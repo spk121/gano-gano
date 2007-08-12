@@ -1,0 +1,11 @@
+2007-08-12  mike <spk121@yahoo.com>
+
+	* Makefile.cygwin (LIB_SRCS): began separating (ncurses core) from
+	(ncurses wide)
+
+2007-08-07  mike <spk121@yahoo.com>
+
+	* Makefile: 
+	* Changelog: created
+	
+

@@ -1,0 +1,10 @@
+;; -*- mode: scheme;-*- 
+
+(define-module (ncurses config)
+  :export (
+	   ncurses-config-libdir
+	   ))
+
+
+(define ncurses-config-libdir "XXlibdirXX")
+
