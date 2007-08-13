@@ -1,5 +1,7 @@
 2007-08-12  Mike Gran  <spike_gran@users.sourceforge.net>
 
+	* src/addch.scm (ncurses): ponder splitting core.scm
+
 	* Makefile.cygwin (LIB_SRCS): add addchstr support
 
 	* src/core.scm (ncurses): add addcstr support

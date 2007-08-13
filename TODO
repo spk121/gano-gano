@@ -1,0 +1,72 @@
+TODO
+$Id: TODO,v 1.1 2007/08/13 05:04:08 spike_gran Exp $
+
+
+Module  Section      Complete
+-----------------------------
+Core
+	curs_addch	x
+	curs_addchstr	x
+	curs_addstr	x
+	curs_attr	x
+	curs_beep
+	curs_bkgd
+	curs_border
+	curs_clear
+	curs_color	x
+	curs_delch
+	curs_deleteln
+	curs_extend
+	curs_getch	x
+	curs_getstr
+	curs_getxy
+	curs_initscr	x
+	curs_inopts	x
+	curs_kernel	x
+	curs_mouse
+	curs_move	x
+	curs_outopts
+	curs_overlay
+	curs_print
+	curs_printw
+	curs_refresh	x
+	curs_scanw
+	curs_termattrs
+	curs_terminfo
+	curs_touch
+	curs_util
+	curs_window
+	curs_inch
+	curs_insch
+	curs_insstr
+	curs_inchstr
+	curs_pad
+	curs_scroll
+	curs_scr_dump
+	curs_slk
+	default_colors	x
+	define_key
+	key_defined
+	keybound
+	keyok
+	resizeterm
+	wresize
+
+Debug
+	curs_trace
+
+Wide
+	curs_addwstr
+	curs_add_wch
+	curs_add_wchstr
+	curs_addwstr
+	curs_bkgrnd
+	curs_border_set
+	curs_getcchar
+	curs_get_wch
+	curs_get_wstr
+	curs_in_wch
+	curs_in_wchstr
+	curs_ins_wch
+	curs_ins_wstr
+	curs_inwstr
