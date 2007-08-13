@@ -39,7 +39,7 @@ CDEBUG = -g
 CTEST = -fprofile-arcs -ftest-coverage
 CFLAGS = $(CDEBUG) -I$(srcdir) `guile-config compile` \
 	-Wall -Wextra -DDLL_EXPORT
-LIB_LIBS = `guile-config link` -lncurses -ltdl
+LIB_LIBS = `guile-config link` -lncurses -ltdl -lgcov
 
 LIB_SRCS = \
 	addch.c \
@@ -88,7 +88,7 @@ libguile-ncurses.a : $(LIB_OBJS)
 	ranlib $@
 
 cygguile-ncurses-0-0.dll: libguile-ncurses.a
-	gcc $(CFLAGS) -fPIC -shared -o $@ \
+	gcc $(CTEST) $(CFLAGS) -fPIC -shared -o $@ \
 	-Wl,-rpath /usr/local/lib \
 	-Wl,--out-implib=libguile-ncurses.dll.a \
 	-Wl,--whole-archive $< \
