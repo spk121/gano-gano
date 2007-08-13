@@ -42,6 +42,7 @@ LIB_LIBS = `guile-config link` -lncurses -ltdl
 
 LIB_SRCS = \
 	addch.c \
+	addchstr.c \
 	addstr.c \
 	attr.c \
 	color.c \
@@ -58,6 +59,7 @@ LIB_SRCS = \
 
 LIB_OBJS = \
 	addch.o \
+	addchstr.o \
 	addstr.o \
 	attr.o \
 	color.o \

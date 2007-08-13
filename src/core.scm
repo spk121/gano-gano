@@ -56,6 +56,16 @@
 	   acs-urcorner
 	   acs-vline
 
+	   ;; From addchstr.c
+	   addchstr
+	   addchnstr
+	   waddchstr
+	   waddchnstr
+	   mvaddchstr
+	   mvaddchnstr
+	   mvwaddchstr
+	   mvwaddchnstr
+
 	   ;; From addstr.c
 	   addstr
 	   addnstr

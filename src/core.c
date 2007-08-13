@@ -1,7 +1,7 @@
 // core.c -- main initialization of ncurses wrapper library and helper
 // functions
 
-// $Id: core.c,v 1.1 2007/08/12 23:52:39 spike_gran Exp $
+// $Id: core.c,v 1.2 2007/08/13 02:26:21 spike_gran Exp $
 
 #include <curses.h>
 #include <stdio.h>
@@ -11,6 +11,7 @@
 #include "defines.h"
 
 #include "addch.h"
+#include "addchstr.h"
 #include "addstr.h"
 #include "attr.h"
 #include "color.h"
@@ -140,3 +141,60 @@ _gnc_from_attr (attr_t x)
     abort ();
 }  
 
+
+// The curses type chstr is a null-terminated vector of chtypes
+int
+_gnc_is_chstr (SCM s)
+{
+  int len, i;
+  SCM element;
+
+  if (!scm_is_true (scm_list_p (s)))
+    return 0;
+  
+  len = scm_to_int (scm_length (s));
+
+  for (i = 0; i < len; i++)
+    {
+      element = scm_list_ref (s, scm_from_int (i));
+      if (!scm_is_integer (element))
+	return 0;
+    }
+
+  return 1;
+}
+
+// This assumes that checking has already been done.
+// The returned vector will have to be freed by the caller.
+chtype *
+_gnc_to_chstr (SCM s)
+{
+  int i, len;
+  SCM element;
+  chtype *chstr;
+
+  // A pointer to the function that converts SCM numbers to 
+  // chtypes.
+  chtype (*scm_to_chtype) (SCM x);
+
+  if (sizeof(chtype) == sizeof(unsigned))
+    scm_to_chtype = scm_to_uint;
+  else if (sizeof (chtype) == sizeof (unsigned long))
+    scm_to_chtype = scm_to_ulong;
+  else
+    abort ();
+
+  len = scm_to_int (scm_length (s));
+
+  chstr = (chtype *) scm_malloc (sizeof(chstr) * (len + 1));
+
+  for (i = 0; i < len; i++)
+    {
+      element = scm_list_ref (s, scm_from_int (i));
+      chstr[i] = (scm_to_chtype (element));
+    }
+
+  chstr[len] = 0;
+
+  return chstr;
+}
