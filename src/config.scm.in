@@ -1,10 +1,20 @@
 ;; -*- mode: scheme;-*- 
+;; config.scm.in -- constants determined during "make"
+
+;; Do not edit config.scm.  Edit config.scm.in instead.
+
+;; $Id: config.scm.in,v 1.2 2007/08/13 13:58:54 spike_gran Exp $
 
 (define-module (ncurses config)
   :export (
-	   ncurses-config-libdir
+	   corelib
+	   libdir
 	   ))
 
+(display "Loading (ncurses config)")
+(newline)
 
-(define ncurses-config-libdir "XXlibdirXX")
+(define libdir "XXlibdirXX")
+(define corelib "XXcorelibXX")
+
 

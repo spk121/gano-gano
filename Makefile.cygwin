@@ -36,6 +36,7 @@ GUILE_SITE = `guile-config info pkgdatadir`/site
 ### Flags ###
 
 CDEBUG = -g
+CTEST = -fprofile-arcs -ftest-coverage
 CFLAGS = $(CDEBUG) -I$(srcdir) `guile-config compile` \
 	-Wall -Wextra -DDLL_EXPORT
 LIB_LIBS = `guile-config link` -lncurses -ltdl
@@ -45,6 +46,7 @@ LIB_SRCS = \
 	addchstr.c \
 	addstr.c \
 	attr.c \
+	beep.c \
 	color.c \
 	core.c \
 	default_colors.c \
@@ -54,6 +56,7 @@ LIB_SRCS = \
 	kernel.c \
 	move.c \
 	refresh.c \
+	termattrs.c \
 	type_window.c \
 	type_screen.c
 
@@ -62,6 +65,7 @@ LIB_OBJS = \
 	addchstr.o \
 	addstr.o \
 	attr.o \
+	beep.o \
 	color.o \
 	core.o \
 	default_colors.o \
@@ -71,6 +75,7 @@ LIB_OBJS = \
 	kernel.o \
 	move.o \
 	refresh.o \
+	termattrs.o \
 	type_window.o \
 	type_screen.o
 
@@ -83,22 +88,31 @@ libguile-ncurses.a : $(LIB_OBJS)
 	ranlib $@
 
 cygguile-ncurses-0-0.dll: libguile-ncurses.a
-	gcc -fPIC -shared -o $@ \
+	gcc $(CFLAGS) -fPIC -shared -o $@ \
 	-Wl,-rpath /usr/local/lib \
 	-Wl,--out-implib=libguile-ncurses.dll.a \
 	-Wl,--whole-archive $< \
 	-Wl,--no-whole-archive $(GUILE_LDFLAGS) -lncurses
 
+
+%.o : %.c
+	gcc -c $(CFLAGS) $(CTEST) $< -o $@
+
 # Generated sources
 $(OBJS): config.scm
 
 config.scm : $(srcdir)/src/config.scm.in
-	sed 's|XXlibdirXX|$(libdir)|' < $< > $@
+	sed 's|XXlibdirXX|$(libdir)|' < $< > $@.tmp
+	sed 's|XXcorelibXX|cygguile-ncurses-0-0.dll|' < $@.tmp > $@
+	rm $@.tmp
 
 install: all
 	mkdir -p $(schemedir)/ncurses
-	install $(srcdir)/src/core.scm $(schemedir)/ncurses/
-	install config.scm $(schemedir)/ncurses/
+	mkdir -p $(schemedir)/ncurses/core
+	install $(srcdir)/src/core.scm $(schemedir)/ncurses/core.scm
+	install $(srcdir)/src/termattrs.scm $(schemedir)/ncurses/core/termattrs.scm
+	install $(srcdir)/src/beep.scm $(schemedir)/ncurses/core/beep.scm
+	install config.scm $(schemedir)/ncurses/config.scm
 	install cygguile-ncurses-0-0.dll $(libdir)
 
 install-html:

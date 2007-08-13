@@ -1,7 +1,7 @@
 // core.c -- main initialization of ncurses wrapper library and helper
 // functions
 
-// $Id: core.c,v 1.2 2007/08/13 02:26:21 spike_gran Exp $
+// $Id: core.c,v 1.3 2007/08/13 13:58:54 spike_gran Exp $
 
 #include <curses.h>
 #include <stdio.h>
@@ -20,6 +20,7 @@
 #include "initscr.h"
 #include "inopts.h"
 #include "kernel.h"
+#include "termattrs.h"
 #include "move.h"
 #include "refresh.h"
 
@@ -49,6 +50,7 @@ gnc_init_core ()
   _gnc_init_inopts ();
   _gnc_init_kernel ();
   _gnc_init_move ();
+  // _gnc_init_termattrs ();
   _gnc_init_refresh ();
 
   if (TESTBED)

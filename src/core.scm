@@ -5,6 +5,9 @@
 ;; API.
 
 (define-module (ncurses core)
+  #:use-module (ncurses config)
+  #:use-module ((ncurses core beep) :renamer (symbol-prefix-proc 'curs:))
+  #:use-module (ncurses core termattrs)
   :export (
 	   ;; From add_wch.c
 	   add-wch
@@ -297,17 +300,19 @@
 	   *key-event*    
 	   *key-max*      
 	   key-fn
-	   ))
+	   )
+  #:re-export (
+	       ;; From termattrs
+	       baudrate
+	       ;; From beep
+	       curs:beep
+	       curs:flash
+	       ))
 
-(display "Loading ncurses core") 
+(display "Loading (ncurses core)") 
 (newline)
 
-(use-modules (ncurses config))
-
-(load-extension (string-append 
-		 ncurses-config-libdir 
-		 "/cygguile-ncurses-0-0.dll") 
-		"gnc_init_core")
+(load-extension (string-append libdir "/" corelib) "gnc_init_core")
 
 
 ;; Curses constants
