@@ -20,6 +20,41 @@
 	   mvaddch
 	   echochar
 	   wechochar
+	   get-tabsize
+	   set-tabsize
+
+	   acs-block 
+	   acs-board 
+	   acs-btee
+	   acs-bullet	   
+	   acs-ckboard
+	   acs-darrow
+	   acs-degree
+	   acs-diamond
+	   acs-gequal
+	   acs-hline 
+	   acs-lantern
+	   acs-larrow
+	   acs-lequal
+	   acs-llcorner 
+	   acs-lrcorner 
+	   acs-ltee
+	   acs-nequal
+	   acs-pi 
+	   acs-plminus
+	   acs-plus
+	   acs-rarrow
+	   acs-rtee
+	   acs-s1 
+	   acs-s3
+	   acs-s7
+	   acs-s9
+	   acs-sterling
+	   acs-ttee
+	   acs-uarrow
+	   acs-ulcorner
+	   acs-urcorner
+	   acs-vline
 
 	   ;; From addstr.c
 	   addstr

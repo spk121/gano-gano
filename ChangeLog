@@ -1,3 +1,17 @@
+2007-08-12  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* src/addch.c (gnc_get_tabsize): comment
+
+	* src/defines.h (TESTBED): add testbed define
+
+	* src/core.h: kill cchar funcs, belong in (ncurses wide)
+
+2007-08-12  mike <spike_gran@users.sourceforge.net>
+
+	* src/addch.c: add ACS chars, tabsize funcs
+	* src/addch.h:
+	* src/core.scm:
+
 2007-08-12  mike <spk121@yahoo.com>
 
 	* Makefile.cygwin (LIB_SRCS): began separating (ncurses core) from

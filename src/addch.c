@@ -1,6 +1,6 @@
 // addch.c -- wrap curses functions to add characters to the curses window
 
-// $Id: addch.c,v 1.1 2007/08/12 23:52:39 spike_gran Exp $
+// $Id: addch.c,v 1.2 2007/08/13 01:15:08 spike_gran Exp $
 
 #include <curses.h>
 #include <libguile.h>
@@ -93,6 +93,59 @@ gnc_wechochar (SCM win, SCM ch)
 				c_char));
 }
 
+// Get / set tabsize.  Note that the tabsize is only defined after
+// initscr is called.
+SCM
+gnc_get_tabsize ()
+{
+  return scm_from_int (TABSIZE);
+}
+
+SCM
+gnc_set_tabsize (SCM t)
+{
+  SCM_ASSERT (scm_is_integer (t), t, SCM_ARG1, "set-tabsize");
+
+  TABSIZE = scm_to_int (t);
+
+  return SCM_UNSPECIFIED;
+}
+
+// Since the following curses identifiers are implemented as macros
+// and don't have values until initscr is called, I'll wrap them as
+// functions.
+SCM gnc_acs_block () {return scm_from_int (ACS_BLOCK);}
+SCM gnc_acs_board () {return scm_from_int (ACS_BOARD);}
+SCM gnc_acs_btee () {return scm_from_int (ACS_BTEE);}
+SCM gnc_acs_bullet () {return scm_from_int (ACS_BULLET);}
+SCM gnc_acs_ckboard () {return scm_from_int (ACS_CKBOARD);}
+SCM gnc_acs_darrow () {return scm_from_int (ACS_DARROW);}
+SCM gnc_acs_degree () {return scm_from_int (ACS_DEGREE);}
+SCM gnc_acs_diamond () {return scm_from_int (ACS_DIAMOND);}
+SCM gnc_acs_gequal () {return scm_from_int (ACS_GEQUAL);}
+SCM gnc_acs_hline () {return scm_from_int (ACS_HLINE);}
+SCM gnc_acs_lantern () {return scm_from_int (ACS_LANTERN);}
+SCM gnc_acs_larrow () {return scm_from_int (ACS_LARROW);}
+SCM gnc_acs_lequal () {return scm_from_int (ACS_LEQUAL);}
+SCM gnc_acs_llcorner () {return scm_from_int (ACS_LLCORNER);}
+SCM gnc_acs_lrcorner () {return scm_from_int (ACS_LRCORNER);}
+SCM gnc_acs_ltee () {return scm_from_int (ACS_LTEE);}
+SCM gnc_acs_nequal () {return scm_from_int (ACS_NEQUAL);}
+SCM gnc_acs_pi () {return scm_from_int (ACS_PI);}
+SCM gnc_acs_plminus () {return scm_from_int (ACS_PLMINUS);}
+SCM gnc_acs_plus () {return scm_from_int (ACS_PLUS);}
+SCM gnc_acs_rarrow () {return scm_from_int (ACS_RARROW);}
+SCM gnc_acs_rtee () {return scm_from_int (ACS_RTEE);}
+SCM gnc_acs_s1 () {return scm_from_int (ACS_S1);}
+SCM gnc_acs_s3 () {return scm_from_int (ACS_S3);}
+SCM gnc_acs_s7 () {return scm_from_int (ACS_S7);}
+SCM gnc_acs_s9 () {return scm_from_int (ACS_S9);}
+SCM gnc_acs_sterling () {return scm_from_int (ACS_STERLING);}
+SCM gnc_acs_ttee () {return scm_from_int (ACS_TTEE);}
+SCM gnc_acs_uarrow () {return scm_from_int (ACS_UARROW);}
+SCM gnc_acs_ulcorner () {return scm_from_int (ACS_ULCORNER);}
+SCM gnc_acs_urcorner () {return scm_from_int (ACS_URCORNER);}
+SCM gnc_acs_vline () {return scm_from_int (ACS_VLINE);}
 
 
 // Register these functions as scheme functions
@@ -108,5 +161,41 @@ _gnc_init_addch ()
   scm_c_define_gsubr ("mvwaddch", 4, 0, 0, gnc_mvwaddch);
   scm_c_define_gsubr ("echochar", 1, 0, 0, gnc_echochar);
   scm_c_define_gsubr ("wechochar", 2, 0, 0, gnc_wechochar);
+  scm_c_define_gsubr ("get-tabsize", 0, 0, 0, gnc_get_tabsize);
+  scm_c_define_gsubr ("set-tabsize", 1, 0, 0, gnc_set_tabsize);
 
+  scm_c_define_gsubr ("acs-block", 0, 0, 0,  gnc_acs_block);
+  scm_c_define_gsubr ("acs-board", 0, 0, 0,  gnc_acs_board);
+  scm_c_define_gsubr ("acs-btee", 0, 0, 0,  gnc_acs_btee);
+  scm_c_define_gsubr ("acs-bullet", 0, 0, 0,  gnc_acs_bullet);
+  scm_c_define_gsubr ("acs-ckboard", 0, 0, 0,  gnc_acs_ckboard);
+  scm_c_define_gsubr ("acs-darrow", 0, 0, 0,  gnc_acs_darrow);
+  scm_c_define_gsubr ("acs-degree", 0, 0, 0,  gnc_acs_degree);
+  scm_c_define_gsubr ("acs-diamond", 0, 0, 0,  gnc_acs_diamond);
+  scm_c_define_gsubr ("acs-gequal", 0, 0, 0,  gnc_acs_gequal);
+  scm_c_define_gsubr ("acs-hline", 0, 0, 0,  gnc_acs_hline);
+  scm_c_define_gsubr ("acs-lantern", 0, 0, 0,  gnc_acs_lantern);
+  scm_c_define_gsubr ("acs-larrow", 0, 0, 0,  gnc_acs_larrow);
+  scm_c_define_gsubr ("acs-lequal", 0, 0, 0,  gnc_acs_lequal);
+  scm_c_define_gsubr ("acs-llcorner", 0, 0, 0,  gnc_acs_llcorner);
+  scm_c_define_gsubr ("acs-lrcorner", 0, 0, 0,  gnc_acs_lrcorner);
+  scm_c_define_gsubr ("acs-ltee", 0, 0, 0,  gnc_acs_ltee);
+  scm_c_define_gsubr ("acs-nequal", 0, 0, 0,  gnc_acs_nequal);
+  scm_c_define_gsubr ("acs-pi", 0, 0, 0,  gnc_acs_pi);
+  scm_c_define_gsubr ("acs-plminus", 0, 0, 0,  gnc_acs_plminus);
+  scm_c_define_gsubr ("acs-plus", 0, 0, 0,  gnc_acs_plus);
+  scm_c_define_gsubr ("acs-rarrow", 0, 0, 0,  gnc_acs_rarrow);
+  scm_c_define_gsubr ("acs-rtee", 0, 0, 0,  gnc_acs_rtee);
+  scm_c_define_gsubr ("acs-s1", 0, 0, 0,  gnc_acs_s1);
+  scm_c_define_gsubr ("acs-s3" , 0, 0, 0,  gnc_acs_s3);
+  scm_c_define_gsubr ("acs-s7", 0, 0, 0,  gnc_acs_s7);
+  scm_c_define_gsubr ("acs-s9", 0, 0, 0,  gnc_acs_s9);
+  scm_c_define_gsubr ("acs-sterling", 0, 0, 0,  gnc_acs_sterling);
+  scm_c_define_gsubr ("acs-ttee", 0, 0, 0,  gnc_acs_ttee);
+  scm_c_define_gsubr ("acs-uarrow", 0, 0, 0,  gnc_acs_uarrow);
+  scm_c_define_gsubr ("acs-ulcorner", 0, 0, 0,  gnc_acs_ulcorner);
+  scm_c_define_gsubr ("acs-urcorner", 0, 0, 0,  gnc_acs_urcorner);
+  scm_c_define_gsubr ("acs-vline", 0, 0, 0,  gnc_acs_vline);
+  
 }
+
