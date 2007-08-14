@@ -1,5 +1,9 @@
 2007-08-13  Mike Gran  <spike_gran@users.sourceforge.net>
 
+	* test/unit_can_change_color.scm: new test
+
+	* test/unit_baudrate.scm: new test
+
 	* src/core.scm (ncurses): add beep / baudrate func
 
 	* src/termattrs.scm: add baudrate func

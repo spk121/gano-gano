@@ -4,32 +4,23 @@
 
 ;;; unit_beep -- test the function beep
 
-;;; $Id: unit_beep.scm,v 1.2 2007/08/14 04:02:19 spike_gran Exp $
+;;; $Id: unit_beep.scm,v 1.3 2007/08/14 04:36:32 spike_gran Exp $
 
-(read-enable 'positions)
-(set! %load-path (append %load-path '(".")))
+(use-modules (ncurses core))
 
-(use-modules (ncurses core)
-	     (testeez))
+;;;;
+(format #t "TEST: calling beep before initscr\n");
+(format #t "Beep: ~s\n" (curs:beep))
+(sleep 1)
 
-(use-syntax (ice-9 syncase))
+;;;;
+(format #t "TEST: calling beep in initscr\n");
+(initscr)
+(define b (curs:beep))
+(endwin)
+(format #t "Beep: ~s\n" b)
+(sleep 1)
 
-(define (%ncurses:test)
-  (testeez
-   "Unit Beep"
-   
-   (test/equal "Beep"
-	       (and
-		(initscr)
-		(curs:beep)
-		(endwin))
-	       #t)
-   
-   (test/equal "Flash"
-	       (and
-		(initscr)
-		(curs:flash)
-		(endwin))
-	       #t)))
-
-(%ncurses:test)
+;;;;
+(format #t "TEST: calling beep after endwin\n");
+(format #t "Beep: ~s\n" (curs:beep))
