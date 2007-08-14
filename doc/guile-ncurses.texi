@@ -1,8 +1,8 @@
 \input texinfo   @c -*-texinfo-*-
-@c $Id: guile-ncurses.texi,v 1.1 2007/08/12 23:52:38 spike_gran Exp $
+@c $Id: guile-ncurses.texi,v 1.2 2007/08/14 14:54:57 spike_gran Exp $
 @c %**start of header
 @setfilename guile-ncurses.info
-@settitle Guile NCurses 0.0.1
+@settitle Guile NCurses X.XX
 @c %**end of header
 
 
@@ -11,8 +11,8 @@
 This manual is for Guile NCurses, a Guile module that wraps the
 NCurses C API.  
 
-This is Edition 0.01, last updated 06 Aug 2007, of `The Guile Ncurses
-Module Manual', for Gano Version 0.01.
+This is Edition $Revision: 1.2 $, last updated $Date: 2007/08/14 14:54:57 $, of `The Guile Ncurses
+Module Manual', for Gano Version X.XX.
 
 Copyright @copyright{} 2007 Michael L. Gran
 
@@ -43,36 +43,131 @@ Documentation License."
 @c `TOP' NODE AND MASTER MENU
  
 @ifnottex
-@node Top
+@node Top, Introduction, (dir), (dir)
 @top Guile NCurses Module
  
 @insertcopying
 @end ifnottex
 
 @menu
-* Core API::
-* Copying This Manual::
-* Index::
+* Introduction::                
+* Hello World::                 
+* Core Library::                
+* Copying This Manual::         
+* Index ::                      
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Core Library
+
+* Initialization::              
+* A Word about Windows::        
+* Capabilities of the Terminal::  
+* Output Functions::            
+* Input Functions::             
+* Character Attributes::        
+* Windows::                     
+* Colors::                      
+* Interfacing with the Keyboard::  
+* Interfacing with the Mouse::  
+* Scren Manipulation::          
+* Miscellandous Features::      
+
+Copying This Manual
+
+* GNU Free Documentation License::  
+
+@end detailmenu
 @end menu
- 
+
 @c BODY
  
-@node Core API
-@chapter Core API
+@node Introduction, Core Library, Top, Top
+@chapter Introduction
+@node Hello World, Core Library, Introduction, Top
+@chapter Hello World
 
-@section Screen Initialization
-@include curs_initscr.texi
+@node Core Library, Copying This Manual, Hello World, Top
+@chapter Core Library
+@menu
+* Initialization::              
+* A Word about Windows::        
+* Capabilities of the Terminal::  
+* Output Functions::            
+* Input Functions::             
+* Character Attributes::        
+* Windows::                     
+* Colors::                      
+* Interfacing with the Keyboard::  
+* Interfacing with the Mouse::  
+* Scren Manipulation::          
+* Miscellandous Features::      
+@end menu
 
-@node Copying This Manual
+@node Initialization, Capabilities of the Terminal, Core Library, Core Library
+@section Initialization
+@node A Word about Windows, Capabilities of the Terminal, Initialization, Core Library
+@section A Word about Windows
+
+@node Capabilities of the Terminal, Output Functions, A Word about Windows, Core Library
+@section Capabilities of the Terminal
+
+When writing a program that uses curses, it is important to know the
+capabilities of the terminal currently being used.  For example, not
+all terminals can print colors or can be resized.  There are functions
+to query the capabilities of the terminal.
+
+Some of the functions in this category may be archaic to the average
+GNU/Linux user.  Most console programs and terminals are fairly
+full-featured and speedy.  But, historically, there have been
+terminals that were slow and limited in their functionality.  The
+function @command{baudrate} will not be commonly used in programs
+targeted for modern consoles and terminal emulaters.  They will be
+more useful for dedicated terminals attached by a serial link.
+
+--- @command{baudrate}
+
+Returns the maximum baudrate that this terminal can handle, or
+@code{#f} if it could not be determined.  For modern terminal
+emulators and consoles, this will be set to some high fixed
+value. Requires @command{initscr}.
+
+@node Output Functions, Character Attributes, Capabilities of the Terminal, Core Library
+@section Output Functions
+@node Input Functions, Windows, Output Functions, Core Library
+@section Input Functions
+@node Character Attributes, Colors, Input Functions, Core Library
+@section Character Attributes
+@node Windows, Interfacing with the Keyboard, Character Attributes, Core Library
+@section Windows
+@node Colors, Interfacing with the Mouse, Windows, Core Library
+@section Colors
+@node Interfacing with the Keyboard, Scren Manipulation, Colors, Core Library
+@section Interfacing with the Keyboard
+@node Interfacing with the Mouse, Miscellandous Features, Interfacing with the Keyboard, Core Library
+@section Interfacing with the Mouse
+@node Scren Manipulation,  , Interfacing with the Mouse, Core Library
+@section Scren Manipulation
+@node Miscellandous Features,  , Scren Manipulation, Core Library
+@section Miscellandous Features
+@appendis Bibliography
+
+@node Copying This Manual, Index , Core Library, Top
 @appendix Copying This Manual
 
+@menu
+* GNU Free Documentation License::  
+@end menu
+
+@node GNU Free Documentation License,  , Copying This Manual, Copying This Manual
 @section GNU Free Documentation License
 
 @include fdl.texi
 
 @c END
 
-@node Index 
+@node Index ,  , Copying This Manual, Top
 @unnumbered Index
      
 @printindex cp
