@@ -1,0 +1,416 @@
+COLOR_PAIR   		attribute-color-pair    
+PAIR_NUMBER      
+_nc_tracebits    
+_traceattr       
+_traceattr2      
+_tracechar       
+_tracechtype     
+_tracechtype2    
+_tracedump       
+_tracef          
+_tracemouse      
+add_wch			window-add-wide-char          
+add_wchnstr    		window-add-wide-string  
+add_wchstr       	window-add-wide-string
+addch            	window-add-char
+addchnstr        	window-add-string
+addchstr         	window-add-string
+addnstr          	window-add-string
+addnwstr         	window-add-wide-string
+addstr           	window-add-string
+addwstr          	window-add-wide-string
+assume_default_co	set-window-default-colors!
+attr_get         	window-attributes
+attr_off         	window-remove-attributes
+attr_on          	set-window-attributes!
+attr_set         	replace-window-attributes!
+attroff          	window-remove-attributes!
+attron           	set-window-attributes!
+attrset          	window-replace-attributes!
+baudrate         	terminal-baudrate
+beep             	terminal-beep
+bkgd             	set-window-background!
+				      
+bkgdset          	set-window-background!
+bkgrnd           	set-window-background-wide-char!
+bkgrndset        	set-window-background-wide-char!
+border           	window-draw-border
+border_set       	window-draw-border
+box              	window-draw-border
+box_set          	window-draw-border
+can_change_color	terminal-can-change-color? 
+cbreak           	terminal-disable-line-buffering
+chgat            	window-apply-attributes-to-string
+clear            	window-clear-all
+clearok          	window-refresh
+clrtobot         	window-clear-from-cursor-to-bottom
+clrtoeol         	window-clear-from-cursor-to-eol
+color_content		color    
+color_set        	window-set-color-pair
+copywin          
+curs_set         
+curses_version   
+def_prog_mode    
+def_shell_mode   
+define_key       
+del_curterm      
+delay_output     
+delch            
+deleteln         
+delscreen		(GC?)
+delwin           
+derwin           
+doupdate         
+dupwin           
+echo 			terminal-enable-echo
+echo_wchar		window-echo-wide-char       
+echochar         
+endwin 			disable-terminal          
+erase			window-clear-all            
+erasechar        
+erasewchar       
+filter           
+flash            
+flushinp         
+get_wch          
+get_wstr         
+getbegyx         
+getbkgd          
+getbkgrnd        
+getcchar         
+getch            
+getmaxyx         
+getmouse         
+getn_wstr        
+getnstr          
+getparyx         
+getstr           
+getsyx           
+getwin           
+getyx            
+halfdelay		window-set-input-timeout
+has_colors		terminal-has-colors?       
+has_ic           
+has_il           
+has_key          
+hline 			window-draw-horiz-line           
+hline_set        	window-draw-horiz-line
+idcok            
+				      
+idlok            
+immedok          
+in_wch           
+in_wchnstr       
+in_wchstr        
+inch             
+inchnstr         
+inchstr          
+init_color       	set-color!
+init_pair		set-color-pair!        
+initscr			make-terminal          
+innstr           
+innwstr          
+ins_nwstr        
+ins_wch          
+ins_wstr         
+insch            
+insdelln         
+insertln         
+insnstr          
+insstr           
+instr            
+intrflush        
+inwstr           
+is_linetouched   
+is_wintouched    
+isendwin 		terminal-disabled?        
+key_defined      
+key_name         
+keybound         
+keyname          
+keyok            
+keypad           
+killchar         
+killwchar        
+leaveok          
+longname         
+mcprint          
+meta             
+mouse_trafo      
+mouseinterval    
+mousemask        
+move             
+mvadd_wch 		window-add-wide-char       
+mvadd_wchnstr    
+mvadd_wchstr     
+mvaddch          
+mvaddchnstr      
+mvaddchstr       
+mvaddnstr        
+mvaddnwstr       
+mvaddstr         
+mvaddwstr        
+mvchgat 		window-apply-attributes-to-string         
+mvcur            
+mvdelch          
+mvderwin         
+mvget_wch        
+mvget_wstr       
+mvgetch          
+mvgetn_wstr      
+mvgetnstr        
+mvgetstr         
+mvhline 		window-draw-horiz-line         
+mvhline_set      	window-draw-horiz-line
+				      
+mvin_wch         
+mvin_wchnstr     
+mvin_wchstr      
+mvinch           
+mvinchnstr       
+mvinchstr        
+mvinnstr         
+mvinnwstr        
+mvins_nwstr      
+mvins_wch        
+mvins_wstr       
+mvinsch          
+mvinsnstr        
+mvinsstr         
+mvinstr          
+mvinwstr         
+mvprintw         
+mvscanw          
+mvvline 		window-draw-vert-line         
+mvvline_set      	window-draw-vert-line
+mvwadd_wch		window-add-wide-char       
+mvwadd_wchnstr   
+mvwadd_wchstr    
+mvwaddch         
+mvwaddchnstr     
+mvwaddchstr      
+mvwaddnstr       
+mvwaddnwstr      
+mvwaddstr        
+mvwaddwstr       
+mvwchgat 		window-apply-attributes-to-string        
+mvwdelch         
+mvwget_wch       
+mvwget_wstr      
+mvwgetch         
+mvwgetn_wstr     
+mvwgetnstr       
+mvwgetstr        
+mvwhline 		window-draw-horiz-line        
+mvwhline_set     	window-draw-horiz-line
+mvwin            
+mvwin_wch        
+mvwin_wchnstr    
+mvwin_wchstr     
+mvwinch          
+mvwinchnstr      
+mvwinchstr       
+mvwinnstr        
+mvwinnwstr       
+mvwins_nwstr     
+mvwins_wch       
+mvwins_wstr      
+mvwinsch         
+mvwinsnstr       
+mvwinsstr        
+mvwinstr         
+mvwinwstr        
+mvwprintw        
+mvwscanw         
+mvwvline 		window-draw-vert-line        
+mvwvline_set     	window-draw-vert-line
+napms            
+newpad           
+newterm          
+newwin           
+				      
+nl               
+nocbreak		terminal-enable-line-buffering
+nodelay			window-set-input-timeout
+noecho 			terminal-disable-echo          
+nonl             
+noqiflush        
+noraw 			terminal-enable-line-buffering
+notimeout		window-set-input-timeout        
+overlay          
+overwrite        
+pair_content		color-pair     
+pechochar        
+pnoutrefresh     
+prefresh         
+printw           
+putp             
+putwin           
+qiflush          
+raw 			terminal-disable-line-buffering-and-interrupts
+redrawwin        
+refresh			window-refresh          
+reset_prog_mode  
+reset_shell_mode 
+resetty          
+resizeterm       
+restartterm      
+ripoffline       
+savetty          
+scanw            
+scr_dump         
+scr_init         
+scr_restore      
+scr_set          
+scrl             
+scroll           
+scrollok         
+set_curterm      
+set_term 		switch-terminal        
+setcchar         
+setscrreg        
+setsyx           
+setterm          
+setupterm        
+slk_attr         
+slk_attr_off     
+slk_attr_on      
+slk_attr_set     
+slk_attroff      
+slk_attron       
+slk_attrset      
+slk_clear        
+slk_color        
+slk_init         
+slk_label        
+slk_noutrefresh  
+slk_refresh      
+slk_restore      
+slk_set          
+slk_touch        
+standend         
+standout         
+start_color		terminal-enable-color
+subpad           
+subwin           
+syncok           
+				      
+term_attrs       
+termattrs        
+termname         
+tgetent          
+tgetflag         
+tgetnum          
+tgetstr          
+tgoto            
+tigetflag        
+tigetnum         
+tigetstr         
+timeout			window-set-input-timeout          
+touchline        
+touchwin         
+tparm            
+tputs            
+tputs            
+trace            
+typeahead        
+unctrl           
+unget_wch        
+ungetch          
+ungetmouse       
+untouchwin       
+use_default_color	set-window-default-colors!
+use_env          
+use_extended_name
+vid_attr         
+vid_puts         
+vidattr          
+vidputs          
+vline            
+vline_set        
+vw_printw        
+vw_scanw         
+vwprintw         
+vwscanw          
+wadd_wch		window-add-wide-char         
+wadd_wchnstr     
+wadd_wchstr      
+waddch           
+waddchnstr       
+waddchstr        
+waddnstr         
+waddnwstr        
+waddstr          
+waddwstr         
+wattr_get        
+wattr_off        
+wattr_on         
+wattr_set        
+wattroff         
+wattron          
+wattrset         
+wbkgd            
+wbkgdset         
+wbkgrnd          
+wbkgrndset       
+wborder 		window-draw-border
+wborder_set      	window-draw-border
+wchgat 			apply-attributes-to-string          
+wclear           
+wclrtobot		window-clear-from-cursor-to-bottom        
+wclrtoeol        	window-clear-from-cursor-to-eol
+wcolor_set		window-set-color-pair       
+				      
+wcursyncup       
+wdelch           
+wdeleteln        
+wecho_wchar		window-echo-wide-char      
+wechochar        
+wenclose         
+werase 			window-clear-all          
+wget_wch         
+wget_wstr        
+wgetbkgrnd       
+wgetch           
+wgetn_wstr       
+wgetnstr         
+wgetstr          
+whline			window-draw-horiz-line           
+whline_set       	window-draw-horiz-line
+win_wch          
+win_wchnstr      
+win_wchstr       
+winch            
+winchnstr        
+winchstr         
+winnstr          
+winnwstr         
+wins_nwstr       
+wins_wch         
+wins_wstr        
+winsch           
+winsdelln        
+winsertln        
+winsnstr         
+winsstr          
+winstr           
+winwstr          
+wmouse_trafo     
+wmove            
+wnoutrefresh     
+wprintw          
+wredrawln        
+wrefresh		window-refresh         
+wresize          
+wscanw           
+wscrl            
+wsetscrreg       
+wstandend        
+wstandout        
+wsyncdown        
+wsyncup          
+wtimeout		window-set-input-timeout         
+wtouchln         
+wunctrl          
+wvline 			window-draw-vert-line          
+wvline_set       	window-draw-vert-line
