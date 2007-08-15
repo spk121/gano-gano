@@ -1,5 +1,5 @@
 \input texinfo   @c -*-texinfo-*-
-@c $Id: guile-ncurses.texi,v 1.2 2007/08/14 14:54:57 spike_gran Exp $
+@c $Id: guile-ncurses.texi,v 1.3 2007/08/15 06:22:07 spike_gran Exp $
 @c %**start of header
 @setfilename guile-ncurses.info
 @settitle Guile NCurses X.XX
@@ -11,7 +11,7 @@
 This manual is for Guile NCurses, a Guile module that wraps the
 NCurses C API.  
 
-This is Edition $Revision: 1.2 $, last updated $Date: 2007/08/14 14:54:57 $, of `The Guile Ncurses
+This is Edition $Revision: 1.3 $, last updated $Date: 2007/08/15 06:22:07 $, of `The Guile Ncurses
 Module Manual', for Gano Version X.XX.
 
 Copyright @copyright{} 2007 Michael L. Gran
@@ -42,53 +42,31 @@ Documentation License."
  
 @c `TOP' NODE AND MASTER MENU
  
-@ifnottex
 @node Top, Introduction, (dir), (dir)
 @top Guile NCurses Module
  
 @insertcopying
-@end ifnottex
 
 @menu
 * Introduction::                
 * Hello World::                 
 * Core Library::                
+* Bibliography::                
 * Copying This Manual::         
 * Index ::                      
-
-@detailmenu
- --- The Detailed Node Listing ---
-
-Core Library
-
-* Initialization::              
-* A Word about Windows::        
-* Capabilities of the Terminal::  
-* Output Functions::            
-* Input Functions::             
-* Character Attributes::        
-* Windows::                     
-* Colors::                      
-* Interfacing with the Keyboard::  
-* Interfacing with the Mouse::  
-* Scren Manipulation::          
-* Miscellandous Features::      
-
-Copying This Manual
-
-* GNU Free Documentation License::  
-
-@end detailmenu
 @end menu
 
 @c BODY
  
-@node Introduction, Core Library, Top, Top
+@node Introduction, Hello World, Top, Top
 @chapter Introduction
+
+@section What is the Guile-NCurses Module?
+
 @node Hello World, Core Library, Introduction, Top
 @chapter Hello World
 
-@node Core Library, Copying This Manual, Hello World, Top
+@node Core Library, Bibliography, Hello World, Top
 @chapter Core Library
 @menu
 * Initialization::              
@@ -101,11 +79,10 @@ Copying This Manual
 * Colors::                      
 * Interfacing with the Keyboard::  
 * Interfacing with the Mouse::  
-* Scren Manipulation::          
-* Miscellandous Features::      
+* Screen Manipulation::         
 @end menu
 
-@node Initialization, Capabilities of the Terminal, Core Library, Core Library
+@node Initialization, A Word about Windows, Core Library, Core Library
 @section Initialization
 @node A Word about Windows, Capabilities of the Terminal, Initialization, Core Library
 @section A Word about Windows
@@ -118,6 +95,63 @@ capabilities of the terminal currently being used.  For example, not
 all terminals can print colors or can be resized.  There are functions
 to query the capabilities of the terminal.
 
+@subsection Color Capabilities
+
+Among modern terminals and terminal emulation programs, the widest
+variation occurs among their ability to
+use color.  To get an idea of a terminal's color capabilities, a few
+questions need to be answered.
+
+@itemize
+@item
+Can the terminal display color?
+
+@item
+If so, what are the colors that can be used?
+
+@item
+Can those colors be changed?
+@end itemize
+
+To answer these questions, first use @code{has-color} to determine
+whether a terminal has any color capabilities.  If it does,
+@code{colors} returns the number of colors available.  A color
+terminal will always have a set of pre-defined colors. The function
+@code{can-change-color} indicates if the pre-defined colors can be
+reassigned.
+
+With the exception of @code{has-color}, all of the above functions
+require that the color capabilities of curses be initialized first by
+calling @code{start-color}.
+
+The specifics of using color will be described in greater detail someplace.
+
+@defun  has-color
+This function returns @code{#t} if the terminal has any color capabilities,
+or @code{#f} otherwise.  Requires @code{initscr}.
+@end defun
+
+@defun  start-color
+This initializes NCurses's color capabilities.  On monochrome
+terminals, calling it does nothing and is harmless.
+@code{start-color} will usually return @code{#t}, even if the terminal
+is monochrome.  If could possibly return @code{#f} if no memory can be
+allocated.  Requires @code{initscr}.
+@end defun
+
+@defun  colors
+This returns the number of colors available.  Requires @code{initscr}
+and @code{start-color}.
+@end defun
+
+@defun  can-change-color
+This return @code{#t} if the terminal's pre-defined colors can be
+modified for this session, or @code{#f} if they cannot be modified.
+Requires @code{initscr} and @code{start-color}.
+@end defun
+
+@subsection Archaic Capabilities
+
 Some of the functions in this category may be archaic to the average
 GNU/Linux user.  Most console programs and terminals are fairly
 full-featured and speedy.  But, historically, there have been
@@ -126,34 +160,56 @@ function @command{baudrate} will not be commonly used in programs
 targeted for modern consoles and terminal emulaters.  They will be
 more useful for dedicated terminals attached by a serial link.
 
---- @command{baudrate}
-
-Returns the maximum baudrate that this terminal can handle, or
-@code{#f} if it could not be determined.  For modern terminal
-emulators and consoles, this will be set to some high fixed
+@defun  baudrate
+Returns an integer indicating the maximum baudrate that this terminal
+can handle, or @code{#f} if it could not be determined.  For modern
+terminal emulators and consoles, this will be set to some high fixed
 value. Requires @command{initscr}.
+@end defun
 
-@node Output Functions, Character Attributes, Capabilities of the Terminal, Core Library
+@node Output Functions, Input Functions, Capabilities of the Terminal, Core Library
 @section Output Functions
-@node Input Functions, Windows, Output Functions, Core Library
-@section Input Functions
-@node Character Attributes, Colors, Input Functions, Core Library
-@section Character Attributes
-@node Windows, Interfacing with the Keyboard, Character Attributes, Core Library
-@section Windows
-@node Colors, Interfacing with the Mouse, Windows, Core Library
-@section Colors
-@node Interfacing with the Keyboard, Scren Manipulation, Colors, Core Library
-@section Interfacing with the Keyboard
-@node Interfacing with the Mouse, Miscellandous Features, Interfacing with the Keyboard, Core Library
-@section Interfacing with the Mouse
-@node Scren Manipulation,  , Interfacing with the Mouse, Core Library
-@section Scren Manipulation
-@node Miscellandous Features,  , Scren Manipulation, Core Library
-@section Miscellandous Features
-@appendis Bibliography
 
-@node Copying This Manual, Index , Core Library, Top
+@subsection Beeping and Flashing
+
+The functions @code{beep} and @code{flash} are used to get the
+attention of a program's user.  The function @code{beep} make a
+beeping noise, and @code{flash} makes the screen @dfn{flash}, which is
+reversing the screen's color for a fraction of a second and then
+restoring the original color.
+
+@defun  beep
+This routine will request that the teminal make a short beep.  If it
+cannot, it requests that the terminal flash.  If either is possible,
+it returns @code{#t}.  If neither is possible, it returns @code{#f}.  Requires
+@code{initscr}.
+@end defun
+
+@defun  flash
+This routine will request that the terminal flash.  If it cannot, it
+requests that the terminal beep.  If either is possible, it returns
+@code{#t}; otherwise, it returns @code{#f}.  Requires @code{initscr}.
+@end defun
+
+@node Input Functions, Character Attributes, Output Functions, Core Library
+@section Input Functions
+@node Character Attributes, Windows, Input Functions, Core Library
+@section Character Attributes
+@node Windows, Colors, Character Attributes, Core Library
+@section Windows
+@node Colors, Interfacing with the Keyboard, Windows, Core Library
+@section Colors
+@node Interfacing with the Keyboard, Interfacing with the Mouse, Colors, Core Library
+@section Interfacing with the Keyboard
+@node Interfacing with the Mouse, Screen Manipulation, Interfacing with the Keyboard, Core Library
+@section Interfacing with the Mouse
+@node Screen Manipulation,  , Interfacing with the Mouse, Core Library
+@section Screen Manipulation
+
+@node Bibliography, Copying This Manual, Core Library, Top
+@appendix Bibliography
+
+@node Copying This Manual, Index , Bibliography, Top
 @appendix Copying This Manual
 
 @menu
@@ -169,6 +225,7 @@ value. Requires @command{initscr}.
 
 @node Index ,  , Copying This Manual, Top
 @unnumbered Index
+@findex
      
 @printindex cp
      

@@ -1,6 +1,7 @@
 2007-08-14  Mike Gran  <spike_gran@users.sourceforge.net>
 
 	* doc/guile-ncurses.texi: document baudrate
+	(Output Functions): document beep
 
 2007-08-13  Mike Gran  <spike_gran@users.sourceforge.net>
 
