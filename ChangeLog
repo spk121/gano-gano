@@ -1,3 +1,9 @@
+2007-08-15  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* doc/API: sketch out verbose API
+
+	* doc/guile-ncurses.texi (API): sketch out verbose API
+
 2007-08-14  Mike Gran  <spike_gran@users.sourceforge.net>
 
 	* doc/guile-ncurses.texi: document baudrate

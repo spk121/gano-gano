@@ -1,5 +1,5 @@
 \input texinfo   @c -*-texinfo-*-
-@c $Id: guile-ncurses.texi,v 1.3 2007/08/15 06:22:07 spike_gran Exp $
+@c $Id: guile-ncurses.texi,v 1.4 2007/08/16 04:20:07 spike_gran Exp $
 @c %**start of header
 @setfilename guile-ncurses.info
 @settitle Guile NCurses X.XX
@@ -11,7 +11,7 @@
 This manual is for Guile NCurses, a Guile module that wraps the
 NCurses C API.  
 
-This is Edition $Revision: 1.3 $, last updated $Date: 2007/08/15 06:22:07 $, of `The Guile Ncurses
+This is Edition $Revision: 1.4 $, last updated $Date: 2007/08/16 04:20:07 $, of `The Guile Ncurses
 Module Manual', for Gano Version X.XX.
 
 Copyright @copyright{} 2007 Michael L. Gran
@@ -51,7 +51,7 @@ Documentation License."
 * Introduction::                
 * Hello World::                 
 * Core Library::                
-* Bibliography::                
+* API::                
 * Copying This Manual::         
 * Index ::                      
 @end menu
@@ -66,7 +66,7 @@ Documentation License."
 @node Hello World, Core Library, Introduction, Top
 @chapter Hello World
 
-@node Core Library, Bibliography, Hello World, Top
+@node Core Library, API, Hello World, Top
 @chapter Core Library
 @menu
 * Initialization::              
@@ -79,7 +79,7 @@ Documentation License."
 * Colors::                      
 * Interfacing with the Keyboard::  
 * Interfacing with the Mouse::  
-* Screen Manipulation::         
+* Screen Manipulation:: 
 @end menu
 
 @node Initialization, A Word about Windows, Core Library, Core Library
@@ -206,10 +206,150 @@ requests that the terminal beep.  If either is possible, it returns
 @node Screen Manipulation,  , Interfacing with the Mouse, Core Library
 @section Screen Manipulation
 
-@node Bibliography, Copying This Manual, Core Library, Top
-@appendix Bibliography
+@node API, Copying This Manual, Core Library, Top
+@appendix API
 
-@node Copying This Manual, Index , Bibliography, Top
+@verbatim
+*COLOR_PAIR   		attribute-color-pair    
+*addch            	window-add-char
+*addnstr          	window-add-string
+*addstr           	window-add-string
+*attroff          	window-remove-attributes!
+*attron           	set-window-attributes!
+*attrset          	window-replace-attributes!
+*baudrate         	*terminal-baudrate			
+*beep             	*terminal-beep
+*bkgd             	set-window-background!
+*bkgdset          	set-window-background!
+*border           	window-draw-border
+*box              	window-draw-border
+*can_change_color	*terminal-can-change-color? 
+*cbreak           	*terminal-disable-line-buffering
+*clear            	window-clear-all
+*clearok          	window-refresh
+*clrtobot         	window-clear-from-cursor-to-bottom
+*clrtoeol         	window-clear-from-cursor-to-eol
+*color_content		*color    
+color_set        	window-set-color-pair
+*curs_set         	*terminal-set-cursor
+*def_prog_mode    	*terminal-store-program-mode
+*def_shell_mode   	*terminal-store-shell-mode
+*delay_output		*terminal-set-output-delay     
+*delch                  window-delete-char
+*deleteln               window-delete-line
+*derwin                 subwindow-create          
+*doupdate		*terminal-refresh         
+*echo 			*terminal-enable-echo
+*echochar               window-add-char (with flag)
+*endwin 		*terminal-disable
+*erase			window-clear-all            
+*erasechar        	*terminal-get-erasechar
+*filter           	(should be opt in initscr?)
+*flash            	*terminal-flash
+*flushinp         	*terminal-flush-input-port
+*getbegyx               window-get-origin
+*getch                  window-read-char
+*getmaxyx               window-get-size
+*getmouse		*terminal-get-mouse         	
+*getparyx               subwindow-get-origin-from-parent
+*getstr                 window-read-string
+*getsyx 		*terminal-get-virtual-position          
+*getwin 		*window-restore-from-file          
+*getyx                  window-get-cursor-position
+*halfdelay		terminal-set-input-timeout
+*has_colors		terminal-has-colors?       
+*has_ic           	terminal-has-ic? terminal-can-insert-chars?
+*has_il           	terminal-has-il? terminal-can-insert-lines?
+*has_key          	terminal-has-key?
+*hline 			window-draw-horiz-line           
+*idcok                  window-(enable/disable)-terminal-char-insertion
+*idlok                  window-(enable/disable)-terminal-line-instertion
+*immedok                window-(enable/disable)-immediate-refresh
+*inch                   window-get-window-char
+*init_color       	*set-color! color-set!
+*init_pair		*set-color-pair!	color-pair-set!	    Color pair zero may be treated differently in curses, but, we're going to treat it the same here        
+*initscr		*make-terminal, terminal-initalize terminal-enable
+*insch                  window-insert-char
+*insdelln               window-insert-lines
+*insertln               window-insert-line
+*insnstr                window-insert-string
+*insstr                 window-insert-string
+*is_linetouched         window-line-needs-refresh?
+*is_wintouched          window-needs-refresh?
+*isendwin 		*terminal-disabled?        
+*keyname          	key-short-name
+keyok            
+*keypad                 window-(enable/disable)-function-key-translation
+*killchar		*terminal-get-killchar         
+*leaveok                window-(enable/disable)-sloppy-cursor
+*longname         	*terminal-long-name
+*meta             	*terminal-allow-8bit-data
+*mouseinterval		*terminal-set-mouse-timeout    
+*mousemask        	*terminal-mask-mouse-events or terminal-(get/set)-mouse-events
+*move             
+*mvderwin         
+*mvwin            
+*napms 			same as guile usleep           
+*newpad           	*window-create (pad flag)
+*newwin          	*window-create 
+				      
+*nl               	terminal-enable-newline-translation
+*nocbreak		terminal-enable-line-buffering
+*nodelay		window-set-input-timeout
+*noecho 		terminal-disable-echo          
+*nonl             	terminal-disable-newline-translation
+*noqiflush        	terminal-disable-flush-on-interrupt
+*noraw 			terminal-enable-line-buffering
+*notimeout		window-set-input-timeout        
+*overlay          
+*overwrite        
+*pair_content		color-pair     
+*putp 			terminal-get-capability (awkward)            
+*putwin 		*window-store-to-file          
+*qiflush          	terminal-enable-flush-on-interrupt
+*raw 			terminal-disable-line-buffering-and-interrupts
+*redrawwin        
+*refresh			window-refresh          
+*reset_prog_mode	terminal-restore-program-mode  
+*reset_shell_mode 	terminal-restore-shell-mode
+*scroll           
+*scrollok         
+*setscrreg        
+*setsyx			*terminal-set-virtual-position           
+*setupterm 		terminal-setup       
+*standend         
+*standout         
+*start_color		terminal-enable-color
+*subpad           
+*subwin           
+*syncok           
+*termattrs		terminal-attributes        
+*termname         	terminal-short-name
+*tigetflag        	terminal-capability
+*tigetnum         
+*tigetstr         
+*timeout			window-set-input-timeout          
+*touchline        
+*touchwin         
+*tparm            
+*typeahead 		terminal-set-typeahead-port       
+*unctrl			key-short-name           
+*ungetch          	terminal-requeue-char
+*ungetmouse		terminal-requeue-mouse       
+*untouchwin       
+*use_default_color	set-window-default-colors!	    On init, set default colors to default-fg-color, bg_color.  Then allow color pair 0 to be redefined?
+*use_env          	(put into terminal-enable or terminal-setup)
+*vline            
+*wcursyncup       
+*wenclose         
+*wnoutrefresh		*window-prepare-refresh     
+*wredrawln        
+*wsyncdown        
+*wsyncup          
+
+@end verbatim
+
+@node Copying This Manual, Index , API, Top
 @appendix Copying This Manual
 
 @menu

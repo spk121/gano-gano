@@ -1,5 +1,5 @@
-COLOR_PAIR   		attribute-color-pair    
-PAIR_NUMBER      
+*COLOR_PAIR   		attribute-color-pair    
+*PAIR_NUMBER      	
 _nc_tracebits    
 _traceattr       
 _traceattr2      
@@ -12,134 +12,134 @@ _tracemouse
 add_wch			window-add-wide-char          
 add_wchnstr    		window-add-wide-string  
 add_wchstr       	window-add-wide-string
-addch            	window-add-char
+*addch            	window-add-char
 addchnstr        	window-add-string
 addchstr         	window-add-string
-addnstr          	window-add-string
+*addnstr          	window-add-string
 addnwstr         	window-add-wide-string
-addstr           	window-add-string
+*addstr           	window-add-string
 addwstr          	window-add-wide-string
-assume_default_co	set-window-default-colors!
+assume_default_co	set-window-default-colors!	    Or, on color init assign default colors to special color 'default-fc-color and default-bg-color?
 attr_get         	window-attributes
 attr_off         	window-remove-attributes
 attr_on          	set-window-attributes!
 attr_set         	replace-window-attributes!
-attroff          	window-remove-attributes!
-attron           	set-window-attributes!
-attrset          	window-replace-attributes!
-baudrate         	terminal-baudrate
-beep             	terminal-beep
-bkgd             	set-window-background!
+*attroff          	window-remove-attributes!
+*attron           	set-window-attributes!
+*attrset          	window-replace-attributes!
+*baudrate         	*terminal-baudrate			
+*beep             	*terminal-beep
+*bkgd             	set-window-background!
 				      
-bkgdset          	set-window-background!
+*bkgdset          	set-window-background!
 bkgrnd           	set-window-background-wide-char!
 bkgrndset        	set-window-background-wide-char!
-border           	window-draw-border
+*border           	window-draw-border
 border_set       	window-draw-border
-box              	window-draw-border
+*box              	window-draw-border
 box_set          	window-draw-border
-can_change_color	terminal-can-change-color? 
-cbreak           	terminal-disable-line-buffering
+*can_change_color	*terminal-can-change-color? 
+*cbreak           	*terminal-disable-line-buffering
 chgat            	window-apply-attributes-to-string
 clear            	window-clear-all
-clearok          	window-refresh
-clrtobot         	window-clear-from-cursor-to-bottom
-clrtoeol         	window-clear-from-cursor-to-eol
-color_content		color    
+*clearok          	window-refresh
+*clrtobot         	window-clear-from-cursor-to-bottom
+*clrtoeol         	window-clear-from-cursor-to-eol
+*color_content		*color    
 color_set        	window-set-color-pair
 copywin          
-curs_set         
+*curs_set         	*terminal-set-cursor
 curses_version   
-def_prog_mode    
-def_shell_mode   
+*def_prog_mode    	*terminal-store-program-mode
+*def_shell_mode   	*terminal-store-shell-mode
 define_key       
 del_curterm      
-delay_output     
-delch            
-deleteln         
+*delay_output		*terminal-set-output-delay     
+*delch            
+*deleteln         
 delscreen		(GC?)
 delwin           
-derwin           
-doupdate         
+*derwin           
+*doupdate		*terminal-refresh         
 dupwin           
-echo 			terminal-enable-echo
+*echo 			*terminal-enable-echo
 echo_wchar		window-echo-wide-char       
-echochar         
-endwin 			disable-terminal          
-erase			window-clear-all            
-erasechar        
+*echochar         
+*endwin 		*terminal-disable
+*erase			window-clear-all            
+*erasechar        	*terminal-get-erasechar
 erasewchar       
-filter           
-flash            
-flushinp         
+*filter           	(should be opt in initscr?)
+*flash            	*terminal-flash
+*flushinp         	*terminal-flush-input-port
 get_wch          
 get_wstr         
-getbegyx         
+*getbegyx         
 getbkgd          
 getbkgrnd        
 getcchar         
-getch            
-getmaxyx         
-getmouse         
+*getch            
+*getmaxyx         
+*getmouse		*terminal-get-mouse         	
 getn_wstr        
 getnstr          
-getparyx         
-getstr           
-getsyx           
-getwin           
-getyx            
-halfdelay		window-set-input-timeout
-has_colors		terminal-has-colors?       
-has_ic           
-has_il           
-has_key          
-hline 			window-draw-horiz-line           
+*getparyx         
+*getstr           
+*getsyx 		*terminal-get-virtual-position          
+*getwin 		*window-restore-from-file          
+*getyx            
+*halfdelay		terminal-set-input-timeout
+*has_colors		terminal-has-colors?       
+*has_ic           	terminal-has-ic? terminal-can-insert-characters?
+*has_il           	terminal-has-il? terminal-can-insert-lines?
+*has_key          	terminal-has-key?
+*hline 			window-draw-horiz-line           
 hline_set        	window-draw-horiz-line
-idcok            
+*idcok            
 				      
-idlok            
-immedok          
+*idlok            
+*immedok          
 in_wch           
 in_wchnstr       
 in_wchstr        
-inch             
+*inch             
 inchnstr         
 inchstr          
-init_color       	set-color!
-init_pair		set-color-pair!        
-initscr			make-terminal          
+*init_color       	*set-color! color-set!
+*init_pair		*set-color-pair!	color-pair-set!	    Color pair zero may be treated differently in curses, but, we're going to treat it the same here        
+*initscr		*make-terminal, terminal-initalize terminal-enable
 innstr           
 innwstr          
 ins_nwstr        
 ins_wch          
 ins_wstr         
-insch            
-insdelln         
-insertln         
-insnstr          
-insstr           
+*insch            
+*insdelln         
+*insertln         
+*insnstr          
+*insstr           
 instr            
 intrflush        
 inwstr           
-is_linetouched   
-is_wintouched    
-isendwin 		terminal-disabled?        
+*is_linetouched   
+*is_wintouched    
+*isendwin 		*terminal-disabled?        
 key_defined      
-key_name         
+key_name         	
 keybound         
-keyname          
+*keyname          	key-short-name
 keyok            
-keypad           
-killchar         
+*keypad           
+*killchar		*terminal-get-killchar         
 killwchar        
-leaveok          
-longname         
+*leaveok          
+*longname         	*terminal-long-name
 mcprint          
-meta             
+*meta             	*terminal-allow-8bit-data
 mouse_trafo      
-mouseinterval    
-mousemask        
-move             
+*mouseinterval		*terminal-set-mouse-timeout    
+*mousemask        	*terminal-mask-mouse-events or terminal-(get/set)-mouse-events
+*move             
 mvadd_wch 		window-add-wide-char       
 mvadd_wchnstr    
 mvadd_wchstr     
@@ -153,7 +153,7 @@ mvaddwstr
 mvchgat 		window-apply-attributes-to-string         
 mvcur            
 mvdelch          
-mvderwin         
+*mvderwin         
 mvget_wch        
 mvget_wstr       
 mvgetch          
@@ -203,7 +203,7 @@ mvwgetnstr
 mvwgetstr        
 mvwhline 		window-draw-horiz-line        
 mvwhline_set     	window-draw-horiz-line
-mvwin            
+*mvwin            
 mvwin_wch        
 mvwin_wchnstr    
 mvwin_wchstr     
@@ -224,34 +224,34 @@ mvwprintw
 mvwscanw         
 mvwvline 		window-draw-vert-line        
 mvwvline_set     	window-draw-vert-line
-napms            
-newpad           
+*napms 			same as guile usleep           
+*newpad           	*window-create (pad flag)
 newterm          
-newwin           
+*newwin          	*window-create 
 				      
-nl               
-nocbreak		terminal-enable-line-buffering
-nodelay			window-set-input-timeout
-noecho 			terminal-disable-echo          
-nonl             
-noqiflush        
-noraw 			terminal-enable-line-buffering
-notimeout		window-set-input-timeout        
-overlay          
-overwrite        
-pair_content		color-pair     
+*nl               	terminal-enable-newline-translation
+*nocbreak		terminal-enable-line-buffering
+*nodelay		window-set-input-timeout
+*noecho 		terminal-disable-echo          
+*nonl             	terminal-disable-newline-translation
+*noqiflush        	terminal-disable-flush-on-interrupt
+*noraw 			terminal-enable-line-buffering
+*notimeout		window-set-input-timeout        
+*overlay          
+*overwrite        
+*pair_content		color-pair     
 pechochar        
 pnoutrefresh     
 prefresh         
 printw           
-putp             
-putwin           
-qiflush          
-raw 			terminal-disable-line-buffering-and-interrupts
-redrawwin        
-refresh			window-refresh          
-reset_prog_mode  
-reset_shell_mode 
+*putp 			terminal-get-capability (awkward)            
+*putwin 		*window-store-to-file          
+*qiflush          	terminal-enable-flush-on-interrupt
+*raw 			terminal-disable-line-buffering-and-interrupts
+*redrawwin        
+*refresh			window-refresh          
+*reset_prog_mode	terminal-restore-program-mode  
+*reset_shell_mode 	terminal-restore-shell-mode
 resetty          
 resizeterm       
 restartterm      
@@ -263,15 +263,15 @@ scr_init
 scr_restore      
 scr_set          
 scrl             
-scroll           
-scrollok         
+*scroll           
+*scrollok         
 set_curterm      
 set_term 		switch-terminal        
 setcchar         
-setscrreg        
-setsyx           
+*setscrreg        
+*setsyx			*terminal-set-virtual-position           
 setterm          
-setupterm        
+*setupterm 		terminal-setup       
 slk_attr         
 slk_attr_off     
 slk_attr_on      
@@ -288,45 +288,45 @@ slk_refresh
 slk_restore      
 slk_set          
 slk_touch        
-standend         
-standout         
-start_color		terminal-enable-color
-subpad           
-subwin           
-syncok           
+*standend         
+*standout         
+*start_color		terminal-enable-color
+*subpad           
+*subwin           
+*syncok           
 				      
 term_attrs       
-termattrs        
-termname         
-tgetent          
+*termattrs		terminal-attributes        
+*termname         	terminal-short-name
+tgetent          	
 tgetflag         
 tgetnum          
 tgetstr          
 tgoto            
-tigetflag        
-tigetnum         
-tigetstr         
-timeout			window-set-input-timeout          
-touchline        
-touchwin         
-tparm            
+*tigetflag        	terminal-capability
+*tigetnum         
+*tigetstr         
+*timeout			window-set-input-timeout          
+*touchline        
+*touchwin         
+*tparm            
 tputs            
 tputs            
 trace            
-typeahead        
-unctrl           
+*typeahead 		terminal-set-typeahead-port       
+*unctrl			key-short-name           
 unget_wch        
-ungetch          
-ungetmouse       
-untouchwin       
-use_default_color	set-window-default-colors!
-use_env          
+*ungetch          	terminal-requeue-char
+*ungetmouse		terminal-requeue-mouse       
+*untouchwin       
+*use_default_color	set-window-default-colors!	    On init, set default colors to default-fg-color, bg_color.  Then allow color pair 0 to be redefined?
+*use_env          	(put into terminal-enable or terminal-setup)
 use_extended_name
 vid_attr         
 vid_puts         
 vidattr          
 vidputs          
-vline            
+*vline            
 vline_set        
 vw_printw        
 vw_scanw         
@@ -361,12 +361,12 @@ wclrtobot		window-clear-from-cursor-to-bottom
 wclrtoeol        	window-clear-from-cursor-to-eol
 wcolor_set		window-set-color-pair       
 				      
-wcursyncup       
+*wcursyncup       
 wdelch           
 wdeleteln        
 wecho_wchar		window-echo-wide-char      
 wechochar        
-wenclose         
+*wenclose         
 werase 			window-clear-all          
 wget_wch         
 wget_wstr        
@@ -397,20 +397,87 @@ winstr
 winwstr          
 wmouse_trafo     
 wmove            
-wnoutrefresh     
+*wnoutrefresh		*window-prepare-refresh     
 wprintw          
-wredrawln        
-wrefresh		window-refresh         
+*wredrawln        
+wrefresh		*window-refresh         
 wresize          
 wscanw           
 wscrl            
 wsetscrreg       
 wstandend        
 wstandout        
-wsyncdown        
-wsyncup          
+*wsyncdown        
+*wsyncup          
 wtimeout		window-set-input-timeout         
 wtouchln         
 wunctrl          
 wvline 			window-draw-vert-line          
 wvline_set       	window-draw-vert-line
+
+
+
+
+
+****
+terminal options: halfdelay meta curs_set typeahead has_key raw cbreak qiflush noraw nocbreak 
+intrflush
+
+terminal properties:
+_cbreak: halfdelay noraw nocbreak raw cbreak
+_keytry
+_keyok
+_legacy_coding: use_legacy_coding
+_default_fc:
+_default_bg:
+_color_defs:
+_default_color:
+_has_sgr_39_49:
+_echo: echo noecho
+_endwin: endwin
+_mouse_wrap: endwin
+_setbuf:
+_mouse_inline:
+_max_click
+_mouse_parse:
+_sig_winch:
+_nl:
+_use_meta:
+(mouse stuff):
+(fifo stuff):
+_ifd: 
+_notty:
+_raw:
+_keypad_on: (if we are in prog_mode, not shell_mode)
+(all slk):
+(all acs):
+_ofp (output file pointer?), _ifd:
+_cursor: curs_set
+_color_on:
+(attributes, underline, standout)
+
+
+
+cbreak -> _cbreak = 1
+nocbreak -> _cbreak = 0
+raw -> _cbreak = 1
+noraw -> _cbreak = 0
+
+window options: idlok idcok nodelay notimeout wtimeout keypad 
+
+window properties: _notimeout _clear _leaveok _scroll _idlok _idcok _immed _sync _use_keypad _delay
+_notimeout: notimeout
+_clear: wclear
+_leaveok: leaveok
+_scroll: scrollok wscrl
+_idlok: idlok   (but it depends on has_il, which is a terminal attribute)
+_idcok: idcok
+_immed: immedok
+_sync: syncok
+_use_keypad:
+_delay: nodelay wtimeout
+
+TIMER SOLUTION : halfdelay overrides wtimeout, but, otherwise it is the same timer.
+  The post-ESC timeout comes from check_mouse_activity.  
+  Window-specific timer if _notimeout is false and _delay is >= 0.
+  Terminal-specific timer if _cbreak > 1 (set by halfdelay)
