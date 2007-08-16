@@ -1,5 +1,5 @@
 \input texinfo   @c -*-texinfo-*-
-@c $Id: guile-ncurses.texi,v 1.4 2007/08/16 04:20:07 spike_gran Exp $
+@c $Id: guile-ncurses.texi,v 1.5 2007/08/16 15:21:45 spike_gran Exp $
 @c %**start of header
 @setfilename guile-ncurses.info
 @settitle Guile NCurses X.XX
@@ -11,7 +11,7 @@
 This manual is for Guile NCurses, a Guile module that wraps the
 NCurses C API.  
 
-This is Edition $Revision: 1.4 $, last updated $Date: 2007/08/16 04:20:07 $, of `The Guile Ncurses
+This is Edition $Revision: 1.5 $, last updated $Date: 2007/08/16 15:21:45 $, of `The Guile Ncurses
 Module Manual', for Gano Version X.XX.
 
 Copyright @copyright{} 2007 Michael L. Gran
@@ -286,9 +286,9 @@ keyok
 *meta             	*terminal-allow-8bit-data
 *mouseinterval		*terminal-set-mouse-timeout    
 *mousemask        	*terminal-mask-mouse-events or terminal-(get/set)-mouse-events
-*move             
-*mvderwin         
-*mvwin            
+*move                   window-move-cursor             
+*mvderwin               subwindow-move-window
+*mvwin                  window-move-window
 *napms 			same as guile usleep           
 *newpad           	*window-create (pad flag)
 *newwin          	*window-create 
@@ -301,24 +301,24 @@ keyok
 *noqiflush        	terminal-disable-flush-on-interrupt
 *noraw 			terminal-enable-line-buffering
 *notimeout		window-set-input-timeout        
-*overlay          
-*overwrite        
+*overlay                window-overlay
+*overwrite              window-overwrite
 *pair_content		color-pair     
 *putp 			terminal-get-capability (awkward)            
 *putwin 		*window-store-to-file          
 *qiflush          	terminal-enable-flush-on-interrupt
 *raw 			terminal-disable-line-buffering-and-interrupts
-*redrawwin        
-*refresh			window-refresh          
+*redrawwin              window-refresh (flag)
+*refresh		window-refresh          
 *reset_prog_mode	terminal-restore-program-mode  
 *reset_shell_mode 	terminal-restore-shell-mode
-*scroll           
-*scrollok         
-*setscrreg        
+*scroll                 window-scroll
+*scrollok               window-(enable/disable)-scroll       
+*setscrreg              window-set-scroll-region
 *setsyx			*terminal-set-virtual-position           
 *setupterm 		terminal-setup       
-*standend         
-*standout         
+*standend               window-clear-attributes
+*standout               window-f
 *start_color		terminal-enable-color
 *subpad           
 *subwin           
@@ -348,6 +348,60 @@ keyok
 *wsyncup          
 
 @end verbatim
+
+CSS vs Ncurses terminology
+
+@table @code
+@item A_NORMAL
+font-weight-normal
+visibility-visible
+text-decoration-none
+
+@item A_STANDOUT
+font-weight-bold
+ 
+@item A_UNDERLINE
+text-decoration-underline
+
+@item A_REVERSE
+no real analog
+color-reverse?
+
+@item A_BLINK
+text-decoration-blink
+
+@item A_DIM
+font-weight-lighter
+
+@item A_BOLD
+font-weight-bold
+
+@item A_PROTECT
+
+@item A_INVIS
+visibility-invisible
+
+@item A_ALTCHARSET
+
+@item COLOR_PAIR
+background-color
+color
+border-color
+border-{top, right, bottom, left}-color
+@end table
+
+There ought to be a function to tell you what STANDOUT does by trying
+to compareits terminfo database (capname smso, TCapCode so) with the
+others: underline (smul / us), blink (blink / mb), dim (dim / mh),
+bold (bold / md). 
+
+
+infocmp is the program to make terminfo legible
+
+For xterm, A_STANDOUT is A_REVERSE.
+
+For curses, there are two ways to give colors.  @code{color: red} and
+@code{color: rgb(255, 0, 0)}
 
 @node Copying This Manual, Index , API, Top
 @appendix Copying This Manual
