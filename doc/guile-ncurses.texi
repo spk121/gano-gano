@@ -1,5 +1,5 @@
 \input texinfo   @c -*-texinfo-*-
-@c $Id: guile-ncurses.texi,v 1.5 2007/08/16 15:21:45 spike_gran Exp $
+@c $Id: guile-ncurses.texi,v 1.6 2007/08/17 04:51:42 spike_gran Exp $
 @c %**start of header
 @setfilename guile-ncurses.info
 @settitle Guile NCurses X.XX
@@ -11,7 +11,7 @@
 This manual is for Guile NCurses, a Guile module that wraps the
 NCurses C API.  
 
-This is Edition $Revision: 1.5 $, last updated $Date: 2007/08/16 15:21:45 $, of `The Guile Ncurses
+This is Edition $Revision: 1.6 $, last updated $Date: 2007/08/17 04:51:42 $, of `The Guile Ncurses
 Module Manual', for Gano Version X.XX.
 
 Copyright @copyright{} 2007 Michael L. Gran
@@ -320,18 +320,18 @@ keyok
 *standend               window-clear-attributes
 *standout               window-f
 *start_color		terminal-enable-color
-*subpad           
-*subwin           
-*syncok           
+*subpad                 subwindow-create
+*subwin                 subwindow-create (pad flag)
+*syncok                 window-(enable/disable)-immediate-sync
 *termattrs		terminal-attributes        
 *termname         	terminal-short-name
 *tigetflag        	terminal-capability
-*tigetnum         
-*tigetstr         
-*timeout			window-set-input-timeout          
-*touchline        
-*touchwin         
-*tparm            
+*tigetnum               terminal-capability
+*tigetstr               terminal-capability
+*timeout		window-set-input-timeout          
+*touchline              window-lines-need-refresh              
+*touchwin               window-needs-refresh
+*tparm                  ???
 *typeahead 		terminal-set-typeahead-port       
 *unctrl			key-short-name           
 *ungetch          	terminal-requeue-char
@@ -339,13 +339,13 @@ keyok
 *untouchwin       
 *use_default_color	set-window-default-colors!	    On init, set default colors to default-fg-color, bg_color.  Then allow color pair 0 to be redefined?
 *use_env          	(put into terminal-enable or terminal-setup)
-*vline            
-*wcursyncup       
-*wenclose         
+*vline                  window-draw-vert-line
+*wcursyncup             window-sync-cursor
+*wenclose               window-contains-position?
 *wnoutrefresh		*window-prepare-refresh     
-*wredrawln        
-*wsyncdown        
-*wsyncup          
+*wredrawln              window-lines-need-erase-refresh     
+*wsyncdown              (unneeded)
+*wsyncup                window-sync-parents
 
 @end verbatim
 
