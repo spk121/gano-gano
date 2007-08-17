@@ -8,6 +8,7 @@
   #:use-module (ncurses config)
   #:use-module ((ncurses core beep) :renamer (symbol-prefix-proc 'curs:))
   #:use-module (ncurses core termattrs)
+  #:use-module (ncurses terminfo)
   :export (
 	   ;; From add_wch.c
 	   add-wch
@@ -304,6 +305,8 @@
   #:re-export (
 	       ;; From termattrs
 	       baudrate
+	       ;; From terminfo
+	       setupterm
 	       ;; From beep
 	       curs:beep
 	       curs:flash

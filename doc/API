@@ -22,23 +22,23 @@ terminal-capability (awkward)            			putp
 terminal-erasechar						erasechar             
 terminal-killchar         					killchar	       
 terminal-has-colors?       					has_colors	       
-terminal-has-ic? terminal-can-insert-chars?			has_ic                
-terminal-has-il? terminal-can-insert-lines?			has_il                
+terminal-can-insert-chars?					has_ic                
+terminal-can-insert-lines?					has_il
 terminal-has-key?						has_key               
 terminal-long-name						longname              
 terminal-short-name						termname              
 
 // positions, sizes,  and moving
-terminal-get-virtual-position					getsyx 	       
+terminal-virtual-position					getsyx 	       
 terminal-set-virtual-position           			setsyx		       
 window-contains-position?					wenclose              
-window-get-cursor-position					getyx                 
-window-get-origin						getbegyx              
-window-get-size							getmaxyx              
-window-get-window-char						inch                  
+window-cursor-position						getyx                 
+window-char-at-cursor						inch                  
+window-origin							getbegyx              
+window-size							getmaxyx              
 window-move-cursor						move                  
 window-move-window						mvwin                 
-subwindow-get-origin-from-parent				getparyx              
+subwindow-origin						getparyx              
 subwindow-move-window						mvderwin              
 window-sync-cursor						wcursyncup            
 
@@ -94,7 +94,9 @@ window-lines-need-refresh					touchline
 // modifyiable options that affect output
 terminal-(enable/disable)-echo					echo 		       
 terminal-(enable/disable)-echo          			noecho 	       
-terminal-enable-color						start_color	       
+terminal-(enable/disable)-8bit-data				meta                  
+terminal-enable-color						start_color
+terminal-disable-color						(add for parallelism)	       
 terminal-set-output-delay     					delay_output	       
 window-(enable/disable)-immediate-refresh			immedok               
 window-(enable/disable)-immediate-sync				syncok                
@@ -102,17 +104,16 @@ window-(enable/disable)-scroll       				scrollok
 window-(enable/disable)-sloppy-cursor				leaveok               
 window-(enable/disable)-terminal-char-insertion			idcok                 
 window-(enable/disable)-terminal-line-instertion		idlok                 
-window-set-background!						bkgd                  
-window-set-background!						bkgdset               
-window-set-default-colors!					use_default_color 
-window-set-color-pair						color_set              
-window-set-attributes!						attron                
 window-clear-attributes						standend              
+window-f							standout              
 window-remove-attributes!					attroff               
 window-replace-attributes!					attrset               
-window-f							standout              
+window-set-attributes!						attron                
+window-set-background!						bkgd                  
+window-set-background!						bkgdset               
+window-set-color-pair						color_set              
+window-set-default-colors!					use_default_color 
 window-set-scroll-region					setscrreg             
-terminal-allow-8bit-data					meta                  
 
 
 // do actual input

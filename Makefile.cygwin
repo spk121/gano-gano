@@ -57,6 +57,7 @@ LIB_SRCS = \
 	move.c \
 	refresh.c \
 	termattrs.c \
+	terminfo.c \
 	type_window.c \
 	type_screen.c
 
@@ -76,6 +77,7 @@ LIB_OBJS = \
 	move.o \
 	refresh.o \
 	termattrs.o \
+	terminfo.o \
 	type_window.o \
 	type_screen.o
 
@@ -111,6 +113,7 @@ install: all
 	mkdir -p $(schemedir)/ncurses/core
 	install $(srcdir)/src/core.scm $(schemedir)/ncurses/core.scm
 	install $(srcdir)/src/termattrs.scm $(schemedir)/ncurses/core/termattrs.scm
+	install $(srcdir)/src/terminfo.scm $(schemedir)/ncurses/terminfo.scm
 	install $(srcdir)/src/beep.scm $(schemedir)/ncurses/core/beep.scm
 	install config.scm $(schemedir)/ncurses/config.scm
 	install cygguile-ncurses-0-0.dll $(libdir)
