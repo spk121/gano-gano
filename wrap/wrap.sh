@@ -2,7 +2,7 @@
 
 # wrap.sh -- generate scheme wrapper functions
 
-# $Id: wrap.sh,v 1.1 2007/08/27 13:22:18 spike_gran Exp $
+# $Id: wrap.sh,v 1.2 2007/08/28 15:20:38 spike_gran Exp $
 
 # Put together a mostly complete wrapset from the files func_dir.txt
 # and const_dir.txt. 
