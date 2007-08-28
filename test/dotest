@@ -1,0 +1,12 @@
+#!/bin/sh
+
+mkdir .tmp
+cd .tmp
+ln -s ../../src gucu
+
+LTDL_LIBRARY_PATH=/usr/local/lib \
+guile -L . -s ../call_tests.scm
+
+rm gucu
+cd ..
+rmdir .tmp
