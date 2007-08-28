@@ -834,6 +834,85 @@ gucu_ACS_BLOCK ()
 	return s_ret;
 }
 
+SCM
+gucu_ACS_LEQUAL ()
+{
+	chtype ret = ACS_LEQUAL;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+
+SCM
+gucu_ACS_GEQUAL ()
+{
+	chtype ret = ACS_GEQUAL;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+SCM
+gucu_ACS_NEQUAL ()
+{
+	chtype ret = ACS_NEQUAL;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+
+SCM
+gucu_ACS_PI ()
+{
+	chtype ret = ACS_PI;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+SCM
+gucu_ACS_STERLING ()
+{
+	chtype ret = ACS_STERLING;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+
+SCM
+gucu_ACS_S3 ()
+{
+	chtype ret = ACS_S3;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+SCM
+gucu_ACS_S7 ()
+{
+	chtype ret = ACS_S7;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+
+
+SCM
+gucu_LINES ()
+{
+	int ret = LINES;
+	SCM s_ret = scm_from_int (ret);
+
+	return s_ret;
+}
+
+SCM
+gucu_COLS ()
+{
+	int ret = COLS;
+	SCM s_ret = scm_from_int (ret);
+
+	return s_ret;
+}
+
 
 void
 gucu_init_special ()
@@ -867,30 +946,39 @@ gucu_init_special ()
   scm_c_define_gsubr ("getbegyz", 1, 0, 0, gucu_getbegyx);
   scm_c_define_gsubr ("getmaxyz", 1, 0, 0, gucu_getmaxyx);
   scm_c_define_gsubr ("getparyz", 1, 0, 0, gucu_getparyx);
-  scm_c_define_gsubr ("getyz", 1, 0, 0, gucu_getmaxyx);
-  scm_c_define_gsubr ("ACS-ULCORNER", 0, 0, 0, gucu_ACS_ULCORNER);
+  scm_c_define_gsubr ("getyx", 1, 0, 0, gucu_getyx);
+  scm_c_define_gsubr ("ACS-BLOCK", 0, 0, 0, gucu_ACS_BLOCK);
+  scm_c_define_gsubr ("ACS-BOARD", 0, 0, 0, gucu_ACS_BOARD);
+  scm_c_define_gsubr ("ACS-BTEE", 0, 0, 0, gucu_ACS_BTEE);
+  scm_c_define_gsubr ("ACS-BULLET", 0, 0, 0, gucu_ACS_BULLET);
+  scm_c_define_gsubr ("ACS-CKBOARD", 0, 0, 0, gucu_ACS_CKBOARD);
+  scm_c_define_gsubr ("ACS-DARROW", 0, 0, 0, gucu_ACS_DARROW);
+  scm_c_define_gsubr ("ACS-DEGREE", 0, 0, 0, gucu_ACS_DEGREE);
+  scm_c_define_gsubr ("ACS-DIAMOND", 0, 0, 0, gucu_ACS_DIAMOND);
+  scm_c_define_gsubr ("ACS-GEQUAL", 0, 0, 0, gucu_ACS_GEQUAL);
+  scm_c_define_gsubr ("ACS-HLINE", 0, 0, 0, gucu_ACS_HLINE);
+  scm_c_define_gsubr ("ACS-LANTERN", 0, 0, 0, gucu_ACS_LANTERN);
+  scm_c_define_gsubr ("ACS-LARROW", 0, 0, 0, gucu_ACS_LARROW);
+  scm_c_define_gsubr ("ACS-LEQUAL", 0, 0, 0, gucu_ACS_LEQUAL);
   scm_c_define_gsubr ("ACS-LLCORNER", 0, 0, 0, gucu_ACS_LLCORNER);
-  scm_c_define_gsubr ("ACS-URCORNER", 0, 0, 0, gucu_ACS_URCORNER);
   scm_c_define_gsubr ("ACS-LRCORNER", 0, 0, 0, gucu_ACS_LRCORNER);
   scm_c_define_gsubr ("ACS-LTEE", 0, 0, 0, gucu_ACS_LTEE);
-  scm_c_define_gsubr ("ACS-RTEE", 0, 0, 0, gucu_ACS_RTEE);
-  scm_c_define_gsubr ("ACS-BTEE", 0, 0, 0, gucu_ACS_BTEE);
-  scm_c_define_gsubr ("ACS-TTEE", 0, 0, 0, gucu_ACS_TTEE);
-  scm_c_define_gsubr ("ACS-HLINE", 0, 0, 0, gucu_ACS_HLINE);
-  scm_c_define_gsubr ("ACS-VLINE", 0, 0, 0, gucu_ACS_VLINE);
-  scm_c_define_gsubr ("ACS-PLUS", 0, 0, 0, gucu_ACS_PLUS);
-  scm_c_define_gsubr ("ACS-S1", 0, 0, 0, gucu_ACS_S1);
-  scm_c_define_gsubr ("ACS-S9", 0, 0, 0, gucu_ACS_S9);
-  scm_c_define_gsubr ("ACS-DIAMOND", 0, 0, 0, gucu_ACS_DIAMOND);
-  scm_c_define_gsubr ("ACS-CKBOARD", 0, 0, 0, gucu_ACS_CKBOARD);
-  scm_c_define_gsubr ("ACS-DEGREE", 0, 0, 0, gucu_ACS_DEGREE);
+  scm_c_define_gsubr ("ACS-NEQUAL", 0, 0, 0, gucu_ACS_NEQUAL);
+  scm_c_define_gsubr ("ACS-PI", 0, 0, 0, gucu_ACS_PI);
   scm_c_define_gsubr ("ACS-PLMINUS", 0, 0, 0, gucu_ACS_PLMINUS);
-  scm_c_define_gsubr ("ACS-BULLET", 0, 0, 0, gucu_ACS_BULLET);
-  scm_c_define_gsubr ("ACS-LARROW", 0, 0, 0, gucu_ACS_LARROW);
+  scm_c_define_gsubr ("ACS-PLUS", 0, 0, 0, gucu_ACS_PLUS);
   scm_c_define_gsubr ("ACS-RARROW", 0, 0, 0, gucu_ACS_RARROW);
-  scm_c_define_gsubr ("ACS-DARROW", 0, 0, 0, gucu_ACS_DARROW);
+  scm_c_define_gsubr ("ACS-RTEE", 0, 0, 0, gucu_ACS_RTEE);
+  scm_c_define_gsubr ("ACS-S1", 0, 0, 0, gucu_ACS_S1);
+  scm_c_define_gsubr ("ACS-S3", 0, 0, 0, gucu_ACS_S3);
+  scm_c_define_gsubr ("ACS-S7", 0, 0, 0, gucu_ACS_S7);
+  scm_c_define_gsubr ("ACS-S9", 0, 0, 0, gucu_ACS_S9);
+  scm_c_define_gsubr ("ACS-STERLING", 0, 0, 0, gucu_ACS_STERLING);
+  scm_c_define_gsubr ("ACS-TTEE", 0, 0, 0, gucu_ACS_TTEE);
   scm_c_define_gsubr ("ACS-UARROW", 0, 0, 0, gucu_ACS_UARROW);
-  scm_c_define_gsubr ("ACS-BOARD", 0, 0, 0, gucu_ACS_BOARD);
-  scm_c_define_gsubr ("ACS-LANTERN", 0, 0, 0, gucu_ACS_LANTERN);
-  scm_c_define_gsubr ("ACS-BLOCK", 0, 0, 0, gucu_ACS_BLOCK);
+  scm_c_define_gsubr ("ACS-ULCORNER", 0, 0, 0, gucu_ACS_ULCORNER);
+  scm_c_define_gsubr ("ACS-URCORNER", 0, 0, 0, gucu_ACS_URCORNER);
+  scm_c_define_gsubr ("ACS-VLINE", 0, 0, 0, gucu_ACS_VLINE);
+  scm_c_define_gsubr ("LINES", 0, 0, 0, gucu_LINES);
+  scm_c_define_gsubr ("COLS", 0, 0, 0, gucu_COLS);
 }

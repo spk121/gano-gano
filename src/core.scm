@@ -1,50 +1,119 @@
 (define-module (gucu core)
   #:use-module (ice-9 optargs)
+  #:use-module ((gucu raw) 
+		:renamer (symbol-prefix-proc 'raw:))
+
   #:export (
 	    ;; add-character
+
+
+
+	    *a-altcharset*
+	    *a-blink*    
+	    *a-bold*     
+	    *a-chartext* 
+	    *a-dim*      
+	    *a-invis*    
+	    *a-normal*   
+	    *a-protect*  
+	    *a-reverse*  
+	    *a-standout* 
+	    *a-underline*
+	    *stdscr*
+	    acs-block
+	    acs-board
+	    acs-btee
+	    acs-bullet
+	    acs-ckboard
+	    acs-darrow
+	    acs-degree
+	    acs-diamond
+	    acs-gequal
+	    acs-hline
+	    acs-lantern
+	    acs-larrow
+	    acs-lequal
+	    acs-llcorner
+	    acs-lrcorner
+	    acs-ltee
+	    acs-nequal
+	    acs-pi
+	    acs-plminus
+	    acs-plus
+	    acs-rarrow
+	    acs-rtee
+	    acs-s1
+	    acs-s3
+	    acs-s7
+	    acs-s9
+	    acs-sterling
+	    acs-ttee
+	    acs-uarrow
+	    acs-ulcorner
+	    acs-urcorner
+	    acs-vline
 	    add-character
-	    echo-character
 	    add-character-string
 	    add-string 
+	    attributes-get
 	    attributes-off
 	    attributes-on
 	    attributes-set
-	    color-set
-	    standout-end
-	    standout
-	    attributes-get
-	    change-attributes
-	    beep
-	    flash
 	    background-set
-	    get-background
+	    beep
 	    border
 	    box
-	    horizontal-line
-	    vertical-line
+	    change-attributes
 	    clear-all
 	    clear-to-bottom
 	    clear-to-end-of-line
+	    color-set
+	    columns
 	    delete-character
-	    initialize-screen
+	    delete-screen
+	    delete-window
+	    disable-echo
+	    disable-flush-on-interrupt
+	    disable-keypad
+	    disable-newline-translation
+	    disable-scroll
+	    do-update
+	    echo-character
+	    enable-cbreak
+	    enable-echo
+	    enable-flush-on-interrupt
+	    enable-keypad
+	    enable-newline-translation
+	    enable-scroll
 	    end-window
 	    end-window?
-	    new-terminal
-	    set-terminal
-	    delete-screen
-	    refresh
-	    do-update
-	    redraw-window
-	    redraw-line
-	    new-window
-	    delete-window
+	    flash
+	    get-background
+	    get-character
+	    get-cursor-coordinates
+	    horizontal-line
+	    initialize-screen
+	    lines
+	    move
 	    move-window
+	    new-terminal
+	    new-window
+	    redraw-line
+	    redraw-window
+	    refresh
+	    set-scroll-region
+	    set-terminal
+	    standout
+	    standout-end
+	    vertical-line
 	    ))
 
 	    
 
 
-(use-modules ((gucu raw) :renamer (symbol-prefix-proc 'raw:)))
+(use-modules ((gucu raw) 
+	      :renamer (symbol-prefix-proc 'raw:)))
+	      
 
 (define *stdscr* #f)
 
@@ -72,9 +141,15 @@
    (else (error "~S is neither OK nor ERR" x))))
 
 (define (err->false x)
-  (if (eqv? x ERR)
+  (if (eqv? x raw:ERR)
       #f
       x))
+
+(define (lines)
+  (raw:LINES))
+
+(define (columns)
+  (raw:COLS))
 
 ;;; add-wide-character is a in (gucu wide)
 ;;; add-wide-character-string is in (gucu wide)
@@ -112,6 +187,53 @@
     (if window
 	(ok/err->bool (raw:wechochar window ch))
 	(ok/err->bool (raw:echochar ch)))))
+
+
+
+(define (acs-block) (raw:ACS-BLOCK))
+(define (acs-board) (raw:ACS-BOARD))
+(define (acs-btee) (raw:ACS-BTEE))
+(define (acs-bullet) (raw:ACS-BULLET))
+(define (acs-ckboard) (raw:ACS-CKBOARD))
+(define (acs-darrow) (raw:ACS-DARROW))
+(define (acs-degree) (raw:ACS-DEGREE))
+(define (acs-diamond) (raw:ACS-DIAMOND))
+(define (acs-gequal) (raw:ACS-GEQUAL))
+(define (acs-hline) (raw:ACS-HLINE))
+(define (acs-lantern) (raw:ACS-LANTERN))
+(define (acs-larrow) (raw:ACS-LARROW))
+(define (acs-lequal) (raw:ACS-LEQUAL))
+(define (acs-llcorner) (raw:ACS-LLCORNER))
+(define (acs-lrcorner) (raw:ACS-LRCORNER))
+(define (acs-ltee) (raw:ACS-LTEE))
+(define (acs-nequal) (raw:ACS-NEQUAL))
+(define (acs-pi) (raw:ACS-PI))
+(define (acs-plminus) (raw:ACS-PLMINUS))
+(define (acs-plus) (raw:ACS-PLUS))
+(define (acs-rarrow) (raw:ACS-RARROW))
+(define (acs-rtee) (raw:ACS-RTEE))
+(define (acs-s1) (raw:ACS-S1))
+(define (acs-s3) (raw:ACS-S3))
+(define (acs-s7) (raw:ACS-S7))
+(define (acs-s9) (raw:ACS-S9))
+(define (acs-sterling) (raw:ACS-STERLING))
+(define (acs-ttee) (raw:ACS-TTEE))
+(define (acs-uarrow) (raw:ACS-UARROW))
+(define (acs-ulcorner) (raw:ACS-ULCORNER))
+(define (acs-urcorner) (raw:ACS-URCORNER))
+(define (acs-vline) (raw:ACS-VLINE))
+
+(define *a-normal* raw:A-NORMAL)
+(define *a-standout* raw:A-STANDOUT)
+(define *a-underline* raw:A-UNDERLINE)
+(define *a-reverse* raw:A-REVERSE)
+(define *a-blink* raw:A-BLINK)
+(define *a-dim* raw:A-DIM)
+(define *a-bold* raw:A-BOLD)
+(define *a-protect* raw:A-PROTECT)
+(define *a-invis* raw:A-INVIS)
+(define *a-altcharset* raw:A-ALTCHARSET)
+(define *a-chartext* raw:A-CHARTEXT)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -312,39 +434,41 @@
    (else
     (ok/err->bool (raw:box *stdscr* vert horiz)))))
 
-(define* (horizontal-line ch #:key 
+(define* (horizontal-line c #:key 
 			  (window #f)
-			  (x #f)
+			  (x 0)
 			  (y #f)
 			  (n (raw:COLS)))
-  (cond
-   ((and (not window) (not x) (not y))
-    (ok/err->bool (raw:hline ch n)))
-   ((and window (not x) (not y))
-    (ok/err->bool (raw:whline window y x n)))
-   ((and (not window) x y)
-    (ok/err->bool (raw:mvhline y x ch n)))
-   ((and window x y)
-    (ok/err->bool (raw:mvwhline window y x ch n)))
-   (else
-    (error "Invalid arguments"))))
+  (let ((ch (any->curses-character c)))
+    (cond
+     ((and (not window) (not y))
+      (ok/err->bool (raw:hline ch n)))
+     ((and window (not y))
+      (ok/err->bool (raw:whline window y x n)))
+     ((and (not window) y)
+      (ok/err->bool (raw:mvhline y x ch n)))
+     ((and window y)
+      (ok/err->bool (raw:mvwhline window y x ch n)))
+     (else
+      (error "Invalid arguments")))))
 
-(define* (vertical-line ch #:key 
+(define* (vertical-line c #:key 
 			(window #f)
 			(x #f)
-			(y #f)
+			(y 0)
 			(n (raw:LINES)))
-  (cond
-   ((and (not window) (not x) (not y))
-    (ok/err->bool (raw:hline ch n)))
-   ((and window (not x) (not y))
-    (ok/err->bool (raw:whline window y x n)))
-   ((and (not window) x y)
-    (ok/err->bool (raw:mvhline y x ch n)))
-   ((and window x y)
-    (ok/err->bool (raw:mvwhline window y x ch n)))
-   (else
-    (error "Invalid arguments"))))
+  (let ((ch (any->curses-character c)))
+    (cond
+     ((and (not window) (not x))
+      (ok/err->bool (raw:vline ch n)))
+     ((and window (not x))
+      (ok/err->bool (raw:wvline window y x n)))
+     ((and (not window) x)
+      (ok/err->bool (raw:mvvline y x ch n)))
+     ((and window x)
+      (ok/err->bool (raw:mvvline window y x ch n)))
+     (else
+      (error "Invalid arguments")))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -514,22 +638,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; get-yx functions
 
-(define (get-cursor-coordinates #:key (window *stdscr*))
-  (raw:getyx window))
+(define* (get-cursor-coordinates #:key (window #f))
+  (if window
+      (raw:getyx window)
+      (raw:getyx *stdscr*)))
 
-(define (get-window-coordinates-relative-to-parent #:key (window *stdscr*))
+(define* (get-window-coordinates-relative-to-parent #:key (window *stdscr*))
   (raw:getparyx window))
 
-(define (get-window-coordinates #:key (window *stdscr*))
+(define* (get-window-coordinates #:key (window *stdscr*))
   (raw:getbegyx))
 
-(define (get-window-size #:key (window *stdscr*))
+(define* (get-window-size #:key (window *stdscr*))
   (raw:getmaxyx))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; inch functions
 
-(define (get-character-from-window #:key 
+(define* (get-character-from-window #:key 
 				   (window #f)
 				   (x #f)
 				   (y #f))
@@ -547,7 +673,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; inchstr functions
-(define (get-characters-from-window #:key 
+(define* (get-characters-from-window #:key 
 				    (window #f)
 				    (x #f)
 				    (y #f)
@@ -597,10 +723,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; input-options functions
 
-(define (screen-newline-on)
+
+;; These options are overlapping and somewhat redundant.
+
+;; to clarify
+;; screen-raw-off and screen=cbreak-off = read in cooked mode
+
+;; window-keypad overrules screen-keypad
+
+;; if window-timeout-on && (window-delay >= 0 or  halfdelay >= 0)
+;;   use event_delay if we are in a widechar composition event?
+;;   else halfdelay if set
+;;   otherwise uses window delay if set
+;;
+
+(define (enable-newline-translation)
   (ok/err->bool (raw:nl)))
 
-(define (screen-newline-off)
+(define (disable-newline-translation)
   (ok/err->bool (raw:nonl)))
 
 (define (screen-raw-on)
@@ -609,7 +749,7 @@
 (define (screen-raw-off)
   (ok/err->bool (raw:noraw)))
 
-(define (screen-cbreak-on)
+(define (enable-cbreak)
   (ok/err->bool (raw:cbreak)))
 
 (define (screen-cbreak-off)
@@ -618,10 +758,10 @@
 (define (screen-cbreak-half-delay t)
   (ok/err->bool (raw:halfdelay t)))
 
-(define (screen-echo-on)
+(define (enable-echo)
   (ok/err->bool (raw:echo)))
 
-(define (screen-echo-off)
+(define (disable-echo)
   (ok/err->bool (raw:noecho)))
 
 (define (screen-meta-on)
@@ -630,11 +770,11 @@
 (define (screen-meta-off)
   (ok/err->bool (raw:meta *stdscr* #f)))
 
-(define (screen-keypad-on)
+(define (enable-keypad)
   (ok/err->bool (raw:keypad *stdscr* #t)))
 
-(define (screen-keypad-off)
-  (ok/err->bool (raw:keypad *stdscr #f)))
+(define (disable-keypad)
+  (ok/err->bool (raw:keypad *stdscr* #f)))
 
 (define (screen-queue-flush-on-interrupt-on)
   (ok/err->bool (raw:qiflush)))
@@ -658,13 +798,13 @@
   (ok/err->bool (raw:wtimeout window t)))
 
 
-(define (flush-on-interrupt)
+(define (enable-flush-on-interrupt)
   (ok/err->bool (raw:intrflush *stdscr* #t)))
 
-(define (no-flush-on-interrupt)
+(define (disable-flush-on-interrupt)
   (ok/err->bool (raw:intrflush *stdscr* #f)))
 
-(define* ( #:key (window *stdscr*))
+(define* (keypad #:key (window *stdscr*))
   (ok/err->bool (raw:keypad window #t)))
 
 (define* (disable-keypad #:key (window *stdscr*))
@@ -676,8 +816,14 @@
 (define (enable-seven-bit-input)
   (ok/err->bool (raw:meta *stdscr* #f)))
 
-(define (enable-
+(define* (set-scroll-region top bottom #:key (window *stdscr*))
+  (ok/err->bool (raw:wsetscrreg window top bottom)))
 
+(define* (enable-scroll #:key (window *stdscr*))
+  (ok/err->bool (raw:scrollok window #t)))
+
+(define* (disable-scroll #:key (window *stdscr*))
+  (ok/err->boool (raw:scrollok window #t)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; refresh functions
 
@@ -723,6 +869,22 @@
 
 (define (move-window window y x)
   (ok/err->bool (rawmvwin window y x)))
+
+;; cursor
+
+(define* (move #:key (x #f) (y #f) (window *stdscr*))
+  (let ((current-pos (get-cursor-coordinates #:window window)))
+    (cond 
+     ((and (not y) (not x))
+      #f)
+     ((and y (not x))
+      (raw:move y (cadr current-pos)))
+     ((and (not y) x)
+      (raw:move (car current-pos) x))
+     (else
+      (raw:move y x)))))
+	   
+
 
 
 

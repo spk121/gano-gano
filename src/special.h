@@ -42,31 +42,43 @@ SCM gugu_getmaxyx (SCM win) API;
 SCM gugu_getparyx (SCM win) API;
 SCM gugu_getyx (SCM win) API;
 
-SCM gucu_ACS_ULCORNER (void) API;
+SCM gucu_ACS_BLOCK (void) API;
+SCM gucu_ACS_BOARD (void) API;
+SCM gucu_ACS_BTEE (void) API;
+SCM gucu_ACS_BULLET (void) API;
+SCM gucu_ACS_CKBOARD (void) API;
+SCM gucu_ACS_DARROW (void) API;
+SCM gucu_ACS_DEGREE (void) API;
+SCM gucu_ACS_DIAMOND (void) API;
+SCM gucu_ACS_GEQUAL (void) API;
+SCM gucu_ACS_HLINE (void) API;
+SCM gucu_ACS_LANTERN (void) API;
+SCM gucu_ACS_LARROW (void) API;
+SCM gucu_ACS_LEQUAL (void) API;
 SCM gucu_ACS_LLCORNER (void) API;
-SCM gucu_ACS_URCORNER (void) API;
 SCM gucu_ACS_LRCORNER (void) API;
 SCM gucu_ACS_LTEE (void) API;
-SCM gucu_ACS_RTEE (void) API;
-SCM gucu_ACS_BTEE (void) API;
-SCM gucu_ACS_TTEE (void) API;
-SCM gucu_ACS_HLINE (void) API;
-SCM gucu_ACS_VLINE (void) API;
-SCM gucu_ACS_PLUS (void) API;
-SCM gucu_ACS_S1 (void) API;
-SCM gucu_ACS_S9 (void) API;
-SCM gucu_ACS_DIAMOND (void) API;
-SCM gucu_ACS_CKBOARD (void) API;
-SCM gucu_ACS_DEGREE (void) API;
+SCM gucu_ACS_NEQUAL (void) API;
+SCM gucu_ACS_PI (void) API;
 SCM gucu_ACS_PLMINUS (void) API;
-SCM gucu_ACS_BULLET (void) API;
-SCM gucu_ACS_LARROW (void) API;
+SCM gucu_ACS_PLUS (void) API;
 SCM gucu_ACS_RARROW (void) API;
-SCM gucu_ACS_DARROW (void) API;
+SCM gucu_ACS_RTEE (void) API;
+SCM gucu_ACS_S1 (void) API;
+SCM gucu_ACS_S3 (void) API;
+SCM gucu_ACS_S7 (void) API;
+SCM gucu_ACS_S9 (void) API;
+SCM gucu_ACS_STERLING (void) API;
+SCM gucu_ACS_TTEE (void) API;
 SCM gucu_ACS_UARROW (void) API;
-SCM gucu_ACS_BOARD (void) API;
-SCM gucu_ACS_LANTERN (void) API;
-SCM gucu_ACS_BLOCK (void) API;
+SCM gucu_ACS_ULCORNER (void) API;
+SCM gucu_ACS_URCORNER (void) API;
+SCM gucu_ACS_VLINE (void) API;
+
+
+SCM gucu_LINES (void) API;
+SCM gucu_COLS (void) API;
+
 
 void gucu_init_special (void);
 

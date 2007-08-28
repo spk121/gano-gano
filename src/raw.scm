@@ -389,32 +389,41 @@
 	    getbegyz
 	    getmaxyz
 	    getparyz
-	    getyz
-	    ACS-ULCORNER
+	    getyx
+	    ACS-BLOCK
+	    ACS-BOARD
+	    ACS-BTEE
+	    ACS-BULLET
+	    ACS-CKBOARD
+	    ACS-DARROW
+	    ACS-DEGREE
+	    ACS-DIAMOND
+	    ACS-GEQUAL
+	    ACS-HLINE
+	    ACS-LANTERN
+	    ACS-LARROW
+	    ACS-LEQUAL
 	    ACS-LLCORNER
-	    ACS-URCORNER
 	    ACS-LRCORNER
 	    ACS-LTEE
-	    ACS-RTEE
-	    ACS-BTEE
-	    ACS-TTEE
-	    ACS-HLINE
-	    ACS-VLINE
-	    ACS-PLUS
-	    ACS-S1
-	    ACS-S9
-	    ACS-DIAMOND
-	    ACS-CKBOARD
-	    ACS-DEGREE
+	    ACS-NEQUAL
+	    ACS-PI
 	    ACS-PLMINUS
-	    ACS-BULLET
-	    ACS-LARROW
+	    ACS-PLUS
 	    ACS-RARROW
-	    ACS-DARROW
+	    ACS-RTEE
+	    ACS-S1
+	    ACS-S3
+	    ACS-S7
+	    ACS-S9
+	    ACS-STERLING
+	    ACS-TTEE
 	    ACS-UARROW
-	    ACS-BOARD
-	    ACS-LANTERN
-	    ACS-BLOCK
+	    ACS-ULCORNER
+	    ACS-URCORNER
+	    ACS-VLINE
+	    LINES
+	    COLS
 	    fopen
 	    fclose
 ))
