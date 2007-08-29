@@ -120,12 +120,12 @@
 (add-string "enable-scroll\n" #:window right-window)
 (refresh #:window right-window)
 (enable-scroll #:window right-window)
-(sleep 1)
+
 
 (add-string "enable-keypad\n" #:window right-window)
 (refresh #:window right-window)
 (enable-keypad)
-(sleep 1)
+
 
 
 (let loop ((test-list test-list))

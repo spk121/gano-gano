@@ -22,6 +22,5 @@
 (add-character (logior *a-altcharset* (char->integer #\X)) #:window left-window)
 (add-string " altcharset\n" #:window left-window)
 (refresh #:window left-window)
-(sleep 1)
 
 (end-test-case)

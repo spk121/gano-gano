@@ -12,7 +12,6 @@
 	(add-character x #:window left-window)
 	(loop (+ x 1)))))
 (refresh #:window left-window)
-(sleep 1)
 
 (add-string "8-bit characters\n" #:window right-window)
 (refresh #:window right-window)
@@ -23,7 +22,6 @@
 	(add-character x #:window left-window)
 	(loop (+ 1 x)))))
 (refresh #:window left-window)
-(sleep 1)
 
 (add-string "ACS symbols\n" #:window right-window)
 (refresh #:window right-window)
@@ -68,6 +66,5 @@
 	(add-character (car acs) #:window left-window)
 	(loop (cdr acs)))))
 (refresh #:window left-window)
-(sleep 1)
 
 (end-test-case)
