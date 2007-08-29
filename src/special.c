@@ -33,7 +33,7 @@ gucu_color_content (SCM s_color)
   SCM s_list;
 
   ret = color_content(scm_to_short (s_color), &c_red, &c_green, &c_blue);
-  if (ret)
+  if (ret == OK)
     {
       s_list = scm_list_3 (scm_from_short (c_red), 
 			   scm_from_short (c_green),
@@ -390,16 +390,18 @@ gucu_mvwinstr (SCM win, SCM y, SCM x)
 }
 
 SCM
-gucu_pair_content (SCM s_color)
+gucu_pair_content (SCM s_pair)
 {
-  SCM_ASSERT (scm_is_integer (s_color), s_color, SCM_ARG1, "color-content");
+  SCM_ASSERT (scm_is_integer (s_pair), s_pair, SCM_ARG1, "pair-content");
+  //SCM_ASSERT (scm_is_true(scm_gr_p(s_pair, scm_from_int (0))), 
+  //      s_pair, SCM_ARG1, "color-content");
 
   int ret;
   short c_fore, c_back;
   SCM s_list;
 
-  ret = pair_content(scm_to_short (s_color), &c_fore, &c_back);
-  if (ret)
+  ret = pair_content(scm_to_short (s_pair), &c_fore, &c_back);
+  if (ret == OK)
     {
       s_list = scm_list_2 (scm_from_short (c_fore), 
 			   scm_from_short (c_back));
@@ -913,6 +915,24 @@ gucu_COLS ()
 	return s_ret;
 }
 
+SCM
+gucu_COLORS ()
+{
+	int ret = COLORS;
+	SCM s_ret = scm_from_int (ret);
+
+	return s_ret;
+}
+
+SCM
+gucu_COLOR_PAIRS ()
+{
+	int ret = COLOR_PAIRS;
+	SCM s_ret = scm_from_int (ret);
+
+	return s_ret;
+}
+
 
 void
 gucu_init_special ()
@@ -981,4 +1001,6 @@ gucu_init_special ()
   scm_c_define_gsubr ("ACS-VLINE", 0, 0, 0, gucu_ACS_VLINE);
   scm_c_define_gsubr ("LINES", 0, 0, 0, gucu_LINES);
   scm_c_define_gsubr ("COLS", 0, 0, 0, gucu_COLS);
+  scm_c_define_gsubr ("COLORS", 0, 0, 0, gucu_COLORS);
+  scm_c_define_gsubr ("COLOR_PAIRS", 0, 0, 0, gucu_COLOR_PAIRS);
 }

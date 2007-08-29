@@ -187,6 +187,7 @@ SCM gucu_touchwin (SCM arg1) API;
 SCM gucu_typeahead (SCM arg1) API;
 SCM gucu_ungetch (SCM arg1) API;
 SCM gucu_untouchwin (SCM arg1) API;
+SCM gucu_use_default_colors (void) API;
 SCM gucu_use_env (SCM arg1) API;
 SCM gucu_vid_attr (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_vidattr (SCM arg1) API;

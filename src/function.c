@@ -2492,6 +2492,15 @@ gucu_untouchwin (SCM arg1)
 }
 
 SCM
+gucu_use_default_colors ()
+{
+	int ret = use_default_colors ();
+	SCM s_ret = scm_from_int (ret);
+
+	return s_ret;
+}
+
+SCM
 gucu_use_env (SCM arg1)
 {
 	SCM_ASSERT (scm_is_bool (arg1), arg1, SCM_ARG1, "use-env");
@@ -3435,6 +3444,7 @@ gucu_init_function ()
 	scm_c_define_gsubr ("typeahead", 1, 0, 0, gucu_typeahead);
 	scm_c_define_gsubr ("ungetch", 1, 0, 0, gucu_ungetch);
 	scm_c_define_gsubr ("untouchwin", 1, 0, 0, gucu_untouchwin);
+	scm_c_define_gsubr ("use-default-colors", 0, 0, 0, gucu_use_default_colors);
 	scm_c_define_gsubr ("use-env", 1, 0, 0, gucu_use_env);
 	scm_c_define_gsubr ("vid-attr", 3, 0, 0, gucu_vid_attr);
 	scm_c_define_gsubr ("vidattr", 1, 0, 0, gucu_vidattr);

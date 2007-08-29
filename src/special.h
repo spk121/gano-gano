@@ -78,6 +78,8 @@ SCM gucu_ACS_VLINE (void) API;
 
 SCM gucu_LINES (void) API;
 SCM gucu_COLS (void) API;
+SCM gucu_COLORS (void) API;
+SCM gucu_COLOR_PAIRS (void) API;
 
 
 void gucu_init_special (void);

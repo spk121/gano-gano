@@ -18,14 +18,16 @@
 		bkgdset
 		border
 		box
-		can-change_color
+		can-change-color
 		cbreak
 		chgat
 		clearok
 		clear
 		clrtobot
 		clrtoeol
+		COLORS
 		COLOR-PAIR
+		COLOR_PAIRS
 		color-set
 		copywin
 		curs-set
@@ -178,6 +180,7 @@
 		typeahead
 		ungetch
 		untouchwin
+		use-default-colors
 		use-env
 		vid-attr
 		vidattr

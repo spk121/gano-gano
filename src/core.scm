@@ -20,6 +20,14 @@
 	    *a-standout* 
 	    *a-underline*
 	    *stdscr*
+	    *color-black*
+	    *color-red* 
+	    *color-green*
+	    *color-yellow*
+	    *color-blue* 
+	    *color-magenta*
+	    *color-cyan*
+	    *color-white* 
 	    acs-block
 	    acs-board
 	    acs-btee
@@ -63,11 +71,16 @@
 	    beep
 	    border
 	    box
+	    can-change-color?
 	    change-attributes
 	    clear-all
 	    clear-to-bottom
 	    clear-to-end-of-line
 	    color-set
+	    colors
+	    color-content
+	    color-pair
+	    color-pairs
 	    columns
 	    delete-character
 	    delete-screen
@@ -91,20 +104,25 @@
 	    get-background
 	    get-character
 	    get-cursor-coordinates
+	    has-colors?
 	    horizontal-line
 	    initialize-screen
+	    set-color-pair!
 	    lines
 	    move
 	    move-window
 	    new-terminal
 	    new-window
+	    color-pair-content
 	    redraw-line
 	    redraw-window
 	    refresh
 	    set-scroll-region
 	    set-terminal
 	    standout
+	    start-color
 	    standout-end
+	    use-default-colors
 	    vertical-line
 	    ))
 
@@ -504,10 +522,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; color functions
 
+(define (colors)
+  (raw:COLORS))
+
+(define (color-pairs)
+  (raw:COLOR_PAIRS))
+
 (define (start-color)
   (ok/err->bool (raw:start-color)))
 
-(define (init-pair pair-id foreground-color background-color)
+(define (set-color-pair! pair-id foreground-color background-color)
   (ok/err->bool (raw:init-pair pair-id foreground-color background-color)))
 
 (define (init-color color-id red green blue)
@@ -522,8 +546,23 @@
 (define (color-content color-id)
   (raw:color-content color-id))
 
-(define (pair-content pair-id)
+(define (color-pair-content pair-id)
   (raw:pair-content pair-id))
+
+(define (use-default-colors)
+  (ok/err->bool (raw:use-default-colors)))
+
+(define (color-pair pair)
+  (raw:COLOR-PAIR pair))
+
+(define *color-black* raw:COLOR-BLACK)
+(define *color-red* raw:COLOR-RED)
+(define *color-green* raw:COLOR-GREEN)
+(define *color-yellow* raw:COLOR-YELLOW)
+(define *color-blue* raw:COLOR-BLUE)
+(define *color-magenta* raw:COLOR-MAGENTA)
+(define *color-cyan* raw:COLOR-CYAN)
+(define *color-white* raw:COLOR-WHITE)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; delete-character functions
