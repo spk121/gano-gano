@@ -64,3 +64,5 @@
 	    fclose
 	    LINES
 	    COLS
+	    COLORS
+	    COLOR_PAIRS

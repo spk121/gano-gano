@@ -177,6 +177,7 @@ int touchwin(WINDOW *);
 int typeahead(int);
 int ungetch(int);
 int untouchwin(WINDOW *);
+int use_default_colors(void);
 void use_env(bool);
 int vid_attr(attr_t, short, void *);
 int vidattr(chtype);
