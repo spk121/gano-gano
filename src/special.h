@@ -80,7 +80,9 @@ SCM gucu_LINES (void) API;
 SCM gucu_COLS (void) API;
 SCM gucu_COLORS (void) API;
 SCM gucu_COLOR_PAIRS (void) API;
-
+SCM gucu_TABSIZE (void) API;
+SCM gucu_set_TABSIZE (SCM x) API;
+SCM gucu_stdscr (void) API;
 
 void gucu_init_special (void);
 

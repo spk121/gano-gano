@@ -5,9 +5,6 @@
 
   #:export (
 	    ;; add-character
-
-
-
 	    *a-altcharset*
 	    *a-blink*    
 	    *a-bold*     
@@ -19,15 +16,15 @@
 	    *a-reverse*  
 	    *a-standout* 
 	    *a-underline*
-	    *stdscr*
 	    *color-black*
-	    *color-red* 
-	    *color-green*
-	    *color-yellow*
 	    *color-blue* 
-	    *color-magenta*
 	    *color-cyan*
+	    *color-green*
+	    *color-magenta*
+	    *color-red* 
 	    *color-white* 
+	    *color-yellow*
+	    *stdscr*
 	    acs-block
 	    acs-board
 	    acs-btee
@@ -76,11 +73,12 @@
 	    clear-all
 	    clear-to-bottom
 	    clear-to-end-of-line
-	    color-set
-	    colors
 	    color-content
 	    color-pair
+	    color-pair-content
 	    color-pairs
+	    color-set
+	    colors
 	    columns
 	    delete-character
 	    delete-screen
@@ -107,21 +105,22 @@
 	    has-colors?
 	    horizontal-line
 	    initialize-screen
-	    set-color-pair!
 	    lines
 	    move
 	    move-window
 	    new-terminal
 	    new-window
-	    color-pair-content
 	    redraw-line
 	    redraw-window
 	    refresh
+	    set-color-pair!
 	    set-scroll-region
+	    set-tabsize!
 	    set-terminal
 	    standout
-	    start-color
 	    standout-end
+	    start-color
+	    tabsize
 	    use-default-colors
 	    vertical-line
 	    ))
@@ -206,52 +205,56 @@
 	(ok/err->bool (raw:wechochar window ch))
 	(ok/err->bool (raw:echochar ch)))))
 
+(define (tabsize)
+  (raw:TABSIZE))
 
+(define (set-tabsize! x)
+  (raw:SET_TABSIZE x))
 
-(define (acs-block) (raw:ACS-BLOCK))
-(define (acs-board) (raw:ACS-BOARD))
-(define (acs-btee) (raw:ACS-BTEE))
-(define (acs-bullet) (raw:ACS-BULLET))
-(define (acs-ckboard) (raw:ACS-CKBOARD))
-(define (acs-darrow) (raw:ACS-DARROW))
-(define (acs-degree) (raw:ACS-DEGREE))
-(define (acs-diamond) (raw:ACS-DIAMOND))
-(define (acs-gequal) (raw:ACS-GEQUAL))
-(define (acs-hline) (raw:ACS-HLINE))
-(define (acs-lantern) (raw:ACS-LANTERN))
-(define (acs-larrow) (raw:ACS-LARROW))
-(define (acs-lequal) (raw:ACS-LEQUAL))
-(define (acs-llcorner) (raw:ACS-LLCORNER))
-(define (acs-lrcorner) (raw:ACS-LRCORNER))
-(define (acs-ltee) (raw:ACS-LTEE))
-(define (acs-nequal) (raw:ACS-NEQUAL))
-(define (acs-pi) (raw:ACS-PI))
-(define (acs-plminus) (raw:ACS-PLMINUS))
-(define (acs-plus) (raw:ACS-PLUS))
-(define (acs-rarrow) (raw:ACS-RARROW))
-(define (acs-rtee) (raw:ACS-RTEE))
-(define (acs-s1) (raw:ACS-S1))
-(define (acs-s3) (raw:ACS-S3))
-(define (acs-s7) (raw:ACS-S7))
-(define (acs-s9) (raw:ACS-S9))
-(define (acs-sterling) (raw:ACS-STERLING))
-(define (acs-ttee) (raw:ACS-TTEE))
-(define (acs-uarrow) (raw:ACS-UARROW))
-(define (acs-ulcorner) (raw:ACS-ULCORNER))
-(define (acs-urcorner) (raw:ACS-URCORNER))
-(define (acs-vline) (raw:ACS-VLINE))
+(define (acs-block) (raw:ACS_BLOCK))
+(define (acs-board) (raw:ACS_BOARD))
+(define (acs-btee) (raw:ACS_BTEE))
+(define (acs-bullet) (raw:ACS_BULLET))
+(define (acs-ckboard) (raw:ACS_CKBOARD))
+(define (acs-darrow) (raw:ACS_DARROW))
+(define (acs-degree) (raw:ACS_DEGREE))
+(define (acs-diamond) (raw:ACS_DIAMOND))
+(define (acs-gequal) (raw:ACS_GEQUAL))
+(define (acs-hline) (raw:ACS_HLINE))
+(define (acs-lantern) (raw:ACS_LANTERN))
+(define (acs-larrow) (raw:ACS_LARROW))
+(define (acs-lequal) (raw:ACS_LEQUAL))
+(define (acs-llcorner) (raw:ACS_LLCORNER))
+(define (acs-lrcorner) (raw:ACS_LRCORNER))
+(define (acs-ltee) (raw:ACS_LTEE))
+(define (acs-nequal) (raw:ACS_NEQUAL))
+(define (acs-pi) (raw:ACS_PI))
+(define (acs-plminus) (raw:ACS_PLMINUS))
+(define (acs-plus) (raw:ACS_PLUS))
+(define (acs-rarrow) (raw:ACS_RARROW))
+(define (acs-rtee) (raw:ACS_RTEE))
+(define (acs-s1) (raw:ACS_S1))
+(define (acs-s3) (raw:ACS_S3))
+(define (acs-s7) (raw:ACS_S7))
+(define (acs-s9) (raw:ACS_S9))
+(define (acs-sterling) (raw:ACS_STERLING))
+(define (acs-ttee) (raw:ACS_TTEE))
+(define (acs-uarrow) (raw:ACS_UARROW))
+(define (acs-ulcorner) (raw:ACS_ULCORNER))
+(define (acs-urcorner) (raw:ACS_URCORNER))
+(define (acs-vline) (raw:ACS_VLINE))
 
-(define *a-normal* raw:A-NORMAL)
-(define *a-standout* raw:A-STANDOUT)
-(define *a-underline* raw:A-UNDERLINE)
-(define *a-reverse* raw:A-REVERSE)
-(define *a-blink* raw:A-BLINK)
-(define *a-dim* raw:A-DIM)
-(define *a-bold* raw:A-BOLD)
-(define *a-protect* raw:A-PROTECT)
-(define *a-invis* raw:A-INVIS)
-(define *a-altcharset* raw:A-ALTCHARSET)
-(define *a-chartext* raw:A-CHARTEXT)
+(define *a-normal* raw:A_NORMAL)
+(define *a-standout* raw:A_STANDOUT)
+(define *a-underline* raw:A_UNDERLINE)
+(define *a-reverse* raw:A_REVERSE)
+(define *a-blink* raw:A_BLINK)
+(define *a-dim* raw:A_DIM)
+(define *a-bold* raw:A_BOLD)
+(define *a-protect* raw:A_PROTECT)
+(define *a-invis* raw:A_INVIS)
+(define *a-altcharset* raw:A_ALTCHARSET)
+(define *a-chartext* raw:A_CHARTEXT)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -320,6 +323,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; attribute functions
 
+;; mock of attributes as if they were a list
+(set-attributes!)
+(append-attributes!)
+(delete-attributes!)
+(filter-attributes!)
+
+
 (define* (attributes-off attr #:key 
 			 (window #f))
   
@@ -352,9 +362,9 @@
 (define* (color-set pair-id #:key (window #f))
   (cond
    ((not window)
-    (ok/err->bool (raw:color-set pair-id #f)))
+    (ok/err->bool (raw:color_set pair-id #f)))
    (window
-    (ok/err->bool (raw:wcolor-set window pair-id #f)))
+    (ok/err->bool (raw:wcolor_set window pair-id #f)))
    (else
     (error "Invalid arguments"))))
 
@@ -529,40 +539,40 @@
   (raw:COLOR_PAIRS))
 
 (define (start-color)
-  (ok/err->bool (raw:start-color)))
+  (ok/err->bool (raw:start_color)))
 
 (define (set-color-pair! pair-id foreground-color background-color)
-  (ok/err->bool (raw:init-pair pair-id foreground-color background-color)))
+  (ok/err->bool (raw:init_pair pair-id foreground-color background-color)))
 
 (define (init-color color-id red green blue)
-  (ok/err->bool (raw:init-color color-id red green blue)))
+  (ok/err->bool (raw:init_color color-id red green blue)))
 
 (define (has-colors?)
-  (raw:has-colors))
+  (raw:has_colors))
 
 (define (can-change-color?)
-  (raw:can-change-color))
+  (raw:can_change_color))
 
 (define (color-content color-id)
-  (raw:color-content color-id))
+  (raw:color_content color-id))
 
 (define (color-pair-content pair-id)
-  (raw:pair-content pair-id))
+  (raw:pair_content pair-id))
 
 (define (use-default-colors)
-  (ok/err->bool (raw:use-default-colors)))
+  (ok/err->bool (raw:use_default_colors)))
 
 (define (color-pair pair)
-  (raw:COLOR-PAIR pair))
+  (raw:COLOR_PAIR pair))
 
-(define *color-black* raw:COLOR-BLACK)
-(define *color-red* raw:COLOR-RED)
-(define *color-green* raw:COLOR-GREEN)
-(define *color-yellow* raw:COLOR-YELLOW)
-(define *color-blue* raw:COLOR-BLUE)
-(define *color-magenta* raw:COLOR-MAGENTA)
-(define *color-cyan* raw:COLOR-CYAN)
-(define *color-white* raw:COLOR-WHITE)
+(define *color-black* raw:COLOR_BLACK)
+(define *color-red* raw:COLOR_RED)
+(define *color-green* raw:COLOR_GREEN)
+(define *color-yellow* raw:COLOR_YELLOW)
+(define *color-blue* raw:COLOR_BLUE)
+(define *color-magenta* raw:COLOR_MAGENTA)
+(define *color-cyan* raw:COLOR_CYAN)
+(define *color-white* raw:COLOR_WHITE)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; delete-character functions
@@ -618,7 +628,7 @@
 ;;; extended functions
 
 (define (curses-version)
-  (raw:curses-version))
+  (raw:curses_version))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; get-character functions
@@ -643,7 +653,7 @@
   (ok/err->bool (raw:ungetch ch)))
 
 (define (has-key? ch)
-  (raw:has-key ch))
+  (raw:has_key ch))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; get-string functions
@@ -917,11 +927,11 @@
      ((and (not y) (not x))
       #f)
      ((and y (not x))
-      (raw:move y (cadr current-pos)))
+      (raw:wmove window y (cadr current-pos)))
      ((and (not y) x)
-      (raw:move (car current-pos) x))
+      (raw:wmove window (car current-pos) x))
      (else
-      (raw:move y x)))))
+      (raw:wmove window y x)))))
 	   
 
 

@@ -18,7 +18,7 @@
 		bkgdset
 		border
 		box
-		can-change-color
+		can_change_color
 		cbreak
 		chgat
 		clearok
@@ -26,14 +26,14 @@
 		clrtobot
 		clrtoeol
 		COLORS
-		COLOR-PAIR
+		COLOR_PAIR
 		COLOR_PAIRS
-		color-set
+		color_set
 		copywin
-		curs-set
-		def-prog_mode
-		def-shell_mode
-		delay-output
+		curs_set
+		def_prog_mode
+		def_shell_mode
+		delay_output
 		delch
 		deleteln
 		delscreen
@@ -53,17 +53,17 @@
 		getch
 		getwin
 		halfdelay
-		has-colors
-		has-ic
-		has-il
+		has_colors
+		has_ic
+		has_il
 		hline
 		idcok
 		idlok
 		immedok
 		inch
 		initscr
-		init-color
-		init-pair
+		init_color
+		init_pair
 		insch
 		insdelln
 		insertln
@@ -71,9 +71,9 @@
 		insstr
 		intrflush
 		isendwin
-		is-linetouched
-		is-wintouched
-		KEY-F
+		is_linetouched
+		is_wintouched
+		KEY_F
 		keyname
 		keypad
 		killchar
@@ -125,7 +125,7 @@
 		notimeout
 		overlay
 		overwrite
-		PAIR-NUMBER
+		PAIR_NUMBER
 		pechochar
 		pnoutrefresh
 		prefresh
@@ -135,37 +135,37 @@
 		raw
 		redrawwin
 		refresh
-		reset-prog_mode
-		reset-shell_mode
+		reset_prog_mode
+		reset_shell_mode
 		resetty
 		savetty
-		scr-dump
-		scr-init
+		scr_dump
+		scr_init
 		scrl
 		scroll
 		scrollok
-		scr-restore
-		scr-set
+		scr_restore
+		scr_set
 		setscrreg
-		set-term
-		slk-attr_off
-		slk-attroff
-		slk-attr_on
-		slk-attron
-		slk-attr_set
-		slk-attrset
-		slk-clear
-		slk-color
-		slk-init
-		slk-label
-		slk-noutrefresh
-		slk-refresh
-		slk-restore
-		slk-set
-		slk-touch
+		set_term
+		slk_attr_off
+		slk_attroff
+		slk_attr_on
+		slk_attron
+		slk_attr_set
+		slk_attrset
+		slk_clear
+		slk_color
+		slk_init
+		slk_label
+		slk_noutrefresh
+		slk_refresh
+		slk_restore
+		slk_set
+		slk_touch
 		standend
 		standout
-		start-color
+		start_color
 		subpad
 		subwin
 		syncok
@@ -180,9 +180,9 @@
 		typeahead
 		ungetch
 		untouchwin
-		use-default-colors
-		use-env
-		vid-attr
+		use_default_colors
+		use_env
+		vid_attr
 		vidattr
 		vline
 		waddch
@@ -193,9 +193,9 @@
 		wattroff
 		wattron
 		wattrset
-		wattr-off
-		wattr-on
-		wattr-set
+		wattr_off
+		wattr_on
+		wattr_set
 		wbkgd
 		wbkgdset
 		wborder
@@ -204,7 +204,7 @@
 		wclrtobot
 		wclrtoeol
 		wcursyncup
-		wcolor-set
+		wcolor_set
 		wdelch
 		wdeleteln
 		wechochar
@@ -235,137 +235,137 @@
 		FALSE
 		OK
 		TRUE
-		A-NORMAL
-		A-STANDOUT
-		A-UNDERLINE
-		A-REVERSE
-		A-BLINK
-		A-DIM
-		A-BOLD
-		A-PROTECT
-		A-INVIS
-		A-ALTCHARSET
-		A-CHARTEXT
-		A-ATTRIBUTES
-		A-COLOR
-		WA-NORMAL
-		WA-STANDOUT
-		WA-UNDERLINE
-		WA-REVERSE
-		WA-BLINK
-		WA-DIM
-		WA-BOLD
-		WA-ALTCHARSET
-		WA-HORIZONTAL
-		WA-LEFT
-		WA-LOW
-		WA-RIGHT
-		WA-TOP
-		WA-VERTICAL
-		COLOR-BLACK
-		COLOR-GREEN
-		COLOR-RED
-		COLOR-YELLOW
-		COLOR-BLUE
-		COLOR-MAGENTA
-		COLOR-CYAN
-		COLOR-WHITE
-		KEY-CODE_YES
-		KEY-MIN
-		KEY-BREAK
-		KEY-SRESET
-		KEY-RESET
-		KEY-DOWN
-		KEY-UP
-		KEY-LEFT
-		KEY-RIGHT
-		KEY-HOME
-		KEY-BACKSPACE
-		KEY-F0
-		KEY-DL
-		KEY-IL
-		KEY-DC
-		KEY-IC
-		KEY-EIC
-		KEY-CLEAR
-		KEY-EOS
-		KEY-EOL
-		KEY-SF
-		KEY-SR
-		KEY-NPAGE
-		KEY-PPAGE
-		KEY-STAB
-		KEY-CTAB
-		KEY-CATAB
-		KEY-ENTER
-		KEY-PRINT
-		KEY-LL
-		KEY-A1
-		KEY-A3
-		KEY-B2
-		KEY-C1
-		KEY-C3
-		KEY-BTAB
-		KEY-BEG
-		KEY-CANCEL
-		KEY-CLOSE
-		KEY-COMMAND
-		KEY-COPY
-		KEY-CREATE
-		KEY-END
-		KEY-EXIT
-		KEY-FIND
-		KEY-HELP
-		KEY-MARK
-		KEY-MESSAGE
-		KEY-MOVE
-		KEY-NEXT
-		KEY-OPEN
-		KEY-OPTIONS
-		KEY-PREVIOUS
-		KEY-REDO
-		KEY-REFERENCE
-		KEY-REFRESH
-		KEY-REPLACE
-		KEY-RESTART
-		KEY-RESUME
-		KEY-SAVE
-		KEY-SBEG
-		KEY-SCANCEL
-		KEY-SCOMMAND
-		KEY-SCOPY
-		KEY-SCREATE
-		KEY-SDC
-		KEY-SDL
-		KEY-SELECT
-		KEY-SEND
-		KEY-SEOL
-		KEY-SEXIT
-		KEY-SFIND
-		KEY-SHELP
-		KEY-SHOME
-		KEY-SIC
-		KEY-SLEFT
-		KEY-SMESSAGE
-		KEY-SMOVE
-		KEY-SNEXT
-		KEY-SOPTIONS
-		KEY-SPREVIOUS
-		KEY-SPRINT
-		KEY-SREDO
-		KEY-SREPLACE
-		KEY-SRIGHT
-		KEY-SRSUME
-		KEY-SSAVE
-		KEY-SSUSPEND
-		KEY-SUNDO
-		KEY-SUSPEND
-		KEY-UNDO
-		KEY-MOUSE
-		KEY-RESIZE
-		KEY-EVENT
-	    attr-get
-	    color-content
+		A_NORMAL
+		A_STANDOUT
+		A_UNDERLINE
+		A_REVERSE
+		A_BLINK
+		A_DIM
+		A_BOLD
+		A_PROTECT
+		A_INVIS
+		A_ALTCHARSET
+		A_CHARTEXT
+		A_ATTRIBUTES
+		A_COLOR
+		WA_NORMAL
+		WA_STANDOUT
+		WA_UNDERLINE
+		WA_REVERSE
+		WA_BLINK
+		WA_DIM
+		WA_BOLD
+		WA_ALTCHARSET
+		WA_HORIZONTAL
+		WA_LEFT
+		WA_LOW
+		WA_RIGHT
+		WA_TOP
+		WA_VERTICAL
+		COLOR_BLACK
+		COLOR_GREEN
+		COLOR_RED
+		COLOR_YELLOW
+		COLOR_BLUE
+		COLOR_MAGENTA
+		COLOR_CYAN
+		COLOR_WHITE
+		KEY_CODE_YES
+		KEY_MIN
+		KEY_BREAK
+		KEY_SRESET
+		KEY_RESET
+		KEY_DOWN
+		KEY_UP
+		KEY_LEFT
+		KEY_RIGHT
+		KEY_HOME
+		KEY_BACKSPACE
+		KEY_F0
+		KEY_DL
+		KEY_IL
+		KEY_DC
+		KEY_IC
+		KEY_EIC
+		KEY_CLEAR
+		KEY_EOS
+		KEY_EOL
+		KEY_SF
+		KEY_SR
+		KEY_NPAGE
+		KEY_PPAGE
+		KEY_STAB
+		KEY_CTAB
+		KEY_CATAB
+		KEY_ENTER
+		KEY_PRINT
+		KEY_LL
+		KEY_A1
+		KEY_A3
+		KEY_B2
+		KEY_C1
+		KEY_C3
+		KEY_BTAB
+		KEY_BEG
+		KEY_CANCEL
+		KEY_CLOSE
+		KEY_COMMAND
+		KEY_COPY
+		KEY_CREATE
+		KEY_END
+		KEY_EXIT
+		KEY_FIND
+		KEY_HELP
+		KEY_MARK
+		KEY_MESSAGE
+		KEY_MOVE
+		KEY_NEXT
+		KEY_OPEN
+		KEY_OPTIONS
+		KEY_PREVIOUS
+		KEY_REDO
+		KEY_REFERENCE
+		KEY_REFRESH
+		KEY_REPLACE
+		KEY_RESTART
+		KEY_RESUME
+		KEY_SAVE
+		KEY_SBEG
+		KEY_SCANCEL
+		KEY_SCOMMAND
+		KEY_SCOPY
+		KEY_SCREATE
+		KEY_SDC
+		KEY_SDL
+		KEY_SELECT
+		KEY_SEND
+		KEY_SEOL
+		KEY_SEXIT
+		KEY_SFIND
+		KEY_SHELP
+		KEY_SHOME
+		KEY_SIC
+		KEY_SLEFT
+		KEY_SMESSAGE
+		KEY_SMOVE
+		KEY_SNEXT
+		KEY_SOPTIONS
+		KEY_SPREVIOUS
+		KEY_SPRINT
+		KEY_SREDO
+		KEY_SREPLACE
+		KEY_SRIGHT
+		KEY_SRSUME
+		KEY_SSAVE
+		KEY_SSUSPEND
+		KEY_SUNDO
+		KEY_SUSPEND
+		KEY_UNDO
+		KEY_MOUSE
+		KEY_RESIZE
+		KEY_EVENT
+	    attr_get
+	    color_content
 	    getnstr
 	    getstr
 	    inchnstr
@@ -382,7 +382,7 @@
 	    mvwinchstr
 	    mvwinnstr
 	    mvwinstr
-	    pair-content
+	    pair_content
 	    wgetnstr
 	    wgetstr
 	    winchnstr
@@ -393,42 +393,45 @@
 	    getmaxyz
 	    getparyz
 	    getyx
-	    ACS-BLOCK
-	    ACS-BOARD
-	    ACS-BTEE
-	    ACS-BULLET
-	    ACS-CKBOARD
-	    ACS-DARROW
-	    ACS-DEGREE
-	    ACS-DIAMOND
-	    ACS-GEQUAL
-	    ACS-HLINE
-	    ACS-LANTERN
-	    ACS-LARROW
-	    ACS-LEQUAL
-	    ACS-LLCORNER
-	    ACS-LRCORNER
-	    ACS-LTEE
-	    ACS-NEQUAL
-	    ACS-PI
-	    ACS-PLMINUS
-	    ACS-PLUS
-	    ACS-RARROW
-	    ACS-RTEE
-	    ACS-S1
-	    ACS-S3
-	    ACS-S7
-	    ACS-S9
-	    ACS-STERLING
-	    ACS-TTEE
-	    ACS-UARROW
-	    ACS-ULCORNER
-	    ACS-URCORNER
-	    ACS-VLINE
+	    ACS_BLOCK
+	    ACS_BOARD
+	    ACS_BTEE
+	    ACS_BULLET
+	    ACS_CKBOARD
+	    ACS_DARROW
+	    ACS_DEGREE
+	    ACS_DIAMOND
+	    ACS_GEQUAL
+	    ACS_HLINE
+	    ACS_LANTERN
+	    ACS_LARROW
+	    ACS_LEQUAL
+	    ACS_LLCORNER
+	    ACS_LRCORNER
+	    ACS_LTEE
+	    ACS_NEQUAL
+	    ACS_PI
+	    ACS_PLMINUS
+	    ACS_PLUS
+	    ACS_RARROW
+	    ACS_RTEE
+	    ACS_S1
+	    ACS_S3
+	    ACS_S7
+	    ACS_S9
+	    ACS_STERLING
+	    ACS_TTEE
+	    ACS_UARROW
+	    ACS_ULCORNER
+	    ACS_URCORNER
+	    ACS_VLINE
 	    LINES
 	    COLS
 	    fopen
 	    fclose
+	    TABSIZE
+	    SET_TABSIZE
+	    stdscr
 ))
 
 (load-extension "libguile-gucu" "gucu_init")

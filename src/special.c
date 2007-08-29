@@ -26,7 +26,7 @@ gucu_attr_get ()
 SCM
 gucu_color_content (SCM s_color)
 {
-  SCM_ASSERT (scm_is_integer (s_color), s_color, SCM_ARG1, "color-content");
+  SCM_ASSERT (scm_is_integer (s_color), s_color, SCM_ARG1, "color_content");
 
   int ret;
   short c_red, c_green, c_blue;
@@ -392,9 +392,9 @@ gucu_mvwinstr (SCM win, SCM y, SCM x)
 SCM
 gucu_pair_content (SCM s_pair)
 {
-  SCM_ASSERT (scm_is_integer (s_pair), s_pair, SCM_ARG1, "pair-content");
+  SCM_ASSERT (scm_is_integer (s_pair), s_pair, SCM_ARG1, "pair_content");
   //SCM_ASSERT (scm_is_true(scm_gr_p(s_pair, scm_from_int (0))), 
-  //      s_pair, SCM_ARG1, "color-content");
+  //      s_pair, SCM_ARG1, "color_content");
 
   int ret;
   short c_fore, c_back;
@@ -415,7 +415,7 @@ gucu_pair_content (SCM s_pair)
 SCM
 gucu_wattr_get (SCM win)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wattr-get");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wattr_get");
 
   attr_t c_attrs;
   short c_pair;
@@ -933,12 +933,38 @@ gucu_COLOR_PAIRS ()
 	return s_ret;
 }
 
+SCM
+gucu_TABSIZE ()
+{
+  int ret = TABSIZE;
+  SCM s_ret = scm_from_int (ret);
 
+  return s_ret;
+}
+
+SCM
+gucu_set_TABSIZE (SCM t)
+{
+  SCM_ASSERT (scm_is_integer (t), t, SCM_ARG1, "SET_TABSIZE");
+
+  TABSIZE = scm_to_int (t);
+  return SCM_UNSPECIFIED;
+}
+
+SCM
+gucu_stdscr ()
+{
+  WINDOW *ret = stdscr;
+  SCM s_ret = _scm_from_window (ret);
+
+  return s_ret;
+}
+  
 void
 gucu_init_special ()
 {
-  scm_c_define_gsubr ("attr-get", 0, 0, 0, gucu_attr_get);
-  scm_c_define_gsubr ("color-content", 1, 0, 0, gucu_color_content);
+  scm_c_define_gsubr ("attr_get", 0, 0, 0, gucu_attr_get);
+  scm_c_define_gsubr ("color_content", 1, 0, 0, gucu_color_content);
   scm_c_define_gsubr ("getnstr", 1, 0, 0, gucu_getnstr);
   scm_c_define_gsubr ("getstr", 1, 0, 0, gucu_getstr);
   scm_c_define_gsubr ("inchnstr", 1, 0, 0, gucu_inchnstr);
@@ -955,8 +981,8 @@ gucu_init_special ()
   scm_c_define_gsubr ("mvwinchstr", 3, 0, 0, gucu_mvwinchstr);
   scm_c_define_gsubr ("mvwinnstr", 3, 0, 0, gucu_mvwinnstr);
   scm_c_define_gsubr ("mvwinstr", 3, 0, 0, gucu_mvwinstr);
-  scm_c_define_gsubr ("pair-content", 1, 0, 0, gucu_pair_content);
-  scm_c_define_gsubr ("wattr-get", 1, 0, 0, gucu_wattr_get);
+  scm_c_define_gsubr ("pair_content", 1, 0, 0, gucu_pair_content);
+  scm_c_define_gsubr ("wattr_get", 1, 0, 0, gucu_wattr_get);
   scm_c_define_gsubr ("wgetnstr", 2, 0, 0, gucu_wgetnstr);
   scm_c_define_gsubr ("wgetstr", 1, 0, 0, gucu_wgetstr);
   scm_c_define_gsubr ("winchnstr", 2, 0, 0, gucu_winchnstr);
@@ -967,40 +993,43 @@ gucu_init_special ()
   scm_c_define_gsubr ("getmaxyz", 1, 0, 0, gucu_getmaxyx);
   scm_c_define_gsubr ("getparyz", 1, 0, 0, gucu_getparyx);
   scm_c_define_gsubr ("getyx", 1, 0, 0, gucu_getyx);
-  scm_c_define_gsubr ("ACS-BLOCK", 0, 0, 0, gucu_ACS_BLOCK);
-  scm_c_define_gsubr ("ACS-BOARD", 0, 0, 0, gucu_ACS_BOARD);
-  scm_c_define_gsubr ("ACS-BTEE", 0, 0, 0, gucu_ACS_BTEE);
-  scm_c_define_gsubr ("ACS-BULLET", 0, 0, 0, gucu_ACS_BULLET);
-  scm_c_define_gsubr ("ACS-CKBOARD", 0, 0, 0, gucu_ACS_CKBOARD);
-  scm_c_define_gsubr ("ACS-DARROW", 0, 0, 0, gucu_ACS_DARROW);
-  scm_c_define_gsubr ("ACS-DEGREE", 0, 0, 0, gucu_ACS_DEGREE);
-  scm_c_define_gsubr ("ACS-DIAMOND", 0, 0, 0, gucu_ACS_DIAMOND);
-  scm_c_define_gsubr ("ACS-GEQUAL", 0, 0, 0, gucu_ACS_GEQUAL);
-  scm_c_define_gsubr ("ACS-HLINE", 0, 0, 0, gucu_ACS_HLINE);
-  scm_c_define_gsubr ("ACS-LANTERN", 0, 0, 0, gucu_ACS_LANTERN);
-  scm_c_define_gsubr ("ACS-LARROW", 0, 0, 0, gucu_ACS_LARROW);
-  scm_c_define_gsubr ("ACS-LEQUAL", 0, 0, 0, gucu_ACS_LEQUAL);
-  scm_c_define_gsubr ("ACS-LLCORNER", 0, 0, 0, gucu_ACS_LLCORNER);
-  scm_c_define_gsubr ("ACS-LRCORNER", 0, 0, 0, gucu_ACS_LRCORNER);
-  scm_c_define_gsubr ("ACS-LTEE", 0, 0, 0, gucu_ACS_LTEE);
-  scm_c_define_gsubr ("ACS-NEQUAL", 0, 0, 0, gucu_ACS_NEQUAL);
-  scm_c_define_gsubr ("ACS-PI", 0, 0, 0, gucu_ACS_PI);
-  scm_c_define_gsubr ("ACS-PLMINUS", 0, 0, 0, gucu_ACS_PLMINUS);
-  scm_c_define_gsubr ("ACS-PLUS", 0, 0, 0, gucu_ACS_PLUS);
-  scm_c_define_gsubr ("ACS-RARROW", 0, 0, 0, gucu_ACS_RARROW);
-  scm_c_define_gsubr ("ACS-RTEE", 0, 0, 0, gucu_ACS_RTEE);
-  scm_c_define_gsubr ("ACS-S1", 0, 0, 0, gucu_ACS_S1);
-  scm_c_define_gsubr ("ACS-S3", 0, 0, 0, gucu_ACS_S3);
-  scm_c_define_gsubr ("ACS-S7", 0, 0, 0, gucu_ACS_S7);
-  scm_c_define_gsubr ("ACS-S9", 0, 0, 0, gucu_ACS_S9);
-  scm_c_define_gsubr ("ACS-STERLING", 0, 0, 0, gucu_ACS_STERLING);
-  scm_c_define_gsubr ("ACS-TTEE", 0, 0, 0, gucu_ACS_TTEE);
-  scm_c_define_gsubr ("ACS-UARROW", 0, 0, 0, gucu_ACS_UARROW);
-  scm_c_define_gsubr ("ACS-ULCORNER", 0, 0, 0, gucu_ACS_ULCORNER);
-  scm_c_define_gsubr ("ACS-URCORNER", 0, 0, 0, gucu_ACS_URCORNER);
-  scm_c_define_gsubr ("ACS-VLINE", 0, 0, 0, gucu_ACS_VLINE);
+  scm_c_define_gsubr ("ACS_BLOCK", 0, 0, 0, gucu_ACS_BLOCK);
+  scm_c_define_gsubr ("ACS_BOARD", 0, 0, 0, gucu_ACS_BOARD);
+  scm_c_define_gsubr ("ACS_BTEE", 0, 0, 0, gucu_ACS_BTEE);
+  scm_c_define_gsubr ("ACS_BULLET", 0, 0, 0, gucu_ACS_BULLET);
+  scm_c_define_gsubr ("ACS_CKBOARD", 0, 0, 0, gucu_ACS_CKBOARD);
+  scm_c_define_gsubr ("ACS_DARROW", 0, 0, 0, gucu_ACS_DARROW);
+  scm_c_define_gsubr ("ACS_DEGREE", 0, 0, 0, gucu_ACS_DEGREE);
+  scm_c_define_gsubr ("ACS_DIAMOND", 0, 0, 0, gucu_ACS_DIAMOND);
+  scm_c_define_gsubr ("ACS_GEQUAL", 0, 0, 0, gucu_ACS_GEQUAL);
+  scm_c_define_gsubr ("ACS_HLINE", 0, 0, 0, gucu_ACS_HLINE);
+  scm_c_define_gsubr ("ACS_LANTERN", 0, 0, 0, gucu_ACS_LANTERN);
+  scm_c_define_gsubr ("ACS_LARROW", 0, 0, 0, gucu_ACS_LARROW);
+  scm_c_define_gsubr ("ACS_LEQUAL", 0, 0, 0, gucu_ACS_LEQUAL);
+  scm_c_define_gsubr ("ACS_LLCORNER", 0, 0, 0, gucu_ACS_LLCORNER);
+  scm_c_define_gsubr ("ACS_LRCORNER", 0, 0, 0, gucu_ACS_LRCORNER);
+  scm_c_define_gsubr ("ACS_LTEE", 0, 0, 0, gucu_ACS_LTEE);
+  scm_c_define_gsubr ("ACS_NEQUAL", 0, 0, 0, gucu_ACS_NEQUAL);
+  scm_c_define_gsubr ("ACS_PI", 0, 0, 0, gucu_ACS_PI);
+  scm_c_define_gsubr ("ACS_PLMINUS", 0, 0, 0, gucu_ACS_PLMINUS);
+  scm_c_define_gsubr ("ACS_PLUS", 0, 0, 0, gucu_ACS_PLUS);
+  scm_c_define_gsubr ("ACS_RARROW", 0, 0, 0, gucu_ACS_RARROW);
+  scm_c_define_gsubr ("ACS_RTEE", 0, 0, 0, gucu_ACS_RTEE);
+  scm_c_define_gsubr ("ACS_S1", 0, 0, 0, gucu_ACS_S1);
+  scm_c_define_gsubr ("ACS_S3", 0, 0, 0, gucu_ACS_S3);
+  scm_c_define_gsubr ("ACS_S7", 0, 0, 0, gucu_ACS_S7);
+  scm_c_define_gsubr ("ACS_S9", 0, 0, 0, gucu_ACS_S9);
+  scm_c_define_gsubr ("ACS_STERLING", 0, 0, 0, gucu_ACS_STERLING);
+  scm_c_define_gsubr ("ACS_TTEE", 0, 0, 0, gucu_ACS_TTEE);
+  scm_c_define_gsubr ("ACS_UARROW", 0, 0, 0, gucu_ACS_UARROW);
+  scm_c_define_gsubr ("ACS_ULCORNER", 0, 0, 0, gucu_ACS_ULCORNER);
+  scm_c_define_gsubr ("ACS_URCORNER", 0, 0, 0, gucu_ACS_URCORNER);
+  scm_c_define_gsubr ("ACS_VLINE", 0, 0, 0, gucu_ACS_VLINE);
   scm_c_define_gsubr ("LINES", 0, 0, 0, gucu_LINES);
   scm_c_define_gsubr ("COLS", 0, 0, 0, gucu_COLS);
   scm_c_define_gsubr ("COLORS", 0, 0, 0, gucu_COLORS);
   scm_c_define_gsubr ("COLOR_PAIRS", 0, 0, 0, gucu_COLOR_PAIRS);
+  scm_c_define_gsubr ("TABSIZE", 0, 0, 0, gucu_TABSIZE);
+  scm_c_define_gsubr ("SET_TABSIZE", 1, 0, 0, gucu_set_TABSIZE);
+  scm_c_define_gsubr ("stdscr", 0, 0, 0, gucu_stdscr);
 }
