@@ -1,0 +1,700 @@
+\input texinfo @c -*- texinfo -*-
+@comment ========================================================
+@comment %**start of header
+@setfilename gucu.info
+@include version.texi
+@settitle GNU M4 @value{VERSION} macro processor
+@setchapternewpage odd
+
+@c @ovar{ARG}
+@c -------------------
+@c The ARG is an optional argument.  To be used for macro arguments in
+@c their documentation.
+@c @macro ovar{varname}
+@c @r{[}@var{\varname\}@r{]}
+@c @end macro
+
+@c @kvar{KEYWORD, ARG}
+@c -------------------
+@c The ARG is an optional argument, defaulting to DEFAULT.  To be used
+@c for macro arguments in their documentation.
+@c @macro dvar{keyword, arg}
+@c @r{[}@samp{\keyword\} @var{\arg\}@r{]}
+@c @end macro
+
+
+@comment %**end of header
+@comment ========================================================
+
+@copying
+
+This manual is for GuCu (version @value{VERSION}, @value{UPDATED}),
+a package containing a wrapper for NCurses function for Guile.
+
+Copyright @copyright{} 2007 Michael L. Gran
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the @acronym{GNU} Free Documentation License,
+Version 1.2 or any later version published by the Free Software
+Foundation; with no Invariant Sections, no Front-Cover Texts, and no
+Back-Cover Texts.  A copy of the license is included in the section
+entitled ``@acronym{GNU} Free Documentation License.''
+@end quotation
+@end copying
+
+@titlepage
+@title GuCu, version @value{VERSION}
+@subtitle Curses for @acronym{GNU} Guile
+@subtitle Edition @value{EDITION}, @value{UPDATED}
+@author by Michael L. Gran
+@author (@email{spk121@@yahoo.com})
+
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top GuCu
+@insertcopying
+@end ifnottex
+
+GuCu is a library to offer an API to the Curses library to @acronym{GNU}
+Guile, an implementation of the Scheme language.
+
+This is release @value{VERSION}.  It is now considered to be
+pre-alpha: lacking necessary features and with significant bugs.
+
+@menu
+* Preliminaries::               Introduction and preliminaries
+* Invoking GuCu::               ``Invoking'' the GuCu library
+* Tutorial::                    Programming with GuCu
+* Core API::                    API Reference for @code{(gucu core)}
+* Raw API::                     API Reference for @code{(gucu raw)}
+* Copying GuCu::                How to make copies of this package and manual
+* Indices::                     Indices of concepts and macros
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Introduction and preliminaries
+
+* Intro::                       Introduction to Curses, Guile, and GuCu
+* Bugs::                        Problems and bugs
+* Manual::                      Using this manual
+
+``Invoking'' the GuCu library
+
+* Installation Problems::       Installation Problems
+* Ncurses versions::            Versions of Ncurses
+
+Programming with GuCu
+
+API Reference for @code{(gucu core)}
+
+API Reference for @code {(gucu raw)}
+
+How to make copies of this package and manual
+
+* Copying::                     GNU General Public License
+* GNU Free Documentation License::  License for copying this manual
+
+Indices of concepts and macros
+
+* Procedure index::             Index for all GuCu procedures and variables
+* Concept index::               Concept Index
+
+@end detailmenu
+@end menu
+
+@node Preliminaries
+@chapter Introduction and Preliminaries
+
+This chapter explains what GuCu is, how to read this documentation,
+how to call the GuCu interface, and how to report bugs.  It then
+introduces the contents of the remaining chapters.
+
+@node Intro
+@section Introduction to Curses, Guile, and GuCu
+
+@cindex overview of GuCu
+
+Ncurses is the core terminal interface library for @acronym{GNU}/Linux
+and OpenBSD.  It provides the ability to do terminal programming in a
+terminal-independent fashion.  Its routines for color, function key
+mapping, symbols, pads, and input processing free the programmer from
+having to know the specifics of the underlying terminal hardware or
+emulation.  
+
+Guile is a scripting language used on the GNU systems.  It is a
+dialect of the language Scheme, a member of the Lisp family of
+languages.  Guile provides a small core functionality, and additional
+functionality can be provided by loading @emph{libraries}.  In Guile,
+libraries are also refered to as @emph{modules}.
+
+GuCu is a Guile library.  It is an implementation of an application
+programming interface (@acronym{API}) that provides a rich set of
+commands for terminal-based interfaces.  It relies on the
+@acronym{GNU} Ncurses library to provide the underlying terminal
+functionality, while trying to present an API that is more consistent
+with Scheme programming practice.
+
+GuCu actually include two separate APIs: the @emph{core} API and the
+@emph{raw} API.  The core API tries to present an interface that is
+familiar to Scheme programmers; the raw API, however, tries to present
+an interface that is as close as possible to the C-language Ncurses
+interface.  Of the two, the core interface will be used in the
+tutorial and the examples.  The raw interface is provided for those
+familiar with using Ncurses in C.
+
+@node Bugs
+@section Problems and bugs
+
+@cindex reporting bugs
+@cindex bug reports
+@cindex suggestions, reporting
+If you have any difficulty with the GuCu library or think that you've
+discovered a bug, please report it.  Always remember to consult this
+manual before you send off a bug report.  Maybe the answers are
+already contained herein.
+
+When reporting a bug, do try to create a small script that reproduces
+the problem, if possible.  Then, check the version of the GuCu library
+you are using and the version of Ncurses that it uses.  Assuming that
+the package built and installed correctly, both of these version
+numbers, as well as other pertinent information, are output by the
+program @code{gucuinfo} provided by this distribution.  Also, provide
+details about the platform on which the program is being run.
+
+With this information compiled, send an e-mail to
+@email{spk121@@yahoo.com}, and I'll see if I can help.  (Please be
+advised that I'm just some skinny schmuck living in Los Angeles that
+does this for fun, so my responsivness and accuracy vary.)
+
+On the other hand, I'm fully aware that probably no one will read this
+manual or use this package.  I'm so sure of it that the first person
+to send me an e-mail containing the phrase ``the GuCu manual says give
+me a dollar'' will get a rumpled dollar sent to them via U.S. mail.
+
+Seriously, if there were a pressing need for this, why would I have to
+write my own library?
+
+Anyhoo@enddots{}
+
+@node Manual
+@section Using this manual
+
+@cindex examples, understanding
+(The text of this section is taken nearly verbatim from the @code{m4}
+manual.  Thanks, guys!)
+
+This manual contains a number of examples of Guile and Ncurses input
+and output, and a simple notation is used to distinguish input, output
+and error messages from Scheme code.  Examples are set out from the
+normal text, and shown in a fixed width font, like this
+
+@comment ignore
+@example
+This is an example of an example!
+@end example
+
+To distinguish input from output, all output from a program is
+prefixed by the string @samp{@result{}}, and all error messages by the
+string @samp{@error{}}.  When showing how command line options affect
+matters, the command line is shown with a prompt @samp{$ @kbd{like
+this}}.  Thus:
+
+@comment ignore
+@example
+$ @kbd{command line to invoke a program}
+Example of input line
+@result{}Output line from a program
+@error{}and an error message
+@end example
+
+If the sequence @samp{^D} appears in an example, it indicates the end
+of the input file.  The sequence @samp{@key{NL}} refers to the newline
+character.  Some of these examples are self-contained Guile scripts,
+and you can run them with similar results by saving them as text files
+and executing them as scripts.
+
+As each of the procedures in GuCu is described, a
+prototype of the function will be shown, giving descriptive names to
+the arguments, e.g.,
+
+@deffn Procedure example string [#:key keyvar] [argument] 
+
+This is a template for a call to the procedure @var{example}.  (There
+is not really a procedure named @code{example}.  This is just an
+example.)  It requires at least one argument, @var{string}.  The
+brackets around @var{keyvar} and @var{argument} show that these
+arguments are optional.  The optional variable @var{keyvar} requires
+the keyword @code{#:key} to precede it if it is to be used.  Note that
+while required arguments like @var{string} and optional arguments like
+@var{argument} must be passed to the procedure in the order indicated,
+keyword arguments like @var{keyvar} can be passed to the procedure in
+any order.
+@end deffn
+
+Please recall that, for Scheme, a @emph{variable} can contain
+a @emph{value} or a @emph{procedure}.  A procedure is called with
+@emph{arguments}. 
+
+@node Invoking GuCu
+@chapter ``Invoking'' the GuCu library
+
+A library is not @emph{invoked} so much as it is @emph{imported};
+however, the @cite{@acronym{GNU} Coding Standards} insist that a
+manual have a section with the word ``invoke'' in the title.
+
+Depending on the application, a program would import one of the
+following forms of the library. 
+
+@table @code
+
+@item (gucu raw)
+This loads a version of the GuCu library that tries to present an
+@acronym{API} that is as close as possible to the C-language Ncurses
+@acronym{API}.  This form of the library is described in Chapter FIXME. 
+
+@item (gucu core)
+This loads a version of the GuCu library that presents a more
+verbose, Scheme-like @acronym{API} that covers the functionality
+provided by Ncurses.  A tutorial on the use of this library is in
+Chapter FIXME, and a reference of the functions in this library is in
+Chapter FIXME.
+@end table
+
+A program should not import both the @code{raw} and the @code{core}
+versions of the library into the same namespace.  Use one or the
+other.
+
+@node Installation Problems
+@section Installation Problems
+
+It is quite likely that after you install the library and try to use
+it or include it into a program, it will fail to work.
+
+If you installed it without laboriously reading through the INSTALL
+document, you probably will get a result like the following.
+
+@example
+$ @kbd{guile}
+guile> @kbd{(use-modules (gucu core))}
+@error{}standard input:1:1: no code for modules (gucu core)
+@error{}ABORT: (misc-error)
+@end example
+
+If you want a quick fix, try this.
+@example
+$ @kbd{LD_LIBRARY_PATH=/usr/local/lib GUILE_LOAD_PATH=/usr/local/share/guile/site guile}
+guile> @kbd{(use-modules (gucu core))}
+@end example
+
+Did it work?  If so, add @env{LD_LIBRARY_PATH} and @env{GUILE_LOAD_PATH}
+to your @file{.profile} or @file{.bashrc} and you should be ready to go.
+
+The most likely reason for why you receive this error has to do with
+installation directories.  Most distributions install pre-packaged
+distro-supplied programs in a specific directory tree, such as
+@file{/usr}, while most user-compiled programs end up in a different
+tree, such as @file{/usr/local}.  If Guile was prepackaged to appear
+in @file{/usr}, for example, it would expect that new Guile modules
+appear in @file{/usr/share/guile/site}.  If the GuCu module was
+compiled using the default settings, the library tree is probably
+located in @file{/usr/instead/share/guile/site}, instead.  When
+searching for modules, Guile may not search into that directory by
+default.
+
+Guile searches a list of paths for modules when @code{use-module} is
+called.  To see the list, display the contents of the
+@code{%load-path} variable.
+
+@example
+$ @kbd{guile}
+guile> @kbd{(display %load-path)}
+@result{}(/usr/share/guile/site /usr/share/guile/1.8 /usr/share/guile .)
+@end example
+
+If you find that the GuCu library has not been installed in one of the
+directories in the @code{%load-path}, there are two basic solutions.
+
+@enumerate
+@item
+Add the install location of the GuCu library to the @code{%load-path}.
+@item
+Reinstall the GuCu library into a directory in Guile's
+@code{%load-path}.
+@end enumerate
+
+There are a couple of methods to get Guile to add new directories to
+the load path, short of a recompilation.
+
+One, the program can append the location of @code{(gucu)} to the
+@code{%load-path}.  Two, the environment variable
+@env{GUILE_LOAD_PATH} can be updated to append the location of
+libraries before Guile is invoked.  Three, later versions of Guile can
+be called with the @option{-L} option, to add a library path at
+runtime.
+ 
+Once this hurdle has been fixed, you may then get another error such
+as
+
+@example
+@error{}libguile-gucu.so: cannot open shared object file: No such file or directory
+@end example
+
+This error comes from the Libtool LTDL library which Guile uses to
+load binary libraries.  When this error occurs, it indicates that the
+shared object file either does not exist or is not in the set of paths
+that the LTDL searches when trying to dynamically link.  In this case
+you will have to modify the run-time linker path used by LTDL.  This
+can be done by appending the location of libguile-gucu.so to the
+environment variable @env{LD_LIBRARY_PATH}.
+
+@node Ncurses versions
+@section Versions of Ncurses
+
+Depending on how it was compiled, the Ncurses library will be one of
+four flavors.  It may or may not contain functions for wide
+characters, and it may or may not contain functions to assist in
+debugging curses functions.  When using the Ncurses library in C,
+using a wide character function or debugging function with a version
+of Ncurses that does not support it would probably result in a
+link-time error.
+
+Typically, one can determine the compilation options of the Ncurses
+library from the resulting filename of the library.
+
+@table
+@item @file{libncurses} or @file{libcurses}
+This library does not have wide character support and support for
+run-time debugging functions.
+@item @file{libncursesw} or @file{libcursesw}
+This library has wide character support.
+@item @file{libncurses_g} or @file{libcurses_g}
+This library has support for run-time debugging.
+@item @file{libncursesw_g} or @file{libcursesw_g}
+This library has support for wide characters and for run-time
+debugging.
+@end table
+
+The GuCu library is written so that wide-character and debugging
+procedures are always available in the @acronym{API}.  If they are
+used with an Ncurses library that does not support them, however, an
+error will result.
+
+@node Tutorial
+@chapter Programming with GuCu
+
+@node Core API                    
+@chapter API Reference for @code{(gucu core)}
+
+@node Raw API                     
+@chapter API Reference for @code{(gucu raw)}
+
+The the maximum extent possible, the raw @acronym{API} was designed to
+match the C-language Ncurses API.  As such, an explanation of the
+purpose and use of each variable and procedure will not be given here.  
+
+First, there will be a description of how the various C types used by
+Ncurses appear in Guile, and of the helper functions.
+
+Afterwards, the API will be presented, with care to note when and how
+the Ncurses C API and the @code{(gucu raw)} API diverge.
+
+@node Ncurses types
+@section Ncurses types in Guile
+
+@section Helper functions
+
+@section Procedure and variable list
+
+The following list contains all the wrapped
+procedures and variables in the @code{(gucu raw)} API.  Unless
+otherwise noted, the Guile versions of these functions have the same
+arguments and return values as their C counterparts.  For information
+on how the C types were transliterated, see @ref{Ncurses types}.
+
+@table @code
+
+
+
+@item ACS_BLOCK     
+@item ACS_BOARD     
+@item ACS_BTEE      
+@item ACS_BULLET    
+@item ACS_CKBOARD   
+@item ACS_DARROW    
+@item ACS_DEGREE    
+@item ACS_DIAMOND   
+@item ACS_GEQUAL    
+@item ACS_HLINE     
+@item ACS_LANTERN   
+@item ACS_LARROW    
+@item ACS_LEQUAL    
+@item ACS_LLCORNER  
+@item ACS_LRCORNER  
+@item ACS_LTEE      
+@item ACS_NEQUAL    
+@item ACS_PI        
+@item ACS_PLMINUS   
+@item ACS_PLUS      
+@item ACS_RARROW    
+@item ACS_RTEE      
+@item ACS_S1        
+@item ACS_S3        
+@item ACS_S7        
+@item ACS_S9        
+@item ACS_STERLING  
+@item ACS_TTEE      
+@item ACS_UARROW    
+@item ACS_ULCORNER  
+@item ACS_URCORNER  
+@item ACS_VLINE     
+@item A_ALTCHARSET
+@item A_BLINK
+@item A_BOLD
+@item A_CHARTEXT
+@item A_DIM
+@item A_INVIS
+@item A_NORMAL
+@item A_PROTECT
+@item A_REVERSE
+@item A_STANDOUT
+@item A_UNDERLINE
+@item COLOR_PAIR
+@item PAIR_NUMBER
+@item TABSIZE
+@item add_wch
+@item add_wchnstr
+@item add_wchstr
+@item addch
+@item addchnstr     
+@item addchstr      
+@item addnstr
+@item addnwstr
+@item addstr
+@item addwstr
+@item attr_get
+@item attr_off
+@item attr_on
+@item attr_set
+@item attroff
+@item attron
+@item attrset
+@item beep
+@item bkgd
+@item bkgdset
+@item chgat
+@item color_set
+@item echo_wchar
+@item echochar
+@item flash
+@item getbkgd
+@item mvadd_wch
+@item mvadd_wchnstr
+@item mvadd_wchstr
+@item mvaddch
+@item mvaddchnstr   
+@item mvaddchstr    
+@item mvaddnstr
+@item mvaddnwstr
+@item mvaddstr
+@item mvaddwstr
+@item mvchgat
+@item mvwadd_wch
+@item mvwadd_wchnstr
+@item mvwadd_wchstr
+@item mvwaddch
+@item mvwaddchnstr 
+@item mvwaddchstr   
+@item mvwaddnstr
+@item mvwaddnwstr
+@item mvwaddstr
+@item mvwaddwstr
+@item mvwchgat
+@item standend
+@item standout
+@item wadd_wch
+@item wadd_wchnstr
+@item wadd_wchstr
+@item waddch
+@item waddchnstr    
+@item waddchstr     
+@item waddnstr
+@item waddnwstr
+@item waddstr
+@item waddwstr
+@item wattr_get
+@item wattr_off
+@item wattr_on
+@item wattr_set
+@item wattroff
+@item wattron
+@item wattrset
+@item wbkgd
+@item wbkgdset
+@item wchgat
+@item wcolor_set
+@item wecho_wchar
+@item wechochar
+@item wstandend
+@item wstandout
+
+@end table
+
+
+@section Raw @code{addch} functions
+
+@section Raw @code{addchstr} functions
+
+@section Raw @code{addstr} functions
+
+@section Raw @code{addwstr} functions
+
+@section Raw @code{attr} functions
+
+@node Raw beep functions
+@section Raw @code{beep} functions
+
+These functions are in the standard @code{ncurses} library.  They are
+wrapped with no special modifications.
+
+@deffn Procedure beep
+@end deffn
+
+@deffn Procedure flash
+@end deffn
+
+@section Raw @code{bkgd} functions
+
+@section Raw @code{bkgrnd} functions
+
+@section Raw @code{border} functions
+
+These functions are in the standard @code{ncurses} library.  They are
+wrapped with no special modifications.
+
+@deffn Procedure border ls rs ts bs tl tr bl br
+
+@end deffn
+       int wborder(WINDOW *win, chtype ls, chtype rs,
+          chtype ts, chtype bs, chtype tl, chtype tr,
+          chtype bl, chtype br);
+       int box(WINDOW *win, chtype verch, chtype horch);
+       int hline(chtype ch, int n);
+       int whline(WINDOW *win, chtype ch, int n);
+       int vline(chtype ch, int n);
+       int wvline(WINDOW *win, chtype ch, int n);
+       mvhline(int y, int x, chtype ch, int n);
+       mvwhline(WINDOW *, int y, int x, chtype ch, int n);
+       int mvvline(int y, int x, chtype ch, int n);
+       int mvwvline(WINDOW *, int y, int x, chtype ch, int n);
+
+@section Raw @code{border_set} functions
+
+@section Raw @code{clear} functions
+
+@section Raw @code{color} functions
+
+@section Raw @code{delch} functions
+
+@section Raw @code{deleteln} functions
+
+@section Raw @code{extend} functions
+
+@section Raw @code{get_wch} procedures
+
+@section Raw @code{get_wstr} procedures
+
+@section Raw @code{getcchar} procedures
+
+@section Raw @code{getch} procedures
+
+@section Raw @code{getstr} procedures
+
+@section Raw @code{getyx} procedures
+
+@section Raw @code{in_wch} procedures
+
+@section Raw @code{in_wchstr} procedures
+
+@section Raw @code{inch} procedures
+
+@section Raw @code{insstr} procedures
+
+@section Raw @code{instr} procedures
+
+@section Raw @code{inwstr} procedures
+
+@section Raw @code{kernel} procedures
+
+@section Raw @code{mouse} procedures
+
+@section Raw @code{move} procedures
+
+@section Raw @code{outputs} procedures
+
+@section Raw @code{overlay} procedures
+
+@section Raw @code{pad} procedures
+
+@section Raw @code{print} procedures
+
+@section Raw @code{printw} procedures
+
+@section Raw @code{refresh} procedures
+
+@section Raw @code{scanw} procedures
+
+@section Raw @code{scr_dump} procedures
+
+@section Raw @code{set} procedures
+
+@section Raw @code{slk} procedures
+
+@section Raw @code{termattrs} procedures
+
+@section Raw @code{termcap} procedures
+
+@section Raw @code{terminfo} procedures
+
+@section Raw @code{touch} procedures
+
+@section Raw @code{trace} procedures
+
+@section Raw @code{util} procedures
+
+@section Raw @code{window} procedures
+
+@section Miscellaneous Procedures
+
+
+@node Indices
+@appendix Indices of concepts and macros
+
+@menu
+* Procedure index::             Index for all GuCu procedures and variables
+* Concept index::               Concept index
+@end menu
+
+@node Procedure index
+@appendixsec Index for all GuCu procedures and variables
+
+This index covers all @code{m4} builtins, as well as several useful
+composite macros.  References are exclusively to the places where a
+macro is introduced the first time.
+
+@printindex fn
+
+@node Concept index
+@appendixsec Concept index
+
+@printindex cp
+
+@bye

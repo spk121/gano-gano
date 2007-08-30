@@ -324,6 +324,136 @@
 ;;; attribute functions
 
 ;; mock of attributes as if they were a list
+
+;; A rendition (colors plus attributes) is stored internally in
+;; Ncurses as a 32 bit unsigned integer.  The lower 8 bits are not
+;; part of the rendition.  The lower 8 bits would hold a character for
+;; narrow characters.  The next 8 bits are a color pair.  The last 16
+;; bits store the A_* flags.
+
+;; This just is the sum of the inputs returning a rendition number.
+;; It could be called like this, for example 
+;; (rendition A_BLINK (COLOR_PAIR 3))
+
+;; Check that this is a 32-bit number with the lower 8 bits set to
+;; zero.
+(define (rendition? r)
+  (if (integer? r)
+      (if (equal? r 0)
+	  #t
+	  (and
+	   (<= (integer-length r) 32)
+	   (not (logand r #x000000FF))))))
+
+;; Create a new rendition from a list of attributes
+(define rendition 
+  (lambda x
+    (let loop ((x x) (total 0))
+      (if (null? x)
+	  total
+	  (loop (cdr x) (+ total (car x)))))))
+
+;; Return a newly created rendition value formed by appending the list
+;; of attributes X to a given rendition value R.  This function
+;; doesn't modify the given rendition R.
+(define (append-rendition r x)
+  (let loop ((x x) (total r))
+    (if (null? x)
+	total
+	(loop (cdr x) (logior total (car x))))))
+
+;; Return a newly created rendition value formed by removing the list
+;; of attributes X from a given rendition value R.  It is not an error
+;; to try to remove attributes that do not exist.  This function
+;; doesn't modify the given rendition R.
+(define (delete-rendition r x)
+  (let loop ((x x) (total r))
+    (if (null? x)
+	total
+	(loop (cdr x) (- total (logand total (car x)))))))
+
+(define (rendition->attributes r))
+
+(define (rendition->color-pair))
+
+;; types char, rendered-char, string, rendered-string
+;; complex-char, rendered-complex-char, wide-string, rendered-wide-string
+
+
+;; Returns a rendered character by combining a rendition R with a
+;; character C.
+(define (apply-rendition-to-chararacter r c)
+  (logand r (char->integer c)))
+
+;; Returns a rendered character string by combining a rendition R with
+;; a string S.
+(define (apply-rendition-to-string r s)
+  (map-in-order (lambda (c) 
+		  (apply-rendition-to-char r c)) 
+		(string->list)))
+
+
+(define (get-window-rendition #:key (window #f)))
+
+(define (set-window-rendition r #:key (window #f)))
+
+(define (clear-window-rendition #:key (window #f)))
+
+(define (apply-rendition-to-window r #:key (window #f))
+  (cond
+   (window
+    (raw:attrset r))
+   (else
+    (raw:wattrset win r))))
+				   
+
+
+(define (apply-rendition-to-window-characters r
+;; A debugging convenience function.  Given a rendition, it will
+;; pretty print information about it.
+(define (debug-rendition r)
+  (let ((char (logand r raw:A_CHARTEXT))
+	(color-pair (ash (logand r raw:A_COLOR) -8))
+	(standout (logand r raw:A_STANDOUT))
+	(underline (logand r raw:A_UNDERLINE))
+	(reverse (logand r raw:A_REVERSE))
+	(blink (logand r raw:A_BLINK))
+	(dim (logand r raw:A_DIM))
+	(bold (logand r raw:A_BOLD))
+	(altcharset (logand r raw:A_ALTCHARSET))
+	(invis (logand r raw:A_INVIS))
+	(protect (logand r raw:A_PROTECT))
+	(horizontal (logand r raw:A_HORIZONAL))
+	(left (logand r raw:A_LEFT))
+	(low (logand r raw:A_LOW))
+	(right (logand r raw:A_RIGHT))
+	(top (logand r raw:A_TOP))
+	(vertical (logand r raw:A_VERTICAL)))
+    (list
+     (if char 
+	 (list (integer->char char)) 
+	 '())
+     (if color-pair 
+	 (list (string->symbol (format #f "color-pair~s" color-pair))) 
+	 '())
+     (if standout '(standout) '())
+     (if underline '(underline) '())
+     (if reverse '(reverse) '())
+     (if blink '(blink) '())
+     (if dim '(dim) '())
+     (if bold '(bold) '())
+     (if altcharset '(altcharset) '())
+     (if invis '(invis) '())
+     (if protect '(protect) '())
+     (if horizontal '(horizontal) '())
+     (if left '(left) '())
+     (if low '(low) '())
+     (if right '(right) '())
+     (if top '(top) '())
+     (if vertical '(vertical) '()))))
+	 
+
+
 (set-attributes!)
 (append-attributes!)
 (delete-attributes!)

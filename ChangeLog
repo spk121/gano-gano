@@ -1,3 +1,9 @@
+2007-08-30  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* doc/gucu.texinfo: a different attempt at organizing the doc
+
+	* src/core.scm (gucu): working on rendition types
+
 2007-08-29  Mike Gran  <spike_gran@users.sourceforge.net>
 
 	* src/core.scm (gucu): I can't remember to update this Changelog.
