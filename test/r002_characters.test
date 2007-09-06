@@ -1,0 +1,59 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r002_characters.test --- test suite for curses's character constants
+
+(define-module (test r002_characters)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+(with-test-prefix "ASCII"
+		  (pass-if "a"
+			   (begin
+			     (mvaddch 0 0 (char->integer #\a))
+			     (refresh)
+			     (equal? (mvinch 0 0) (char->integer #\a)))))
+
+(define (acs-test-pair pair)
+  (acs-test (car pair) (cdr pair)))
+
+;; If the term can print the char, the character should be part of the
+;; ALTCHARSET
+(define (acs-test xname x)
+  (pass-if xname
+	   (begin
+	     (clear)
+	     (mvaddch 0 0 x)
+	     (refresh)
+	     (usleep 10000)
+	     (let ((x2 (mvinch 0 0)))
+	       (and
+		(equal? x x2)
+		(equal? (logand x2 A_ALTCHARSET) A_ALTCHARSET))))))
+
+(with-test-prefix "ACS"
+		  (map acs-test-pair
+		       `(("ACS_ULCORNER" . ,(ACS_ULCORNER))
+			 ("ACS_LLCORNER" . ,(ACS_LLCORNER))
+			 ("ACS_URCORNER" . ,(ACS_URCORNER))
+			 ("ACS_LRCORNER" . ,(ACS_LRCORNER))
+			 ("ACS_RTEE" . ,(ACS_RTEE))
+			 ("ACS_LTEE" . ,(ACS_LTEE))
+			 ("ACS_BTEE" . ,(ACS_BTEE))
+			 ("ACS_TTEE" . ,(ACS_TTEE))
+			 ("ACS_HLINE" . ,(ACS_HLINE))
+			 ("ACS_VLINE" . ,(ACS_VLINE))
+			 ("ACS_PLUS" . ,(ACS_PLUS))
+			 ("ACS_S1" . ,(ACS_S1))
+			 ("ACS_S9" . ,(ACS_S9))
+			 ("ACS_DIAMOND" . ,(ACS_DIAMOND))
+			 ("ACS_CKBOARD" . ,(ACS_CKBOARD))
+			 ("ACS_DEGREE" . ,(ACS_DEGREE))
+			 ("ACS_PLMINUS" . ,(ACS_PLMINUS))
+			 ("ACS_LARROW" . ,(ACS_LARROW))
+			 ("ACS_RARROW" . ,(ACS_RARROW))
+			 ("ACS_UARROW" . ,(ACS_UARROW))
+			 ("ACS_DARROW" . ,(ACS_DARROW))
+			 ("ACS_BOARD" . ,(ACS_BOARD))
+			 ("ACS_LANTERN" . ,(ACS_LANTERN))
+			 ("ACS_BLOCK" . ,(ACS_BLOCK))
+			 )))

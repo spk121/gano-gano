@@ -1,0 +1,36 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r000_initscr.test -- test suite for curses initialization functions
+
+(define-module (test r000_initscr)
+  #:use-module (test lib)
+  #:use-module (ice-9 threads)
+  #:use-module (gucu raw))
+
+
+;;;
+;;; initscr
+;;;
+
+;; Pass if OK
+(with-test-prefix "initscr"
+		  
+		  (pass-if "(default)"
+			   (window? (initscr))))
+
+(with-test-prefix "isendwin"
+		  (pass-if "before endwin"
+			   (equal? #f (isendwin))))
+
+;; Leave curses
+(endwin)
+
+(with-test-prefix "isendwin"
+		  (pass-if "after endwin"
+			   (equal? #t (isendwin))))
+
+;; Reenter curses
+(refresh)
+
+(with-test-prefix "isendwin"
+		  (pass-if "after refresh"
+			   (equal? #f (isendwin))))

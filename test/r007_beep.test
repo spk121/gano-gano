@@ -1,0 +1,23 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r007_beep.test --- test suite for curses's beep!
+
+(define-module (test r007_beep)
+  #:use-module (test lib)
+  #:use-module (gucu raw))
+
+
+;; Should be able to beep and flash
+(with-test-prefix "beep"
+		  
+		  (pass-if "beep"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (equal? OK (and (beep) (beep) (beep)))))
+
+		  (pass-if "flash"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (equal? OK (and (flash) (flash) (flash))))))
+

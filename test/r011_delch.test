@@ -1,0 +1,68 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r011_delch.test --- test suite for curses's character deletion
+
+(define-module (test r011_delch)
+  #:use-module (test lib)
+  #:use-module (gucu raw))
+
+
+;; Should be able to delete characters
+(with-test-prefix "delch"
+		  
+		  (pass-if "delch"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0"abc")
+			     (move 0 1)
+			     (delch)
+			     (refresh)
+			     (let ((x1 (mvinch 0 0))
+				   (x2 (mvinch 0 1)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\c))))))
+		  
+		  (pass-if "mvdelch"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0"abc")
+			     (mvdelch 0 1)
+			     (refresh)
+			     (let ((x1 (mvinch 0 0))
+				   (x2 (mvinch 0 1)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\c)))))))
+
+(define win (newwin 5 10 5 5))
+
+(with-test-prefix "wdelch"
+		  
+		  (pass-if "wdelch"
+			   (begin
+			     (wclear win)
+			     (mvwaddstr win 0 0"abc")
+			     (wmove win 0 1)
+			     (wdelch win)
+			     (wrefresh win)
+			     (let ((x1 (mvwinch win 0 0))
+				   (x2 (mvwinch win 0 1)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\c))))))
+		  
+		  (pass-if "mvwdelch"
+			   (begin
+			     (wclear win)
+			     (mvwaddstr win 0 0"abc")
+			     (mvwdelch win 0 1)
+			     (wrefresh win)
+			     (let ((x1 (mvwinch win 0 0))
+				   (x2 (mvwinch win 0 1)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\c)))))))
+
+
+(delwin win)
+(refresh)

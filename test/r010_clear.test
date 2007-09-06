@@ -1,0 +1,130 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r010_beep.test --- test suite for curses's clear and erase
+
+(define-module (test r010_clear)
+  #:use-module (test lib)
+  #:use-module (gucu raw))
+
+
+(define space (char->integer #\sp))
+
+;; Should be able to erase
+(with-test-prefix "clear"
+		  
+		  (pass-if "clear"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0 "xxxx")
+			     (mvaddstr 1 0 "xxxx")
+			     (clear)
+			     (refresh)
+			     (let ((x1 (mvinch 0 1))
+				   (x2 (mvinch 1 1)))
+			       (and
+				(equal? x1 space)
+				(equal? x2 space)))))
+
+		  (pass-if "erase"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0 "xxxx")
+			     (mvaddstr 1 0 "xxxx")
+			     (erase)
+			     (refresh)
+			     (let ((x1 (mvinch 0 1))
+				   (x2 (mvinch 1 1)))
+			       (and
+				(equal? x1 space)
+				(equal? x2 space)))))
+			      
+
+		  (pass-if "clrtobot"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0 "xxxx")
+			     (mvaddstr 1 0 "xxxx")
+			     (move 0 0)
+			     (clrtobot)
+			     (refresh)
+			     (let ((x1 (mvinch 0 1))
+				   (x2 (mvinch 1 1)))
+			       (and
+				(equal? x1 space))
+				(equal? x2 space))))
+
+		  (pass-if "clrtoeol"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0 "xxxx")
+			     (mvaddstr 1 0 "xxxx")
+			     (move 0 0)
+			     (clrtoeol)
+			     (refresh)
+			     (let ((x1 (mvinch 0 1))
+				   (x2 (mvinch 1 1)))
+			       (and
+				(equal? x1 space)
+				(equal? x2 (char->integer #\x)))))))
+
+(define win (newwin 5 10 5 5))
+
+(with-test-prefix "wclear"
+		  
+		  (pass-if "wclear"
+			   (begin
+			     (wclear win)
+			     (mvwaddstr win 0 0 "xxxx")
+			     (mvwaddstr win 1 0 "xxxx")
+			     (wclear win)
+			     (wrefresh win)
+			     (let ((x1 (mvwinch win 0 1))
+				   (x2 (mvwinch win 1 1)))
+			       (and
+				(equal? x1 space)
+				(equal? x2 space)))))
+
+		  (pass-if "werase"
+			   (begin
+			     (wclear win)
+			     (mvwaddstr win 0 0 "xxxx")
+			     (mvwaddstr win 1 0 "xxxx")
+			     (werase win)
+			     (wrefresh win)
+			     (let ((x1 (mvwinch win 0 1))
+				   (x2 (mvwinch win 1 1)))
+			       (and
+				(equal? x1 space)
+				(equal? x2 space)))))
+			      
+
+		  (pass-if "wclrtobot"
+			   (begin
+			     (wclear win)
+			     (mvwaddstr win 0 0 "xxxx")
+			     (mvwaddstr win 1 0 "xxxx")
+			     (wmove win 0 0)
+			     (wclrtobot win)
+			     (wrefresh win)
+			     (let ((x1 (mvwinch win 0 1))
+				   (x2 (mvwinch win 1 1)))
+			       (and
+				(equal? x1 space))
+				(equal? x2 space))))
+
+		  (pass-if "clrtoeol"
+			   (begin
+			     (wclear win)
+			     (mvwaddstr win 0 0 "xxxx")
+			     (mvwaddstr win 1 0 "xxxx")
+			     (wmove win 0 0)
+			     (wclrtoeol win)
+			     (wrefresh win)
+			     (let ((x1 (mvwinch win 0 1))
+				   (x2 (mvwinch win 1 1)))
+			       (and
+				(equal? x1 space)
+				(equal? x2 (char->integer #\x)))))))
+
+
+(delwin win)
+(refresh)

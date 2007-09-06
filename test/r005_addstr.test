@@ -1,0 +1,86 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r005_addstr.test --- test suite for curses's addstr
+
+(define-module (test r005_addstr)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+(with-test-prefix "addstr"
+		  
+		  (pass-if "addstr"
+			   (begin
+			     (clear)
+			     (move 0 0)
+			     (addstr "hello")
+			     (refresh)
+			     (let ((w2 (mvinstr 0 0)))
+			       (string=? "hello" (string-take w2 (string-length "hello"))))))
+
+		  (pass-if "addnstr"
+			   (begin
+			     (clear)
+			     (move 0 0)
+			     (addnstr "hello" 2)
+			     (refresh)
+			     (let ((w2 (mvinstr 0 0)))
+			       (string=? "he" (string-take w2 (string-length "he"))))))
+
+		  (pass-if "mvaddstr"
+			   (begin
+			     (clear)
+			     (mvaddstr 1 0 "bold")
+			     (refresh)
+			     (let ((x2 (mvinstr 1 0)))
+			       (string=? "bold" (string-take x2 (string-length "bold"))))))
+
+		  (pass-if "mvaddnstr"
+			   (begin
+			     (clear)
+			     (mvaddnstr 1 0 "bold" 2)
+			     (refresh)
+			     (let ((x2 (mvinstr 1 0)))
+			       (string=? "bo" (string-take x2 (string-length "bo")))))))
+
+(define win (newwin 5 10 5 5))
+
+(with-test-prefix "waddstr"
+		  
+		  (pass-if "2addstr"
+			   (begin
+			     (wclear win)
+			     (wmove win 0 0)
+			     (waddstr win "hello")
+			     (wrefresh win)
+			     (let ((w2 (mvwinstr win 0 0)))
+			       (string=? "hello" (string-take w2 (string-length "hello"))))))
+
+		  (pass-if "waddnstr"
+			   (begin
+			     (wclear win)
+			     (wmove win 0 0)
+			     (waddnstr win "hello" 2)
+			     (wrefresh win)
+			     (let ((w2 (mvwinstr win 0 0)))
+			       (string=? "he" (string-take w2 (string-length "he"))))))
+
+		  (pass-if "mvwaddstr"
+			   (begin
+			     (wclear win)
+			     (mvwaddstr win 1 0 "bold")
+			     (wrefresh win)
+			     (let ((x2 (mvwinstr win 1 0)))
+			       (string=? "bold" (string-take x2 (string-length "bold"))))))
+
+		  (pass-if "mvaddnstr"
+			   (begin
+			     (wclear win)
+			     (mvwaddnstr win 1 0 "bold" 2)
+			     (wrefresh win)
+			     (let ((x2 (mvwinstr win 1 0)))
+			       (string=? "bo" (string-take x2 (string-length "bo")))))))
+
+			      
+(delwin win)
+(refresh)

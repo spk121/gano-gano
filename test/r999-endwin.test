@@ -1,0 +1,18 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r999-endwin.test  --- test suite for curses's endwin function
+
+(define-module (test r999-endwin)
+  #:use-module (test lib)
+  #:use-module (ice-9 threads)
+  #:use-module (gucu raw))
+
+
+;;;
+;;; endwin
+;;;
+
+;; Pass if OK
+(with-test-prefix "endwin"
+		  
+  (pass-if "(default)"
+    (equal? OK (endwin))))

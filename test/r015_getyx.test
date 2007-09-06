@@ -1,0 +1,46 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r015_getyx.test --- test suite for curses's position reporting functions
+
+(define-module (test r015_getyx)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+(define win (newwin 5 6 7 8))
+(define win2 (subwin win 2 2 8 9))
+
+
+;; Should be able to determine where the cursor is
+(with-test-prefix "getyx"
+		  
+		  (pass-if "setup"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (box win 0 0)
+			     (box win2 0 0)
+			     (touchwin win)
+			     (wrefresh win2)
+			     (wrefresh win)
+			     #t))
+
+		  (pass-if "getyx"
+			   (begin
+			     (wmove win 2 1)
+			     (refresh)
+			     (lset= eqv? '(2 1) (getyx win))))
+
+		  (pass-if "getparyx"
+			   (lset= eqv? (list (- 8 7) (- 9 8)) (getparyx win2)))
+
+		  (pass-if "getbegyx"
+			   (lset= eqv? '(7 8) (getbegyx win)))
+
+		  (pass-if "getmaxyx"
+			   (lset= eqv? '(5 6) (getmaxyx win))))
+
+(delwin win2)
+(touchwin win)
+(wrefresh win)
+(delwin win)
+(refresh)

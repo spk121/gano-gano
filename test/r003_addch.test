@@ -1,0 +1,67 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r003_addch.test --- test suite for curses's addch functions
+
+(define-module (test r003_addch)
+  #:use-module (test lib)
+  #:use-module (gucu raw))
+
+
+(define x_normal (char->integer #\x))
+(define x_bold (logior x_normal A_BOLD))
+
+(with-test-prefix "addch"
+		  
+		  (pass-if "addch"
+			   (begin
+			     (clear)
+			     (move 0 0)
+			     (addch x_normal)
+			     (refresh)
+			     (let ((x2 (mvinch 0 0)))
+			       (equal? x_normal x2))))
+		  (pass-if "mvaddch"
+			   (begin
+			     (clear)
+			     (mvaddch 1 0 x_bold)
+			     (refresh)
+			     (let ((x2 (mvinch 1 0)))
+			       (equal? x_bold x2))))
+
+		  (pass-if "echochar"
+			   (begin
+			     (clear)
+			     (move 2 0)
+			     (echochar x_normal)
+			     (let ((x2 (mvinch 2 0)))
+			       (equal? x_normal x2)))))
+			      
+(define win (newwin 5 5 5 5))
+
+(with-test-prefix "waddch"
+		  
+		  (pass-if "waddch"
+			   (begin
+			     (wclear win)
+			     (wmove win 0 0)
+			     (waddch win x_normal)
+			     (wrefresh win)
+			     (let ((x2 (mvwinch win 0 0)))
+			       (equal? x_normal x2))))
+		  (pass-if "mvaddch"
+			   (begin
+			     (wclear win)
+			     (mvwaddch win 1 0 x_bold)
+			     (wrefresh win)
+			     (let ((x2 (mvwinch win 1 0)))
+			       (equal? x_bold x2))))
+
+		  (pass-if "echochar"
+			   (begin
+			     (wclear win)
+			     (wmove win 2 0)
+			     (wechochar win x_normal)
+			     (let ((x2 (mvwinch win 2 0)))
+			       (equal? x_normal x2)))))
+			      
+(delwin win)
+(refresh)

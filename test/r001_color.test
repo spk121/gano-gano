@@ -1,0 +1,93 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r001_color.test --- test suite for curses's color functions
+
+(define-module (test r001_color)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+;;; These values are the xterm values
+
+;; Should be able to start color
+(with-test-prefix "start_color"
+		  
+		  (pass-if "(default)"
+			   (equal? OK (start_color))))
+	   
+;; xterm has colors
+(with-test-prefix "has_colors"
+		  (pass-if "xterm default"
+			   (has_colors)))
+
+
+;; xterm can't change color
+(with-test-prefix "can_chage_color"
+		  (pass-if "xterm default"
+			   (equal? #f
+				   (can_change_color))))
+
+;; xterm has 8 colors
+(with-test-prefix "COLORS"
+		  (pass-if "xterm default"
+			   (equal? 8
+				   (COLORS))))
+
+;; xterm has 64 color pairs
+(with-test-prefix "COLOR_PAIRS"
+		  (pass-if "xterm default"
+			   (equal? 64
+				   (COLOR_PAIRS))))
+
+;; Check some colors
+(with-test-prefix "COLOR_"
+		  (pass-if "BLACK"
+			   (lset= equal?
+				  '(0 0 0)
+				  (color_content COLOR_BLACK)))
+		  (pass-if "RED"
+			   (lset= equal?
+				  '(680 0 0)
+				  (color_content COLOR_RED)))
+		  (pass-if "GREEN"
+			   (lset= equal?
+				  '(0 680 0)
+				  (color_content COLOR_GREEN)))
+		  (pass-if "YELLOW"
+			   (lset= equal?
+				  '(680 680 0)
+				  (color_content COLOR_YELLOW)))
+		  (pass-if "BLUE"
+			   (lset= equal?
+				  '(0 0 680)
+				  (color_content COLOR_BLUE)))
+		  (pass-if "MAGENTA"
+			   (lset= equal?
+				  '(680 0 680)
+				  (color_content COLOR_MAGENTA)))
+		  (pass-if "CYAN"
+			   (lset= equal?
+				  '(0 680 0)
+				  (color_content COLOR_CYAN)))
+		  (pass-if "WHITE"
+			   (lset= equal?
+				  '(680 680 680)
+				  (color_content COLOR_WHITE))))
+				    
+;; can't set colors on xterm
+(with-test-prefix "init_color"
+		  (expect-fail "set color #1"
+			       (begin
+				 (init_color 1 200 200 200)
+				 (lset= equal?
+					'(200 200 200)
+					(color_content 1)))))
+
+;; can set color pairs on xterm
+(with-test-prefix "init_pair"
+		  (pass-if "set pair #1"
+			   (begin
+			     (init_pair 1 COLOR_BLACK COLOR_RED)
+			     (lset= equal? 
+				    (list COLOR_BLACK COLOR_RED)
+				    (pair_content 1)))))

@@ -1,0 +1,134 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r011_deleteln.test --- test suite for curses's line deletion functions
+
+(define-module (test r011_deleteln)
+  #:use-module (test lib)
+  #:use-module (gucu raw))
+
+
+(with-test-prefix "deleteln"
+		  
+		  (pass-if "deleteln"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0 "aaa")
+			     (mvaddstr 1 0 "bbb")
+			     (mvaddstr 2 0 "ccc")
+			     (move 1 0)
+			     (deleteln)
+			     (refresh)
+			     (let ((x1 (mvinch 0 0))
+				   (x2 (mvinch 2 0)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\sp))))))
+
+		  (pass-if "insdelln -1"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0 "aaa")
+			     (mvaddstr 1 0 "bbb")
+			     (mvaddstr 2 0 "ccc")
+			     (move 1 0)
+			     (insdelln -1)
+			     (refresh)
+			     (let ((x1 (mvinch 0 0))
+				   (x2 (mvinch 2 0)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\sp))))))
+
+		  (pass-if "insertln"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0 "aaa")
+			     (mvaddstr 1 0 "bbb")
+			     (mvaddstr 2 0 "ccc")
+			     (move 1 0)
+			     (insertln)
+			     (refresh)
+			     (let ((x1 (mvinch 0 0))
+				   (x2 (mvinch 2 0)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\b))))))
+
+		  (pass-if "insdelln +1"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0 "aaa")
+			     (mvaddstr 1 0 "bbb")
+			     (mvaddstr 2 0 "ccc")
+			     (move 1 0)
+			     (insdelln 1)
+			     (refresh)
+			     (let ((x1 (mvinch 0 0))
+				   (x2 (mvinch 2 0)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\b)))))))
+
+(define win (newwin 5 10 5 5))
+
+
+(with-test-prefix "wdeleteln"
+		  
+		  (pass-if "wdeleteln"
+			   (begin
+			     (wclear win)
+			     (mvwaddstr win 0 0 "aaa")
+			     (mvwaddstr win 1 0 "bbb")
+			     (mvwaddstr win 2 0 "ccc")
+			     (wmove win 1 0)
+			     (wdeleteln win)
+			     (wrefresh win)
+			     (let ((x1 (mvwinch win 0 0))
+				   (x2 (mvwinch win 2 0)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\sp))))))
+
+		  (pass-if "insdelln -1"
+			   (begin
+			     (wclear win)
+			     (mvwaddstr win 0 0 "aaa")
+			     (mvwaddstr win 1 0 "bbb")
+			     (mvwaddstr win 2 0 "ccc")
+			     (wmove win 1 0)
+			     (winsdelln win -1)
+			     (wrefresh win )
+			     (let ((x1 (mvwinch win 0 0))
+				   (x2 (mvwinch win 2 0)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\sp))))))
+
+		  (pass-if "insertln"
+			   (begin
+			     (wclear win)
+			     (mvwaddstr win 0 0 "aaa")
+			     (mvwaddstr win 1 0 "bbb")
+			     (mvwaddstr win 2 0 "ccc")
+			     (wmove win 1 0)
+			     (winsertln win)
+			     (wrefresh win)
+			     (let ((x1 (mvwinch win 0 0))
+				   (x2 (mvwinch win 2 0)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\b))))))
+
+		  (pass-if "insdelln +1"
+			   (begin
+			     (wclear win)
+			     (mvwaddstr win 0 0 "aaa")
+			     (mvwaddstr win 1 0 "bbb")
+			     (mvwaddstr win 2 0 "ccc")
+			     (wmove win 1 0)
+			     (winsdelln win 1)
+			     (wrefresh win)
+			     (let ((x1 (mvwinch win 0 0))
+				   (x2 (mvwinch win 2 0)))
+			       (and
+				(equal? x1 (char->integer #\a))
+				(equal? x2 (char->integer #\b)))))))

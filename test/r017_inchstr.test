@@ -1,0 +1,94 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r017_inchstr.test --- test suite for curses's inchstr
+
+(define-module (test r017_inchstr)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+(define hello (map char->integer (string->list "hello")))
+(define he (map char->integer (string->list "he")))
+(define hello-bold (map (lambda (x) 
+			  (logior A_BOLD (char->integer x)))
+			(string->list "hello")))
+(define he-bold (map (lambda (x) 
+		       (logior A_BOLD (char->integer x)))
+		     (string->list "he")))
+
+(with-test-prefix "inchstr"
+		  
+		  (pass-if "inchstr"
+			   (begin
+			     (clear)
+			     (mvaddchstr 0 0 hello)
+			     (refresh)
+			     (move 0 0)
+			     (let ((w2 (inchstr)))
+			       (lset= equal? hello (list-head w2 (length hello))))))
+
+		  (pass-if "inchnstr"
+			   (begin
+			     (clear)
+			     (mvaddchstr 0 0 hello)
+			     (refresh)
+			     (move 0 0)
+			     (let ((w2 (inchnstr 2)))
+			       (lset= equal? he w2))))
+
+		  (pass-if "mvinchstr"
+			   (begin
+			     (clear)
+			     (mvaddchstr 1 0 hello-bold)
+			     (refresh)
+			     (let ((x2 (mvinchstr 1 0)))
+			       (equal? hello-bold (list-head x2 (length hello-bold))))))
+
+		  (pass-if "mvinchnstr"
+			   (begin
+			     (clear)
+			     (mvaddchstr 1 0 hello-bold)
+			     (refresh)
+			     (let ((x2 (mvinchnstr 1 0 2)))
+			       (equal? he-bold x2)))))
+
+(define win (newwin 5 10 5 5))
+
+(with-test-prefix "inchstr"
+		  
+		  (pass-if "winchstr"
+			   (begin
+			     (wclear win)
+			     (mvwaddchstr win 0 0 hello)
+			     (wrefresh win)
+			     (wmove win 0 0)
+			     (let ((w2 (winchstr win)))
+			       (lset= equal? hello (list-head w2 (length hello))))))
+
+		  (pass-if "winchnstr"
+			   (begin
+			     (wclear win)
+			     (mvwaddchstr win 0 0 hello)
+			     (wrefresh win)
+			     (wmove win 0 0)
+			     (let ((w2 (winchnstr win 2)))
+			       (lset= equal? he w2))))
+
+		  (pass-if "mvwinchstr"
+			   (begin
+			     (wclear win)
+			     (mvwaddchstr win 1 0 hello-bold)
+			     (wrefresh win)
+			     (let ((x2 (mvwinchstr win 1 0)))
+			       (equal? hello-bold (list-head x2 (length hello-bold))))))
+
+		  (pass-if "mvwinchnstr"
+			   (begin
+			     (wclear win)
+			     (mvwaddchstr win 1 0 hello-bold)
+			     (wrefresh win)
+			     (let ((x2 (mvwinchnstr win 1 0 2)))
+			       (equal? he-bold x2)))))
+
+(delwin win)
+(refresh)
