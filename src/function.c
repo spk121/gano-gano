@@ -4,6 +4,23 @@
 #include "function.h"
 #include "type.h"
 #define _GNU_SOURCE
+
+SCM
+gucu_add_wch (SCM s_wch)
+{
+  int ret;
+  SCM s_ret;
+  cchar_t *p_wch;
+
+  SCM_ASSERT (_scm_is_cchar (s_wch), s_wch, SCM_ARG1, "add_wch");
+
+  p_wch = _scm_to_cchar (s_wch);
+  ret = add_wch (p_wch);
+  s_ret = scm_from_int (ret);
+
+  return s_ret;
+}
+  
 SCM
 gucu_addch (SCM arg1)
 {
@@ -3267,6 +3284,7 @@ gucu_wvline (SCM arg1, SCM arg2, SCM arg3)
 void 
 gucu_init_function ()
 {
+  scm_c_define_gsubr ("add_wch", 1, 0, 0, gucu_add_wch);
 	scm_c_define_gsubr ("addch", 1, 0, 0, gucu_addch);
 	scm_c_define_gsubr ("addchnstr", 2, 0, 0, gucu_addchnstr);
 	scm_c_define_gsubr ("addchstr", 1, 0, 0, gucu_addchstr);
@@ -3310,7 +3328,7 @@ gucu_init_function ()
 	scm_c_define_gsubr ("endwin", 0, 0, 0, gucu_endwin);
 	scm_c_define_gsubr ("erasechar", 0, 0, 0, gucu_erasechar);
 	scm_c_define_gsubr ("erase", 0, 0, 0, gucu_erase);
-	scm_c_define_gsubr ("filter", 0, 0, 0, gucu_filter);
+	scm_c_define_gsubr ("%filter", 0, 0, 0, gucu_filter);
 	scm_c_define_gsubr ("flash", 0, 0, 0, gucu_flash);
 	scm_c_define_gsubr ("flushinp", 0, 0, 0, gucu_flushinp);
 	scm_c_define_gsubr ("getbkgd", 1, 0, 0, gucu_getbkgd);

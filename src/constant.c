@@ -1,8 +1,12 @@
 
-#include <libguile.h>
+
 #include <curses.h>
+#include <libguile.h>
+#include <wchar.h>
+
 #include "constant.h"
 #include "type.h"
+
 #define _GNU_SOURCE
 SCM gucu_EOF;
 SCM gucu_ERR;
@@ -45,7 +49,6 @@ SCM gucu_COLOR_MAGENTA;
 SCM gucu_COLOR_CYAN;
 SCM gucu_COLOR_WHITE;
 SCM gucu_KEY_CODE_YES;
-SCM gucu_KEY_MIN;
 SCM gucu_KEY_BREAK;
 SCM gucu_KEY_SRESET;
 SCM gucu_KEY_RESET;
@@ -135,9 +138,6 @@ SCM gucu_KEY_SSUSPEND;
 SCM gucu_KEY_SUNDO;
 SCM gucu_KEY_SUSPEND;
 SCM gucu_KEY_UNDO;
-SCM gucu_KEY_MOUSE;
-SCM gucu_KEY_RESIZE;
-SCM gucu_KEY_EVENT;
 
 void 
 gucu_init_constant ()
@@ -183,7 +183,6 @@ gucu_init_constant ()
 	gucu_COLOR_CYAN = scm_permanent_object (scm_c_define ("COLOR_CYAN", scm_from_int (COLOR_CYAN)));
 	gucu_COLOR_WHITE = scm_permanent_object (scm_c_define ("COLOR_WHITE", scm_from_int (COLOR_WHITE)));
 	gucu_KEY_CODE_YES = scm_permanent_object (scm_c_define ("KEY_CODE_YES", scm_from_int (KEY_CODE_YES)));
-	gucu_KEY_MIN = scm_permanent_object (scm_c_define ("KEY_MIN", scm_from_int (KEY_MIN)));
 	gucu_KEY_BREAK = scm_permanent_object (scm_c_define ("KEY_BREAK", scm_from_int (KEY_BREAK)));
 	gucu_KEY_SRESET = scm_permanent_object (scm_c_define ("KEY_SRESET", scm_from_int (KEY_SRESET)));
 	gucu_KEY_RESET = scm_permanent_object (scm_c_define ("KEY_RESET", scm_from_int (KEY_RESET)));
@@ -273,7 +272,4 @@ gucu_init_constant ()
 	gucu_KEY_SUNDO = scm_permanent_object (scm_c_define ("KEY_SUNDO", scm_from_int (KEY_SUNDO)));
 	gucu_KEY_SUSPEND = scm_permanent_object (scm_c_define ("KEY_SUSPEND", scm_from_int (KEY_SUSPEND)));
 	gucu_KEY_UNDO = scm_permanent_object (scm_c_define ("KEY_UNDO", scm_from_int (KEY_UNDO)));
-	gucu_KEY_MOUSE = scm_permanent_object (scm_c_define ("KEY_MOUSE", scm_from_int (KEY_MOUSE)));
-	gucu_KEY_RESIZE = scm_permanent_object (scm_c_define ("KEY_RESIZE", scm_from_int (KEY_RESIZE)));
-	gucu_KEY_EVENT = scm_permanent_object (scm_c_define ("KEY_EVENT", scm_from_int (KEY_EVENT)));
 }
