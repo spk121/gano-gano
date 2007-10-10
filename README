@@ -1,5 +1,5 @@
 The README file for Guile Curses
-$Id: README,v 1.1 2007/09/06 16:26:55 spike_gran Exp $
+$Id: README,v 1.2 2007/10/10 16:35:21 spike_gran Exp $
 
 
 This is gucu v0.0, the curses library from the Gano project.  It

@@ -27,12 +27,15 @@ uname -v = #2 SMP Tue Jun 19 14:58:11 CDT 2007
 /usr/bin/oslevel       = unknown
 /bin/universe          = unknown
 
-PATH: /usr/local/sbin
 PATH: /usr/local/bin
-PATH: /sbin
-PATH: /usr/sbin
-PATH: /bin
 PATH: /usr/bin
+PATH: /bin
+PATH: /usr/games
+PATH: /usr/lib/java/bin
+PATH: /usr/lib/java/jre/bin
+PATH: /usr/lib/qt/bin
+PATH: /usr/share/texmf/bin
+PATH: .
 
 
 ## ----------- ##
@@ -40,11 +43,11 @@ PATH: /usr/bin
 ## ----------- ##
 
 configure:1983: checking for a BSD-compatible install
-configure:2039: result: /bin/ginstall -c
+configure:2039: result: /usr/bin/ginstall -c
 configure:2050: checking whether build environment is sane
 configure:2093: result: yes
 configure:2158: checking for gawk
-configure:2174: found /bin/gawk
+configure:2174: found /usr/local/bin/gawk
 configure:2185: result: gawk
 configure:2196: checking whether make sets $(MAKE)
 configure:2217: result: yes
@@ -104,17 +107,17 @@ configure:3364: result: GNU
 configure:3392: checking dependency style of gcc
 configure:3482: result: gcc3
 configure:3512: checking for a BSD-compatible install
-configure:3568: result: /bin/ginstall -c
+configure:3568: result: /usr/bin/ginstall -c
 configure:3660: checking build system type
 configure:3678: result: i586-pc-linux-gnu
 configure:3700: checking host system type
 configure:3715: result: i586-pc-linux-gnu
 configure:3737: checking for a sed that does not truncate output
-configure:3793: result: /bin/sed
+configure:3793: result: /usr/bin/sed
 configure:3796: checking for grep that handles long lines and -e
-configure:3870: result: /bin/grep
+configure:3870: result: /usr/bin/grep
 configure:3875: checking for egrep
-configure:3953: result: /bin/grep -E
+configure:3953: result: /usr/bin/grep -E
 configure:3969: checking for ld used by gcc
 configure:4036: result: /usr/i486-slackware-linux/bin/ld
 configure:4045: checking if the linker (/usr/i486-slackware-linux/bin/ld) is GNU ld
@@ -388,7 +391,7 @@ configure:9276: checking whether stripping libraries is possible
 configure:9281: result: yes
 configure:9405: checking for shl_load
 configure:9461: gcc -o conftest -g -O2   conftest.c  >&5
-/tmp/cc0fBUlD.o: In function `main':
+/tmp/ccK8chmz.o: In function `main':
 /home/mike/curses/conftest.c:55: undefined reference to `shl_load'
 collect2: ld returned 1 exit status
 configure:9467: $? = 1
@@ -496,7 +499,7 @@ configure: failed program was:
 configure:9548: result: no
 configure:9553: checking for dlopen
 configure:9609: gcc -o conftest -g -O2   conftest.c  >&5
-/tmp/cczrzE5c.o: In function `main':
+/tmp/ccgNGWif.o: In function `main':
 /home/mike/curses/conftest.c:55: undefined reference to `dlopen'
 collect2: ld returned 1 exit status
 configure:9615: $? = 1
@@ -574,10 +577,10 @@ configure:9965: checking whether a statically linked program can dlopen itself
 configure:10039: gcc -o conftest -g -O2  -DHAVE_DLFCN_H  -Wl,--export-dynamic -static conftest.c -ldl  >&5
 configure: In function 'main':
 configure:10035: warning: incompatible implicit declaration of built-in function 'exit'
-/tmp/ccWl2rIR.o: In function `main':
+/tmp/ccotMB92.o: In function `main':
 /home/mike/curses/configure:10023: warning: Using 'dlopen' in statically linked applications requires at runtime the shared libraries from the glibc version used for linking
 configure:10042: $? = 0
-/lib/: cannot read file data: Is a directory
+/usr/local/lib/: cannot read file data: Is a directory
 configure:10060: result: no
 configure:10083: checking if libtool supports shared libraries
 configure:10085: result: yes
@@ -637,7 +640,7 @@ configure:15795: result: GNU/Linux ld.so
 configure:15804: checking how to hardcode library paths into programs
 configure:15829: result: immediate
 configure:19399: checking for a thread-safe mkdir -p
-configure:19438: result: /bin/mkdir -p
+configure:19438: result: /usr/bin/mkdir -p
 configure:19443: checking for guile
 configure:19461: found /usr/local/bin/guile
 configure:19473: result: /usr/local/bin/guile
@@ -981,13 +984,13 @@ ac_cv_lib_dl_dlopen=yes
 ac_cv_lib_dld_shl_load=no
 ac_cv_lib_guile_scm_boot_guile=yes
 ac_cv_objext=o
-ac_cv_path_EGREP='/bin/grep -E'
-ac_cv_path_GREP=/bin/grep
+ac_cv_path_EGREP='/usr/bin/grep -E'
+ac_cv_path_GREP=/usr/bin/grep
 ac_cv_path_GUILE=/usr/local/bin/guile
 ac_cv_path_GUILE_CONFIG=/usr/local/bin/guile-config
 ac_cv_path_GUILE_TOOLS=/usr/local/bin/guile-tools
-ac_cv_path_install='/bin/ginstall -c'
-ac_cv_path_mkdir=/bin/mkdir
+ac_cv_path_install='/usr/bin/ginstall -c'
+ac_cv_path_mkdir=/usr/bin/mkdir
 ac_cv_prog_AWK=gawk
 ac_cv_prog_CPP='gcc -E'
 ac_cv_prog_CXXCPP='g++ -E'
@@ -1025,7 +1028,7 @@ lt_cv_objdir=.libs
 lt_cv_path_LD=/usr/i486-slackware-linux/bin/ld
 lt_cv_path_LDCXX=/usr/i486-slackware-linux/bin/ld
 lt_cv_path_NM='/usr/bin/nm -B'
-lt_cv_path_SED=/bin/sed
+lt_cv_path_SED=/usr/bin/sed
 lt_cv_prog_compiler_c_o=yes
 lt_cv_prog_compiler_c_o_CXX=yes
 lt_cv_prog_compiler_c_o_F77=yes
@@ -1073,11 +1076,11 @@ ECHO='echo'
 ECHO_C=''
 ECHO_N='-n'
 ECHO_T=''
-EGREP='/bin/grep -E'
+EGREP='/usr/bin/grep -E'
 EXEEXT=''
 F77='g77'
 FFLAGS='-g -O2'
-GREP='/bin/grep'
+GREP='/usr/bin/grep'
 GUILE='/usr/local/bin/guile'
 GUILE_CFLAGS='-I/usr/local/include -pthread'
 GUILE_CONFIG='/usr/local/bin/guile-config'
@@ -1104,7 +1107,7 @@ PACKAGE_TARNAME='gucu'
 PACKAGE_VERSION='0.0'
 PATH_SEPARATOR=':'
 RANLIB='ranlib'
-SED='/bin/sed'
+SED='/usr/bin/sed'
 SET_MAKE=''
 SHELL='/bin/sh'
 STRIP='strip'
