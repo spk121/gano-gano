@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <libguile.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <config.h>
 
@@ -52,6 +53,12 @@ _scm_from_attr (attr_t x)
     abort ();
 }
 
+// cchar: a wide character with possible combining characters and its
+// associated renditions.  In C, a cchar_t struct.  In scheme, a list
+// where element 0 is the attributes, element 1 is the color pair, and
+// the rest of the list is the code points of the character and its
+// accents
+
 SCM
 _scm_from_cchar (cchar_t *x)
 {
@@ -66,18 +73,53 @@ _scm_from_cchar (cchar_t *x)
   SCM total_list = SCM_EOL;
 
   len = getcchar(x, 0, 0, 0, 0);
-  ret = getcchar(WACS_LTEE, wch, &attr, &color_pair, NULL);
+  ret = getcchar(x, wch, &attr, &color_pair, NULL);
   
   assert (ret != ERR);
 
+  total_list = scm_list_2 (_scm_from_attr (attr), scm_from_short (color_pair));
+
   for (i=0; i<len; i++)
     {
-      element = scm_from_int32 (wch[i]);
+      element = scm_from_uint32 (wch[i]);
       element_list = scm_list_1 (element);
       total_list = scm_append (scm_list_2 (total_list, element_list));
     }
 
-  return scm_list_3 (_scm_from_attr (attr), scm_from_short (color_pair), total_list);
+  return total_list;
+}
+
+int
+wchstrlen(const cchar_t *s)
+{
+  int i = 0;
+  int result = 0;
+  while ((s[i]).chars[0] != L'\0')
+    {
+      i++ ;
+      result ++;
+    }
+  return result;
+}
+
+SCM
+_scm_from_cstring (cchar_t *x)
+{
+  int i;
+  int len;
+  SCM element;
+  SCM element_list;
+  SCM total_list = SCM_EOL;
+
+  len = wchstrlen(x);
+  for (i=0; i<len; i++)
+    {
+      element = _scm_from_cchar (&(x[i]));
+      element_list = scm_list_1 (element);
+      total_list = scm_append (scm_list_2 (total_list, element_list));
+    }
+
+  return total_list;
 }
 
 int
@@ -118,6 +160,33 @@ _scm_is_cchar (SCM x)
 
 }
 
+int
+_scm_is_cstring (SCM x)
+{
+  int i;
+  int err = 0;			
+  SCM member;			
+  
+  if (scm_is_true (scm_list_p (x)))
+    {
+      int len = scm_to_int (scm_length (x));
+      for (i=0; i<len; i++)
+	{
+	  member = scm_list_ref (x, scm_from_int (i));
+	  if (!_scm_is_cchar (member))
+	    err ++;
+	}
+    }
+  else
+    err ++;
+
+  if (err > 0)
+    return 0;
+  else
+    return 1;
+}
+
+
 cchar_t *
 _scm_to_cchar (SCM x)
 {
@@ -147,8 +216,40 @@ _scm_to_cchar (SCM x)
   wch[len-2] = L'\0';
 
   setcchar(cchar, wch, attr, color_pair, NULL);
+  
+  free (wch);
 
   return cchar;
+}
+
+cchar_t *
+_scm_to_cstring (SCM x)
+{
+  int i;
+  SCM member;			
+  cchar_t *cstring;
+  cchar_t *cchar;
+  cchar_t terminator;
+  wchar_t wch;
+  
+  int len = scm_to_int (scm_length (x));
+  cstring = (cchar_t *) scm_malloc (sizeof(cchar_t) * (len + 1));
+
+
+  for (i=0; i<len; i++)
+    {
+      member = scm_list_ref (x, scm_from_int (i));
+      cchar = _scm_to_cchar (member);
+      memcpy( &(cstring[i]), cchar, sizeof(cchar_t));
+      free(cchar);
+    }
+
+  wch = L'\0';
+
+  setcchar(&terminator, &wch, A_NORMAL, 0, NULL);
+  memcpy( &(cstring[len]), &terminator, sizeof(cchar_t));
+  
+  return cstring;
 }
 
 
@@ -368,6 +469,28 @@ _scm_from_screen (SCREEN *x)
   return s_screen;
 }
 
+int
+print_screen (SCM x, SCM port, scm_print_state *pstate)
+{
+  SCREEN *screen = (SCREEN *) SCM_SMOB_DATA (x);
+  char *str;
+
+  assert (screen != NULL);
+
+  scm_puts ("#<screen ", port);
+
+  if (asprintf (&str, "%p", screen) < 0)
+    scm_puts ("???", port);
+  else
+    scm_puts (str, port);
+
+  scm_puts (">", port);
+  
+  // non-zero means success 
+  return 1;
+}
+
+
 // voidstring -- In C, (void *)NULL.  In Scheme, doesn't matter.  This
 // is because all of the (void *) arguments in the directly wrapped
 // list are unused by curses.
@@ -389,6 +512,77 @@ _scm_from_voidstring (void *x)
 {
   return SCM_EOL;
 }
+
+// wstring -- in C, wchar_t * array.  In scheme, a list of integers
+
+int
+_scm_is_wstring (SCM x)
+{
+  int i;
+  int err = 0;			
+  SCM member;			
+  
+  if (scm_is_true (scm_list_p (x)))
+    {
+      int len = scm_to_int (scm_length (x));
+      for (i=0; i<len; i++)
+	{
+	  member = scm_list_ref (x, scm_from_int (i));
+	  if (!_scm_is_wchar (member))
+	    err ++;
+	}
+    }
+  else
+    err ++;
+  
+  if (err > 0)
+    return 0;
+  else
+    return 1;
+}
+
+wchar_t *
+_scm_to_wstring (SCM x)
+{
+  int i;
+  wchar_t *str;
+  SCM member;
+  
+  int len = scm_to_int (scm_length (x));
+  
+  str = (wchar_t *) scm_malloc ((len + 1)* sizeof (wchar_t));
+  for (i=0; i<len; i++)
+    {
+      member = scm_list_ref (x, scm_from_int (i));
+      str[i] = _scm_to_wchar (member);
+    }
+  str[len] = (chtype) 0;
+  
+  return str;
+}
+
+SCM
+_scm_from_wstring (wchar_t *x)
+{
+  int i;
+  SCM element;
+  SCM element_list;
+  SCM total_list = SCM_EOL;
+
+  assert (x != NULL);
+  
+  /* FIXME: possible infinite loop if X is junk */
+  i = 0;
+  while (x[i] != 0) 
+    {
+      element = _scm_from_wchar (x[i]);
+      element_list = scm_list_1 (element);
+      total_list = scm_append (scm_list_2 (total_list, element_list));
+      i ++;
+    }
+  return (total_list);
+}
+
 
 // window -- in C, a WINDOW *.  In Scheme, a smob that contains the pointer
 
@@ -494,23 +688,41 @@ gucu_is_window_p (SCM x)
   return scm_from_bool (_scm_is_window (x));
 }
 
+// wchar_t.  In C, an int.  In scheme, an integer.
+
 int
 _scm_is_wchar (SCM x)
 {
   return scm_is_integer (x);
 }
 
+wchar_t
+_scm_to_wchar (SCM x)
+{
+  return scm_to_uint32 (x);
+}
+
+SCM
+_scm_from_wchar (wchar_t x)
+{
+  return scm_from_uint32 (x);
+}
+
+
 void 
 gucu_init_type ()
 {
   screen_tag = scm_make_smob_type ("screen", sizeof (SCREEN *));
+  scm_set_smob_print (screen_tag, print_screen);
+
   window_tag = scm_make_smob_type ("window", sizeof (WINDOW *));
   scm_set_smob_mark (window_tag, mark_window);
   scm_set_smob_free (window_tag, free_window);
   scm_set_smob_print (window_tag, print_window);
   scm_set_smob_equalp (window_tag, equalp_window);
+  scm_c_define_gsubr ("window?", 1, 0, 0, gucu_is_window_p);
+
   file_tag = scm_make_smob_type ("file", sizeof (FILE *));
   scm_c_define_gsubr ("fopen", 2, 0, 0, gucu_fopen);
   scm_c_define_gsubr ("fclose", 1, 0, 0, gucu_fclose);
-  scm_c_define_gsubr ("window?", 1, 0, 0, gucu_is_window_p);
 }

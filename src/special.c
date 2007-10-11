@@ -28,7 +28,7 @@ gucu_attr_get ()
 SCM
 gucu_color_content (SCM s_color)
 {
-  SCM_ASSERT (scm_is_integer (s_color), s_color, SCM_ARG1, "color_content");
+  SCM_ASSERT (scm_is_integer (s_color), s_color, SCM_ARG1, "color-content");
 
   int ret;
   short c_red, c_green, c_blue;
@@ -46,6 +46,25 @@ gucu_color_content (SCM s_color)
 
   return s_list; 
 }
+
+SCM
+gucu_getbkgrnd ()
+{
+  cchar_t wch;
+  SCM s_wch;
+  int ret;
+
+  ret = getbkgrnd(&wch);
+  if (ret == OK)
+    {
+      s_wch = _scm_from_cchar (&wch);
+    }
+  else
+    abort();
+
+  return s_wch;
+}
+  
 
 SCM
 gucu_getnstr (SCM n)
@@ -139,8 +158,10 @@ gucu_innstr (SCM n)
   SCM s_str;
   int ret;
 
-  ret = innstr (c_str, scm_to_int (n));
-  if (ret == OK)
+  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
+
+  ret = innstr (c_str, scm_to_int (n) + 1);
+  if (ret != ERR)
     {
       s_str = scm_take_locale_string (c_str);
     }
@@ -157,8 +178,9 @@ gucu_instr ()
   SCM s_str;
   int ret;
 
+  c_str = (char *) scm_malloc (sizeof (char) * (COLS + 1));
   ret = instr (c_str);
-  if (ret == OK)
+  if (ret != ERR)
     {
       s_str = scm_take_locale_string (c_str);
     }
@@ -166,6 +188,17 @@ gucu_instr ()
     abort ();
 
   return s_str;
+}
+
+SCM
+gucu_in_wch ()
+{
+  int ret;
+  cchar_t ch;
+  
+  ret = in_wch (&ch);
+  
+  return _scm_from_cchar (&ch);
 }
 
 SCM
@@ -268,8 +301,8 @@ gucu_mvwgetstr (SCM win, SCM y, SCM x)
 SCM
 gucu_mvin_wch (SCM y, SCM x)
 {
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvwin_wch");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvwin_wch");
+  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvin_wch");
+  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvin_wch");
 
   int ret;
   cchar_t ch;
@@ -339,8 +372,10 @@ gucu_mvinnstr (SCM y, SCM x, SCM n)
   SCM s_str;
   int ret;
 
-  ret = mvinnstr (scm_to_int (y), scm_to_int (x), c_str, scm_to_int (n));
-  if (ret == OK)
+  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
+
+  ret = mvinnstr (scm_to_int (y), scm_to_int (x), c_str, scm_to_int (n) + 1);
+  if (ret != ERR)
     {
       s_str = scm_take_locale_string (c_str);
     }
@@ -353,8 +388,8 @@ gucu_mvinnstr (SCM y, SCM x, SCM n)
 SCM
 gucu_mvinstr (SCM y, SCM x)
 {
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvinnstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvinnstr");
+  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvinstr");
+  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvinstr");
 
   char *c_str;
   SCM s_str;
@@ -366,6 +401,54 @@ gucu_mvinstr (SCM y, SCM x)
   if (ret != ERR)
     {
       s_str = scm_take_locale_string (c_str);
+    }
+  else
+    abort ();
+
+  return s_str;
+}
+
+SCM
+gucu_mvinwstr (SCM y, SCM x)
+{
+  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvinwstr");
+  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvinwstr");
+
+  wchar_t *c_str;
+  SCM s_str;
+  int ret;
+
+  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (COLS + 1));
+
+  ret = mvinwstr (scm_to_int (y), scm_to_int (x), c_str);
+  if (ret != ERR)
+    {
+      s_str = _scm_from_wstring (c_str);
+    }
+  else
+    abort ();
+
+  return s_str;
+}
+
+
+SCM
+gucu_mvin_wchstr(SCM y, SCM x)
+{
+  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvin-wchstr");
+  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvin-wchstr");
+
+  cchar_t *c_str;
+  SCM s_str;
+  int ret;
+  
+  c_str = (cchar_t *) scm_malloc (sizeof(cchar_t) * (COLS + 1));
+
+  ret = mvin_wchstr (scm_to_int (y), scm_to_int (x), c_str);
+  if (ret != ERR)
+    {
+      s_str = _scm_from_cstring (c_str);
+      free (c_str);
     }
   else
     abort ();
@@ -437,11 +520,11 @@ gucu_mvwinnstr (SCM win, SCM y, SCM x, SCM n)
   SCM s_str;
   int ret;
 
-  c_str = (char *) scm_malloc (sizeof (char) * (COLS + 1));
+  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
 
   ret = mvwinnstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), 
-		   c_str, scm_to_int (n));
-  if (ret == OK)
+		   c_str, scm_to_int (n) + 1);
+  if (ret != ERR)
     {
       s_str = scm_take_locale_string (c_str);
     }
@@ -477,9 +560,103 @@ gucu_mvwinstr (SCM win, SCM y, SCM x)
 }
 
 SCM
+gucu_mvwinwstr (SCM win, SCM y, SCM x)
+{
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwinstr");
+  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwinstr");
+  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwinstr");
+
+  wchar_t *c_str;
+  SCM s_str;
+  int ret;
+  
+  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (COLS + 1));
+
+  ret = mvwinwstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), c_str);
+
+  if (ret != ERR)
+    {
+      s_str = _scm_from_wstring (c_str);
+    }
+  else
+    abort ();
+
+  return s_str;
+}
+
+SCM
+gucu_mvwin_wch (SCM win, SCM y, SCM x)
+{
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwin-wch");
+  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwin-wch");
+  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwin-wch");
+
+  int ret;
+  cchar_t ch;
+  
+  ret = mvwin_wch (_scm_to_window (win), scm_to_int (y), scm_to_int (x), &ch);
+  
+  return _scm_from_cchar (&ch);
+}
+
+
+SCM
+gucu_mvwin_wchstr (SCM win, SCM y, SCM x)
+{
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwin-wchstr");
+  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwin-wchstr");
+  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwin-wchstr");
+
+  cchar_t *c_str;
+  SCM s_str;
+  int ret;
+  
+  c_str = (cchar_t *) scm_malloc (sizeof(cchar_t) * (COLS + 1));
+
+  ret = mvwin_wchstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), c_str);
+  if (ret != ERR)
+    {
+      s_str = _scm_from_cstring (c_str);
+      free (c_str);
+    }
+  else
+    abort ();
+
+  return s_str;
+  
+}
+
+
+SCM
+gucu_newterm (SCM arg1, SCM arg2, SCM arg3)
+{
+	SCM_ASSERT (scm_is_string (arg1), arg1, SCM_ARG1, "newterm");
+	SCM_ASSERT (_scm_is_file (arg2), arg2, SCM_ARG2, "newterm");
+	SCM_ASSERT (_scm_is_file (arg3), arg3, SCM_ARG3, "newterm");
+
+	char *c_arg1 = scm_to_locale_string (arg1);
+	FILE *c_arg2 = _scm_to_file (arg2);
+	FILE *c_arg3 = _scm_to_file (arg3);
+
+	SCREEN * ret = newterm (c_arg1, c_arg2, c_arg3);
+	if (ret == NULL)
+	  {
+	    scm_error_scm (SCM_BOOL_F,
+			   scm_from_locale_string("newterm"), 
+			   scm_from_locale_string("could not create a terminal"),
+			   SCM_BOOL_F,
+			   SCM_BOOL_F);
+	  }
+
+	SCM s_ret = _scm_from_screen (ret);
+
+	return s_ret;
+}
+
+SCM
 gucu_pair_content (SCM s_pair)
 {
-  SCM_ASSERT (scm_is_integer (s_pair), s_pair, SCM_ARG1, "pair_content");
+  SCM_ASSERT (scm_is_integer (s_pair), s_pair, SCM_ARG1, "pair-content");
   //SCM_ASSERT (scm_is_true(scm_gr_p(s_pair, scm_from_int (0))), 
   //      s_pair, SCM_ARG1, "color_content");
 
@@ -502,7 +679,7 @@ gucu_pair_content (SCM s_pair)
 SCM
 gucu_wattr_get (SCM win)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wattr_get");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wattr-get");
 
   attr_t c_attrs;
   short c_pair;
@@ -518,6 +695,26 @@ gucu_wattr_get (SCM win)
     abort ();
 
   return s_list;
+}
+
+SCM
+gucu_wgetbkgrnd (SCM win)
+{
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wgetnstr");
+
+  cchar_t wch;
+  SCM s_wch;
+  int ret;
+
+  ret = wgetbkgrnd(_scm_to_window (win), &wch);
+  if (ret == OK)
+    {
+      s_wch = _scm_from_cchar (&wch);
+    }
+  else
+    abort();
+
+  return s_wch;
 }
 
 
@@ -616,15 +813,17 @@ gucu_winchstr (SCM win)
 SCM
 gucu_winnstr (SCM win, SCM n)
 {
-  SCM_ASSERT (scm_is_integer (win), win, SCM_ARG1, "winnstr");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "winnstr");
   SCM_ASSERT (scm_is_integer (n), n, SCM_ARG2, "winnstr");
 
   char *c_str;
   SCM s_str;
   int ret;
 
-  ret = winnstr (_scm_to_window (win), c_str, scm_to_int (n));
-  if (ret == OK)
+  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
+
+  ret = winnstr (_scm_to_window (win), c_str, scm_to_int (n) + 1);
+  if (ret != ERR)
     {
       s_str = scm_take_locale_string (c_str);
     }
@@ -643,8 +842,10 @@ gucu_winstr (SCM win)
   SCM s_str;
   int ret;
 
+  c_str = (char *) scm_malloc (sizeof (char) * (COLS + 1));
+
   ret = winstr (_scm_to_window (win), c_str);
-  if (ret == OK)
+  if (ret != ERR)
     {
       s_str = scm_take_locale_string (c_str);
     }
@@ -1204,7 +1405,7 @@ gucu_TABSIZE ()
 SCM
 gucu_set_TABSIZE (SCM t)
 {
-  SCM_ASSERT (scm_is_integer (t), t, SCM_ARG1, "SET_TABSIZE");
+  SCM_ASSERT (scm_is_integer (t), t, SCM_ARG1, "set-tabsize");
 
   TABSIZE = scm_to_int (t);
   return SCM_UNSPECIFIED;
@@ -1222,94 +1423,103 @@ gucu_stdscr ()
 void
 gucu_init_special ()
 {
-  scm_c_define_gsubr ("attr_get", 0, 0, 0, gucu_attr_get);
-  scm_c_define_gsubr ("color_content", 1, 0, 0, gucu_color_content);
+  scm_c_define_gsubr ("attr-get", 0, 0, 0, gucu_attr_get);
+  scm_c_define_gsubr ("color-content", 1, 0, 0, gucu_color_content);
+  scm_c_define_gsubr ("getbkgrnd", 0, 0, 0, gucu_getbkgrnd);
   scm_c_define_gsubr ("getnstr", 1, 0, 0, gucu_getnstr);
   scm_c_define_gsubr ("getstr", 0, 0, 0, gucu_getstr);
   scm_c_define_gsubr ("inchnstr", 1, 0, 0, gucu_inchnstr);
   scm_c_define_gsubr ("inchstr", 0, 0, 0, gucu_inchstr);
   scm_c_define_gsubr ("innstr", 1, 0, 0, gucu_innstr);
   scm_c_define_gsubr ("instr", 0, 0, 0, gucu_instr);
+  scm_c_define_gsubr ("in-wch", 0, 0, 0, gucu_in_wch);
   scm_c_define_gsubr ("mvgetnstr", 3, 0, 0, gucu_mvgetnstr);
   scm_c_define_gsubr ("mvgetstr", 2, 0, 0, gucu_mvgetstr);
-  scm_c_define_gsubr ("mvin_wch", 2, 0, 0, gucu_mvin_wch);
   scm_c_define_gsubr ("mvinchnstr", 3, 0, 0, gucu_mvinchnstr);
   scm_c_define_gsubr ("mvinchstr", 2, 0, 0, gucu_mvinchstr);
   scm_c_define_gsubr ("mvinnstr", 3, 0, 0, gucu_mvinnstr);
   scm_c_define_gsubr ("mvinstr", 2, 0, 0, gucu_mvinstr);
+  scm_c_define_gsubr ("mvinwstr", 2, 0, 0, gucu_mvinwstr);
+  scm_c_define_gsubr ("mvin-wch", 2, 0, 0, gucu_mvin_wch);
+  scm_c_define_gsubr ("mvin-wchstr", 2, 0, 0, gucu_mvin_wchstr);
   scm_c_define_gsubr ("mvwgetnstr", 4, 0, 0, gucu_mvwgetnstr);
   scm_c_define_gsubr ("mvwgetstr", 3, 0, 0, gucu_mvwgetstr);
   scm_c_define_gsubr ("mvwinchnstr", 4, 0, 0, gucu_mvwinchnstr);
   scm_c_define_gsubr ("mvwinchstr", 3, 0, 0, gucu_mvwinchstr);
-  scm_c_define_gsubr ("mvwinnstr", 3, 0, 0, gucu_mvwinnstr);
+  scm_c_define_gsubr ("mvwinnstr", 4, 0, 0, gucu_mvwinnstr);
   scm_c_define_gsubr ("mvwinstr", 3, 0, 0, gucu_mvwinstr);
-  scm_c_define_gsubr ("pair_content", 1, 0, 0, gucu_pair_content);
-  scm_c_define_gsubr ("wattr_get", 1, 0, 0, gucu_wattr_get);
+  scm_c_define_gsubr ("mvwinwstr", 3, 0, 0, gucu_mvwinwstr);
+  scm_c_define_gsubr ("mvwin-wch", 3, 0, 0, gucu_mvwin_wch);
+  scm_c_define_gsubr ("mvwin-wchstr", 3, 0, 0, gucu_mvwin_wchstr);
+  scm_c_define_gsubr ("newterm", 3, 0, 0, gucu_newterm);
+  scm_c_define_gsubr ("pair-content", 1, 0, 0, gucu_pair_content);
+  scm_c_define_gsubr ("wattr-get", 1, 0, 0, gucu_wattr_get);
+  scm_c_define_gsubr ("wgetbkgrnd", 0, 0, 0, gucu_wgetbkgrnd);
   scm_c_define_gsubr ("wgetnstr", 2, 0, 0, gucu_wgetnstr);
   scm_c_define_gsubr ("wgetstr", 1, 0, 0, gucu_wgetstr);
   scm_c_define_gsubr ("winchnstr", 2, 0, 0, gucu_winchnstr);
   scm_c_define_gsubr ("winchstr", 1, 0, 0, gucu_winchstr);
   scm_c_define_gsubr ("winnstr", 2, 0, 0, gucu_winnstr);
-  scm_c_define_gsubr ("winstr", 2, 0, 0, gucu_winstr);
+  scm_c_define_gsubr ("winstr", 1, 0, 0, gucu_winstr);
   scm_c_define_gsubr ("getbegyx", 1, 0, 0, gucu_getbegyx);
   scm_c_define_gsubr ("getmaxyx", 1, 0, 0, gucu_getmaxyx);
   scm_c_define_gsubr ("getparyx", 1, 0, 0, gucu_getparyx);
   scm_c_define_gsubr ("getyx", 1, 0, 0, gucu_getyx);
-  scm_c_define_gsubr ("ACS_BLOCK", 0, 0, 0, gucu_ACS_BLOCK);
-  scm_c_define_gsubr ("ACS_BOARD", 0, 0, 0, gucu_ACS_BOARD);
-  scm_c_define_gsubr ("ACS_BTEE", 0, 0, 0, gucu_ACS_BTEE);
-  scm_c_define_gsubr ("ACS_BULLET", 0, 0, 0, gucu_ACS_BULLET);
-  scm_c_define_gsubr ("ACS_CKBOARD", 0, 0, 0, gucu_ACS_CKBOARD);
-  scm_c_define_gsubr ("ACS_DARROW", 0, 0, 0, gucu_ACS_DARROW);
-  scm_c_define_gsubr ("ACS_DEGREE", 0, 0, 0, gucu_ACS_DEGREE);
-  scm_c_define_gsubr ("ACS_DIAMOND", 0, 0, 0, gucu_ACS_DIAMOND);
-  scm_c_define_gsubr ("ACS_HLINE", 0, 0, 0, gucu_ACS_HLINE);
-  scm_c_define_gsubr ("ACS_LANTERN", 0, 0, 0, gucu_ACS_LANTERN);
-  scm_c_define_gsubr ("ACS_LARROW", 0, 0, 0, gucu_ACS_LARROW);
-  scm_c_define_gsubr ("ACS_LLCORNER", 0, 0, 0, gucu_ACS_LLCORNER);
-  scm_c_define_gsubr ("ACS_LRCORNER", 0, 0, 0, gucu_ACS_LRCORNER);
-  scm_c_define_gsubr ("ACS_LTEE", 0, 0, 0, gucu_ACS_LTEE);
-  scm_c_define_gsubr ("ACS_PLMINUS", 0, 0, 0, gucu_ACS_PLMINUS);
-  scm_c_define_gsubr ("ACS_PLUS", 0, 0, 0, gucu_ACS_PLUS);
-  scm_c_define_gsubr ("ACS_RARROW", 0, 0, 0, gucu_ACS_RARROW);
-  scm_c_define_gsubr ("ACS_RTEE", 0, 0, 0, gucu_ACS_RTEE);
-  scm_c_define_gsubr ("ACS_S1", 0, 0, 0, gucu_ACS_S1);
-  scm_c_define_gsubr ("ACS_S9", 0, 0, 0, gucu_ACS_S9);
-  scm_c_define_gsubr ("ACS_TTEE", 0, 0, 0, gucu_ACS_TTEE);
-  scm_c_define_gsubr ("ACS_UARROW", 0, 0, 0, gucu_ACS_UARROW);
-  scm_c_define_gsubr ("ACS_ULCORNER", 0, 0, 0, gucu_ACS_ULCORNER);
-  scm_c_define_gsubr ("ACS_URCORNER", 0, 0, 0, gucu_ACS_URCORNER);
-  scm_c_define_gsubr ("ACS_VLINE", 0, 0, 0, gucu_ACS_VLINE);
-  scm_c_define_gsubr ("WACS_BLOCK", 0, 0, 0, gucu_WACS_BLOCK);
-  scm_c_define_gsubr ("WACS_BOARD", 0, 0, 0, gucu_WACS_BOARD);
-  scm_c_define_gsubr ("WACS_BTEE", 0, 0, 0, gucu_WACS_BTEE);
-  scm_c_define_gsubr ("WACS_BULLET", 0, 0, 0, gucu_WACS_BULLET);
-  scm_c_define_gsubr ("WACS_CKBOARD", 0, 0, 0, gucu_WACS_CKBOARD);
-  scm_c_define_gsubr ("WACS_DARROW", 0, 0, 0, gucu_WACS_DARROW);
-  scm_c_define_gsubr ("WACS_DEGREE", 0, 0, 0, gucu_WACS_DEGREE);
-  scm_c_define_gsubr ("WACS_DIAMOND", 0, 0, 0, gucu_WACS_DIAMOND);
-  scm_c_define_gsubr ("WACS_HLINE", 0, 0, 0, gucu_WACS_HLINE);
-  scm_c_define_gsubr ("WACS_LANTERN", 0, 0, 0, gucu_WACS_LANTERN);
-  scm_c_define_gsubr ("WACS_LARROW", 0, 0, 0, gucu_WACS_LARROW);
-  scm_c_define_gsubr ("WACS_LLCORNER", 0, 0, 0, gucu_WACS_LLCORNER);
-  scm_c_define_gsubr ("WACS_LRCORNER", 0, 0, 0, gucu_WACS_LRCORNER);
-  scm_c_define_gsubr ("WACS_LTEE", 0, 0, 0, gucu_WACS_LTEE);
-  scm_c_define_gsubr ("WACS_PLMINUS", 0, 0, 0, gucu_WACS_PLMINUS);
-  scm_c_define_gsubr ("WACS_PLUS", 0, 0, 0, gucu_WACS_PLUS);
-  scm_c_define_gsubr ("WACS_RARROW", 0, 0, 0, gucu_WACS_RARROW);
-  scm_c_define_gsubr ("WACS_RTEE", 0, 0, 0, gucu_WACS_RTEE);
-  scm_c_define_gsubr ("WACS_S1", 0, 0, 0, gucu_WACS_S1);
-  scm_c_define_gsubr ("WACS_S9", 0, 0, 0, gucu_WACS_S9);
-  scm_c_define_gsubr ("WACS_TTEE", 0, 0, 0, gucu_WACS_TTEE);
-  scm_c_define_gsubr ("WACS_UARROW", 0, 0, 0, gucu_WACS_UARROW);
-  scm_c_define_gsubr ("WACS_ULCORNER", 0, 0, 0, gucu_WACS_ULCORNER);
-  scm_c_define_gsubr ("WACS_URCORNER", 0, 0, 0, gucu_WACS_URCORNER);
-  scm_c_define_gsubr ("WACS_VLINE", 0, 0, 0, gucu_WACS_VLINE);
-  scm_c_define_gsubr ("LINES", 0, 0, 0, gucu_LINES);
-  scm_c_define_gsubr ("COLS", 0, 0, 0, gucu_COLS);
-  scm_c_define_gsubr ("COLORS", 0, 0, 0, gucu_COLORS);
-  scm_c_define_gsubr ("COLOR_PAIRS", 0, 0, 0, gucu_COLOR_PAIRS);
-  scm_c_define_gsubr ("TABSIZE", 0, 0, 0, gucu_TABSIZE);
-  scm_c_define_gsubr ("SET_TABSIZE", 1, 0, 0, gucu_set_TABSIZE);
+  scm_c_define_gsubr ("acs-block", 0, 0, 0, gucu_ACS_BLOCK);
+  scm_c_define_gsubr ("acs-board", 0, 0, 0, gucu_ACS_BOARD);
+  scm_c_define_gsubr ("acs-btee", 0, 0, 0, gucu_ACS_BTEE);
+  scm_c_define_gsubr ("acs-bullet", 0, 0, 0, gucu_ACS_BULLET);
+  scm_c_define_gsubr ("acs-ckboard", 0, 0, 0, gucu_ACS_CKBOARD);
+  scm_c_define_gsubr ("acs-darrow", 0, 0, 0, gucu_ACS_DARROW);
+  scm_c_define_gsubr ("acs-degree", 0, 0, 0, gucu_ACS_DEGREE);
+  scm_c_define_gsubr ("acs-diamond", 0, 0, 0, gucu_ACS_DIAMOND);
+  scm_c_define_gsubr ("acs-hline", 0, 0, 0, gucu_ACS_HLINE);
+  scm_c_define_gsubr ("acs-lantern", 0, 0, 0, gucu_ACS_LANTERN);
+  scm_c_define_gsubr ("acs-larrow", 0, 0, 0, gucu_ACS_LARROW);
+  scm_c_define_gsubr ("acs-llcorner", 0, 0, 0, gucu_ACS_LLCORNER);
+  scm_c_define_gsubr ("acs-lrcorner", 0, 0, 0, gucu_ACS_LRCORNER);
+  scm_c_define_gsubr ("acs-ltee", 0, 0, 0, gucu_ACS_LTEE);
+  scm_c_define_gsubr ("acs-plminus", 0, 0, 0, gucu_ACS_PLMINUS);
+  scm_c_define_gsubr ("acs-plus", 0, 0, 0, gucu_ACS_PLUS);
+  scm_c_define_gsubr ("acs-rarrow", 0, 0, 0, gucu_ACS_RARROW);
+  scm_c_define_gsubr ("acs-rtee", 0, 0, 0, gucu_ACS_RTEE);
+  scm_c_define_gsubr ("acs-s1", 0, 0, 0, gucu_ACS_S1);
+  scm_c_define_gsubr ("acs-s9", 0, 0, 0, gucu_ACS_S9);
+  scm_c_define_gsubr ("acs-ttee", 0, 0, 0, gucu_ACS_TTEE);
+  scm_c_define_gsubr ("acs-uarrow", 0, 0, 0, gucu_ACS_UARROW);
+  scm_c_define_gsubr ("acs-ulcorner", 0, 0, 0, gucu_ACS_ULCORNER);
+  scm_c_define_gsubr ("acs-urcorner", 0, 0, 0, gucu_ACS_URCORNER);
+  scm_c_define_gsubr ("acs-vline", 0, 0, 0, gucu_ACS_VLINE);
+  scm_c_define_gsubr ("wacs-block", 0, 0, 0, gucu_WACS_BLOCK);
+  scm_c_define_gsubr ("wacs-board", 0, 0, 0, gucu_WACS_BOARD);
+  scm_c_define_gsubr ("wacs-btee", 0, 0, 0, gucu_WACS_BTEE);
+  scm_c_define_gsubr ("wacs-bullet", 0, 0, 0, gucu_WACS_BULLET);
+  scm_c_define_gsubr ("wacs-ckboard", 0, 0, 0, gucu_WACS_CKBOARD);
+  scm_c_define_gsubr ("wacs-darrow", 0, 0, 0, gucu_WACS_DARROW);
+  scm_c_define_gsubr ("wacs-degree", 0, 0, 0, gucu_WACS_DEGREE);
+  scm_c_define_gsubr ("wacs-diamond", 0, 0, 0, gucu_WACS_DIAMOND);
+  scm_c_define_gsubr ("wacs-hline", 0, 0, 0, gucu_WACS_HLINE);
+  scm_c_define_gsubr ("wacs-lantern", 0, 0, 0, gucu_WACS_LANTERN);
+  scm_c_define_gsubr ("wacs-larrow", 0, 0, 0, gucu_WACS_LARROW);
+  scm_c_define_gsubr ("wacs-llcorner", 0, 0, 0, gucu_WACS_LLCORNER);
+  scm_c_define_gsubr ("wacs-lrcorner", 0, 0, 0, gucu_WACS_LRCORNER);
+  scm_c_define_gsubr ("wacs-ltee", 0, 0, 0, gucu_WACS_LTEE);
+  scm_c_define_gsubr ("wacs-plminus", 0, 0, 0, gucu_WACS_PLMINUS);
+  scm_c_define_gsubr ("wacs-plus", 0, 0, 0, gucu_WACS_PLUS);
+  scm_c_define_gsubr ("wacs-rarrow", 0, 0, 0, gucu_WACS_RARROW);
+  scm_c_define_gsubr ("wacs-rtee", 0, 0, 0, gucu_WACS_RTEE);
+  scm_c_define_gsubr ("wacs-s1", 0, 0, 0, gucu_WACS_S1);
+  scm_c_define_gsubr ("wacs-s9", 0, 0, 0, gucu_WACS_S9);
+  scm_c_define_gsubr ("wacs-ttee", 0, 0, 0, gucu_WACS_TTEE);
+  scm_c_define_gsubr ("wacs-uarrow", 0, 0, 0, gucu_WACS_UARROW);
+  scm_c_define_gsubr ("wacs-ulcorner", 0, 0, 0, gucu_WACS_ULCORNER);
+  scm_c_define_gsubr ("wacs-urcorner", 0, 0, 0, gucu_WACS_URCORNER);
+  scm_c_define_gsubr ("wacs-vline", 0, 0, 0, gucu_WACS_VLINE);
+  scm_c_define_gsubr ("lines", 0, 0, 0, gucu_LINES);
+  scm_c_define_gsubr ("cols", 0, 0, 0, gucu_COLS);
+  scm_c_define_gsubr ("colors", 0, 0, 0, gucu_COLORS);
+  scm_c_define_gsubr ("color-pairs", 0, 0, 0, gucu_COLOR_PAIRS);
+  scm_c_define_gsubr ("tabsize", 0, 0, 0, gucu_TABSIZE);
+  scm_c_define_gsubr ("set-tabsize", 1, 0, 0, gucu_set_TABSIZE);
   scm_c_define_gsubr ("stdscr", 0, 0, 0, gucu_stdscr);
 }
