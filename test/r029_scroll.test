@@ -1,0 +1,43 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r029_scroll.test --- test suite for curses's scroll
+
+(define-module (test r029_scroll)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+;; Should be able to dump windows to files
+(with-test-prefix "scroll"
+
+		  (pass-if "scroll"
+			   (begin
+			     (clear)
+			     (mvaddstr 1 0 "xxx")
+			     (scrollok (stdscr) #t)
+			     (scroll (stdscr))
+			     (refresh)
+			     (let ((x1 (mvinnstr 0 0 3)))
+			       (string=? "xxx" x1))))
+
+
+		  (pass-if "scrl"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0 "xxx")
+			     (scrollok (stdscr) #t)
+			     (scrl -1)
+			     (refresh)
+			     (let ((x1 (mvinnstr 1 0 3)))
+			       (string=? "xxx" x1))))
+
+		  (pass-if "scrl"
+			   (begin
+			     (clear)
+			     (mvaddstr 0 0 "xxx")
+			     (scrollok (stdscr) #t)
+			     (wscrl (stdscr) -1)
+			     (refresh)
+			     (let ((x1 (mvinnstr 1 0 3)))
+			       (string=? "xxx" x1))))
+		  )

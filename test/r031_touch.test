@@ -1,0 +1,58 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r031_touch.test --- test suite for curses's touch functions
+
+(define-module (test r031_touch)
+  #:use-module (test lib)
+  #:use-module (gucu raw))
+
+
+;; Should be able to get term attributes
+(with-test-prefix "touch"
+
+		  (pass-if "is-linetouched #f"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (not (is-linetouched (stdscr) 0))))
+
+		  (pass-if "touchline / is-linetouched"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (touchline (stdscr) 0 1)
+			     (is-linetouched (stdscr) 0)))
+
+
+		  (pass-if "wtouchln / is-linetouched"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (wtouchln (stdscr) 0 1 1)
+			     (is-linetouched (stdscr) 0)))
+
+
+		  (pass-if "is-wintouched #f"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (not (is-wintouched (stdscr)))))
+
+		  (pass-if "touchline / is-linetouched"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (touchwin (stdscr))
+			     (is-wintouched (stdscr))))
+
+
+		  (pass-if "untouchwin / is-linetouched"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (touchwin (stdscr))
+			     (untouchwin (stdscr))
+			     (not (is-wintouched (stdscr)))))
+
+
+
+		  )

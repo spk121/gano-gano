@@ -6,6 +6,7 @@
   #:use-module (ice-9 threads)
   #:use-module (gucu raw))
 
+(setlocale LC_ALL "")
 
 ;;;
 ;;; initscr

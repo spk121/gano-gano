@@ -1,0 +1,28 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r023_move.test --- test suite for curses's move functions
+
+(define-module (test r023_move)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+;; Should be able to move the cursor
+(with-test-prefix "move"
+		  
+		  (pass-if "move"
+			   (clear)
+			   (move 1 1)
+			   (refresh)
+			   (lset= eqv? '(1 1) (getyx (stdscr)))))
+
+(define win (newwin 5 5 5 5))
+
+(with-test-prefix "wmove"
+		  
+		  (pass-if "wmove"
+			   (wclear win)
+			   (wmove win 1 1)
+			   (wrefresh win)
+			   (lset= eqv? '(1 1) (getyx win))))
+

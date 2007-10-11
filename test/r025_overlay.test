@@ -1,0 +1,72 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r025_overlay.test --- test suite for curses's overlay
+
+(define-module (test r025_overlay)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+;; Should be able to overlay one window onto another
+
+(define win (newwin 5 5 5 5))
+(with-test-prefix "overlay"
+		  
+		  (pass-if "overlay"
+			   (begin
+			     (wclear win)
+			     (wrefresh win)
+			     (clear)
+			     (refresh)
+
+			     (mvwaddstr win 0 0 "xxx")
+			     (wrefresh win)
+
+			     (overlay win (stdscr))
+			     (delwin win)
+			     (refresh)
+
+			     (let ((x1 (mvinnstr 5 5 3)))
+			       (string=? x1 "xxx"))))
+
+
+		  (pass-if "overwrite"
+			   (begin
+			     (set! win (newwin 5 5 5 5))
+			     (wclear win)
+			     (wrefresh win)
+			     (clear)
+			     (refresh)
+
+			     (mvwaddstr win 0 0 "xxx")
+			     (wrefresh win)
+
+			     (overwrite win (stdscr))
+			     (delwin win)
+			     (refresh)
+
+			     (let ((x1 (mvinnstr 5 5 3)))
+			       (string=? x1 "xxx"))))
+
+		  (pass-if "copywin"
+			   (begin
+			     (set! win (newwin 5 5 5 5))
+			     (wclear win)
+			     (wrefresh win)
+			     (clear)
+			     (refresh)
+
+			     (mvwaddstr win 0 0 "xxx")
+			     (wrefresh win)
+
+			     (copywin win (stdscr) 0 0 0 0 4 4 1)
+			     (refresh)
+			     (delwin win)
+			     (refresh)
+
+			     (let ((x1 (mvinnstr 0 0 3)))
+			       (string=? x1 "xxx"))))
+
+
+		  )
+

@@ -1,0 +1,48 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r026_pad.test --- test suite for curses's pad functions
+
+(define-module (test r026_pad)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+;; Should be able to make big windows
+(define win (newpad 10 10))
+(define win2 (subpad win 4 4 3 3))
+(with-test-prefix "pad"
+
+		  (pass-if "newpad / prefresh"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (box win 0 0)
+			     (mvwaddstr win 1 1 "xxx")
+			     (prefresh win 0 0 5 5 15 15)
+			     (let ((x1 (mvwinnstr win 1 1 3)))
+			       (string=? x1 "xxx"))))
+
+		  (pass-if "subpad / pnoutrefresh"
+			   (begin 
+			     (box win2 0 0)
+			     (mvwaddstr win2 1 1 "yy")
+			     (touchwin win)
+			     (pnoutrefresh win 0 0 5 5 15 15)
+			     (refresh)
+			     (let ((x1 (mvwinnstr win2 1 1 2)))
+				 (string=? x1 "yy"))))
+
+		  (pass-if "pechochar"
+			   (begin 
+			     (pechochar win (char->integer #\1))
+			     (pechochar win (char->integer #\2))
+			     (pechochar win (char->integer #\3))
+			     (pechochar win (char->integer #\4))
+			     (refresh)
+			     (let ((x1 (mvwinnstr win 1 1 4)))
+			       (string=? x1 "1234"))))
+
+		  )
+(delwin win2)
+(delwin win)
+(refresh)

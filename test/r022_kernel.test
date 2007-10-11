@@ -1,0 +1,28 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r022_kernel.test --- test suite for curses's low level functions
+
+(define-module (test r022_kernel)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+;; Should be able to beep and flash
+(with-test-prefix "kernel"
+		  
+; 		  (pass-if "getsyx / setsyx"
+; 			   (begin
+; 			     (clear)
+; 			     (refresh)
+; 			     (setsyx 6 6)
+; 			     (lset= equal? '(6 6) (getsx))))
+
+		  (pass-if "savetty / resettty"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (savetty)
+			     (resetty)))
+
+		  )
+

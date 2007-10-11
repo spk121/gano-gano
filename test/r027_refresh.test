@@ -1,0 +1,34 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r027_refresh.test --- test suite for curses's refresh
+
+(define-module (test r027_refresh)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+;; Should be able to refresh the windows
+(with-test-prefix "refresh"
+
+		  (pass-if "refresh"
+			   (begin
+			     (and
+			      (eqv? (clear) *ok*)
+			      (eqv? (refresh) *ok*)
+			      (eqv? (addstr "a") *ok*)
+			      (eqv? (refresh) *ok*)
+			      (eqv? (addstr "b") *ok*)
+			      (eqv? (wrefresh (stdscr)) *ok*)
+			      (eqv? (addstr "c") *ok*)
+			      (eqv? (wnoutrefresh (stdscr)) *ok*)
+			      (eqv? (doupdate) *ok*)
+			      (eqv? (begin (display "d")
+					   (wredrawln (stdscr) 0 3))
+				    *ok*)
+			      (eqv? (refresh) *ok*)
+			      (eqv? (begin (display "e")
+					   (redrawwin (stdscr)))
+				    *ok*)
+			      (eqv? (refresh) *ok*)))))
+				      
+

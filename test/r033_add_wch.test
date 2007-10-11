@@ -1,0 +1,94 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r003_add_wch.test --- test suite for curses's wide character functions
+
+(define-module (test r033_add_wch)
+  #:use-module (test lib)
+  #:use-module (gucu raw))
+
+
+;; U+041B CYRILLIC CAPITAL LETTER EL
+(define el_normal `(,*a-normal* 0 #x041B))
+(define el_bold `(,*a-bold* 0 #x041B))
+
+;; U+5FE1 CJK UNIFIED IDEOGRAPH-5FE1
+(define chuu_normal `(,*a-normal* 0 #x4F7E))
+(define chuu_bold `(,*a-bold* 0 #x4F7E))
+
+;; 'o' with combining macron and grave accent below
+(define o_macron `(,*a-normal* 0 ,(char->integer #\o) #x0304 #x0316))
+
+;; Should be able to print a non-8859 character
+(with-test-prefix "add-wch"
+		  
+		  (pass-if "add-wch"
+			   (begin
+			     (clear)
+			     (move 0 0)
+			     (add-wch el_normal)
+			     (refresh)
+			     (let ((x (mvin-wch 0 0)))
+			       (equal? x el_normal))))
+		  ;; (sleep 1)
+
+		  (pass-if "mvadd-wch"
+			   (begin
+			     (mvadd-wch 1 0 el_bold)
+			     (refresh)
+			     (let ((x (mvin-wch 1 0)))
+			       (equal? x el_bold))))
+
+		  ;; (sleep 1)
+
+		  (pass-if "echo-wchar"
+			   (begin
+			     (move 2 0)
+			     (echo-wchar chuu_normal)
+			     (let ((x (mvin-wch 2 0)))
+			       (equal? x chuu_normal)))))
+
+(sleep 1)
+
+(define win (newwin 5 5 5 5))
+
+(with-test-prefix "wadd-wch"
+		  
+		  (pass-if "wadd-wch"
+			   (begin
+			     (clear)
+			     (move 0 0)
+			     (wadd-wch win el_normal)
+			     (wrefresh win)
+			     (let ((x (mvwin-wch win 0 0)))
+			       (equal? x el_normal))))
+
+
+		  (pass-if "mvwadd-wch"
+			   (begin
+			     (clear)
+			     (mvwadd-wch win 1 0 el_bold)
+			     (wrefresh win)
+			     (let ((x (mvwin-wch win 1 0)))
+			       (equal? x el_bold))))
+
+		  (pass-if "wecho-wchar"
+			   (begin
+			     (clear)
+			     (wmove win 2 0)
+			     (wecho-wchar win chuu_bold)
+			     (let ((x (mvwin-wch win 2 0)))
+			       (equal? x chuu_bold))))
+
+		  (pass-if "wecho-wchar combining chars"
+			   (begin
+			     (clear)
+			     (wmove win 3 0)
+			     (wecho-wchar win o_macron)
+			     ;(addstr (format #f "~a" o_macron))
+			     (let ((x (mvwin-wch win 3 0)))
+			       ;(addstr (format #f "~a" x))
+			       ;(refresh)
+			       (equal? x o_macron)))))
+
+(sleep 4)
+(delwin win)
+(refresh)

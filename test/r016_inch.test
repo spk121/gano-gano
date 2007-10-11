@@ -6,27 +6,27 @@
   #:use-module (gucu raw))
 
 
-(define x_normal (char->integer #\x))
-(define x_bold (logior x_normal A_BOLD))
+(define x-normal (char->integer #\x))
+(define x-bold (logior x-normal *a-bold*))
 
 (with-test-prefix "inch"
 		  
 		  (pass-if "inch"
 			   (begin
 			     (clear)
-			     (mvaddch 4 5 x_normal)
+			     (mvaddch 4 5 x-normal)
 			     (move 4 5)
 			     (refresh)
 			     (let ((x1 (inch)))
-			       (equal? x_normal x1))))
+			       (equal? x-normal x1))))
 
 		  (pass-if "mvinch"
 			   (begin
 			     (clear)
-			     (mvaddch 1 0 x_bold)
+			     (mvaddch 1 0 x-bold)
 			     (refresh)
 			     (let ((x2 (mvinch 1 0)))
-			       (equal? x_bold x2)))))
+			       (equal? x-bold x2)))))
 			      
 (define win (newwin 5 5 5 5))
 
@@ -35,19 +35,19 @@
 		  (pass-if "winch"
 			   (begin
 			     (wclear win)
-			     (mvwaddch win 2 3 x_normal)
+			     (mvwaddch win 2 3 x-normal)
 			     (wrefresh win)
 			     (wmove win 2 3)
 			     (let ((x1 (winch win)))
-			       (equal? x_normal x1))))
+			       (equal? x-normal x1))))
 
 		  (pass-if "mvwinch"
 			   (begin
 			     (wclear win)
-			     (mvwaddch win 1 0 x_bold)
+			     (mvwaddch win 1 0 x-bold)
 			     (wrefresh win)
 			     (let ((x2 (mvwinch win 1 0)))
-			       (equal? x_bold x2)))))
+			       (equal? x-bold x2)))))
 
 			      
 (delwin win)

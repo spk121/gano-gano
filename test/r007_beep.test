@@ -13,11 +13,11 @@
 			   (begin
 			     (clear)
 			     (refresh)
-			     (equal? OK (and (beep) (beep) (beep)))))
+			     (equal? *ok* (and (beep) (beep) (beep)))))
 
 		  (pass-if "flash"
 			   (begin
 			     (clear)
 			     (refresh)
-			     (equal? OK (and (flash) (flash) (flash))))))
+			     (equal? *ok* (and (flash) (flash) (flash))))))
 

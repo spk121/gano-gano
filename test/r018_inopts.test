@@ -1,0 +1,70 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r018_inopts.test --- test suite for curse's input options
+
+(define-module (test r018_inopts)
+  #:use-module (test lib)
+  #:use-module (gucu raw))
+
+
+;; Should be able to change input options
+(with-test-prefix "inopts"
+		  
+		  (pass-if "cbreak"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (cbreak)
+			     (nodelay (stdscr) #t)
+			     (equal? *err* (getch))))
+
+		  (pass-if "halfdelay"
+			   (begin
+			     (halfdelay 1)
+			     (equal? *err* (getch))))
+
+; 		  (pass-if "meta"
+; 			   (begin
+; 			     (nodelay (stdscr) #t)
+; 			     (meta (stdscr) #t)
+; 			     (ungetch (+ 128 (char->integer #\A)))
+; 			     (let ((k1 (getch)))
+; 			       (addstr (format #f "~s~%" k1))
+; 			       (refresh)
+; 			       (sleep 5)
+; 			       (equal? k1 (+ 128 (char->integer #\A))))))
+
+; 		  (pass-if "meta"
+; 			   (begin
+; 			     (meta (stdscr) #f)
+; 			     (ungetch (+ 128 (char->integer #\A)))
+; 			     (let ((k1 (getch)))
+; 			       (addstr (format #f "~s~%" k1))
+; 			       (refresh)
+; 			       (sleep 5)
+; 			       (equal? k1 (+ 128 (char->integer #\A))))))
+
+
+
+
+; 		  (pass-if "keypad"
+; 			   (begin
+; 			     (cbreak)
+; 			     (keypad (stdscr) #t)
+; 			     (ungetch (char->integer #\A))
+; 			     (ungetch (char->integer #\[))
+; 			     (ungetch (char->integer #\esc))
+; 			     (let ((k1 (getch))
+; 				   (k2 (getch))
+; 				   (k3 (getch)))
+; 			       (addstr (format #f "~s~%" k1))
+; 			       (addstr (format #f "~s~%" k2))
+; 			       (addstr (format #f "~s~%" k3))
+; 			       (addstr (format #f "~s~%" *key-up*))
+; 			       (refresh)
+; 			       (sleep 5)
+; 			       (equal? k1 *key-up*))))
+
+
+)
+
+

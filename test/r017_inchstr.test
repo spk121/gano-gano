@@ -10,10 +10,10 @@
 (define hello (map char->integer (string->list "hello")))
 (define he (map char->integer (string->list "he")))
 (define hello-bold (map (lambda (x) 
-			  (logior A_BOLD (char->integer x)))
+			  (logior *a-bold* (char->integer x)))
 			(string->list "hello")))
 (define he-bold (map (lambda (x) 
-		       (logior A_BOLD (char->integer x)))
+		       (logior *a-bold* (char->integer x)))
 		     (string->list "he")))
 
 (with-test-prefix "inchstr"

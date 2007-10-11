@@ -1,0 +1,64 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r020_insstr.test --- test suite for curse's insert string functions
+
+(define-module (test r020_insstr)
+  #:use-module (test lib)
+  #:use-module (gucu raw))
+
+
+;; Should be able to change input options
+(with-test-prefix "insstr"
+		  
+		  (pass-if "insstr"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (mvaddstr 0 0 "xxx")
+			     (move 0 0)
+			     (insstr "zzz")
+			     (let ((x1 (mvinch 0 2))
+				   (x2 (mvinch 0 3)))
+			       (and
+				(equal? x1 (char->integer #\z))
+				(equal? x2 (char->integer #\x))))))
+
+		  (pass-if "mvinsch"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (mvaddstr 0 0 "xxx")
+			     (mvinsstr 0 0 "zzz")
+			     (let ((x1 (mvinch 0 2))
+				   (x2 (mvinch 0 3)))
+			       (and
+				(equal? x1 (char->integer #\z))
+				(equal? x2 (char->integer #\x)))))))
+
+(define win (newwin 5 5 5 5))
+
+(with-test-prefix "winsch"
+		  
+		  (pass-if "winsch"
+			   (begin
+			     (wclear win)
+			     (wrefresh win)
+			     (mvwaddstr win 0 0 "xxx")
+			     (wmove win 0 0)
+			     (winsstr win "zzz")
+			     (let ((x1 (mvwinch win 0 2))
+				   (x2 (mvwinch win 0 3)))
+			       (and
+				(equal? x1 (char->integer #\z))
+				(equal? x2 (char->integer #\x))))))
+
+		  (pass-if "mvwinsch"
+			   (begin
+			     (wclear win)
+			     (wrefresh win)
+			     (mvwaddstr win 0 0 "xxx")
+			     (mvwinsstr win 0 0 "zzz")
+			     (let ((x1 (mvwinch win 0 2))
+				   (x2 (mvwinch win 0 3)))
+			       (and
+				(equal? x1 (char->integer #\z))
+				(equal? x2 (char->integer #\x)))))))

@@ -1,0 +1,95 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r030-termattrs.test --- test suite for curses's term attrs
+
+(define-module (test r030-termattrs)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (ice-9 format)
+  #:use-module (gucu raw))
+
+
+;; Should be able to get term attributes
+(with-test-prefix "termattrs"
+
+		  (pass-if "baudrate"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (let ((b (baudrate)))
+			       (eqv? b 38400))))
+
+
+		  (pass-if "erasechar"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (let ((c (erasechar)))
+			       (eqv? c (char->integer #\del)))))
+
+		  (pass-if "killchar"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (let ((c (killchar)))
+			       (eqv? c (char->integer #\nak)))))
+
+		  (pass-if "has-ic"
+			   (begin
+			     (let ((h (has-ic)))
+			       (eqv? h #t))))
+
+		  (pass-if "has-il"
+			   (begin
+			     (let ((h (has-il)))
+			       (eqv? h #t))))
+
+		  (pass-if "longname"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (let ((c (longname)))
+			       (not (not (string= c "xterm" 0 4 0 4))))))
+
+
+		  (pass-if "termname"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (let ((c (longname)))
+			       (not (not (string= c "xterm" 0 4 0 4))))))
+
+
+		  (pass-if "termattrs"
+			   (begin
+			     (clear)
+			     (refresh)
+			     (let ((ta (termattrs))
+				   (ta2 (logior 
+					 *a-altcharset*
+					 *a-blink*
+					 *a-bold*
+					 ; *a-dim*
+					 *a-color*
+					 *a-invis*
+					 ; *a-protect*
+					 *a-reverse*
+					 *a-standout*
+					 *a-underline*))) 
+			       
+			       (mvaddstr 0 0 (format #f "      ~32,'0b~%" ta))
+			       (addstr (format #f "PRTCT ~32,'0b~%" *a-protect*))
+			       (addstr (format #f "INVIS ~32,'0b~%" *a-invis*))
+			       (addstr (format #f "  ALT ~32,'0b~%" *a-altcharset*))
+			       (addstr (format #f " BOLD ~32,'0b~%" *a-bold*))
+			       (addstr (format #f "  DIM ~32,'0b~%" *a-dim*))
+			       (addstr (format #f "BLINK ~32,'0b~%" *a-blink*))
+			       (addstr (format #f "RVRSE ~32,'0b~%" *a-reverse*))
+			       (addstr (format #f "UNDRL ~32,'0b~%" *a-underline*))
+			       (addstr (format #f "STNDT ~32,'0b~%" *a-standout*))
+			       (addstr (format #f "COLOR ~32,'0b~%" *a-color*))
+			       (addstr (format #f "      ~32,'0b~%" ta2))
+			       (refresh)
+			       (sleep 1)
+			       (eqv? ta ta2))))
+
+		  )

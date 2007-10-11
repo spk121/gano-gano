@@ -11,8 +11,8 @@
 ;;; endwin
 ;;;
 
-;; Pass if OK
+;; Pass if *ok*
 (with-test-prefix "endwin"
 		  
   (pass-if "(default)"
-    (equal? OK (endwin))))
+    (equal? *ok* (endwin))))

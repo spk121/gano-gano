@@ -1,0 +1,94 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r034_add_wchstr.test --- test suite for curses's add_wchstr functions
+
+(define-module (test r034_add_wchstr)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+(define (string->cstring str attrib)
+  (map (lambda (x)
+	 (list attrib 0 (char->integer x)))
+       (string->list str)))
+
+(define hello (string->cstring "hello" *a-normal*))
+(define he (string->cstring "he" *a-normal*))
+(define hello-bold (string->cstring "hello" *a-bold*))
+(define he-bold (string->cstring "he" *a-bold*))
+
+(with-test-prefix "add-wchstr"
+		  
+		  (pass-if "add-wchstr"
+			   (begin
+			     (clear)
+			     (move 0 0)
+			     (add-wchstr hello)
+			     (refresh)
+			     (let ((w2 (mvin-wchstr 0 0)))
+			       (lset= equal? hello (list-head w2 (length hello))))))
+
+		  (pass-if "add-wchnstr"
+			   (begin
+			     (clear)
+			     (move 0 0)
+			     (add-wchnstr hello 2)
+			     (refresh)
+			     (let ((w2 (mvin-wchstr 0 0)))
+			       (lset= equal? he (list-head w2 (length he))))))
+
+		  (pass-if "mvadd-wchstr"
+			   (begin
+			     (clear)
+			     (mvadd-wchstr 1 0 hello-bold)
+			     (refresh)
+			     (let ((x2 (mvin-wchstr 1 0)))
+			       (equal? hello-bold (list-head x2 (length hello-bold))))))
+
+		  (pass-if "mvadd-wchnstr"
+			   (begin
+			     (clear)
+			     (mvadd-wchnstr 1 0 hello-bold 2)
+			     (refresh)
+			     (let ((x2 (mvin-wchstr 1 0)))
+			       (equal? he-bold (list-head x2 (length he-bold)))))))
+
+(define win (newwin 5 10 5 5))
+
+(with-test-prefix "wadd-wchstr"
+		  
+		  (pass-if "wadd-wchstr"
+			   (begin
+			     (wclear win)
+			     (wmove win 0 0)
+			     (wadd-wchstr win hello)
+			     (wrefresh win)
+			     (let ((w2 (mvwin-wchstr win 0 0)))
+			       (lset= equal? hello (list-head w2 (length hello))))))
+
+		  (pass-if "wadd-wchnstr"
+			   (begin
+			     (wclear win)
+			     (wmove win 0 0)
+			     (wadd-wchnstr win hello 2)
+			     (wrefresh win)
+			     (let ((w2 (mvwin-wchstr win 0 0)))
+			       (lset= equal? he (list-head w2 (length he))))))
+
+		  (pass-if "mvwadd-wchstr"
+			   (begin
+			     (wclear win)
+			     (mvwadd-wchstr win 1 0 hello-bold)
+			     (wrefresh win)
+			     (let ((x2 (mvwin-wchstr win 1 0)))
+			       (equal? hello-bold (list-head x2 (length hello-bold))))))
+
+		  (pass-if "mvwadd-wchnstr"
+			   (begin
+			     (wclear win)
+			     (mvwadd-wchnstr win 1 0 hello-bold 2)
+			     (wrefresh win)
+			     (let ((x2 (mvwin-wchstr win 1 0)))
+			       (equal? he-bold (list-head x2 (length he-bold)))))))
+			      
+(delwin win)
+(refresh)

@@ -1,0 +1,51 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r024_outopts.test --- test suite for curses's output options
+
+(define-module (test r024_outopts)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+;; Should be able to move the cursor
+(with-test-prefix "outopts"
+		  
+		  (pass-if "setscrreg #t"
+			   (begin
+			     (clear)
+			     (setscrreg 0 3)
+			     (scrollok (stdscr) #t)
+			     (mvaddstr 0 0 "aaa\n")
+			     (addstr "bbb\n")
+			     (addstr "ccc\n")
+			     (addstr "ddd\n")
+			     (addstr "eee\n")
+			     (refresh)
+			     (let ((x1 (mvinnstr 0 0 3))
+				   (x2 (mvinnstr 1 0 3))
+				   (x3 (mvinnstr 2 0 3)))
+			       (and
+				(string=? x1 "ccc")
+				(string=? x2 "ddd")
+				(string=? x3 "eee")))))
+		  
+		  (pass-if "setscrreg #f"
+			   (begin
+			     (clear)
+			     (setscrreg 0 3)
+			     (scrollok (stdscr) #f)
+			     (mvaddstr 0 0 "aaa\n")
+			     (addstr "bbb\n")
+			     (addstr "ccc\n")
+			     (addstr "ddd\n")
+			     (addstr "eee\n")
+			     (refresh)
+			     (let ((x1 (mvinnstr 0 0 3))
+				   (x2 (mvinnstr 1 0 3))
+				   (x3 (mvinnstr 2 0 3)))
+			       (and
+				(string=? x1 "aaa")
+				(string=? x2 "bbb")
+				(string=? x3 "ccc"))))))
+
+(setscrreg 0 (- (lines) 1))

@@ -7,7 +7,7 @@
 
 
 (define x_normal (char->integer #\x))
-(define x_bold (logior x_normal A_BOLD))
+(define x_bold (logior x_normal *a-bold*))
 
 (with-test-prefix "addch"
 		  

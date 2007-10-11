@@ -12,7 +12,7 @@
 (define letter-p (char->integer #\p))
 (define newline (char->integer #\nl))
 (standend)
-(attron (logior (COLOR_PAIR 0) A_NORMAL))
+(attron (logior (color-pair 0) *a-normal*))
 
 ;; Should be able to get strings from the keyboard
 
