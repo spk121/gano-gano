@@ -1,700 +1,3906 @@
-\input texinfo @c -*- texinfo -*-
-@comment ========================================================
-@comment %**start of header
+\input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
+@c $Id: gucu.texi,v 1.2 2007/10/17 15:33:03 spike_gran Exp $
+@c %**start of header
 @setfilename gucu.info
 @include version.texi
-@settitle GNU M4 @value{VERSION} macro processor
-@setchapternewpage odd
+@settitle GuCu @value{VERSION}
 
-@c @ovar{ARG}
-@c -------------------
-@c The ARG is an optional argument.  To be used for macro arguments in
-@c their documentation.
-@c @macro ovar{varname}
-@c @r{[}@var{\varname\}@r{]}
-@c @end macro
+@syncodeindex fn cp
+@syncodeindex vr cp
+@syncodeindex ky cp
+@syncodeindex pg cp
+@syncodeindex tp cp
 
-@c @kvar{KEYWORD, ARG}
-@c -------------------
-@c The ARG is an optional argument, defaulting to DEFAULT.  To be used
-@c for macro arguments in their documentation.
-@c @macro dvar{keyword, arg}
-@c @r{[}@samp{\keyword\} @var{\arg\}@r{]}
-@c @end macro
-
-
-@comment %**end of header
-@comment ========================================================
+@c %**end of header
 
 @copying
+This manual is for Gucu, a Guile Curses library, (version
+@value{VERSION}, @value{UPDATED}).  Gucu provides bindings for the
+Curses library, which provides functionality for updating character
+screens.
 
-This manual is for GuCu (version @value{VERSION}, @value{UPDATED}),
-a package containing a wrapper for NCurses function for Guile.
-
+Copyright @copyright{} 1998-2007 Free Software Foundation, Inc. @*             
+Copyright @copyright{} 2001-2005 Pradeep Padala @*
 Copyright @copyright{} 2007 Michael L. Gran
 
 @quotation
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the @acronym{GNU} Free Documentation License,
-Version 1.2 or any later version published by the Free Software
-Foundation; with no Invariant Sections, no Front-Cover Texts, and no
-Back-Cover Texts.  A copy of the license is included in the section
-entitled ``@acronym{GNU} Free Documentation License.''
+                                                                         
+Permission is hereby granted, free of charge, to any person obtaining a  
+copy of this software and associated documentation files (the            
+"Software"), to deal in the Software without restriction, including      
+without limitation the rights to use, copy, modify, merge, publish,      
+distribute, distribute with modifications, sublicense, and/or sell       
+copies of the Software, and to permit persons to whom the Software is    
+furnished to do so, subject to the following conditions:                 
+                                                                         
+The above copyright notice and this permission notice shall be included  
+in all copies or substantial portions of the Software.                   
+                                                                         
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS  
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF               
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.   
+IN NO EVENT SHALL THE ABOVE COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,   
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR    
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR    
+THE USE OR OTHER DEALINGS IN THE SOFTWARE.                               
+                                                                         
+Except as contained in this notice, the name(s) of the above copyright   
+holders shall not be used in advertising or otherwise to promote the     
+sale, use or other dealings in this Software without prior written       
+authorization.                                                           
+
 @end quotation
 @end copying
 
+@node Top
+
 @titlepage
-@title GuCu, version @value{VERSION}
-@subtitle Curses for @acronym{GNU} Guile
-@subtitle Edition @value{EDITION}, @value{UPDATED}
-@author by Michael L. Gran
-@author (@email{spk121@@yahoo.com})
+@title GuCu: a Guile Curses Library
+@author Michael L. Gran, ed.
+@author Tom Dickey
+@author Pradeep Padala
+
 
 @page
 @vskip 0pt plus 1filll
 @insertcopying
 @end titlepage
 
-@contents
 
-@ifnottex
-@node Top
-@top GuCu
-@insertcopying
-@end ifnottex
+@node Introduction
+@chapter Introduction
 
-GuCu is a library to offer an API to the Curses library to @acronym{GNU}
-Guile, an implementation of the Scheme language.
+@section Authors, Copyright, and Declarations
 
-This is release @value{VERSION}.  It is now considered to be
-pre-alpha: lacking necessary features and with significant bugs.
+Michael Gran assembled this book, but, wrote only small sections of
+text.  Most of reference text of the raw library is taken directly
+from the documentation of NCurses itself, and then modified to make it
+specific to this Guile binding.  The NCurses library is maintained by
+Tom Dickey, and the manual pages in the library note that the Free
+Software Foundation holds the copyright.
 
-@menu
-* Preliminaries::               Introduction and preliminaries
-* Invoking GuCu::               ``Invoking'' the GuCu library
-* Tutorial::                    Programming with GuCu
-* Core API::                    API Reference for @code{(gucu core)}
-* Raw API::                     API Reference for @code{(gucu raw)}
-* Copying GuCu::                How to make copies of this package and manual
-* Indices::                     Indices of concepts and macros
+@quotation
+Copyright (c) 1998-2005,2006 Free Software Foundation, Inc.              
+                                                                         
+Permission is hereby granted, free of charge, to any person obtaining a  
+copy of this software and associated documentation files (the            
+"Software"), to deal in the Software without restriction, including      
+without limitation the rights to use, copy, modify, merge, publish,      
+distribute, distribute with modifications, sublicense, and/or sell       
+copies of the Software, and to permit persons to whom the Software is    
+furnished to do so, subject to the following conditions:                 
+                                                                         
+The above copyright notice and this permission notice shall be included  
+in all copies or substantial portions of the Software.                   
+                                                                         
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS  
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF               
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.   
+IN NO EVENT SHALL THE ABOVE COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,   
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR    
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR    
+THE USE OR OTHER DEALINGS IN THE SOFTWARE.                               
+                                                                         
+Except as contained in this notice, the name(s) of the above copyright   
+holders shall not be used in advertising or otherwise to promote the     
+sale, use or other dealings in this Software without prior written       
+authorization.                                                           
+@end quotation
 
-@detailmenu
- --- The Detailed Node Listing ---
+The tutorial for the raw curses library is from the NCurses
+Programming HowTo by Pradeep Padala, modified by Michael Gran to make
+it specific to the Guile binding.  That document holds the following
+license.
 
-Introduction and preliminaries
+@quotation
 
-* Intro::                       Introduction to Curses, Guile, and GuCu
-* Bugs::                        Problems and bugs
-* Manual::                      Using this manual
+Copyright @copyright{} 2001, 2002, 2005 Pradeep Padala
 
-``Invoking'' the GuCu library
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+``Software''), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, publish,
+distribute, distribute with modifications, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions.
 
-* Installation Problems::       Installation Problems
-* Ncurses versions::            Versions of Ncurses
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
 
-Programming with GuCu
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS  
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF               
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.   
+IN NO EVENT SHALL THE ABOVE COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,   
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR    
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR    
+THE USE OR OTHER DEALINGS IN THE SOFTWARE.                               
+                                                                         
+Except as contained in this notice, the name(s) of the above copyright   
+holders shall not be used in advertising or otherwise to promote the     
+sale, use or other dealings in this Software without prior written       
+authorization.                                                           
+@end quotation
 
-API Reference for @code{(gucu core)}
 
-API Reference for @code {(gucu raw)}
 
-How to make copies of this package and manual
 
-* Copying::                     GNU General Public License
-* GNU Free Documentation License::  License for copying this manual
+@chapter Components of a Curses Interface
 
-Indices of concepts and macros
+The goal of curses is to simplify the task of programming for
+character-cell terminals.  A character-cell terminal is a combination
+of a display that shows text in a monospaced font and the keyboard and
+mouse that connect to it.  These days, there are three common types of
+terminals.  Actual hardware terminals, such as the DEC VT220 or the
+Boundless Technologies VT525, are dedicated thin clients that interact
+with a networked computer via a serial port.  These are still somewhat
+common in industrial applications where computers would be too
+expensive or too fragile.  The consoles of text-mode operating
+systems, such as the console of GNU/Linux when used without X/Windows
+or the command prompt of FreeDOS, are the second type.  The third type
+are the terminal emulation programs that some windowing systems have.
+The best known terminal emulation program is probably XTerm, which
+does a good emulation of a VT220 terminal.
 
-* Procedure index::             Index for all GuCu procedures and variables
-* Concept index::               Concept Index
+The curses library attempts to create a standardized solution for
+these problems.
+@itemize @bullet
+@item
+A program needs to know which keys are pressed and when.
+@item
+A program needs to know a terminal's capabilities. Can text be bold,
+italic, or in color?
+@item
+A program needs to know how to exploit a terminal's capabilities.  How
+does a program tell the terminal to move the cursor, to change text
+color, or to erase the screen?
+@end itemize
 
-@end detailmenu
-@end menu
+@section Terminal Capabilities
 
-@node Preliminaries
-@chapter Introduction and Preliminaries
+The first step in any curses program is to understand the terminal's
+capabilities and attributes.  Curses includes a database of terminals
+and their capabilities called @code{terminfo} or perhaps
+@code{termcap}.  When a curses program is initialized, the type of
+terminal is queried, usually by examining the environment variable
+@env{TERM}, and the capabilities are read from the database.
 
-This chapter explains what GuCu is, how to read this documentation,
-how to call the GuCu interface, and how to report bugs.  It then
-introduces the contents of the remaining chapters.
+@section Keyboards and Keys
 
-@node Intro
-@section Introduction to Curses, Guile, and GuCu
+When a key is pressed, one or more bytes are sent to the program by
+the keyboard driver.  These bytes need to be converted by the program
+back into a key name.  For @abbr{ASCII} characters, this conversion is
+trivial.  A key press of @key{c} usually sends the @abbr{ASCII}
+encoding 142 (@key{c}) which can be understood to mean the letter c.
+For other keys on the keypad, like @key{F1} or @key{HOME}, the
+encoding can take multiple bytes and can differ from terminal to
+terminal.  On some terminals, for example, @key{F1} sends the bytes
+@key{ESC O P}.  
 
-@cindex overview of GuCu
+The @code{terminfo} database provides information that helps associate
+multibyte codes to keys on the keypad, and there are curses functions
+that will do the association.
 
-Ncurses is the core terminal interface library for @acronym{GNU}/Linux
-and OpenBSD.  It provides the ability to do terminal programming in a
-terminal-independent fashion.  Its routines for color, function key
-mapping, symbols, pads, and input processing free the programmer from
-having to know the specifics of the underlying terminal hardware or
-emulation.  
+@section Characters, Attributes, Colors, and Renditions
 
-Guile is a scripting language used on the GNU systems.  It is a
-dialect of the language Scheme, a member of the Lisp family of
-languages.  Guile provides a small core functionality, and additional
-functionality can be provided by loading @emph{libraries}.  In Guile,
-libraries are also refered to as @emph{modules}.
+As the goal of curses is to allow a program to take advantage of the
+capabilities of terminal, each character on the screen has a
+@dfn{color pair} and a set of @dfn{attributes}.
 
-GuCu is a Guile library.  It is an implementation of an application
-programming interface (@acronym{API}) that provides a rich set of
-commands for terminal-based interfaces.  It relies on the
-@acronym{GNU} Ncurses library to provide the underlying terminal
-functionality, while trying to present an API that is more consistent
-with Scheme programming practice.
+In curses, the colors are usually defined in terms of  @dfn{color
+pairs}, which is a combination of a foreground and a background
+color.  Each character written to a terminal will have an associated
+color pair, assuming the terminal supports color.
 
-GuCu actually include two separate APIs: the @emph{core} API and the
-@emph{raw} API.  The core API tries to present an interface that is
-familiar to Scheme programmers; the raw API, however, tries to present
-an interface that is as close as possible to the C-language Ncurses
-interface.  Of the two, the core interface will be used in the
-tutorial and the examples.  The raw interface is provided for those
-familiar with using Ncurses in C.
+Also each character has a set of attributes, such as @dfn{bold},
+@dfn{underline}, or @dfn{blink}.
 
-@node Bugs
-@section Problems and bugs
+A character's color pair and its attributes are collectively called
+its @dfn{rendition}.
 
-@cindex reporting bugs
-@cindex bug reports
-@cindex suggestions, reporting
-If you have any difficulty with the GuCu library or think that you've
-discovered a bug, please report it.  Always remember to consult this
-manual before you send off a bug report.  Maybe the answers are
-already contained herein.
+@section Windows
 
-When reporting a bug, do try to create a small script that reproduces
-the problem, if possible.  Then, check the version of the GuCu library
-you are using and the version of Ncurses that it uses.  Assuming that
-the package built and installed correctly, both of these version
-numbers, as well as other pertinent information, are output by the
-program @code{gucuinfo} provided by this distribution.  Also, provide
-details about the platform on which the program is being run.
+Curses uses the concept of a @dfn{window} to visually organize the
+terminal.  A window is a rectangular area on the terminal.  A terminal
+always has one default window which is the size of the physical
+screen.  This may be further subdivided into other windows.  The
+default window is called the @dfn{standard screen}.
 
-With this information compiled, send an e-mail to
-@email{spk121@@yahoo.com}, and I'll see if I can help.  (Please be
-advised that I'm just some skinny schmuck living in Los Angeles that
-does this for fun, so my responsivness and accuracy vary.)
+Each window has a set of associated visual properties: the default
+rendition of characters added to it and whether it scrolls when text
+reaches the bottom of the screen, for example.
 
-On the other hand, I'm fully aware that probably no one will read this
-manual or use this package.  I'm so sure of it that the first person
-to send me an e-mail containing the phrase ``the GuCu manual says give
-me a dollar'' will get a rumpled dollar sent to them via U.S. mail.
+Each window forms a coordinate system for the display of characters.
+The top-left character location in the window is the origin, (0, 0).
+@var{x} coordinates increase as one moves right and @var{y}
+coordinates increase as one moves down.  Because the origin begins at
+zero, the largest allowable @var{x} value will be the number of
+columns minus one.
 
-Seriously, if there were a pressing need for this, why would I have to
-write my own library?
+@chapter Types and encodings
 
-Anyhoo@enddots{}
+Curses has several types specific to how it operates: rendered strings
+and windows, for example.  Some of the curses types are represented by
+standard scheme types, while others are represented as opaque types
+(SMOBs).
 
-@node Manual
-@section Using this manual
+@section Narrow character types
 
-@cindex examples, understanding
-(The text of this section is taken nearly verbatim from the @code{m4}
-manual.  Thanks, guys!)
+A narrow character is a simple 8-bit character, such as would be found
+in the @abbr{ASCII} encoded text used in the United States, or one of
+the many 8-bit encodings used in Europe, such as ISO-8859-1, which has
+ASCII characters in its lower 128 characters and characters with
+accents in its upper 128 characters.
 
-This manual contains a number of examples of Guile and Ncurses input
-and output, and a simple notation is used to distinguish input, output
-and error messages from Scheme code.  Examples are set out from the
-normal text, and shown in a fixed width font, like this
+@table @samp
+@item unrendered, narrow characters
+This is simple @abbr{ASCII} or 8-bit character, such as @code{#\a},
+with no color information or attribute (e.g. bold, inverse)
+information.  There are no raw curses functions that use unrendered,
+narrow characters.  Usually curses functions that take a single narrow
+character will, in fact, be expecting a @emph{rendered character}.  
 
-@comment ignore
-@example
-This is an example of an example!
-@end example
+A narrow, unrendered character can be converted into a narrow rendered
+character by using @code{char->integer}.
 
-To distinguish input from output, all output from a program is
-prefixed by the string @samp{@result{}}, and all error messages by the
-string @samp{@error{}}.  When showing how command line options affect
-matters, the command line is shown with a prompt @samp{$ @kbd{like
-this}}.  Thus:
+@item rendered, narrow characters
 
-@comment ignore
-@example
-$ @kbd{command line to invoke a program}
-Example of input line
-@result{}Output line from a program
-@error{}and an error message
-@end example
+@findex addch
 
-If the sequence @samp{^D} appears in an example, it indicates the end
-of the input file.  The sequence @samp{@key{NL}} refers to the newline
-character.  Some of these examples are self-contained Guile scripts,
-and you can run them with similar results by saving them as text files
-and executing them as scripts.
+This is a simple 8-bit character along with its associated rendition:
+its color-pair and its attributes (e.g. bold, inverse, blink).  This
+is encoded as a 32-bit integer, where the lower bits are the character
+and the higher bits contain the rendition.  All curses functions that
+deal with single narrow characters (such as @code{addch}) use rendered
+characters.
 
-As each of the procedures in GuCu is described, a
-prototype of the function will be shown, giving descriptive names to
-the arguments, e.g.,
+Examples of a rendered character would be @*
+@code{(char->integer #\a)} @*
+and @*
+@code{(logior *a-blink* (char->integer #\x))} 
 
-@deffn Procedure example string [#:key keyvar] [argument] 
+@item unrendered, narrow strings
 
-This is a template for a call to the procedure @var{example}.  (There
-is not really a procedure named @code{example}.  This is just an
-example.)  It requires at least one argument, @var{string}.  The
-brackets around @var{keyvar} and @var{argument} show that these
-arguments are optional.  The optional variable @var{keyvar} requires
-the keyword @code{#:key} to precede it if it is to be used.  Note that
-while required arguments like @var{string} and optional arguments like
-@var{argument} must be passed to the procedure in the order indicated,
-keyword arguments like @var{keyvar} can be passed to the procedure in
-any order.
-@end deffn
+@findex addstr
 
-Please recall that, for Scheme, a @emph{variable} can contain
-a @emph{value} or a @emph{procedure}.  A procedure is called with
-@emph{arguments}. 
+These are simple scheme strings, such as @code{"blammo"}.  Strings
+are, in our parlance, made from fixed-length sequences of unrendered,
+narrow characters.  There are raw curses functions that deal
+with unrendered, narrow strings, like @code{addstr}.
 
-@node Invoking GuCu
-@chapter ``Invoking'' the GuCu library
+@item rendered, narrow strings
 
-A library is not @emph{invoked} so much as it is @emph{imported};
-however, the @cite{@acronym{GNU} Coding Standards} insist that a
-manual have a section with the word ``invoke'' in the title.
+@findex addchstr
 
-Depending on the application, a program would import one of the
-following forms of the library. 
+Rendered, narrow strings are sequences of narrow characters where each
+character has associated rendition information.  They are encoded as
+lists of integers, where each integer is rendered, narrow character.
+The procedure @code{addchstr} is an example of a function that uses
+rendered, narrow strings.
+
+An example of a rendered, narrow string would be @*
+@code{((char->integer #\h) (char->integer #\i))}.
+
+@end table
+
+@section Wide character types
+
+Wide-characters are 32-bit characters and include all the glyphs for
+the major languages.  The ``wide'' in wide characters refers to the
+size of the integer that encodes them and not their width.
+
+There are challenges when using wide characters.  There are
+double-width characters, such as hiragana and katakana, that take up
+two character spaces on a character cell terminal because of their
+complexity.  There are combining characters, such as accents, that
+aren't intended to stand alone and actually modify the previous
+character in a string.
+
+In the terminology of Unicode, a 32-bit integer that holds a wide
+character is a @dfn{code point}, and documents that refer to unicode
+code points typically write them like this: @code{U+XXXX}, where
+@code{XXXX} is a four-digit hexadecimal number.
+
+Curses also uses the term @dfn{complex character}.  A complex
+character is a set of wide characters that draw one glyph on the
+screen.  In practice, this means that a regular character is followed
+zero or more combining characters that represent accents or other
+markings.  Since there are only so many combining characters that can
+be added to a given letter, a complex character is limited to having
+one base character and three combining characters.
 
 @table @code
 
-@item (gucu raw)
-This loads a version of the GuCu library that tries to present an
-@acronym{API} that is as close as possible to the C-language Ncurses
-@acronym{API}.  This form of the library is described in Chapter FIXME. 
+@item unrendered, wide characters
 
-@item (gucu core)
-This loads a version of the GuCu library that presents a more
-verbose, Scheme-like @acronym{API} that covers the functionality
-provided by Ncurses.  A tutorial on the use of this library is in
-Chapter FIXME, and a reference of the functions in this library is in
-Chapter FIXME.
+An unrendered, wide character is the ``code point'' of unicode
+character.  In C it is a @code{wchar_t}, and in Scheme it is an
+integer.
+
+For values between 0 and 128, unrendered, wide characters and
+unrendered, narrow characters have the same scheme representation in
+curses.
+
+An example of the scheme representation of unrendered, wide characters
+would as follows:@*
+@example
+;; The letter 'x'
+(char->integer #\x)
+;; or
+#x0078
+;; U+041B Cyrillic Capital Letter El
+#x041B
+;; U+5FE1 Japanese Ideograph Chuu
+#x4F7E
+@end example
+
+@item unrendered, wide strings
+
+An unrendered, wide string is a sequence of unrendered wide
+characters.  In C, is an array of @code{wchar_t} values.  In Scheme,
+it is a list of integers, where each integer represents a Unicode
+code-point.
+
+Some examples of the scheme representation of an unrendered wide string
+areas follows:
+@example
+;; A wide string consisting of the letter 'x' 
+;; and U+041B Cyrillic Capital Letter El
+(#x0078 #x041B)
+;; The string "hello" in wide string form
+(map char->integer (string->list "hello"))
+@end example
+
+@item rendered, complex characters
+Rendered, complex characters usually are a standard character, zero to
+three combining characters, attribute information, and color
+information.  It is represented as a list of integers.  The first
+element in the list is the attribute flags.  The second is the color
+pair.  The remaining elements in the list are the characters that form
+this glyph.
+
+Some examples of rendered, complex characters would be as follows:
+@example
+;; The letter 'x'
+(*a-normal* 0 (char->integer #\x))
+;; Bold U+041B Cyrillic Capital Letter El
+(*a-bold* 0 #x041B)
+;; 'o' with combining macron above and grave accent below
+(*a-normal* 0 (char->integer #\o) #x0304 #x0316))
+@end example
+
+@findex add-wch 
+
+Rendered, complex characters are used in routines such as @code{add-wch}.
+
+@item rendered, complex strings
+Rendered, complex strings are sequences of complex characters and
+their associated renditions.  In scheme, they are represented as lists
+of rendered, complex characters.  They are used in routines such as
+@code{add-wchstr}. 
+
+An example of a rendered, complex string is as follows:
+@example
+;; The word so@~nar, 
+;; so@~nar --> U+0073 U+006F U+00F1 U+0061 U+0072
+((*a-bold* 0 #x0073)
+ (*a-bold* 0 #x006F)
+ (*a-bold* 0 #x00F1)
+ (*a-bold* 0 #x0061)
+ (*a-bold* 0 #x0072))
+@end example
+
 @end table
 
-A program should not import both the @code{raw} and the @code{core}
-versions of the library into the same namespace.  Use one or the
-other.
+Constructing complex characters and strings manually is cumbersome.
+Please see FIXME for utility functions to assist with that.
 
-@node Installation Problems
-@section Installation Problems
+@section Opaque types
 
-It is quite likely that after you install the library and try to use
-it or include it into a program, it will fail to work.
+These are types from system libraries that are complex or
+system-depentent.  They are implemented as @code{SMOB}s.
 
-If you installed it without laboriously reading through the INSTALL
-document, you probably will get a result like the following.
+@table @code
 
+@item The @code{#<window>} type
+
+@findex newwin
+
+The @code{#<window>} type is an opaque type that contains information
+about the characters and renditions for a given window.  It is created
+by the function @code{newwin} and is use and most curses functions.
+
+@item The @code{#<screen>} type
+
+@tindex #<screen>
+@findex newterm
+
+The @code{#<screen>} type is an opaque types that contain information
+about the physical terminal.  Variables of type @code{#<screen>} are
+created with the function @code{newterm} and used by the function
+@code{set_term}.
+
+This type is usually only found in programs that use multiple
+terminals.
+
+@item The @code{#<file>} type
+
+@tindex #<file>
+@findex newterm
+@findex typeahead
+@findex putwin
+
+The @code{#<file>} type is an opaque type that represents a file or
+port.  They are created with the @code{(gucu raw)} function
+@code{fopen}, freed with @code{fclose}.  They are used in functions
+that save window information to a file, load window information from a
+file, or interact with ports, such as @code{newterm},
+@code{typeahead}, and @code{putwin}.
+
+
+
+@end table
+
+@chapter Raw Curses Tutorial
+
+@section Hello World!!!
+
+Welcome to the world of curses.  Before we plunge into the library and
+look into its various features, let's write a simple program and say
+hello to the world.
+
+@subsection Using the Guile Curses module
+
+To use ncurses library functions, you have to load the @code{(gucu
+raw)} module into the program.  
+
+Here is the Hello World program, using the raw library.
+
+@c include file test/hello_world.scm
 @example
-$ @kbd{guile}
-guile> @kbd{(use-modules (gucu core))}
-@error{}standard input:1:1: no code for modules (gucu core)
-@error{}ABORT: (misc-error)
+#!/usr/local/bin/guile
+!#
+(use-modules (gucu raw))
+
+(initscr)
+(addstr "Hello World!!!")
+(refresh)
+(getch)
+(endwin)
 @end example
 
-If you want a quick fix, try this.
+The first line of the example, @code{#!/usr/local/bin/guile}, gives the
+location of where Guile is installed on my system. This may differ on
+your system.
+
+The above program prints ``Hello World!!!'' to the screen, waits for
+the user to press any key, and then exits.  This program shows how to
+initialize curses and do screen manipulation and end curses mode.
+Let's dissect it line by line.
+
+@subsubsection About @code{initscr}
+
+@findex initscr
+
+The procedure @code{initscr} initializes the terminal in curses mode.
+It clears the screen and presents a blank screen.  To do any screen
+manipulation using the curses package, this has to be called first.
+This function initializes the curses system and allocates memory for
+our present window (called @code{stdscr}) and some other data
+structures.  Under extreme cases, this function might fail due to
+insufficient memory to allocate memory for curses library's data
+structures.
+
+After this is done, we can do a variety of initializations to
+customize our curses settings
+
+@subsubsection The mysterious @code{refresh}
+
+The next line @code{addstr} prints the string ``Hello World!!!'' on to
+the screen.  This function prints the data on a window called
+@code{stdscr} at the current @code{(y, x)} coordinates.  Since our
+present coordinates are at 0,0 the string is printed at the left-hand
+corner of the window.
+
+This brings us to the mysterious @code{(refresh)}.  Well, when we
+called @code{addstr}, the data is actually written to an imaginary
+window, which is not updated on the screen yet.  The job of
+@code{addstr} is to update a few flags and data structures and write
+the data to a buffer corresponding to @code{stdscr}.  In order to show
+it on the screen, we need to call @code{refresh} and tell the curses
+system to dump the contents on the screen.
+
+The philosophy behind all this is to allow the programmer to do
+multiple updates on the imaginary screen or windows and to do a
+@code{refresh} once all the screen update is done.  @code{refresh}
+checks the window and updates only the portion which has been
+changed.  This improves performance and offers greater flexibility,
+too.  But, it is sometimes frustrating to beginners.  A common mistake
+committed by beginners is to forget to call @code{refresh} after they
+did some update through @code{addstr}.
+
+@subsubsection About @code{endwin}
+
+And finally, don't forget to end the curses mode.  Otherwise your
+terminal might behave strangely after the program quits.
+@code{endwin} frees the memory taken by the curses sub-system and its
+data structures and puts the terminal in normal mode.  This function
+must be called after you are done with curses mode.
+
+@section The Gory Details
+
+Now that we've seen how to write a simple curses program, let's get
+into the details.  There are many functions that help customize what
+you see on the screen and many features which can be put to full use.
+
+Here we go...
+
+@section Initialization
+
+We now know that to initialize curses the function @code{initscr} has
+to be called.  There are functions which can be called after this
+initialization to customize our curses session.  We may ask the curses
+system to set the terminal in raw mode or initialize color or
+initialize the mouse, etc.  Let's discuss some of the functions that
+are normally called immediately after @code{initscr}.
+
+@subsection Initialization Functions
+
+@subsubsection @code{raw} and @code{cbreak}
+
+Normally the terminal driver buffers the characters a user types until
+a new line or carriage return is encountered.  But most program
+require that the characters be available as soon as the user types
+them.. The above two functions are used to disable line buffering.
+The difference between these two functions is in the way control
+characters like suspend (Ctrl-Z), interrupt and quit (Ctrl-C) are
+passed to the program.  In the @code{raw} mode, these characters are
+directly passed to the program without generating a signal.  In the
+@code{cbreak} mode, these control characters are interpreted as any
+other character by the terminal driver, allowing Ctrl-C and Ctrl-Z to
+quit and suspend the program.
+
+@subsubsection @code{echo} and @code{noecho}
+
+These functions control the echoing of characters typed by the user to
+the terminal.  @code{noecho} switches off echoing. With echoing off,
+when a user presses a character, it is not displayed on the screen.
+
+@subsubsection keypad
+
+This function enables the reading of function keys like @key{F1},
+@key{F2}, arrow keys, etc.  Almost every interactive program enables
+this, as arrow keys are a major part of any user interface.  Do
+@code{(keypad (stdscr) #t)} to enable this feature for the regular
+screen @code{stdscr}. 
+
+@subsubsection halfdelay
+
+This function is useful when you want to ask the user for input, and
+if he doesn't respond within a certain time, do something else.  One
+possible example would be a  timeout at a password prompt.
+@code{halfdelay} enables half-delay mode, which is similar to
+@code{cbreak} mode in that characters types are immediately available
+to the program.  However, after a period of time if there is now
+input, it return @code{*err*}.
+
+@subsection An example
+
+Let's write a program that will clarify the usage of these functions.
+
+@c init_func_usage.scm
 @example
-$ @kbd{LD_LIBRARY_PATH=/usr/local/lib GUILE_LOAD_PATH=/usr/local/share/guile/site guile}
-guile> @kbd{(use-modules (gucu core))}
+#!/usr/local/bin/guile
+!#
+(use-modules (gucu raw))
+
+(initscr)                               ; Start curses mode
+(raw)                                   ; Line buffering disabled
+(keypad (stdscr) #t)                    ; We get F1, F2, etc
+(noecho)                                ; Don't echo when we get a keypress
+(addstr "Type any character to see it in bold\n")
+(let ((ch (getch)))                     ; Read a key press, put it in 'ch'
+
+  (if (eqv? ch (KEY_F 1))               ; If the key pressed is F1
+      (addstr "F1 Key pressed")
+      
+      (begin
+        (addstr "The pressed key is ")
+        (addch (logior *a-bold* ch))))    ; Print the char in bold
+  (refresh)                             ; Print it on the real screen
+  (getch)                               ; Wait for user input
+  (endwin))                             ; End curses mode
 @end example
 
-Did it work?  If so, add @env{LD_LIBRARY_PATH} and @env{GUILE_LOAD_PATH}
-to your @file{.profile} or @file{.bashrc} and you should be ready to go.
+Hopefully this program is easy to follow.  But I used functions that
+aren't explained yet.  The procedure @code{getch} is used to get a
+character from the user.  The @code{(logior *a-bold* ch)} adds the bold
+attribute to the character, and @code{addch} prints the character on
+the screen.
 
-The most likely reason for why you receive this error has to do with
-installation directories.  Most distributions install pre-packaged
-distro-supplied programs in a specific directory tree, such as
-@file{/usr}, while most user-compiled programs end up in a different
-tree, such as @file{/usr/local}.  If Guile was prepackaged to appear
-in @file{/usr}, for example, it would expect that new Guile modules
-appear in @file{/usr/share/guile/site}.  If the GuCu module was
-compiled using the default settings, the library tree is probably
-located in @file{/usr/instead/share/guile/site}, instead.  When
-searching for modules, Guile may not search into that directory by
-default.
+@section A word about windows
 
-Guile searches a list of paths for modules when @code{use-module} is
-called.  To see the list, display the contents of the
-@code{%load-path} variable.
+Before we plunge into the myriad ncurses functions, let me clear a few
+things about windows.  Windows are explained in detail in the
+following sections.
 
+A window is an imaginary screen defined by the curses system.  A
+window does not mean a bordered window which you usually see in GNOME
+or KDE system.  When curses is initialized, it creates a default
+window named @code{stdscr} which represents your 80x25 (or the size of
+window in which you are running) screen.l  I fyou are doing simple
+tasks like printing a few strings, reading input, etc., you can safely
+use this single window for all of your purposes.  You can also create
+windows and call functions which explicitly work on the specified
+window.
+
+For example, if you call
 @example
-$ @kbd{guile}
-guile> @kbd{(display %load-path)}
-@result{}(/usr/share/guile/site /usr/share/guile/1.8 /usr/share/guile .)
+(addstr "Hi There!!!")
+(refresh)
 @end example
 
-If you find that the GuCu library has not been installed in one of the
-directories in the @code{%load-path}, there are two basic solutions.
+It prints the string on @code{stdscr} at the present cursor position.
+Similarly, the call to @code{refresh} works on @code{stdscr} only.
+
+Say you have created windows, then you have to call a function with a
+'w' added to the usual function.
+@example
+(waddstr win "Hi There!!!")
+(wrefresh win)
+@end example
+
+As you will see in the rest of the document, naming of functions
+follows the same convention.  For each function, there usually are
+three more functions.
+@example
+(addstr string)       ; Print on stdscr at present cursor location
+(mvaddstr y x string) ; Move to (y, x) then print string
+(waddstr win string)  ; Print on window `win' at present cursor
+                      ; position
+(mvwaddstr win y x string) ; Move to (y, x) relative to window 
+                      ; coordinates and then print
+@end example
+
+@section Output functions
+
+I guess you can't wait any more to see some action.  Back to our
+odyssey of curses functions.  Now that curses is initialized, let's
+interact with the world.
+
+There are three classes of functions which you can use to do output to
+the screen.
+@enumerate
+@item
+The @code{addch} class: print rendered characters
+@item
+The @code{addstr} class: print unrendered strings
+@item
+The @code{addchstr} class: print rendered strings
+@end enumerate
+
+@subsection The @code{addch} class of functions
+
+These functions put a single rendered character into the current
+cursor location and advance the position of the cursor.  You can give
+the character to be printed but they usually are used to print a
+characer with some attributes.  Attributes are explained in detail in
+later sections of the document.  If a character is associated with an
+attribute (bold, reverse video, etc.), when curses prints the
+character, it is printed with that rendition.
+
+In order to combine a character with some attributes, you have two
+options:
+@enumerate
+@item
+You can explicktly construct a rendered character by @code{logior}'ing
+a single character with the desired attribute.
+@example
+(logior *a-bold* *a-underline* (char->integer ch))
+@end example
+
+@item
+By using functions like @code{attrset}, @code{attron}, @code{attroff},
+you can manipulate the current attributes of the given window.  Once
+set, the characters printed in the window are associated with the
+attributes until it is turned off.
+@end enumerate
+
+Additionally, curses provides some special characters for
+character-based graphics.  You can draw tables, horizonal or vertical
+lines.  Try looking for the procedures beginning with @code{acs-}.
+
+@subsubsection mvaddch, waddch, and mvwaddch
+
+@code{mvaddch} is used to move the cursor to a given point, and then
+print.  Thus the calls
+@example
+(move row col)
+(addch ch)
+@end example
+can be replaced by
+@example
+(mvaddch row col ch)
+@end example
+
+@code{waddch} is similar to @code{addch}, except that it adds a
+character into the given window.  Note that @code{addch} adds a
+character into the window @code{stdscr}.
+
+In a similar fashion, @code{mvwaddch} is used to add a character into
+the given window at the given coordinates.
+
+@subsubsection Complex characters and @code{add_wch}
+
+First off, if you want to use non-narrow characters, you need to call
+@code{(setlocale LC_ALL "")} before the call to @code{initscr}.
+
+To add a rendered, complex character to the screen, use @code{add-wch}
+and friends.
+@example
+;; Bold U+041B Cyrillic Capital Letter El
+(add-wch (list *a-bold* 0 #x041B))
+@end example
+
+This procedure also comes in four variations, @code{add-wch},
+@code{mvadd-wch}, @code{wadd-wch}, and @code{mvwadd-wch}.
+
+@section @code{addstr} class of functions
+
+These functions output entire strings to the screen.
+
+They can be used in conjuntion with the @code{(ice-9 format)} function
+@code{format}.
+
+@subsection A simple @code{addstr} example
+
+@example
+(use-modules (gucu raw)
+	     (srfi srfi-1))
+
+(initscr)
+
+(let* ((mesg "Just a string")
+       (len (string-length mesg))
+       (siz (getmaxyx (stdscr)))
+       (row (first siz))
+       (col (second siz)))
+
+  ;; Print the message centered in the window
+  (mvaddstr (round (/ row 2))
+            (round (/ (- col len) 2))
+            mesg)
+
+  ;; Use "format" to generate a message, and then print it
+  (mvaddstr (- row 2)
+            0
+            (format #f "This screen has ~a rows and ~a columns ~%" row col))
+  (addstr "Try resizing your window (if possible) ")
+  (addstr "and then run this program again")
+  (refresh)
+  (getch)
+  (endwin))
+@end example
+     
+The above program demonstrates how easy it is to use @code{addstr}.
+You just feed the coordinates and the message to be printed on the
+screen.  It also shows how @code{(format #f ...)} can be used in
+conjunction with @code{addstr} to do formatted output.
+
+The example introduces the new function @code{getmaxyx}.  It gives the
+number of columns and the number of rows in a given window.
+@code{getmaxyx} does this by returning a list of two elements,
+@code{y} and @code{x}.
+
+@subsection A word of caution
+
+All these functions take a @code{y} coordinate first and then @code{x}
+in their arguments.  A common mistake by beginners is to pass
+@code{x}, @code{y} in that order.  If you are doing too many
+manipulations of @code{(y,x)} coordinates, think of dividing the
+screen into windows and manipulate each one separately. 
+
+@subsection Adding wide strings
+
+The @code{addstr} functions print unrendered, narrow strings.  For
+unrendered, wide strings, use the @code{add-wstr} class of functions:
+@code{add-wstr}, @code{mvadd-wstr}, @code{wadd-wstr}, and
+@code{mvwadd-wstr}. 
+
+@section Input functions
+
+Well, printing without taking input is boring.  Let's see functions
+which allow us to get input from the user.  These functions also can
+be divided into two categories.
 
 @enumerate
 @item
-Add the install location of the GuCu library to the @code{%load-path}.
+@code{getch} class: get a character
 @item
-Reinstall the GuCu library into a directory in Guile's
-@code{%load-path}.
+@code{getstr} class: get a string
 @end enumerate
 
-There are a couple of methods to get Guile to add new directories to
-the load path, short of a recompilation.
 
-One, the program can append the location of @code{(gucu)} to the
-@code{%load-path}.  Two, the environment variable
-@env{GUILE_LOAD_PATH} can be updated to append the location of
-libraries before Guile is invoked.  Three, later versions of Guile can
-be called with the @option{-L} option, to add a library path at
-runtime.
- 
-Once this hurdle has been fixed, you may then get another error such
-as
+@subsection @code{getch} class of functions
+
+These functions read a single character from the terminal.  But there
+are several subtle facts to consider.  For example, if you don't use
+the function @code{cbreak}, curses will not read your input characters
+ontiguously, but, will begin to read them only after a new line or an
+EOF is encountered.  In order to avoid this, the @code{cbreak}
+function must be used so that characters are immediately available to
+your program.  Another widely used function is @code{noecho}.  As the
+name suggests, when this function is set (used), the characters that
+are keyed in by the user will not show up on the screen.  The two
+functions @code{cbreak} and @code{noecho} are typical examples of key
+management.  Functions of this genre are explained in the section
+FIXME.
+
+@subsection @code{getstr} class of functions
+
+These functions are used to get strings from the terminal.  In
+essence, this function performs the same task as would be achieved by
+a series of calls to getch until a newline, carriage return, or
+end-of-file is received.  The resulting string of characters is
+returned.
+
+@subsection An example of @code{getstr} and @code{getch}
 
 @example
-@error{}libguile-gucu.so: cannot open shared object file: No such file or directory
+(use-modules (gucu raw)
+	     (ice-9 format))
+
+(initscr)
+
+(let* ((mesg "Enter a string: ")
+       (len (string-length mesg))
+       (siz (getmaxyx (stdscr)))
+       (row (car siz))
+       (col (cadr siz)))
+  (mvaddstr (round (/ row 2))
+	    0
+	    mesg)
+  (refresh)
+  (let ((str (getstr)))
+    (mvaddstr (- row 2) 
+	      0
+	      (format #f "You entered: ~a~%" str))
+    (getch)))
+
+(endwin)
 @end example
 
-This error comes from the Libtool LTDL library which Guile uses to
-load binary libraries.  When this error occurs, it indicates that the
-shared object file either does not exist or is not in the set of paths
-that the LTDL searches when trying to dynamically link.  In this case
-you will have to modify the run-time linker path used by LTDL.  This
-can be done by appending the location of libguile-gucu.so to the
-environment variable @env{LD_LIBRARY_PATH}.
+@section Attributes
 
-@node Ncurses versions
-@section Versions of Ncurses
+Attributes can be used to print characters with some special effects.
+Attributes, when set prudently, can present information in an easy,
+understandable manner.  
 
-Depending on how it was compiled, the Ncurses library will be one of
-four flavors.  It may or may not contain functions for wide
-characters, and it may or may not contain functions to assist in
-debugging curses functions.  When using the Ncurses library in C,
-using a wide character function or debugging function with a version
-of Ncurses that does not support it would probably result in a
-link-time error.
+The following program takes a scheme file as input and prints the file
+with comments in bold.  It does so by turning on the @code{*a-bold*}
+attribute using @code{attron} when a semicolon is detected, and then
+turning of the @code{*a-bold*} attribute using @code{attroff} when a
+newline is detected.  Have a look.
 
-Typically, one can determine the compilation options of the Ncurses
-library from the resulting filename of the library.
+@example
+#!/usr/local/bin/guile 
+!#
 
-@table
-@item @file{libncurses} or @file{libcurses}
-This library does not have wide character support and support for
-run-time debugging functions.
-@item @file{libncursesw} or @file{libcursesw}
-This library has wide character support.
-@item @file{libncurses_g} or @file{libcurses_g}
-This library has support for run-time debugging.
-@item @file{libncursesw_g} or @file{libcursesw_g}
-This library has support for wide characters and for run-time
-debugging.
-@end table
+(use-modules (gucu raw)
+             (ice-9 format))
 
-The GuCu library is written so that wide-character and debugging
-procedures are always available in the @acronym{API}.  If they are
-used with an Ncurses library that does not support them, however, an
-error will result.
+;; A helper function that return the cursor's current row
+(define (getrow)
+  (car (getyx (stdscr))))
 
-@node Tutorial
-@chapter Programming with GuCu
+;; The program should be passed a filename from the command line
+(if (not (eqv? 2 (length (command-line))))
+    (begin
+      (format #t "Usage: ~a <scm file name>~%" (car (command-line)))
+      (primitive-exit 1)))
 
-@node Core API                    
-@chapter API Reference for @code{(gucu core)}
 
-@node Raw API                     
-@chapter API Reference for @code{(gucu raw)}
+(let* ((filename (cadr (command-line)))
+       (fport (open-input-file filename)))
 
-The the maximum extent possible, the raw @acronym{API} was designed to
-match the C-language Ncurses API.  As such, an explanation of the
-purpose and use of each variable and procedure will not be given here.  
+  (initscr)
 
-First, there will be a description of how the various C types used by
-Ncurses appear in Guile, and of the helper functions.
+  ;; Read one char at a time from the file
+  (let loop ((ch (read-char fport)))
+    (if (not (eof-object? ch))
+        (begin
 
-Afterwards, the API will be presented, with care to note when and how
-the Ncurses C API and the @code{(gucu raw)} API diverge.
+          ;; Wait for a key press once a page
+          ;; of text has been printed
+          (if (eqv? (getrow) (- (lines) 1))
+              (begin
+                (addstr "<-Press any key->")
+                (refresh)
+                (getch)
+                (clear)
+                (move 0 0)))
 
-@node Ncurses types
-@section Ncurses types in Guile
+          ;; Bold all text between a semicolon
+          ;; and the end of a line
+          (cond 
+           ((eqv? ch #\;) 
+            (attron *a-bold*))
+           ((eqv? ch #\nl)
+            (attroff *a-bold*)))
+          (addch (char->integer ch))
+          (refresh)
+          (loop (read-char fport)))
 
-@section Helper functions
+        ;; Clean up on exit
+        (begin
+          (endwin)
+          (close-input-port fport)))))
+	   
+@end example
 
-@section Procedure and variable list
+The function also introruces the two useful functions @code{getyx} and
+@code{move}.  The first function gets the coordinates of the present
+cursor as a list of two elements.  The second moves the cursor to the
+coordinates given to it.
 
-The following list contains all the wrapped
-procedures and variables in the @code{(gucu raw)} API.  Unless
-otherwise noted, the Guile versions of these functions have the same
-arguments and return values as their C counterparts.  For information
-on how the C types were transliterated, see @ref{Ncurses types}.
+The above program is really a simple one which doesn't do much.  Along
+these lines once could write a more useful program which reads a scheme
+file, parses it, and prints it in different colors.
+
+@subsection The details
+
+Let's get into more details of attributes.  The functions
+@code{attron}, @code{attroff}, @code{attrset}, and their sister
+functions @code{attr_get} etc., can be used to switch attributes on
+and off, get attributes, and produce a colorful display.
+
+The functions @code{attron} and @code{attroff} take a bit-mask of
+attributes and switch them on or off respectively.  The following
+video attributes can be passed to these functions.
 
 @table @code
-
-
-
-@item ACS_BLOCK     
-@item ACS_BOARD     
-@item ACS_BTEE      
-@item ACS_BULLET    
-@item ACS_CKBOARD   
-@item ACS_DARROW    
-@item ACS_DEGREE    
-@item ACS_DIAMOND   
-@item ACS_GEQUAL    
-@item ACS_HLINE     
-@item ACS_LANTERN   
-@item ACS_LARROW    
-@item ACS_LEQUAL    
-@item ACS_LLCORNER  
-@item ACS_LRCORNER  
-@item ACS_LTEE      
-@item ACS_NEQUAL    
-@item ACS_PI        
-@item ACS_PLMINUS   
-@item ACS_PLUS      
-@item ACS_RARROW    
-@item ACS_RTEE      
-@item ACS_S1        
-@item ACS_S3        
-@item ACS_S7        
-@item ACS_S9        
-@item ACS_STERLING  
-@item ACS_TTEE      
-@item ACS_UARROW    
-@item ACS_ULCORNER  
-@item ACS_URCORNER  
-@item ACS_VLINE     
-@item A_ALTCHARSET
-@item A_BLINK
-@item A_BOLD
-@item A_CHARTEXT
-@item A_DIM
-@item A_INVIS
-@item A_NORMAL
-@item A_PROTECT
-@item A_REVERSE
-@item A_STANDOUT
-@item A_UNDERLINE
-@item COLOR_PAIR
-@item PAIR_NUMBER
-@item TABSIZE
-@item add_wch
-@item add_wchnstr
-@item add_wchstr
-@item addch
-@item addchnstr     
-@item addchstr      
-@item addnstr
-@item addnwstr
-@item addstr
-@item addwstr
-@item attr_get
-@item attr_off
-@item attr_on
-@item attr_set
-@item attroff
-@item attron
-@item attrset
-@item beep
-@item bkgd
-@item bkgdset
-@item chgat
-@item color_set
-@item echo_wchar
-@item echochar
-@item flash
-@item getbkgd
-@item mvadd_wch
-@item mvadd_wchnstr
-@item mvadd_wchstr
-@item mvaddch
-@item mvaddchnstr   
-@item mvaddchstr    
-@item mvaddnstr
-@item mvaddnwstr
-@item mvaddstr
-@item mvaddwstr
-@item mvchgat
-@item mvwadd_wch
-@item mvwadd_wchnstr
-@item mvwadd_wchstr
-@item mvwaddch
-@item mvwaddchnstr 
-@item mvwaddchstr   
-@item mvwaddnstr
-@item mvwaddnwstr
-@item mvwaddstr
-@item mvwaddwstr
-@item mvwchgat
-@item standend
-@item standout
-@item wadd_wch
-@item wadd_wchnstr
-@item wadd_wchstr
-@item waddch
-@item waddchnstr    
-@item waddchstr     
-@item waddnstr
-@item waddnwstr
-@item waddstr
-@item waddwstr
-@item wattr_get
-@item wattr_off
-@item wattr_on
-@item wattr_set
-@item wattroff
-@item wattron
-@item wattrset
-@item wbkgd
-@item wbkgdset
-@item wchgat
-@item wcolor_set
-@item wecho_wchar
-@item wechochar
-@item wstandend
-@item wstandout
-
+@item *a-normal*
+Normal display (no highlight)
+@item *a-standout*
+Best highlighting mode of the terminal
+@item *a-underline* 
+Underlining
+@item *a-reverse*
+Reverse video
+@item *a-blink*
+Blinking
+@item *a-dim*
+Half-bright
+@item *a-bold*
+Extra bright or bold
+@item *a-protect*
+Protected mode
+@item *a-invis*
+Invisible or blank mode
+@item *a-altcharset*
+Alternate character set
+@item *a-chartext*
+Bit-mask to extract a character
+@item (color-pair n)
+A procedure that returns the bit mask for a color-pair
 @end table
 
+Colors are explained in the next sections.
 
-@section Raw @code{addch} functions
+We can @code{logior} any number of attributes to get a combined
+effect.  I fyou wanted reverse video with blinking characters, you can
+use
+@example
+(attron (logior *a-reverse* *a-blink*))
+@end example
 
-@section Raw @code{addchstr} functions
+@subsection @code{attron} vs @code{attrset}
 
-@section Raw @code{addstr} functions
+Then what is the difference between @code{attron} and @code{attrset}?
+@code{attrset} sets the attributes of a window whereas @code{attron}
+just switches on the attribute given to it.  So @code{attrset} fully
+overrides whatever attributes the window previously had and sets it to
+the new attribute(s).  Similarly, @code{attroff} just switches off the
+attributes(s) given to it as an argument.  This gives us the
+flexibility of managing attributes easily.  But, if you use them
+carelessly, you may lose track of what attributes the window has and
+garble the display.  This is especially true while managing menus with
+colors and highlighting.  So decide on a consistent policy and stick
+to it.  You can always use @code{standend} which is equivalent to
+@code{(attrset *a-normal*)} which turns off all attributes and brings
+you back to normal mode.
 
-@section Raw @code{addwstr} functions
+@subsection @code{attr_get}
 
-@section Raw @code{attr} functions
+The function @code{attr_get} gets the current attributes and color
+pair of the window.  Though we might not use this as often as the
+above runctions, this is useful in scanning areas of a screen.  Say we
+wanted to do some complex update on the screen and we are not sure
+what attribute each character is associated with.  Then this function
+can be used with either @code{attrset} or @code{attron} to produce the
+desired effect.
 
-@node Raw beep functions
-@section Raw @code{beep} functions
+@subsection @code{wattr} functions
 
-These functions are in the standard @code{ncurses} library.  They are
-wrapped with no special modifications.
+For each of the above functions, we have a corresponding function with
+'w' which operates on a particular window.  @code{attron} and friends
+operate on @code{stdscr}.  @code{wattron} and friends operates on a
+particular window.
+
+@subsection @code{chgat} functions
+
+The function @code{chgat} can be used to set attributes for a group of
+characters already on the screen without moving the cursor.  It
+changes the attributes of a given number of characters starting at the
+current cursor location.
+
+You can pass it -1 as the character count to update until the end of
+the current line.  
+
+The following example changes the attributes of characters from
+the current position to the end of the line to reverse video.
+
+@example
+(chgat -1 *a-reverse* 0 #f)
+@end example
+
+There are other functions in the same family.  @code{mvchgat} moves
+the cursor before modifying characters.  @code{wchgat} and
+@code{mvwchgat} operate on a given window.
+
+The following example will print a string on the screen.  Then it will
+set the first 5 characters of the string to blink and change color to
+cyan.
+
+@example
+(use-modules (gucu raw))
+
+(initscr)
+
+;; Prep the color functions
+(start-color)
+
+;; Label cyan on black as color-pair #1
+(init-pair 1 *color-cyan* *color-black*)
+
+(addstr "Blink Don't Blink")
+
+(mvchgat 0                   ; start y
+         0                   ; start x
+         5                   ; num of chars 
+         *a-blink*           ; attributes
+         1                   ; use color pair #1
+         #f)                 ; unused
+
+(refresh)
+(getch)
+(endwin)
+@end example
+
+This example also introduces us to the color world of curses.  Colors
+will be explained in detail later.  Use 0 for no color.
+
+
+@chapter Raw Curses
+
+@c GuCu has two flavors of library, the @code{raw} library, and the
+@c @code{core} library.  
+The procedures in the raw curses library closely follow the functions
+in the C-language @acronym{API, application programming interface}.
+Most of the procedures in the raw library have the same name and
+arguments as the functions in the C-language @acronym{API, application
+programming interface}.
+
+As a consequence, the raw library may seem unusual to the scheme
+programmer.  There are two important things to note.  First,
+underscore characters, and not hyphens, are used to separate words.
+Second, boolean types are often represented as the integers @code{*ok*}
+and @code{*err*}, instead of @code{#t} and @code{#f}.
+
+The raw curses functionality is provided by the @code{(gucu raw)}
+module.
+
+@section Overview
+
+The GuCu library routines give the user a terminal-independent
+method of updating character screens with reasonable optimization.
+
+@c When the GuCu library is built, it is linked with the most featureful
+@c version of the curses library available.  Depending on the compilation
+@c of the underlying ncurses library, GuCu may or may not have
+@c wide-character functions and curses debugging functions.
+
+The package supports: overall screen, window and pad manipulation;
+output to windows and pads; reading terminal input; control over
+terminal and curses input and output options; environment query
+routines; color manipulation; use of soft label keys; terminfo
+capabilities; and access to low-level terminal-manipulation routines.
+
+@findex initscr
+@findex newterm
+@findex endwin
+
+To initialize the routines, the routine @code{initscr} or
+@code{newterm} must be called before any of the other routines that
+deal with windows and screens are used.  The routine @code{endwin} must be
+called before exiting.  To get character-at-a-time input without
+echoing (most interactive, screen oriented programs want this), the
+following sequence should be used:
+
+@findex initscr
+@findex cbreak
+@findex noecho
+
+@example
+(begin
+  (initscr)
+  (cbreak)
+  (noecho))
+@end example
+
+Most programs would additionally use the sequence:
+
+@findex nonl
+@findex intrflush
+@findex keypad
+
+@example
+(begin
+  (nonl)
+  (intrflush (stdscr) #f)
+  (keypad (stdscr) #t))
+@end example
+
+@findex tset
+
+Before a curses program is run, the tab stops of the terminal should
+be set and its initialization strings, if defined, must be output.
+This can be done by executing the @code{tput} init command after the
+shell environment variable @env{TERM} has been exported.  @code{tset}
+is usually responsible for doing this. [See terminfo for further
+details.]
+
+@findex stdscr
+@tindex #<window>
+
+The gucu library permits manipulation of data structures, the
+@code{#<window>} type, which can be thought of as two-dimensional
+arrays of characters representing all or part of a CRT screen.  A
+default window called @code{stdscr}, which is the size of the terminal
+screen, is supplied. The @code{#<window>} information for stdscr is
+returned by calling the procedure @code{(stdscr)}.  Other windows may
+be created with @code{newwin}.
+
+Note that @code{(gucu raw)} does not handle overlapping windows.
+
+@c That's done by the @code{(gucu panel)} library, which remains
+@c unimplemented so far.  
+
+This means that you can either use @code{stdscr} or
+divide the screen into tiled windows and not using stdscr at
+all. Mixing the two will result in unpredictable, and undesired,
+effects.
+
+@findex addch
+@findex move
+@findex stdscr
+@tindex #<window>
+
+Windows are referred to by variables declared as @code{#<window>}.
+These data structures are manipulated with routines described here.
+Among those, the most basic routines are @code{move} and @code{addch}.
+More general versions of these routines are included with names
+beginning with w, allowing the user to specify a window.  The routines
+not beginning with w affect @code{stdscr}.
+
+@findex refresh
+@findex stdscr
+
+After using routines to manipulate a window, @code{refresh} is called,
+telling curses to make the user's CRT screen look like
+@code{stdscr}. Other information about the character may also be
+stored with each character.
+
+Special windows called @dfn{pads} may also be manipulated.  These are
+windows which are not constrained to the size of the screen and whose
+contents need not be completely displayed.
+
+In addition to drawing characters on the screen, video attributes and
+colors may be supported, causing the characters to show up in such
+modes as underlined, in reverse video, or in color on terminals that
+support such display enhancements.  Line drawing characters may be
+specified to be output. On input, curses is also able to translate
+arrow and function keys that transmit escape sequences into single
+values.  The video attributes, line drawing characters, and input
+values use names, such as @code{*a-reverse*}, @code{(ACS_HLINE)},
+and @code{KEY_LEFT}.
+
+If the environment variables @env{LINES} and @env{COLUMNS} are set, or
+if the program is executing in a window environment, line and column
+information in the environment will override information read by
+terminfo.  
+
+If the environment variable @env{TERMINFO} is defined, any program
+using curses checks for a local terminal definition before checking in
+the standard places. For example, if @env{TERM} is set to
+@file{xterm}, then the compiled terminal definition is found in @file{/usr/share/terminfo/x/xterm}
+
+(The ``x'' is copied from the first letter of ``xterm'' to
+avoid creation of huge directories.)  However, if @env{TERMINFO} is set to
+@env{$HOME/myterms}, curses first checks @file{$HOME/myterms/x/xterm},
+and if that fails, it then checks the standard location.
+
+This is useful for developing experimental definitions or when write
+permission in @file{/usr/share/terminfo} is not available.
+
+The integer variables @code{LINES} and @code{COLS} are defined in
+@code{(gucu raw)} and will be filled in by @code{initscr} with the
+size of the screen.  
+
+The GuCu routines also define the @code{#<window>} variable
+@code{curscr} which is used for certain low-level operations like
+clearing and redrawing a screen containing garbage.  The @code{curscr}
+can be used in only a few routines.
+
+@subsection Routine and Argument Names
+
+Many curses routines have two or more versions.  The routines prefixed
+with w require a window argument.  The routines prefixed with p
+require a pad argument. Those without a prefix generally use @code{stdscr}.
+
+The routines prefixed with mv require a y and x coordinate to move to
+before performing the appropriate action.  The mv routines imply a
+call to move before the call to the other routine.  The coordinate y
+always refers to the row (of the window), and x always refers to the
+column.  The upper left-hand corner is always (0,0), not (1,1).
+
+The routines prefixed with mvw take both a window argument and x and y
+coordinates.  The window argument is always specified before the coordinates.
+
+@node ref-raw-init
+@section Curses screen initialization and manipulation routines
+
+@cindex initialization
+@cindex screens, creation
+@cindex curses, initialization
+@cindex curses, ending
+@cindex curses, termination
+
+@findex initscr
+@findex slk_init
+@findex filter
+@findex ripoffline
+@findex use_env
+@findex newterm
+
+@code{initscr} is normally the first curses routine to call when
+initializing a program.  A few special routines sometimes need to be
+called before it; these are @code{slk_init}, @code{filter},
+@code{ripoffline}, @code{use_env}.  For multiple-terminal
+applications, @code{newterm} may be called before @code{initscr}.
+
+@findex initscr
+@vindex stdscr
+
+@deffn Procedure initscr
+
+@findex refresh
+@vindex stdscr
+
+The @code{initscr} code determines the terminal type and initializes
+all curses data structures.  @code{initscr} also causes the first call
+to @code{refresh} to clear the screen.  If errors occur, @code{initscr}
+writes an appropriate error message to standard error and exits;
+otherwise, a @code{#<window>} referencing @code{stdscr} is returned.
+@end deffn
+
+@findex newterm
+@tindex #<screen>
+@vindex TERM
+@tindex #<file>
+@findex fopen
+
+@deffn Procedure newterm type infile outfile
+@findex newterm
+The routine @code{newterm} should be called once for each terminal.
+It returns a variable of type @code{#<screen>} which should be saved
+as a reference to that terminal.  @var{type} is the type of the
+terminal to be used in place of @env{$TERM}.  @var{infile} is a
+@code{#<file>} for output to the terminal, and @var{outfile} is
+@code{#<file>} for input from the terminal.  These arguments
+@var{infile} and @var{outfile} can be created by calling @code{fopen}.
+
+This routine will throw an error if the terminal could not be created.
+@end deffn
+
+@findex newterm
+@findex initscr
+@findex endwin
+
+A program that outputs to more than one terminal should use the
+@code{newterm} routine for each terminal instead of @code{initscr}.  A
+program that needs to inspect capabilities, so it can continue to run
+in a line-oriented mode if the terminal cannot support a
+screen-oriented program, would also use @code{newterm}.  The program
+must also call @code{endwin} for each terminal being used before
+exiting from curses.  If @code{newterm} is called more than once for
+the same terminal, the first terminal referred to must be the last one
+for which @code{endwin} is called.
+
+@findex endwin
+@findex doupdate
+@findex refresh
+
+@deffn Procedure endwin
+A program should always call @code{endwin} before exiting or escaping
+from curses mode temporarily.  This routine restores tty modes, moves
+the cursor to the lower left-hand corner of the screen and resets the
+terminal into the proper non-visual mode.  Calling @code{refresh} or
+@code{doupdate} after a temporary escape causes the program to resume
+visual mode.
+
+@findex endwin
+@vindex END
+@vindex *ok*
+
+@code{endwin} returns the integer @code{*err*} if the current terminal
+has not yet been initialized and @code{*ok*} upon successful completion.
+@end deffn
+
+@findex isendwin
+
+@deffn Procedure isendwin
+The @code{isendwin} routine returns @code{#t} if endwin has been
+called without any subsequent calls to @code{wrefresh}, and @code{#f}
+otherwise.
+@end deffn
+
+@findex set_term
+@tindex #<screen>
+
+@deffn Procedure set_term new
+The @code{set_term} routine is used to switch between different
+terminals.  The screen reference @var{new} becomes the new current
+terminal.  The previous terminal is returned by the routine.  This is
+the only routine which manipulates @code{#<screen>} types; all other
+routines affect only the current terminal.
+
+If this routine fails, it will throw an error
+@end deffn
+
+@findex delscreen
+@findex endwin
+
+@deffn Procedure delscreen screen
+
+The delscreen routine frees storage associated with the @var{screen}
+data structure.  The @code{endwin} routine does not do this, so
+@code{delscreen} should be called after @code{endwin} if a particular
+@var{screen} is no longer needed. 
+
+@c The routine is called automatically when a screen is garbage
+@c collected.
+
+Its return value is @code{UNSPECIFIED}.
+@end deffn
+
+@node ref-raw-addch
+@section Adding characters 
+
+There is a family of functions that add a rendered, narrow character
+to a curses window, and then advance the cursor.
+
+@deffn Procedure addch ch
+@deffnx Procedure waddch win ch
+@deffnx Procedure mvaddch y x ch
+@deffnx Procedure mvwaddch win y x ch
+
+@findex scrollok 
+
+The @code{addch}, @code{waddch}, @code{mvaddch} and @code{mvwaddch}
+routines put the rendered, narrow character @var{ch} into the given
+window at its current window position, which is then advanced.  If the
+advance is at the right margin, the cursor automatically wraps to the
+beginning of the next line.  At the bottom of the current scrolling
+region, if @code{scrollok} is enabled, the scrolling region is
+scrolled up one line.
+
+@findex TABSIZE
+@findex clrtoeol
+
+If @var{ch} is a tab, newline, or backspace, the cursor is moved
+appropriately within the window.  Backspace moves the cursor one
+character left; at the left edge of a window it does nothing. Newline
+does a @code{clrtoeol}, then moves the cursor to the window left
+margin on the next line, scrolling the window if on the last
+line. Tabs are considered to be at every eighth column.  The tab
+interval may be altered with the @code{SET_TABSIZE} procedure.
+
+@findex winch
+
+If @var{ch} is any control character other than tab, newline, or
+backspace, it is drawn in ^X notation.  Calling @code{winch} after
+adding a control character does not return the character itself, but
+instead returns the ^-representation of the control character.
+
+@findex inch
+
+Since @var{ch} is a rendered character, the rendition will be applied
+to the character when it is put on the screen.
+
+These functions return @code{*ok*} on success and @code{*err*} otherwise.
+@end deffn
+
+@findex echochar
+@findex wechochar
+
+@deffn Procedure echochar ch
+@deffnx Prodecure wechochar win ch
+
+@findex addch
+@findex refresh
+@findex waddch
+@findex wrefresh
+
+The @code{echochar} and @code{wechochar} routines are equivalent to a
+call to @code{addch} followed by a call to @code{refresh}, or a call
+to @code{waddch} followed by a call to @code{wrefresh}.  The knowledge
+that only a single character is being output is used and, for
+non-control characters, a considerable performance gain may be seen by
+using these routines instead of their equivalents.
+
+@end deffn
+
+@findex TABSIZE
+
+@deffn Procecure TABSIZE
+Returns the current tabsize for this screen.
+@end deffn
+
+@findex SET_TABSIZE
+
+@deffn Procedure SET_TABSIZE tab
+Sets the tabsize for this screen to @var{tab} characters.
+
+Its return value is @code{UNSPECIFIED}.
+@end deffn
+
+@deffn Procedure add-wch wch
+@deffnx Procedure wadd-wch win wch
+@deffnx Procedure mvadd-wch y x wch
+@deffnx Procedure mvwadd-wch win y x wch
+
+The @code{add-wch}, @code{wadd-wch}, @code{mvadd-wch}, and
+@code{mvwadd-wch} functions put the complex character @var{wch} into the
+given window at its current position, which is then advanced.  These
+functions perform wrapping and special-character processing as
+follows:
+
+If @var{wch} refers to a spacing character, then any previous
+character at that location is removed.  A new character specified by
+wch is placed at that location with rendition specified by wch.  The
+cursor then advances to the next spacing character on the screen.
+
+If @var{wch} refers to a non-spacing character, all previous
+characters at that location are preserved.  The non-spacing characters
+of @var{wch} are added to the spacing complex character, and the
+rendition specified by wch is ignored.
+
+@findex addch
+
+If the character part of @var{wch} is a tab, newline, backspace or
+other control character, the window is updated and the cursor moves as
+if @code{addch} were called.
+
+All routines return the integer @code{*err*} upon failure and
+@code{*ok*} on success.
+
+@end deffn
+
+@deffn Procedure echo-wchar wch
+@deffnx Procecure wecho-wchar win wch
+
+The @code{echo-wchar} function is functionally equivalent to a call to
+@code{add-wch} followed by a call to @code{refresh}.  Similarly, the
+@code{wecho-wchar} is functionally equivalent to a call to
+@code{wadd-wch} followed by a call to @code{wrefresh}.  The knowledge
+that only a single character is being output is taken into
+consideration and, for non-control characters, a considerable
+performance gain might be seen by using the *echo* functions instead
+of their equivalents.
+
+All routines return the integer @code{*err*} upon failure and
+@code{*ok*} on success.
+
+@end deffn
+
+@subsection  Line Graphics
+
+The line-graphics procedures may be used to add line drawing
+characters to the screen with routines of the @code{addch} family.
+Not all terminals have line-graphics characters.  There is a default
+character listed below is used if the @code{acsc} capability doesn't
+define a terminal-specific replacement for it.  The names are taken
+from VT100 nomenclature. Each of these procecures takes no arguments
+and returns a character.  The following prints a less-than-or-equal-to
+sign to the screen, for example.
+
+@example
+(addch (ACS_LEQUAL))
+@end example
+
+The set of line-graphics characters is given in @ref{tab:ACS}.
+
+@float Table,tab:ACS
+@multitable {ACS_XXXXXXXXX} {Default} {xxxxxxxxxxxxxxxxxxxxxxxxx}
+@headitem Name @tab Default @tab Description
+
+@item @code{ACS_BLOCK}
+@tab #		
+@tab solid square block
+@item @code{ACS_BOARD}
+@tab #
+@tab board of squares
+@item @code{ACS_BTEE}
+@tab +
+@tab bottom tee
+@item @code{ACS_BULLET}
+@tab o		
+@tab bullet
+@item @code{ACS_CKBOARD}
+@tab :
+@tab checker board (stipple)
+@item @code{ACS_DARROW}
+@tab v
+@tab arrow pointing down
+@item @code{ACS_DEGREE}
+@tab '
+@tab degree symbol
+@item @code{ACS_DIAMOND}
+@tab +
+@tab diamond
+@item @code{ACS_GEQUAL}
+@tab >
+@tab greater-than-or-equal-to
+@item @code{ACS_HLINE}
+@tab -
+@tab horizontal line
+@item @code{ACS_LANTERN}
+@tab #
+@tab lantern symbol
+@item @code{ACS_LARROW}
+@tab <
+@tab arrow pointing left
+@item @code{ACS_LEQUAL}
+@tab <
+@tab less-than-or-equal-to
+@item @code{ACS_LLCORNER}
+@tab +
+@tab lower left-hand corner
+@item @code{ACS_LRCORNER}
+@tab +
+@tab lower right-hand corner
+@item @code{ACS_LTEE}
+@tab +
+@tab left tee
+@item @code{ACS_NEQUAL}
+@tab !
+@tab not-equal
+@item @code{ACS_PI}
+@tab *
+@tab greek pi
+@item @code{ACS_PLMINUS}
+@tab #
+@tab plus/minus
+@item @code{ACS_PLUS}
+@tab +
+@tab plus
+@item @code{ACS_RARROW}
+@tab >
+@tab arrow pointing right
+@item @code{ACS_RTEE}
+@tab +
+@tab right tee
+@item @code{ACS_S1}
+@tab -
+@tab scan line 1
+@item @code{ACS_S3}
+@tab -
+@tab scan line 3
+@item @code{ACS_S7}
+@tab -
+@tab scan line 7
+@item @code{ACS_S9}
+@tab _
+@tab scan line 9
+@item @code{ACS_STERLING}
+@tab f
+@tab pound-sterling symbol
+@item @code{ACS_TTEE}
+@tab +
+@tab top tee
+@item @code{ACS_UARROW}
+@tab ^
+@tab arrow pointing up
+@item @code{ACS_ULCORNER}
+@tab +
+@tab upper left-hand corner
+@item @code{ACS_URCORNER}
+@tab +
+@tab upper right-hand corner
+@item @code{ACS_VLINE}
+@tab |
+@tab vertical line
+@end multitable
+@caption{The line-graphics procedures}
+@end float
+
+@node ref-raw-addchstr
+@section Adding strings of characters and attributes
+
+@deffn Procedure addchstr chstr
+@deffnx Procedure addchnstr chstr n
+@deffnx Procedure waddchstr win chstr
+@deffnx Procedure waddchnstr win chstr n
+@deffnx Procedure mvaddchstr y x chstr
+@deffnx Procedure mvaddchnstr y x chstr n
+@deffnx Procedure mvwaddchstr win y x chstr
+@deffnx Procedure mvwaddchnstr win y x chstr n
+
+These routines copy the rendered, narrow string @var{chstr} into the
+window image structure at and after the current cursor position.  The
+four routines with @var{n} as the last argument copy at most n
+elements, but no more than will fit on the line.  If @var{n}=-1 then
+the whole string is copied, to the maximum number of characters that
+will fit on the line.
+
+@findex waddnstr
+
+The window cursor is not advanced, and these routines work faster than
+@code{waddnstr}.  On the other hand, they do not perform any kind of
+checking (such as for the newline, backspace, or carriage return
+characters), they do not advance the current cursor position, they do
+not expand other control characters to ^-escapes, and they truncate
+the string if it crosses the right margin, rather than wrapping it
+around to the new line.
+
+All routines return the integer @code{*err*} if the window has already
+been deleted and @code{*ok*} on success.
+
+@end deffn
+
+@deffn Procedure add-wchstr wchstr
+@deffnx Procedure add-wchnstr wchstr n
+@deffnx Procedure wadd-wchstr win wchstr
+@deffnx Procedure wadd-wchnstr win wchstr n
+@deffnx Procedure mvadd-wchstr y x wchstr
+@deffnx Procedure mvadd-wchnstr y x wchstr n
+@deffnx Procedure mvwadd-wchstr win y x wchstr
+@deffnx Procedure mvwadd-wchnstr win y x wchstr n
+
+These routines copy the array of complex characters @var{wchstr} into
+the window image structure at and after the current cursor position.
+The four routines with @var{n} as the last argument copy at most
+@var{n} elements, but no more than will fit on the line.  If
+@var{n}=-1 then the whole array is copied, to the maximum number of
+characters that will fit on the line.
+
+The window cursor is not advanced.  These routines work faster than
+@var{wadd-wnstr}.  On the other hand, they do not perform checking (such as
+for the newline, backspace, or carriage return characters), they do
+not advance the current cursor position, they do not expand other
+control characters to ^-escapes, and they truncate the string if it
+crosses the right margin, rather than wrapping it around to the new
+line.
+
+If a complex character cannot
+completely fit at the end of the current line, the remaining columns
+are filled with the background character and rendition.
+
+All routines return the integer @code{*err*} upon failure and
+@code{*ok*} on success.
+
+@end deffn
+
+
+
+@node ref-raw-addstr
+@section Adding strings 
+
+@deffn Procecure addstr
+@deffnx Procedure addnstr str n
+@deffnx Procedure waddstr win str
+@deffnx Procedure waddnstr win str n
+@deffnx Procedure mvaddstr y x str
+@deffnx Procecure mvaddnstr y x str n
+@deffnx Procecure mvwaddstr win y x str
+@deffnx Procecure mvwaddnstr win y x str n
+
+@findex waddch
+
+These routines write the characters of the unrendered, narrow string
+@var{str} on the given window. It is similar to calling @code{waddch}
+once for each character in the string.  The four routines with @var{n}
+as the last argument write at most n characters.  If @var{n} is -1,
+then the entire string will be added, up to the maximum number of
+characters that will fit on the line, or until a terminating null is
+reached.
+
+All routines return the integer @code{*err*} upon failure and @code{*ok*}
+on success.
+
+@end deffn
+
+@deffn Procecure addwstr str
+@deffnx Procedure addnwstr str n
+@deffnx Procedure waddwstr win str
+@deffnx Procedure waddnwstr win str n
+@deffnx Procedure mvaddwstr y x str
+@deffnx Procecure mvaddnwstr y x str n
+@deffnx Procecure mvwaddwstr win y x str
+@deffnx Procecure mvwaddnwstr win y x str n
+
+@findex waddch
+
+These routines write the characters of the unrendered, wide string
+@var{str} on the given window. It is similar to constructing a
+rendered, complex character for each unrendered wide character in the
+string, and then calling @code{wadd-wch} once for each resulting
+rendered, complex character.  The four routines with @var{n} as the
+last argument write at most n characters.  If @var{n} is -1, then the
+entire string will be added, up to the maximum number of characters
+that will fit on the line, or until a terminating null is reached.
+
+All routines return the integer @code{*err*} upon failure and @code{*ok*}
+on success.
+
+@end deffn
+
+
+@node ref-raw-attr
+@section Character and window attribute control routines
+
+@findex waddch
+@findex waddstr
+
+These routines manipulate the current attributes of the named window.
+The current attributes of a window apply to all characters that are
+written into the window with @code{waddch} and @code{waddstr}.
+Attributes are a property of the character, and move with the
+character through any scrolling and insert/delete line/character
+operations.  To the extent possible, they are displayed as appropriate
+modifications to the graphic rendition of characters put on the
+screen.
+
+@deffn Procedure attrset attrs
+@deffnx Procedure wattrset win attrs
+@deffnx Procedure attron attrs
+@deffnx Procedure wattron win attrs
+@deffnx Procedure attroff attrs
+@deffnx Procedure wattroff win attrs
+@deffnx Procedure standend
+@deffnx Procedure wstandend win
+@deffnx Procedure standout
+@deffnx Procedure wstandout win
+@deffnx Procedure attr_set attrs
+@deffnx Procedure wattr_set win attrs
+@deffnx Procedure attr_on attrs
+@deffnx Procedure wattr_on win attrs
+@deffnx Procedure attr_off attrs
+@deffnx Procedure wattr_off win attrs
+
+The routine @code{attrset} sets the current attributes of the given
+window to @var{attrs}.  The routine @code{attroff} turns off the named
+attributes without turning any other attributes on or off.  The
+routine @code{attron} turns on the named attributes without affecting
+any others.  The routine @code{standout} is the same as @code{(attron
+*a-standout*)}.  The routine @code{standend} is the same as
+@code{(attrset *a-normal*)} or @code{(attrset 0)}, that is, it turns off
+all attributes.
+
+@code{attr_set} is the same as @code{attrset}.  @code{attr_on} is the
+same as @code{attron}, etc.q
+@end deffn
+
+@findex attrset
+
+The @code{attrset} and related routines do not affect the attributes
+used when erasing portions of the window. See FIXME for functions
+which modify the attributes used for erasing and clearing.
+
+@findex color_set
+@findex wcolor_set
+
+@deffn Procedure color_set color_pair_number opts
+@deffnx Procedure wcolor_set win color_pair_number opts
+
+The routine @code{color_set} sets the current color of the given window to
+the foreground/background combination described by the
+@var{color_pair_number}.  The parameter @var{opts} is reserved for
+future use.  For now, set it to @code{#t}.
+
+@end deffn
+
+@deffn Procedure attr_get
+@deffnx Procedure wattr_get win
+ 
+The routine @code{wattr_get} returns the current attribute and color
+pair for the given window; @code{attr_get} returns the current
+attribute and color pair for @code{stdscr}.  They are returned as a
+list containing two elements.  The first element is the rendition: a
+bitmap containing all the attributes and the color pair value under
+256.  The second element is the color pair alone.
+
+@end deffn
+
+@deffn Procedure chgat n attr color opts
+@deffnx Procedure wchgat win n attr color opts
+@deffnx Procedure mvchgat y x n attr color opts
+@deffnx Procedure mvwchgat win y x n attr color opts
+
+@findex init_pair
+
+The routine @code{chgat} changes the attributes of a given number of
+characters starting at the current cursor location of @code{stdscr}.
+It does not update the cursor and does not perform wrapping.  A
+character count of -1 or greater than the remaining window width means
+to change attributes all the way to the end of the current line.  The
+@code{wchgat} function generalizes this to any window; the
+@code{mvwchgat} function does a cursor move before acting. In these
+functions, the @var{color} argument is a color-pair index (as in the
+first argument of @code{init_pair}, see FIXME).  The @var{opts}
+argument is not presently used, but is reserved for the future (leave
+it @code{#t}).
+
+@end deffn
+
+
+The following video attributes can be passed to the routines
+@code{attron}, @code{attroff}, and @code{attrset}, or @code{logior}'d
+with the characters passed to @code{addch}.
+
+@defvr Constant *a-normal*
+Normal display (no highlight)
+@end defvr
+
+@defvr Constant *a-standout*
+Best highlighting mode of the terminal.
+@end defvr
+
+@defvr Constant *a-underline*
+Underlining
+@end defvr
+
+@defvr Constant *a-reverse*
+Reverse video
+@end defvr
+
+@defvr Constant *a-blink*
+Blinking
+@end defvr
+
+@defvr Constant *a-dim*
+Half bright
+@end defvr
+
+@defvr Constant *a-bold*
+Extra bright or bold
+@end defvr
+
+@defvr Constant *a-protect*
+Protected mode
+@end defvr
+
+@defvr Constant *a-invis*
+Invisible or blank mode
+@end defvr
+
+@defvr Constant *a-altcharset*
+Alternate character set
+@end defvr
+
+@defvr Constant *a-chartext*
+Bit-mask to extract a character
+@end defvr
+
+@deffn Procedure COLOR_PAIR n
+Returns a bit mask to apply the color pair @var{n} to a rendition.
+@code{COLOR_PAIR} values can only be @code{logior}'ed with attributes
+if the pair number is less than 256.  The alternate functions such as
+@code{color_set} can pass a color pair value directly.
+@end deffn
+
+@deffn Procedure PAIR_NUMBER attrs
+Returns the pair number number associated with attribute @var{attrs}.
+@end deffn
+
+@node ref-raw-beep
+@section Bell and screen flash routines
+
 
 @deffn Procedure beep
+@deffnx Procedure flash
+
+The @code{beep} and @code{flash} routines are used to alert the
+terminal user.  The routine beep sounds an audible alarm on the
+terminal, if possible; otherwise it flashes the screen (visible bell).
+The routine flash flashes the screen, and if that is not possible,
+sounds the alert.  If neither alert is possible, nothing happens.
+Nearly all terminals have an audible alert (bell or beep), but only
+some can flash the screen.
+
+These routines return @code{*ok*} if they succeed in beeping or flashing, @code{*err*}
+otherwise.
+
 @end deffn
 
-@deffn Procedure flash
+@section Window background manipulation routines
+
+@deffn Procedure bkgdset ch
+@deffnx Procedure wbkgdset win ch
+
+@findex waddch
+
+The @code{bkgdset} and @code{wbkgdset} routines manipulate the
+background of the named window.  The window background consists of any
+combination of attributes (i.e., rendition) and a character @var{ch}.
+The attribute part of the background is combined (@code{logior}'d) with all
+non-blank characters that are written into the window with @code{waddch}.
+Both the character and attribute parts of the background are combined
+with the blank characters.  The background becomes a property of the
+character and moves with the character through any scrolling and
+insert/delete line/character operations.
+
+To the extent possible on a particular terminal, the attribute part of
+the background is displayed as the graphic rendition of the character
+put on the screen.
+
+The return of these functions is undefined.
+
 @end deffn
 
-@section Raw @code{bkgd} functions
+@deffn Procedure bkgd ch
+@deffnx Procedure wbkgd win ch
 
-@section Raw @code{bkgrnd} functions
+The @code{bkgd} and @code{wbkgd} functions set the background property
+of the current or specified window and then apply this setting to
+every character position in that window: The rendition of every
+character on the screen is changed to the new background rendition.
+Wherever the former background character appears, it is changed to the
+new background character.
 
-@section Raw @code{border} functions
+The integer @code{*ok*} is returned
+@end deffn
 
-These functions are in the standard @code{ncurses} library.  They are
-wrapped with no special modifications.
+@deffn Procedure getbkgd win
+The @code{getbkgd} function returns the given window's current background
+character/attribute pair.
+@end deffn
+
+@section Borders and lines
+
 
 @deffn Procedure border ls rs ts bs tl tr bl br
+@deffnx Procedure wborder win ls rs ts bs tl tr bl br
+
+The @code{border} and @code{wborder} routines draw a box around the edges of a
+window. Other than the window, each argument is a character with
+attributes, representing a side or a corner of the border.  The
+arguments are @var{ls} - left side, @var{rs} - right side, @var{ts} -
+top side, @var{bs} - bottom side, @var{tl} - top left-hand corner,
+@var{tr} - top right-hand corner, @var{bl} - bottom left-hand corner,
+and @var{br} - bottom right-hand corner.
+
+If  any of these arguments is zero, then the corresponding default
+values are used instead.  The default values are the line drawing
+characters that create a box, and they would be @var{ls} =
+@code{ACS_VLINE}, @var{rs} = @code{ACS_VLINE}, @var{ts} =
+@code{ACS_HLINE}, @var{bs} = @code{ACS_HLINE}, @var{tl} =
+@code{ACS_ULCORNER}, @var{tr} = @code{ACS_URCORNER}, @var{bl} =
+@code{ACS_LLCORNER}, @var{br} = @code{ACS_LRCORNER}.
 
 @end deffn
-       int wborder(WINDOW *win, chtype ls, chtype rs,
-          chtype ts, chtype bs, chtype tl, chtype tr,
-          chtype bl, chtype br);
-       int box(WINDOW *win, chtype verch, chtype horch);
-       int hline(chtype ch, int n);
-       int whline(WINDOW *win, chtype ch, int n);
-       int vline(chtype ch, int n);
-       int wvline(WINDOW *win, chtype ch, int n);
-       mvhline(int y, int x, chtype ch, int n);
-       mvwhline(WINDOW *, int y, int x, chtype ch, int n);
-       int mvvline(int y, int x, chtype ch, int n);
-       int mvwvline(WINDOW *, int y, int x, chtype ch, int n);
 
-@section Raw @code{border_set} functions
-
-@section Raw @code{clear} functions
-
-@section Raw @code{color} functions
-
-@section Raw @code{delch} functions
-
-@section Raw @code{deleteln} functions
-
-@section Raw @code{extend} functions
-
-@section Raw @code{get_wch} procedures
-
-@section Raw @code{get_wstr} procedures
-
-@section Raw @code{getcchar} procedures
-
-@section Raw @code{getch} procedures
-
-@section Raw @code{getstr} procedures
-
-@section Raw @code{getyx} procedures
-
-@section Raw @code{in_wch} procedures
-
-@section Raw @code{in_wchstr} procedures
-
-@section Raw @code{inch} procedures
-
-@section Raw @code{insstr} procedures
-
-@section Raw @code{instr} procedures
-
-@section Raw @code{inwstr} procedures
-
-@section Raw @code{kernel} procedures
-
-@section Raw @code{mouse} procedures
-
-@section Raw @code{move} procedures
-
-@section Raw @code{outputs} procedures
-
-@section Raw @code{overlay} procedures
-
-@section Raw @code{pad} procedures
-
-@section Raw @code{print} procedures
-
-@section Raw @code{printw} procedures
-
-@section Raw @code{refresh} procedures
-
-@section Raw @code{scanw} procedures
-
-@section Raw @code{scr_dump} procedures
-
-@section Raw @code{set} procedures
-
-@section Raw @code{slk} procedures
-
-@section Raw @code{termattrs} procedures
-
-@section Raw @code{termcap} procedures
-
-@section Raw @code{terminfo} procedures
-
-@section Raw @code{touch} procedures
-
-@section Raw @code{trace} procedures
-
-@section Raw @code{util} procedures
-
-@section Raw @code{window} procedures
-
-@section Miscellaneous Procedures
+@deffn Procedure box win verch horch
+@code{box} is a shorthand for  the  following  call:	 
+@example
+(wborder win verch verch horch horch 0 0 0 0)
+@end example
+@end deffn
 
 
-@node Indices
-@appendix Indices of concepts and macros
 
-@menu
-* Procedure index::             Index for all GuCu procedures and variables
-* Concept index::               Concept index
-@end menu
+@deffn Procedure hline ch n
+@deffnx Procedure whline win ch n
+@deffnx Procedure mvhline y x ch n
+@deffnx Procedure mvwhline win y x ch n
 
-@node Procedure index
-@appendixsec Index for all GuCu procedures and variables
+The @code{hline} and @code{whline} functions draw a horizontal (left
+to right) line using @var{ch} starting at the current cursor position
+in the window.  The current cursor position is not changed.  The line
+is at most @var{n} characters long, or as many as fit into the window.
 
-This index covers all @code{m4} builtins, as well as several useful
-composite macros.  References are exclusively to the places where a
-macro is introduced the first time.
+The @code{mvhline} and @code{mvwhline} functions move the cursor before
+drawing the line.
 
-@printindex fn
+These functions return @code{*ok*}.
 
-@node Concept index
-@appendixsec Concept index
+@end deffn
 
+
+@deffn Procedure vline ch n
+@deffnx Procedure wvline win ch n
+@deffnx Procedure mvvline y x ch n
+@deffnx Procedure mvwvline win y x ch n
+
+The @code{vline} and @code{wvline} functions draw a vertical (top to
+bottom) line using @code{ch} starting at the current cursor position
+in the window.  The current cursor position is not changed.  The line
+is at most @code{n} characters long, or as many as fit into the
+window.
+
+The @code{mvvline} and @code{mvwvline} functions move the cursor
+before drawing the line.
+
+These functions return @code{*ok*}.
+
+@end deffn
+
+@section Clearing windows and parts of window
+
+@findex wbkgdset
+
+The following family of functions @dfn{clear} all or part of a window.
+When clearing a window, the blanks created by erasure have the current
+background rendition (as set by @code{wbkgdset}) merged into them.
+
+
+@deffn Procedure erase
+@deffnx Procedure werase win
+The @code{erase} and @code{werase} routines copy blanks to every
+position in the window, clearing the screen.
+
+These functions return @code{*err*} if the window does not exist.
+Otherwise they return @code{*ok*}.
+@end deffn
+
+@deffn Procedure clear
+@deffnx Procedure wclear win
+
+@findex erase
+@findex werase
+@findex clearok
+@findex wrefresh
+
+The @code{clear} and @code{wclear} routines are like @code{erase} and
+@code{werase}, but they also call @code{clearok}, so that the screen
+is cleared completely on the next call to @code{wrefresh} for that window and
+repainted from scratch.
+
+@end deffn
+
+@deffn Procedure clrtobot
+@deffnx Procedure wclrtobot win
+
+The @code{clrtobot} and @code{wclrtobot} routines erase from the
+cursor to the end of screen. That is, they erase all lines below the
+cursor in the window.  Also, the current line to the right of the
+cursor, inclusive, is erased.
+
+These functions return @code{*err*} if the window does not exist.
+Otherwise they return @code{*ok*}.
+@end deffn
+
+@deffn Procedure clrtoeol
+@deffnx Procedure wclrtoeol win
+
+The @code{clrtoeol} and @code{wclrtoeol} routines erase the current line to the right
+of the cursor, inclusive, to the end of the current line.
+
+These functions return @code{*err*} if the window does not exist.
+Otherwise they return @code{*ok*}.
+@end deffn
+
+@section Color manipulation routines
+
+@findex start_color
+@findex initscr
+@findex init_pair
+@findex COLOR_PAIR
+
+GuCu supports color attributes on terminals with that capability.  To
+use these routines @code{start_color} must be called, usually right
+after @code{initscr}.  Colors are always used in pairs (referred to as
+color-pairs).  A color-pair consists of a foreground color (for
+characters) and a background color (for the blank field on which the
+characters are displayed).  A programmer initializes a color-pair with
+the routine @code{init_pair}.  After it has been initialized,
+@code{COLOR_PAIR} can be used as a new video attribute.
+
+@findex init_color
+@findex has_colors
+@findex can_change_color
+@findex color_content
+@findex pair_content
+
+If a terminal is capable of redefining colors, the programmer can use
+the routine @code{init_color} to change the definition of a color.
+The routines @code{has_colors} and @code{can_change_color} return @code{#t}
+or @code{#f}, depending on whether the terminal has color capabilities and
+whether the programmer can change the colors.  The routine
+@code{color_content} allows a programmer to extract the amounts of red,
+green, and blue components in an initialized color.  The routine
+@code{pair_content} allows a programmer to find out how a given color-pair is
+currently defined.
+
+@deffn Procedure start_color
+
+@findex initscr
+@findex COLORS
+@findex COLOR_PAIRS
+
+The @code{start_color} routine requires no arguments.  It must be called if
+the programmer wants to use colors, and before any other color manipu-
+lation routine is called.  It is good practice to call this routine
+right after @code{initscr}. @code{start_color} initializes eight basic colors
+(black, red, green, yellow, blue, magenta, cyan, and white), and prepares
+procedures, @code{COLORS} and @code{COLOR_PAIRS} (respectively defining the
+maximum number of colors and color-pairs the terminal can support).
+It also restores the colors on the terminal to the values they had
+when the terminal was just turned on.
+@end deffn
+
+@deffn Procedure COLORS
+Returns the maximum number of colors the terminal can support.
+@end deffn
+
+@deffn Procedure COLOR_PAIRS
+Returns the maximum number of color-pairs the terminal can support.
+@end deffn
+
+
+@defvr Constant COLOR_BLACK
+@defvrx Constant COLOR_RED
+@defvrx Constant COLOR_GREEN
+@defvrx Constant COLOR_YELLOW
+@defvrx Constant COLOR_BLUE
+@defvrx Constant COLOR_MAGENTA
+@defvrx Constant COLOR_CYAN
+@defvrx Constant COLOR_WHITE
+
+@findex init_color
+These variables contain the color number of the eight default colors,
+as would be used in the procedure @code{init_pair}
+@end defvr
+
+
+@deffn Procedure init_color color red green blue
+
+The @code{init_color} routine changes the definition of a color.  It
+takes four arguments: the number of the color to be changed followed
+by three RGB values (for the amounts of @var{red}, @var{green}, and
+@var{blue} components).  The value of the first argument must be
+between 0 and COLORS.  (See the section FIXME for the default color
+index.)  Each of the last three arguments must be a value between 0
+and 1000.  When @code{init_color} is used, all occurrences of that
+color on the screen immediately change to the new definition.
+@end deffn
+
+
+@deffn Procedure init_pair color_pair fore_color back_color
+
+The @code{init_pair} routine changes the definition of a color-pair.
+It takes three arguments: the number of the color-pair to be changed,
+the fore-ground color number, and the background color number.
+
+@findex COLOR_PAIRS
+
+The value of the first argument must be between 1 and @code{COLOR_PAIRS-1}.
+
+@findex COLORS
+
+The value of the second and third arguments must be between 0 and
+@code{COLORS}.  Color pair 0 is assumed to be white on black, but is
+actually whatever the terminal implements before color is initialized.
+
+If the color-pair was previously initialized, the screen is refreshed
+and all occurrences of that color-pair are changed to the new definition.
+
+@findex assume_default_colors
+@findex use_default_colors
+
+Color pair 0 is set via the @code{assume_default_colors} routine.
+After @code{use_default_colors} has been called, the special color
+number -1 can be used as @var{fore_color} or @var{back_color}. Color
+number -1 is set to contain the default foreground or background
+color for this screen, which is usually white on black.
+
+Returns @code{*ok*} on success and @code{*err*} on failure.
+@end deffn
+
+
+@deffn Procedure has_colors
+
+The @code{has_colors} routine returns @code{#t} if the terminal can
+manipulate colors; otherwise, it returns @code{#f}.  This routine
+facilitates writing terminal-independent programs. For example, a
+programmer can use it to decide whether to use color or some other
+video attribute.
+
+@end deffn
+
+@deffn Procedure can_change_color
+The @code{can_change_color} routine returns @code{#t}
+if the terminal supports colors and can change their definitions;
+otherwise, it returns @code{#f}.
+@end deffn
+
+@deffn Procedure color_content color
+@findex COLORS
+The color_content routine gives programmers a way to find the
+intensity of the red, green, and blue (RGB) components in a color.
+Given @var{color} as its argument, it returns a list of three values
+indicating the red, green, and blue components in the given color.
+The value of the @var{color} argument must be between 0 and
+@code{COLORS}.  The values returned are between 0 (no component) and
+1000 (maximum amount of component).
+
+@end deffn
+
+@deffn Procedure pair_content pair
+
+The pair_content routine allows programmers to find out what colors
+color-pair @var{pair} consists of.  The value of @var{pair} must be
+between 1 and COLOR_PAIRS-1.  It returns a list of two elements: the
+forground color number and the background color number. The values
+are between 0 and COLORS.
+
+@end deffn
+
+@section Deleting the character under the cursor
+
+@deffn Procedure delch
+@deffnx Procedure wdelch win
+@deffnx Procedure mvdelch y x
+@deffnx Procedure mvwdelch win y x
+
+These routines delete the character under the cursor; all characters
+to the right of the cursor on the same line are moved to the left one
+position and the last character on the line is filled with a blank.
+The cursor position does not change (after moving to y, x, if specified).  (This does not imply use of the hardware delete character feature.)
+
+All routines return the integer @code{*err*} upon failure and an
+@code{*ok*} upon successful completion.
+
+@end deffn
+
+@section Deleting and inserting lines
+
+
+@deffn Procedure deleteln
+@deffnx Procedure wdeleteln win
+
+The @code{deleteln} and @code{wdeleteln} routines delete the line under the cursor
+in the window; all lines below the current line are moved up one line.
+The bottom line of the window is cleared.  The cursor position does
+not change.
+Returns @code{*ok*} on success or @code{*err*} on failure.
+
+@end deffn
+
+@deffn Procedure insdelln n
+@deffnx Procedure winsdelln win n 
+
+The @code{insdelln} and @code{winsdelln} routines, for positive
+@var{n}, insert n lines into the specified window above the current
+line.  The n bottom lines are lost.  For negative @var{n}, delete n
+lines (starting with the one under the cursor), and move the remaining
+lines up.  The bottom n lines are cleared.  The current cursor
+position remains the same.
+Returns @code{*ok*} on success or @code{*err*} on failure.
+
+@end deffn
+
+@deffn Procedure insertln
+@deffnx Procedure winsertln win
+
+The @code{insertln} and @code{winsertln} routines insert a blank line above the
+current line and the bottom line is lost. 
+Returns @code{*ok*} on success or @code{*err*} on failure.
+
+@end deffn
+
+
+@section Getting characters from the keyboard
+
+@deffn Procedure getch
+@deffnx Procedure wgetch win
+@deffnx Procedure mvgetch y x
+@deffnx Procedure mvwgetch win y x
+
+@findex cbreak
+@findex nocbreak
+
+The @code{getch}, @code{wgetch}, @code{mvgetch} and @code{mvwgetch},
+routines read a character from the window.  In no-delay mode, if no
+input is waiting, the value @code{*err*} is returned.  In delay mode,
+the program waits until the system passes text through to the program.
+Depending on the setting of cbreak, this is after one character
+(@code{cbreak} mode), or after the first newline (@code{nocbreak}
+mode).  In @code{half_delay} mode, the program waits until a character
+is typed or the specified timeout has been reached.
+
+@findex noecho
+@findex delch
+@findex beep
+
+Unless @code{noecho} has been set, then the character will also be
+echoed into the designated window according to the following rules: If
+the character is the current erase character, left arrow, or
+backspace, the cursor is moved one space to the left and that screen
+position is erased as if @code{delch} had been called.  If the
+character value is any other KEY_ define, the user is alerted with a
+@code{beep} call.  Otherwise the character is simply output to the
+screen.
+
+@findex keypad
+
+If @code{keypad} is @code{#t}, and a function key is pressed, the token for that
+function key is returned instead of the raw characters. Possible
+function keys are defined in table FIXME.
+
+When a character that could be the beginning of a function key is
+received (which, on modern terminals, means an escape character),
+curses sets a timer.  If the remainder of the sequence does not come
+in within the designated time, the character is passed through;
+otherwise, the function key value is returned.  For this reason, many
+terminals experience a delay between the time a user presses the
+escape key and the escape is returned to the program.
+
+@findex wrefresh
+
+If the window is not a pad, and it has been moved or modified since
+the last call to @code{wrefresh}, @code{wrefresh} will be called
+before another character is read.
+
+@end deffn
+
+@deffn Procedure ungetch ch
+
+@findex wgetch
+
+The ungetch routine places @var{ch} back onto the input queue to be returned
+by the next call to @code{wgetch}.  There is just one input queue for all
+windows.
+
+It returns @code{*err*} if there is no more space in the buffer, or
+@code{*ok*} otherwise.
+
+@end deffn
+
+@findex getch
+@findex keypad
+
+The following function keys, might be returned by @code{getch} if
+@code{keypad} has been enabled.  
+
+Note that almost all of these function keys do not exist on modern
+keyboards.  The standard PC keyboard cannot be depended upon to have
+more than @code{(KEY_F 1)} through @code{(KEY_F 12)}, KEY_HOME,
+KEY_PPAGE (Page Up), KEY_NPAGE (Page Down), KEY_HOME, KEY_END, KEY_IC
+(Insert), KEY_DC (Delete), KEY_BACKSPACE, KEY_DC (Delete), KEY_UP,
+KEY_DOWN, KEY_LEFT, and KEY_RIGHT.
+
+Also, a common terminal is more likely to return ^M than KEY_ENTER
+when the @key{RET} key is pressed.
+
+
+@defvr Constant KEY_BREAK
+Break key
+@end defvr
+
+@defvr Constant KEY_DOWN
+@defvrx Constant KEY_UP
+@defvrx Constant KEY_LEFT
+@defvrx Constant KEY_RIGHT
+The four arrow keys...
+@end defvr
+
+@defvr Constant KEY_HOME
+Home key
+@end defvr
+
+@defvr Constant KEY_BACKSPACE	  
+Backspace
+@end defvr
+
+@defvr Constant KEY_F0	 
+Function keys zero
+@end defvr
+
+@deffn Procedure KEY_F n
+This procedure returns the keycode for function key @var{n}.
+@end deffn
+
+@defvr Constant KEY_DL
+	  Delete line
+@end defvr
+@defvr Constant KEY_IL	  
+Insert line
+@end defvr
+@defvr Constant KEY_DC	  
+Delete character
+@end defvr
+@defvr Constant KEY_IC	
+  Insert char or enter insert mode
+@end defvr
+@defvr Constant KEY_EIC
+	  Exit insert char mode
+@end defvr
+@defvr Constant KEY_CLEAR	 
+ Clear screen
+@end defvr
+@defvr Constant KEY_EOS	
+  Clear to end of screen
+@end defvr
+@defvr Constant KEY_EOL	
+  Clear to end of line
+@end defvr
+@defvr Constant KEY_SF	
+  Scroll 1 line forward
+@end defvr
+@defvr Constant KEY_SR	
+  Scroll 1 line backward (reverse)
+@end defvr
+@defvr Constant KEY_NPAGE	  
+Next page
+@end defvr
+@defvr Constant KEY_PPAGE	
+  Previous page
+@end defvr
+@defvr Constant KEY_STAB	 
+ Set tab
+@end defvr
+@defvr Constant KEY_CTAB	 
+ Clear tab
+@end defvr
+@defvr Constant KEY_CATAB
+	  Clear all tabs
+@end defvr
+@defvr Constant KEY_ENTER	
+  Enter or send
+@end defvr
+@defvr Constant KEY_SRESET	
+  Soft (partial) reset
+@end defvr
+@defvr Constant KEY_RESET	
+  Reset or hard reset
+@end defvr
+@defvr Constant KEY_PRINT	
+  Print or copy
+@end defvr
+@defvr Constant KEY_LL
+	  Home down or bottom (lower left)
+@end defvr
+@defvr Constant KEY_A1
+	  Upper left of keypad
+@end defvr
+@defvr Constant KEY_A3	
+  Upper right of keypad
+@end defvr
+@defvr Constant KEY_B2
+	  Center of keypad
+@end defvr
+@defvr Constant KEY_C1
+	  Lower left of keypad
+@end defvr
+@defvr Constant KEY_C3	
+  Lower right of keypad
+@end defvr
+@defvr Constant KEY_BTAB	
+  Back tab key
+@end defvr
+@defvr Constant KEY_BEG
+	  Beg(inning) key
+@end defvr
+@defvr Constant KEY_CANCEL	 
+ Cancel key
+@end defvr
+@defvr Constant KEY_CLOSE	
+  Close key
+@end defvr
+@defvr Constant KEY_COMMAND	
+  Cmd (command) key
+@end defvr
+@defvr Constant KEY_COPY
+	  Copy key
+@end defvr
+@defvr Constant KEY_CREATE
+	  Create key
+@end defvr
+@defvr Constant KEY_END
+	  End key
+@end defvr
+@defvr Constant KEY_EXIT
+	  Exit key
+@end defvr
+@defvr Constant KEY_FIND
+	  Find key
+@end defvr
+@defvr Constant KEY_HELP
+	  Help key
+@end defvr
+@defvr Constant KEY_MARK	 
+ Mark key
+@end defvr
+@defvr Constant KEY_MESSAGE
+	  Message key
+@end defvr
+@defvr Constant KEY_MOUSE	
+  Mouse event read
+@end defvr
+@defvr Constant KEY_MOVE	  
+Move key
+@end defvr
+@defvr Constant KEY_NEXT	 
+ Next object key
+@end defvr
+@defvr Constant KEY_OPEN	
+  Open key
+@end defvr
+@defvr Constant KEY_OPTIONS	
+  Options key
+@end defvr
+@defvr Constant KEY_PREVIOUS	
+  Previous object key
+@end defvr
+@defvr Constant KEY_REDO	 
+ Redo key
+@end defvr
+@defvr Constant KEY_REFERENCE
+	  Ref(erence) key
+@end defvr
+@defvr Constant KEY_REFRESH
+	  Refresh key
+@end defvr
+@defvr Constant KEY_REPLACE
+	  Replace key
+@end defvr
+@defvr Constant KEY_RESIZE
+	  Screen resized
+@end defvr
+@defvr Constant KEY_RESTART
+	  Restart key
+@end defvr
+@defvr Constant KEY_RESUME
+	  Resume key
+@end defvr
+@defvr Constant KEY_SAVE
+	  Save key
+@end defvr
+@defvr Constant KEY_SBEG
+	  Shifted beginning key
+@end defvr
+@defvr Constant KEY_SCANCEL
+	  Shifted cancel key
+@end defvr
+@defvr Constant KEY_SCOMMAND
+	  Shifted command key
+@end defvr
+@defvr Constant KEY_SCOPY	
+  Shifted copy key
+@end defvr
+@defvr Constant KEY_SCREATE	
+  Shifted create key
+@end defvr
+@defvr Constant KEY_SDC
+	  Shifted delete char key
+@end defvr
+@defvr Constant KEY_SDL
+	  Shifted delete line key
+@end defvr
+@defvr Constant KEY_SELECT	
+  Select key
+@end defvr
+@defvr Constant KEY_SEND	
+  Shifted end key
+@end defvr
+@defvr Constant KEY_SEOL
+	  Shifted clear line key
+@end defvr
+@defvr Constant KEY_SEXIT	 
+ Shifted exit key
+@end defvr
+@defvr Constant KEY_SFIND
+	  Shifted find key
+@end defvr
+@defvr Constant KEY_SHELP	
+  Shifted help key
+@end defvr
+@defvr Constant KEY_SHOME
+	  Shifted home key
+@end defvr
+@defvr Constant KEY_SIC
+	  Shifted input key
+@end defvr
+@defvr Constant KEY_SLEFT	
+  Shifted left arrow key
+@end defvr
+@defvr Constant KEY_SMESSAGE
+	  Shifted message key
+@end defvr
+@defvr Constant KEY_SMOVE
+	  Shifted move key
+@end defvr
+@defvr Constant KEY_SNEXT	
+  Shifted next key
+@end defvr
+@defvr Constant KEY_SOPTIONS	
+  Shifted options key
+@end defvr
+@defvr Constant KEY_SPREVIOUS	
+  Shifted prev key
+@end defvr
+@defvr Constant KEY_SPRINT	
+  Shifted print key
+@end defvr
+@defvr Constant KEY_SREDO	
+  Shifted redo key
+@end defvr
+@defvr Constant KEY_SREPLACE
+	  Shifted replace key
+@end defvr
+@defvr Constant KEY_SRIGHT	
+  Shifted right arrow
+@end defvr
+@defvr Constant KEY_SRSUME
+	  Shifted resume key
+@end defvr
+@defvr Constant KEY_SSAVE
+	  Shifted save key
+@end defvr
+@defvr Constant KEY_SSUSPEND
+	  Shifted suspend key
+@end defvr
+@defvr Constant KEY_SUNDO
+	  Shifted undo key
+@end defvr
+@defvr Constant KEY_SUSPEND
+	  Suspend key
+@end defvr
+@defvr Constant KEY_UNDO
+	  Undo key
+@end defvr
+
+
+@deffn Procedure has_key ch
+@findex resizeterm
+The @code{has_key} routine takes a key value @var{ch} from the above
+list, and returns @code{#t} or @code{#f} according to whether the current
+terminal type recognizes a key with that value.  Note that a few
+values do not correspond to a real key, e.g., KEY_RESIZE and
+KEY_MOUSE.  See @code{resizeterm} for more details about KEY_RESIZE, and
+FIXME for a discussion of KEY_MOUSE.
+@end deffn
+
+
+Use of the @key{ESC} key by a programmer for a single character function
+is discouraged, as it will cause a delay of up to one second while the
+keypad code looks for a following function-key sequence.
+
+Note that some keys may be the same as commonly used control keys,
+e.g., KEY_ENTER versus control/M, KEY_BACKSPACE versus control/H.
+Some curses implementations may differ according to whether they treat
+these control keys specially (and ignore the terminfo), or use the
+terminfo definitions.  Ncurses uses the terminfo definition.  If it
+says that KEY_ENTER is control/M, getch will return KEY_ENTER when you
+press control/M.
+
+When using getch, wgetch, mvgetch, or mvwgetch, nocbreak mode
+(nocbreak) and echo mode (echo) should not be used at the same time.
+Depending on the state of the tty driver when each character is typed,
+the program may produce undesirable results.
+
+Historically, the set of keypad macros was largely defined by the
+extremely function-key-rich keyboard of the AT&T 7300, aka 3B1, aka
+Safari 4.  Modern personal computers usually have only a small subset
+of these.  IBM PC-style consoles typically support little more than
+KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_HOME, KEY_END, KEY_NPAGE,
+KEY_PPAGE, and function keys 1 through 12.  The Ins key is usually
+mapped to KEY_IC.
+
+@section Receiving strings from the keyboard
+
+@deffn Procedure getstr
+@deffnx Procedure getnstr n
+@deffnx Procedure wgetstr win
+@deffnx Procedure wgetnstr win n
+@deffnx Procedure mvgetstr y x
+@deffnx Procedure mvwgetstr win y x
+@deffnx Procedure mvgetnstr y x n
+@deffnx Procedure mvwgetnstr win y x n
+
+@findex getch
+
+The proceudre @code{getstr} is equivalent to a series of calls to
+@code{getch}, until a newline or carriage return is received (the
+terminating character is not included in the returned string).  The
+resulting string is returned.
+
+@code{wgetnstr} reads at most @var{n} characters, thus preventing a
+possible overflow of the input buffer.  Any attempt to enter more
+characters (other than the terminating newline or carriage return)
+causes a beep.  Function keys also cause a beep and are ignored. The
+@code{getnstr} function reads from the @code{stdscr} default window.
+
+The user's erase and kill characters are interpreted. If keypad mode
+is on for the window, KEY_LEFT and KEY_BACKSPACE are both considered
+equivalent to the user's kill character.
+
+Characters input are echoed only if @code{echo} is currently on.  In
+that case, backspace is echoed as deletion of the previous character
+(typically a left motion).
+
+FIXME (MAKE THE CODE DO THIS) If a SIGWINCH interrupts the function,
+it will return KEY_RESIZE as the first character in the string.
+@end deffn
+
+@section Cursor location and window coordinates
+
+@deffn Procedure getyx win
+The @code{getyx} procedure returns the current cursor position as a
+list containing two integers.  The first is the y position and the
+second is the x position.
+@end deffn
+
+@deffn Procedure getparyx win
+If @var{win} is a subwindow, the @code{getparyx} procedure places the
+beginning coordinates of the subwindow relative to the parent window
+into two element list @code{(y x)}.  Otherwise, @code{(-1 -1)} is
+returned.
+@end deffn
+
+@deffn Procedure getbegyx win
+Returns the beginning coordinates of a window as two element list
+@code{(y x)}.
+@end deffn
+
+@deffn Procedure getmaxyx win
+Returns the size of a window as two element list
+@code{(y x)}.
+@end deffn
+
+@section Getting a rendered character from the window
+
+These functions examine a character on the screen and return it, along
+with its rendition.
+
+@deffn Procedure inch
+@deffnx Procedure winch win
+@deffnx Procedure mvinch y x
+@deffnx Procedure mvwinch win y x
+
+@findex *a-chartext*
+@findex *a-attributes*
+@findex *a-color*
+
+These routines return the rendered 8-bit character at the current
+position in the named window.  If any attributes are set for that
+position, their values are @code{logior}'ed into the value returned.
+The constants @code{*a-chartext*}, @code{*a-attributes*}, and @code{*a-color*} can be used with
+@code{logand} to extract the character, attributes, or color of the
+rendered character.
+@end deffn
+
+
+@section Getting a string of characters and attributes from a window
+
+@deffn Procedure inchstr
+@deffnx Procedure inchnstr n
+@deffnx Procedure winchstr win
+@deffnx Procedure winchnstr win n
+@deffnx Procedure mvinchstr y x
+@deffnx Procedure mvinchnstr y x n 
+@deffnx Procedure mvwinchstr win y x
+@deffnx Procedure mvwinchnstr win y x n
+
+These routines return a list of rendered characters, starting at the
+current cursor position in the named window and ending at the right
+margin of the window.  The four functions with @var{n} as the last
+argument, return a leading substring at most @var{n} characters long.
+@end deffn
+
+@section Input options
+
+@deffn Procedure cbreak
+@deffnx Procedure nocbreak
+
+Normally, the tty driver buffers typed characters until a @key{NL} or
+@key{RET} is typed.  The @code{cbreak} routine disables line buffering
+and erase/kill character-processing (interrupt and flow control
+characters are unaffected), making characters typed by the user
+immediately available to the program.
+
+The @code{nocbreak} routine returns the terminal to normal (cooked)
+mode.
+
+@findex raw
+@findex getch
+
+Initially the terminal may or may not be in @code{cbreak} mode, as the
+mode is inherited; therefore, a program should call @code{cbreak} or
+@code{nocbreak} explicitly.  Most interactive programs using curses
+set the @code{cbreak} mode.  Note that @code{cbreak} overrides
+@code{raw}.  
+
+@findex echo
+@findex noecho
+
+See
+curs_getch FIXME for a discussion of how these routines interact with
+@code{echo} and @code{noecho}.]
+
+
+@end deffn
+
+@deffn Procedure halfdelay tenths
+
+@findex cbreak
+@findex nocbreak
+
+The @code{halfdelay} routine is used for half-delay mode, which is similar to
+@code{cbreak} mode in that characters typed by the user are immediately
+available to the program.  However, after blocking for @var{tenths} tenths
+of seconds, @code{*err*} is returned if nothing has been typed.  The value of
+tenths must be a number between 1 and 255.  Use @code{nocbreak} to leave
+half-delay mode.
+
+@end deffn
+
+@deffn Procedure intrflush win bf
+
+If the intrflush option is enabled, (@var{bf} is @code{#t}, when an interrupt
+key is pressed on the keyboard (interrupt, break, quit) all output in
+the tty driver queue will be flushed, giving the effect of faster
+response to the interrupt, but causing curses to have the wrong idea
+of what is on the screen.  Disabling (@var{bf} is @code{#f}), the option
+prevents the flush.  The default for the option is inherited from the
+tty driver settings.  The window @var{win} argument is ignored.
+@end deffn
+
+
+@deffn Procedure keypad win bf
+
+@findex wgetch
+
+The keypad option enables the keypad of the user's terminal.  If en-
+abled (@var{bf} is @code{#t}, the user can press a function key (such
+as an arrow key) and @code{wgetch} returns a single value representing
+the function key, as in @code{KEY_LEFT}. If disabled (@var{bf} is
+@code{#f}, curses does not treat function keys specially and the
+program has to interpret the escape sequences itself.  If the keypad
+in the terminal can be turned on (made to transmit) and off (made to
+work locally), turning on this option causes the terminal keypad to be
+turned on when @code{wgetch} is called.  The default value for keypad
+is @code{#f}.
+
+@end deffn
+
+
+@deffn Procedure meta win bf
+
+Initially, whether the terminal returns 7 or 8 significant bits on
+input depends on the control mode of the tty driver [see termio(
+FIXME].  To force 8 bits to be returned, invoke @code{(meta win #t)}.
+This is equivalent, under POSIX, to setting the CS8 flag on the
+terminal.  To force 7 bits to be returned, invoke @code{(meta win
+#f)}.  This is equivalent, under POSIX, to setting the CS7 flag on the
+terminal.  The window argument, @var{win}, is always ignored. If the
+terminfo capabilities @code{smm} (@code{meta_on}) and @code{rmm}
+(@code{meta_off}) are defined for the terminal.  The code for
+@code{smm} is sent to the terminal when @code{(meta win #t)} is called
+and @code{rmm} is sent when @code{(meta win #f)} is called.
+@end deffn
+
+@deffn Procedure nodelay win bf
+@findex getch
+The @code{nodelay} option causes @code{getch} to be a non-blocking
+call.  If no input is ready, getch returns @code{*err*}.  If disabled
+(@var{bf} is @code{#f}), @code{getch} waits until a key is pressed.
+
+@end deffn
+
+@deffn Procedure notimeout win bf
+
+@findex wgetch
+While interpreting an input escape sequence, @code{wgetch} sets a timer while
+waiting for the next character. If @code{(notimeout win #t)} is called,
+then @code{wgetch} does not set a timer.  The purpose of the timeout is to
+differentiate between sequences received from a function key and those
+typed by a user.
+
+@end deffn
+
+@deffn Procedure raw
+@deffnx Procedure noraw
+
+The @code{raw} and @code{noraw} routines place the terminal into or
+out of raw mode.  Raw mode is similar to @code{cbreak} mode, in that
+characters typed are immediately passed through to the user program.
+The differences are that in raw mode, the interrupt, quit, suspend,
+and flow control characters are all passed through uninterpreted,
+instead of generating a signal.  The behavior of the @key{BREAK} key depends
+on other bits in the tty driver that are not set by curses.
+
+@end deffn
+
+@deffn Procedure noqiflush
+
+When the @code{noqiflush} routine is used, normal flush of input and
+output queues associated with the INTR, QUIT and SUSP characters will
+not be done [see termio FIXME].  When @code{qiflush} is called, the
+queues will be flushed when these control characters are read. You may
+want to call @code{noqiflush} in a signal handler if you want output to
+continue as though the interrupt had not occurred, after the handler
+exits.
+
+@end deffn
+
+
+
+@deffn Procedure timeout delay
+@deffnx Procedure wtimeout win delay
+
+@findex nodelay
+
+The @code{timeout} and @code{wtimeout} routines set blocking or
+non-blocking read for a given window.  If @var{delay} is negative,
+blocking read is used (i.e., waits indefinitely for input).  If
+@var{delay} is zero, then non-blocking read is used (i.e., read
+returns @code{*err*} if no input is waiting).  If @var{delay} is positive, then
+read blocks for delay milliseconds, and returns @code{*err*} if there is
+still no input. Hence, these routines provide the same functionality
+as @code{nodelay}, plus the additional capability of being able to
+block for only @var{delay} milliseconds (where @var{delay} is
+positive).
+
+@end deffn
+
+
+@deffn Procedure typeahead fd
+
+The curses library does ``line-breakout optimization'' by looking for
+typeahead periodically while updating the screen.  If input is found,
+and it is coming from a tty, the current update is postponed until
+refresh or doupdate is called again.  This allows faster response to
+commands typed in advance.  Normally, the input @code{#<file>} passed
+to newterm, or @code{stdin} in the case that initscr was used, will be
+used to do this typeahead checking.  The typeahead routine specifies
+that the @code{#<file>} @var{fd} is to be used to check for typeahead
+instead.  If @var{fd} is -1, then no typeahead checking is
+done. FIXME: is this true?
+
+@end deffn 
+
+@section Inserting a character before the cursor
+
+@deffn Procedure insch ch
+@deffnx Procedure winsch win ch
+@deffnx Procedure mvinsch y x ch
+@deffnx Procedure mvwinsch win y x ch
+
+These routines insert the character @var{ch} before the character
+under the cursor.  All characters to the right of the cursor are moved
+one space to the right, with the possibility of the rightmost
+character on the line being lost.  The insertion operation does not
+change the cursor position.
+
+All routines that return an integer return @code{*err*} upon failure and
+@code{*ok*} upon successful completion .
+
+@end deffn
+
+@section Inserting a string before the cursor
+
+@deffn Procedure insstr str
+@deffnx Procedure insnstr str n
+@deffnx Procedure winsstr win str
+@deffnx Procedure winsnstr win str n
+@deffnx Procedure mvinsstr y x str
+@deffnx Procedure mvinsnstr y x str n
+@deffnx Procedure mvwinsstr win y x str
+@deffnx Procedure mvwinsnstr win y x str n
+
+These routines insert a character string (as many characters as will
+fit on the line) before the character under the cursor. All characters
+to the right of the cursor are shifted right with the possibility of
+the rightmost characters on the line being lost.  The cursor position
+does not change (after moving to @var{y}, @var{x}, if specified). The
+functions with @var{n} as the last argument insert a leading substring of at
+most n characters.  If @var{n}<=0, then the entire string is inserted.
+
+@findex addch
+
+Special characters are handled as in @code{addch}.
+
+All routines that return an integer return @code{*err*} upon failure and
+@code{*ok*}upon successful completion.
+
+@end deffn
+
+@section Getting a string of characters from the screen
+
+@deffn Procedure instr
+@deffnx Procedure innstr n
+@deffnx Procedure winstr win
+@deffnx Procedure winnstr win n
+@deffnx Procedure mvinstr y x
+@deffnx Procedure mvinnstr y x n
+@deffnx Procedure mvwinstr win y x 
+@deffnx Procedure mvwinnstr win y x n
+
+These routines return a unrendered string, extracted starting at the
+current cursor position in the named window. Attributes are stripped
+from the characters.  The four functions with @var{n} as the last
+argument return a leading substring at most n characters long.
+
+@end deffn
+
+@section Low-level routines
+
+The following routines give low-level access to various curses
+capabilities.  Theses routines typically are used inside library
+routines.
+
+@deffn Procedure def_prog_mode
+@deffnx Procedure def_shell_mode
+
+@findex initscr
+@findex newterm
+The @code{def_prog_mode} and @code{def_shell_mode} routines save the
+current terminal modes as the "program" (in curses) or "shell" (not in
+curses) state for use by the @code{reset_prog_mode} and
+@code{reset_shell_mode} routines.  This is done automatically by
+@code{initscr}.  There is one such save area for each screen context
+allocated by @code{newterm}.
+
+@code{*ok*} is always returned.
+
+@end deffn
+
+
+@deffn Procedure reset_prog_mode
+@deffnx Procedure reset_shell_mode
+
+@findex endwin
+@findex doupdate
+
+The @code{reset_prog_mode} and @code{reset_shell_mode} routines
+restore the terminal to "program" (in curses) or "shell" (out of
+curses) state.  These are done automatically by @code{endwin} and,
+after an @code{endwin}, by @code{doupdate}, so they normally are not
+called.
+
+@end deffn
+
+@deffn Procedure resetty
+@deffnx Procedure savetty
+
+The @code{resetty} and @code{savetty} routines save and restore the
+state of the terminal modes.  @code{savetty} saves the current state
+in a buffer and @code{resetty} restores the state to what it was at
+the last call to @code{savetty}.
+
+@end deffn
+
+@deffn Procedure curs_set visibility
+
+The @code{curs_set} routine sets the cursor state is set to invisible,
+normal, or very visible for @var{visibility} equal to 0, 1, or 2
+respectively.  If the terminal supports the visibility requested, the
+previous cursor state is returned; otherwise, @code{*err*} is
+returned. FIXME: test this.
+
+@end deffn
+
+@section Mouse handline
+
+FIXME
+
+@section Moving the cursor 
+
+@deffn Procedure move y x
+@deffnx Procedure wmove win y x
+
+@findex refresh
+
+These routines move the cursor associated with the window to line @var{y} and
+column @var{x}.  This routine does not move the physical cursor of the termi-
+nal until @code{refresh} is called.  The position specified is relative to the
+upper left-hand corner of the window, which is @code{(0 0)}.
+
+These routines return @code{*err*} upon failure and @code{*ok*} on
+successful completion.
+
+@end deffn
+
+@section Output options
+
+
+These routines set options that change the style of output within
+curses.  All options are initially @code{#f}, unless otherwise stated.  It
+is not necessary to turn these options off before calling @code{endwin}.
+
+@deffn Procedure clearok win bf
+
+@findex wrefresh
+
+If @code{clearok} is called with @var{bf} as @code{#t},
+the next call to @code{wrefresh} with this window will clear the
+screen completely and redraw the entire screen from scratch.  This is
+useful when the contents of the screen are uncertain, or in some cases
+for a more pleasing visual effect.  If the @var{win} argument to
+@code{clearok} is the global variable @code{curscr}, the next call to
+@code{wrefresh} with any window causes the screen to be cleared and
+repainted from scratch.
+
+Returns @code{*ok*}.
+
+@end deffn
+
+@deffn Procedure idlok win bf
+
+If @code{idlok} is called with @code{#t} as second argument, curses considers
+using the hardware insert/delete line feature of terminals so
+equipped.  Calling @code{idlok} with @var{bf} as @code{#f} disables use of
+line insertion and deletion.  This option should be enabled only if
+the application needs insert/delete line, for example, for a screen
+editor.  It is disabled by default because insert/delete line tends to
+be visually annoying when used in applications where it isn't really
+needed.  If insert/delete line cannot be used, curses redraws the
+changed portions of all lines.
+
+Returns @code{*ok*}.
+@end deffn
+
+@deffn Procedure idcok win bf
+
+If @code{idcok} is called with @var{bf} as @code{#f}, curses no longer
+considers using the hardware insert/delete character feature of
+terminals so equipped.  Use of character insert/delete is enabled by
+default.  Calling @code{idcok} with @code{#t} as second argument
+re-enables use of character insertion and deletion.
+
+Returns @code{*ok*}.
+@end deffn
+
+
+@deffn Procedure immedok win bf
+
+@findex waddch
+@findex wclrtobot
+@findex wscrl
+@findex wrefresh
+
+If @code{immedok} is called with @code{#t} as argument, any change in
+the window image, such as the ones caused by @code{waddch},
+@code{wclrtobot}, @code{wscrl}, etc., automatically cause a call to
+@code{wrefresh}.  However, it may degrade performance considerably,
+due to repeated calls to @code{wrefresh}. It is disabled by default.
+
+Returns @code{*ok*}.
+@end deffn
+
+@deffn Procedure leavok win bf
+
+Normally, the hardware cursor is left at the location of the window
+cursor being refreshed.  The @code{leaveok} option allows the cursor
+to be left wherever the update happens to leave it.  It is useful for
+applications where the cursor is not used, since it reduces the need
+for cursor motions.
+
+@end deffn
+
+@deffn Procedure setscrreg top bot
+@deffnx Procedure wsetscrreg win top bot
+
+@findex scrollok
+@findex idlok
+
+The @code{setscrreg} and @code{wsetscrreg} routines allow the
+application programmer to set a software scrolling region in a window.
+@var{top} and @var{bot} are the line numbers of the top and bottom
+margin of the scrolling region.  (Line 0 is the top line of the
+window.)  If this option and @code{scrollok} are enabled, an attempt to move
+off the bottom margin line causes all lines in the scrolling region to
+scroll one line in the direction of the first line. Only the text of
+the window is scrolled.  (Note that this has nothing to do with the
+use of a physical scrolling region capability in the terminal, like
+that in the VT100.  If @code{idlok} is enabled and the terminal has either a
+scrolling region or insert/delete line capability, they will probably
+be used by the output routines.)
+
+Returns @code{*ok*} on success and @code{*err*} on failure.
+@end deffn
+
+
+@deffn Procedure scrollok win bf
+
+@findex idlok
+
+The @code{scrollok} option controls what happens when the cursor of a window
+is moved off the edge of the window or scrolling region, either as a
+result of a newline action on the bottom line, or typing the last
+character of the last line. If disabled, (@var{bf} is @code{#f}), the cursor
+is left on the bottom line.  If enabled, (@var{bf} is @code{#t}), the window is
+scrolled up one line (Note that to get the physical scrolling effect
+on the terminal, it is also necessary to call @code{idlok}).
+
+Returns @code{*ok*}.
+@end deffn
+
+@deffn Procedure nl
+@deffnx Procedure nonl
+
+The @code{nl} and @code{nonl} routines control whether the underlying
+display device translates @key{RET} (return) into @key{NL} (newline)
+on input, and whether it translates @key{NL} into @key{RET} and
+@key{LF} (linefeed) output (in either case, the call @code{(addch
+(char->integer #\nl))} does the equivalent of return and line feed on
+the virtual screen).  Initially, these translations do occur.  If you
+disable them using @code{nonl}, curses will be able to make better use
+of the line-feed capability, resulting in faster cursor motion.  Also,
+curses will then be able to detect the return key.
+
+@end deffn
+
+
+@section Overlay and manipulate overlapped windows
+
+
+@deffn Procedure overlay srcwin dstwin
+@deffnx Procedure overwrite srcwin dstwin
+
+The @code{overlay} and @code{overwrite} routines overlay @var{srcwin}
+on top of @var{dstwin}.  @var{scrwin} and @var{dstwin} are not
+required to be the same size; only text where the two windows overlap
+is copied.  The difference is that overlay is non-destructive (blanks
+are not copied) whereas overwrite is destructive.
+
+Returns @code{*ok*} on success or @code{*err*} on failure.  @code{*err*}
+could indicate that the windows are freed.
+
+@end deffn
+
+@deffn Procedure copywin srcwin dstwin sminrow smincol dminrow dmincol dmaxrow dmaxcol overlay
+
+@findex overlay 
+@findex overwrite
+@findex prefresh
+
+The @code{copywin} routine provides a finer granularity of control
+over the @code{overlay} and @code{overwrite} routines.  Like in the
+@code{prefresh} routine, a rectangle is specified in the destination
+window, (@var{dminrow}, @var{dmincol}) and (@var{dmaxrow},
+@var{dmaxcol}), and the upper-left-corner coordinates of the source
+window, (@var{sminrow}, @var{smincol}).  If the argument @var{overlay}
+is @code{#t}, then copying is non-destructive, as in overlay.
+
+Returns @code{*ok*} on success or @code{*err*} on failure.  @code{*err*}
+could indicate that the windows are freed or if some part of the
+window would be placed offscreen.
+@end deffn
+
+@section Create and display pads
+
+A pad is like a window, except that it is not restricted by the screen
+size, and is not necessarily associated with a particular part of the
+screen. Pads can be used when a large window is needed, and only a
+part of the window will be on the screen at one time.  Automatic
+refreshes of pads (e.g., from scrolling or echoing of input) do not
+occur.  It is not legal to call wrefresh with a pad as an argument;
+the routines prefresh or pnoutrefresh should be called instead.  Note
+that these routines require additional parameters to specify the part
+of the pad to be displayed and the location on the screen to be used
+for the display.
+
+@deffn Procedure newpad nlines ncols
+
+The newpad routine creates and returns @code{#<window>} pad with the
+given number of lines, @var{nlines}, and columns, @var{ncols}.
+
+@end deffn
+
+@deffn Procedure subpad orig nlines ncols begin_y begin_x
+
+@findex subwin
+@findex touchwin
+@findex touchline
+@findex prefresh
+@findex subwin
+
+The @code{subpad} routine creates and returns a pointer to a subwindow
+within a pad with the given number of lines, @var{nlines}, and
+columns, @var{ncols}.  Unlike @code{subwin}, which uses screen
+coordinates, the window is at position (@var{begin_x}, @var{begin_y})
+on the pad.  The window is made in the middle of the window orig, so
+that changes made to one window affect both windows.  During the use
+of this routine, it will often be necessary to call @code{touchwin} or
+@code{touchline} on orig before calling @code{prefresh}.
+
+@end deffn
+
+
+@deffn Procedure prefresh pad pminrow pmincol sminrow simincol smaxrow smaxcol
+@deffnx Procedure pnoutrefresh pad pminrow pmincol sminrow smincol smaxrow smaxcol
+
+@findex wrefresh
+@findex wnoutrefresh
+
+The @code{prefresh} and @code{pnoutrefresh} routines are analogous to
+@code{wrefresh} and @code{wnoutrefresh} except that they relate to
+pads instead of windows.  The additional parameters are needed to
+indicate what part of the pad and screen are involved.  @var{pminrow}
+and @code{pmincol} specify the upper left-hand corner of the rectangle
+to be displayed in the pad.  @var{sminrow}, @var{smincol},
+@var{smaxrow}, and @var{smaxcol} specify the edges of the rectangle to
+be displayed on the screen.  The lower right-hand corner of the
+rectangle to be displayed in the pad is calculated from the screen
+coordinates, since the rectangles must be the same size.  Both
+rectangles must be entirely contained within their respective
+structures.  Negative values of @var{pminrow}, @var{pmincol},
+@var{sminrow}, or @var{smincol} are treated as if they were zero.
+
+Returns @code{*err*} upon failure and @code{*ok*} upon successful
+@end deffn
+
+
+@deffn Procedure pechochar pad ch
+
+@findex addch
+@findex refresh
+@findex waddch
+@findex wrefresh
+@findex prefresh
+
+The @code{pechochar} routine is functionally equivalent to a call to
+@code{addch} followed by a call to @code{refresh}, a call to
+@code{waddch} followed by a call to @code{wrefresh}, or a call to
+@code{waddch} followed by a call to @code{prefresh}.  The knowledge
+that only a single character is being output is taken into
+consideration and, for non-control characters, a considerable
+performance gain might be seen by using these routines instead of
+their equivalents.  In the case of @code{pechochar}, the last location
+of the pad on the screen is reused for the arguments to
+@code{prefresh}.
+
+Returns @code{*err*} upon failure and @code{*ok*} upon successful
+completion.
+@end deffn
+
+
+@section Refresh windows and lines
+
+@deffn Procedure refresh
+@deffnx Procedure wrefresh win
+
+@findex wnoutrefresh
+@findex doupdate
+@findex leaveok
+
+The @code{refresh} and @code{wrefresh} routines (or
+@code{wnoutrefresh} and @code{doupdate}) must be called to get actual
+output to the terminal, as other routines merely manipulate data
+structures.  The routine @code{wrefresh} copies the named window to
+the physical terminal screen, taking into account what is already
+there to do optimizations.  The @code{refresh} routine is the same,
+using @code{stdscr} as the default window.  Unless @code{leaveok} has
+been enabled, the physical cursor of the terminal is left at the
+location of the cursor for that window.
+
+@end deffn
+
+
+@deffn Procedure wnoutrefresh win
+
+Copies the named window @var{win} to the virtual screen
+
+@end deffn
+
+@deffn Procedure doupdate
+
+Compared the virtual screen to the physical screen and updates it
+where necessary.
+
+@end deffn
+
+The @code{wnoutrefresh} and @code{doupdate} routines allow multiple
+updates with more efficiency than @code{wrefresh} alone. In addition
+to all the window structures, curses keeps two data structures
+representing the terminal screen: a physical screen, describing what
+is actually on the screen, and a virtual screen, describing what the
+programmer wants to have on the screen.
+
+The routine @code{wrefresh} works by first calling
+@code{wnoutrefresh}, which copies the named window to the virtual
+screen, and then calling @code{doupdate}, which compares the virtual
+screen to the physical screen and does the actual update.  If the
+programmer wishes to output several windows at once, a series of calls
+to @code{wrefresh} results in alternating calls to @code{wnoutrefresh}
+and @code{doupdate}, causing several bursts of output to the
+screen. By first calling @code{wnoutrefresh} for each window, it is
+then possible to call @code{doupdate} once, resulting in only one
+burst of output, with fewer total characters transmitted and less CPU
+time used. If the @var{win} argument to @code{wrefresh} is the global
+variable @code{curscr}, the screen is immediately cleared and
+repainted from scratch.
+
+The phrase "copies the named window to the virtual screen" above is
+ambiguous.  What actually happens is that all touched (changed) lines
+in the window are copied to the virtual screen.  This affects programs
+that use overlapping windows; it means that if two windows overlap,
+you can refresh them in either order and the overlap region will be
+modified only when it is explicitly changed.  
+
+@deffn Procedure redrawwin win
+@deffnx Procedure wredrawln win beg_line num_lines
+
+The @code{wredrawln} routine indicates to curses that some screen
+lines are corrupted and should be thrown away before anything is
+written over them.  It touches the indicated lines (marking them
+changed).  The routine @code{redrawwin} touches the entire window.
+
+@end deffn
+
+@section Reading and writing a curses screen to a file
+
+@deffn Procedure scr_dump filename
+
+The @code{scr_dump} routine dumps the current contents of the virtual screen
+to the file @var{filename}.
+
+@end deffn
+
+
+@deffn Procedure scr_restore filename
+
+@findex doupdate
+
+The @code{scr_restore} routine sets the virtual screen to the contents
+of @var{filename}, which must have been written using scr_dump.  The
+next call to @code{doupdate} restores the screen to the way it looked
+in the dump file.
+
+@end deffn
+
+@deffn Procedure scr_init filename
+
+@findex initscr
+@findex scr_dump
+@findex endwin
+
+The @code{scr_init} routine reads in the contents of @var{filename}
+and uses them to initialize the curses data structures about what the
+terminal currently has on its screen.  If the data is determined to be
+valid, curses bases its next update of the screen on this information
+rather than clearing the screen and starting from scratch.
+@code{scr_init} is used after @code{initscr} or a system call to share
+the screen with another process which has done a @code{scr_dump} after
+its @code{endwin} call.  The data is declared invalid if the terminfo
+capabilities @code{rmcup} and @code{nrrmc} exist; also if the terminal
+has been written to since the preceding @code{scr_dump} call.
+
+@end deffn
+
+
+@deffn Procedure scr_set filename
+
+@findex scr_restore
+@findex scr_init
+
+The @code{scr_set} routine is a combination of @code{scr_restore} and
+@code{scr_init}.  It tells the program that the information in
+@var{filename} is what is currently on the screen, and also what the
+program wants on the screen.  This can be thought of as a screen
+inheritance function.
+
+@end deffn
+
+To read (write) a window from (to) a file, use the getwin and putwin
+routines [see FIXME.
+
+All routines return the integer @code{*err*} upon failure and @code{*ok*}
+upon success.
+
+@section Scroll a window
+
+@deffn Procedure scroll win
+
+The @code{scroll} routine scrolls the window up one line.  This
+involves moving the lines in the window data structure.  As an
+optimization, if the scrolling region of the window is the entire
+screen, the physical screen may be scrolled at the same time.
+
+@end deffn
+
+
+@deffn Procedure scrl n
+@deffnx Procedure wscrl win n
+
+For positive @var{n}, the @code{scrl} and @code{wscrl} routines scroll
+the window up @code{n} lines (line i+n becomes i); otherwise scroll
+the window down @code{n} lines.  This involves moving the lines in the
+window character image structure.  The current cursor position is not
+changed.
+
+For these functions to work, scrolling must be enabled via
+@code{scrollok}.
+
+These routines return @code{*err*} upon failure, and @code{*ok*} upon
+successful completion.
+
+@end deffn
+
+@section Function key labels
+
+The slk* functions manipulate the set of soft function-key labels that
+exist on many terminals.  For those terminals that do not have soft
+labels, curses takes over the bottom line of @code{stdscr}, reducing
+the size of @code{stdscr} (and thus the return value of the procedure
+@code{LINES}). curses standardizes on eight labels of up to eight
+characters each. In addition to this, the ncurses implementation
+supports a mode where it simulates 12 labels of up to five characters
+each. This is most common for todays PC like enduser devices.  Please
+note that ncurses simulates this mode by taking over up to two lines
+at the bottom of the screen, it doesn't try to use any hardware
+support for this mode.
+
+@section Terminal attributes
+
+
+@deffn Procedure baudrate
+
+The @code{baudrate} routine returns the output speed of the terminal.
+The number returned is in bits per second, for example 9600, and is an
+integer.
+
+@end deffn
+
+@deffn Procedure erasechar
+
+The erasechar routine returns the user's current erase character.
+
+@end deffn
+
+@deffn Procedure has_ic
+
+The has_ic routine is true if the terminal has insert- and delete-
+character capabilities.
+
+@end deffn
+
+
+@deffn Procedure has_il
+
+@findex scrollok
+
+The @code{has_il} routine is true if the terminal has insert- and
+delete-line capabilities, or can simulate them using scrolling
+regions.  This might be used to determine if it would be appropriate
+to turn on physical scrolling using @code{scrollok}.
+
+@end deffn
+
+@deffn Procedure killchar
+
+The killchar routine returns the user's current line kill character.
+
+@end deffn
+
+@deffn Procedure longname
+
+The @code{longname} routine returns a string that is a 
+verbose description of the current terminal.  
+
+@end deffn
+
+@deffn Procedure termattrs
+@deffnx Procedure term_attrs
+
+The @code{termattrs} function return a @code{logior} of all video attributes
+supported by the terminal using @code{*a-xxx*} constants.  The @code{term_attrs}
+function is identical.
+
+@end deffn
+
+@deffn Procedure termname
+
+The @code{termname} routine returns the terminal name used by
+@code{setupterm}.
+
+@end deffn
+
+@section Refresh routines
+
+@deffn Procedure touchwin win
+@deffnx Procedure touchline win start count
+
+The @code{touchwin} and @code{touchline} routines throw away all
+optimization information about which parts of the window have been
+touched, by pretending that the entire window has been drawn on.  This
+is sometimes necessary when using overlapping windows, since a change
+to one window affects the other window, but the records of which lines
+have been changed in the other window do not reflect the change.  The
+routine @code{touchline} only pretends that @var{count} lines have
+been changed, beginning with line @var{start}.
+
+@end deffn
+
+@deffn Procedure untouchwin win 
+
+@findex wrefresh
+
+The @code{untouchwin} routine marks all lines in the window as
+unchanged since the last call to @code{wrefresh}.
+
+@end deffn
+
+
+@deffn Procedure wtouchln win y n changed
+
+@findex wrefresh
+
+The @code{wtouchln} routine makes @var{n} lines in the window,
+starting at line @var{y}, look as if they have (@var{changed}=1) or have not
+(@var{changed}=0) been changed since the last call to @code{wrefresh}.
+
+@end deffn
+
+@deffn Procedure is_linetouched win line
+@deffnx Procedure is_wintouched win 
+@findex wrefresh
+
+The @code{is_linetouched} and @code{is_wintouched} routines return
+@code{#t} if the specified line/window was modified since the last
+call to @code{wrefresh}; otherwise they return @code{#f}. In addition,
+@code{is_linetouched} returns @code{*err*} if line is not valid for the given
+window. FIXME: the code doesn't do this.
+
+@end deffn
+
+@section Miscellaneous utilities
+
+@deffn Procedure unctrl ch
+
+The @code{unctrl} routine returns a character string which is a
+printable representation of the character @var{ch}, ignoring
+attributes.  Control characters are displayed in the @code{^X} notation.
+Printing characters are displayed as is.
+
+@end deffn
+
+@deffn Procedure keyname ch
+
+The @code{keyname} routine returns a character string corresponding to
+the key @var{ch}.  Control characters are displayed in the @code{^X}
+notation.  Values above 128 are either meta characters, shown in the
+@code{M-X} notation, or the names of function keys, or null.  
+
+@end deffn
+
+@deffn Procedure use_env f
+
+@findex initscr
+
+The @code{use_env} routine, if used, is called before @code{initscr}
+or @code{newterm} are called. When called with @code{#f} as an
+argument, the values of lines and columns specified in the terminfo
+database will be used, even if environment variables @env{LINES} and
+@env{COLUMNS} (used by default) are set, or if curses is running in a
+window (in which case default behavior would be to use the window size
+if LINES and COLUMNS are not set).  Note that setting @env{LINES} or
+@env{COLUMNS} overrides the corresponding size which may be obtained
+from the operating system.
+
+@end deffn
+
+@deffn Procedure putwin win file
+
+@findex getwin
+
+The @code{putwin} routine writes all data associated with window
+@var{win} into the @code{#<file>} @var{file}.  This information can
+be later retrieved using the @code{getwin} function.
+
+@end deffn
+
+
+@deffn Procedure getwin file
+
+@findex putwin
+
+The @code{getwin} routine reads window related data stored in the file
+by @code{putwin}. The routine then creates and initializes a new
+window using that data.  It returns a new @code{#<window>}
+
+@end deffn
+
+@deffn Procedure delay_output ms
+
+The @code{delay_output} routine inserts an @var{ms} millisecond pause
+in output.  This routine should not be used extensively because
+padding characters are used rather than a CPU pause. 
+ 
+@end deffn
+ 
+@deffn Procedure flushinp
+
+The @code{flushinp} routine throws away any typeahead that has been
+typed by the user and has not yet been read by the program.
+
+@end deffn
+
+@section Window creation
+
+
+@deffn Procedure newwin nlines ncols begin_y begin_x
+
+Calling @code{newwin} creates and returns a pointer to a new window
+with the given number of lines and columns.  The upper left-hand
+corner of the window is at line @var{begin_y}, column @var{begin_x}.
+If either @var{nlines} or @var{ncols} is zero, they default to
+@code{(- (LINES) begin_y)} and @code{(- (COLS) begin_x)}.  A new
+full-screen window is created by calling @code{(newwin 0 0 0 0)}.
+
+@end deffn
+
+@deffn Procedure delwin win
+
+Calling @code{delwin} deletes the named window, freeing all memory
+associated with it (it does not actually erase the window's screen
+image).  Subwindows must be deleted before the main window can be
+deleted.
+
+This function is called implicitly if a window is garbage collected.
+@end deffn
+
+
+@deffn Procedure mvwin win y x
+
+Calling @code{mvwin} moves the window so that the upper left-hand
+corner is at position @var{x}, @var{y}.  If the move would cause the
+window to be off the screen, it is an error and the window is not
+moved.  Moving subwindows is allowed, but should be avoided.
+
+@end deffn
+
+
+@deffn Procedure subwin orig nlines ncols begin_y begin_x
+
+@findex touchwin
+@findex touchline
+@findex wrefresh
+
+Calling @code{subwin} creates and returns a pointer to a new window
+with the given number of lines, @var{nlines}, and columns,
+@var{ncols}.  The window is at position (@var{begin_y}, @var{begin_x})
+on the screen.  (This position is relative to the screen, and not to
+the window orig.)  The window is made in the middle of the window
+@var{orig}, so that changes made to one window will affect both
+windows.  The subwindow shares memory with the window @var{orig}.
+When using this routine, it is necessary to call @code{touchwin} or
+@code{touchline} on @var{orig} before calling @code{wrefresh} on the
+subwindow.
+
+@end deffn
+
+@deffn Procedure derwin orign nlines ncols begin_y begin_x
+
+Calling @code{derwin} is the same as calling @code{subwin}, except
+that @var{begin_y} and @var{begin_x} are relative to the origin of the
+window @var{orig} rather than the screen. There is no difference
+between the subwindows and the derived windows.
+
+@end deffn
+
+
+@deffn Procedure mvderwin win par_y par_x
+
+Calling @code{mvderwin} moves a derived window (or subwindow) inside
+its parent window.  The screen-relative parameters of the window are
+not changed.  This routine is used to display different parts of the
+parent window at the same physical position on the screen.
+
+@end deffn
+
+
+@deffn Procedure dupwin win 
+
+Calling @code{dupwin} creates an exact duplicate of the window @var{win}.
+
+@end deffn 
+
+@deffn Procedure wsyncup win
+@findex syncok
+
+Calling @code{wsyncup} touches all locations in ancestors of @var{win}
+that are changed in @var{win}.  If @code{syncok} is called with second
+argument @code{#t} then @code{wsyncup} is called automatically
+whenever there is a change in the window.
+
+@end deffn 
+
+@deffn Procedure wsyncdown win
+
+@findex wrefresh
+
+The @code{wsyncdown} routine touches each location in @var{win} that
+has been touched in any of its ancestor windows. This routine is
+called by @code{wrefresh}, so it should almost never be necessary to
+call it manually.
+
+@end deffn 
+
+
+@deffn Procedure wcursyncup win
+
+The routine @code{wcursyncup} updates the current cursor position of
+all the ancestors of the window to reflect the current cursor position
+of the window.
+
+@end deffn 
+
+Routines that return an integer return the integer @code{*err*} upon failure
+and @code{*ok*} upon successful completion.
+
+@chapter Hacking the module
+
+Much of the code for the bindings is generated by awk and shell
+scripts in the @file{wrap} directory of the distribution.
+
+The script @file{wrap.sh} calls a set of awk scripts that generate
+@file{function.c}, @file{function.h}, @file{constant.c},
+@file{constant.h}, and @file{raw.scm.in}.
+
+The generate the code from a set of template files @file{function.txt}
+and @file{constant.txt}.  The template files look a lot like c header
+files.
+
+The scripts generate code based on the c types in the template files.
+To get it to work, I had to add a new type @code{cstring}, to
+disambiguate the difference between a @code{cchar_t *} that points to
+a single character, and a @code{cchar_t *} that points at a
+null-terminated @code{cchar_t} array.
+
+There is also a file @file{special.txt} that lists the functions not
+wrapped by @file{wrap.sh} script.  The procedures listed in
+@file{special.txt} are copied into the generated @file{raw.scm.in}
+file, but the c code for them was coded by hand in
+@file{special.c}.
+
+Also coded by hand was @file{type.c}, which does the type conversions.
+
+
+@node Index
+@unnumbered Index
 @printindex cp
-
 @bye
