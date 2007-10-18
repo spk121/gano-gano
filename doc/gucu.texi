@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.2 2007/10/17 15:33:03 spike_gran Exp $
+@c $Id: gucu.texi,v 1.3 2007/10/18 16:03:44 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -1099,6 +1099,146 @@ cyan.
 This example also introduces us to the color world of curses.  Colors
 will be explained in detail later.  Use 0 for no color.
 
+@section Windows
+
+Windows from the most important concept in curses.  You have seen the
+standard window @code{stdscr} above where all the functions implicitly
+operated on this window.  Not to make design even a simplest GUI, you
+need to resort to windows.  The man reason you may want to use windows
+is to manipulate parts of the screen separately, for better
+efficiency, by updating only the windows that need to be changed, and
+for a better design.  I would say the last reason is the most
+important in going for windows.  You should always strive for a better
+and easy-to-manage dsign in your programs.  I fyou are writing bing,
+complex GUIs this is of pivotal importance before you start doing
+anything.
+
+@subsubsection The basics
+
+A window can be created by calling the function @code{newwin}. It
+doesn't create any thin on the screen actually.  It allocated memory
+for a structure to manipulate the windo and updates the sructure with
+data regarding the window, like it's size, position, etc.  Hence in
+curses, a window is just an abstraction of an imaginary window, which
+can be manipulated independently of other parts of the screen.  The
+function @code{newwin} returns a @code{#window} which can be passed to
+window-related functions like @code{waddstr}.  Finally the window can
+be destroyed with @code{delwin}.  It will deallocate the memory
+associated with the window structure.
+
+@subsubsection Let there be a window
+
+What fun is it if a window is created and we can't see it?  So the fun
+part begins by displaying the window.  The function @code{box} can be
+used to draw a border around the window.  Let's explore these
+functions in more detail in this example.
+
+@example
+(use-modules (gucu raw))
+
+;; This procedure makes a new window and draws a box
+;; around it
+(define (create-newwin height width starty startx)
+  ((lambda (win)			; Make a lambda proc that...
+     (box win (acs-vline) (acs-hline))	; Makes a box,
+     (wrefresh win)			; Draws the window
+     win)				; Returns the window to the caller
+
+   (newwin height width starty startx))) ; Create a window and apply it
+					; to the lambda function
+
+
+
+;; This procedure erases the box around a window and then deletes it
+(define (destroy-win win)
+  (let ((s (char->integer #\sp)))
+    (wborder win s s s s s s s s)	; Draw a box of spaces
+    (wrefresh win)
+    (delwin win)))
+
+
+;; This prodecure deletes a window than then draw a new one someplace
+;; else
+(define (move-win win height width starty startx)
+  (destroy-win win)
+  (create-newwin height width starty startx))
+
+
+;; Program Begins
+(initscr)				; Start curses
+(cbreak)				; Line buffering disabled
+(keypad (stdscr) #t)			; Check for function keys
+
+
+(let* ((height 3)
+      (width 10)
+      (starty (round (/ (- (lines) height) 2)))
+      (startx (round (/ (- (cols) width) 2))))
+      
+  (addstr "Press F1 to exit")
+  (refresh)
+  (let loop ((starty starty)
+	     (startx startx)
+	     (my-win (create-newwin height width starty startx))
+	     (ch (getch)))
+    (cond
+     ((eqv? ch *key-left*)
+      (loop starty
+	    (- startx 1)
+	    (move-win my-win height width starty (- startx 1))
+	    (getch)))
+     
+     ((eqv? ch *key-right*)
+      (loop starty
+	    (+ startx 1)
+	    (move-win my-win height width starty (+ startx 1))
+	    (getch)))
+     
+     ((eqv? ch *key-up*)
+      (loop (- starty 1)
+	    startx
+	    (move-win my-win height width (- starty 1) startx)
+	    (getch)))
+     
+     ((eqv? ch *key-down*)
+      (loop (+ starty 1)
+	    startx
+	    (move-win my-win height width (+ starty 1) startx)
+	    (getch)))
+     
+     ((eqv? ch (key-f 1))
+      #f)
+     
+     (else
+      (loop starty startx my-win (getch)))))
+  
+  (endwin))
+@end example
+
+Don't scream.  I know it is a big example..  But there are some
+important things to explain here.  This program creates a rectangular
+window that can be moved with left, right, up, and down arrow keys.
+It repeatedly creates and destroys windows as a user presses a key.
+Don't go beyond the screen limits.  Checking for limits is left as an
+exercise for the reader.  Let's dissect it line by line.
+
+The @code{create-newwin} function creates a window with @code{newwin}
+and draws a box around it with @code{box}.  For the horizonal lines in
+the box, I chose the special drawing character @code{acs-hline}.  The
+vertical lines are the special drawing character @code{acs-vline}.  
+
+The procedure @code{destroy-win} first erases the window from the
+screen by painting a border of blanks and then calline @code{delwin}
+to deallocate memory related to it.  Depending on the key the user
+presses, @code{startx} and @code{starty} are changed, and a new window
+is created.
+
+In the @code{destroy-win}, as you can see, I used @code{wborder}
+instead of @code{box}.  Thsi reason is this:  @code{wborder} draws a
+border around the window and the characters given to it as the four
+corners and the four lines.  To put it clearly, if you called wborder
+as below:
+@example
 
 @chapter Raw Curses
 
