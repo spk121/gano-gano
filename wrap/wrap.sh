@@ -2,7 +2,7 @@
 
 # wrap.sh -- generate scheme wrapper functions
 
-# $Id: wrap.sh,v 1.2 2007/08/28 15:20:38 spike_gran Exp $
+# $Id: wrap.sh,v 1.3 2007/10/22 06:32:05 spike_gran Exp $
 
 # Put together a mostly complete wrapset from the files func_dir.txt
 # and const_dir.txt. 
@@ -15,7 +15,9 @@ echo "
 #include <curses.h>
 #include \"function.h\"
 #include \"type.h\"
-#define _GNU_SOURCE" > function.c
+#include \"term.h\"
+#define _GNU_SOURCE
+#define cstring_t cchar_t" > function.c
 
 awk --file="func_def.awk" < function.txt >> function.c
 
@@ -41,7 +43,8 @@ echo "
 #define API __attribute__ ((dllexport, cdecl))
 #else
 #define API
-#endif" > function.h
+#endif
+#define cstring_t cchar_t" > function.h
 
 awk --file="func_head.awk" < function.txt >> function.h
 
@@ -53,8 +56,9 @@ void gucu_init_function (void) API;
 # constant.c
 
 echo "
-#include <libguile.h>
 #include <curses.h>
+#include <libguile.h>
+#include <wchar.h>
 #include \"constant.h\"
 #include \"type.h\"
 #define _GNU_SOURCE" > constant.c
@@ -95,13 +99,14 @@ void gucu_init_constant (void) API;
 ##########
 # SCM file
 echo "
-(define-module (gucu raw)
-	#:export ( " > raw.scm
+;; -*- Mode: scheme; -*-
+(define-module (XXpackageXX raw)
+	#:export ( " > raw.scm.in
 
-awk --file="func_scm.awk" < function.txt >> raw.scm
-awk --file="const_scm.awk" < constant.txt >> raw.scm
-cat special.txt >> raw.scm
-echo "))" >> raw.scm
+awk --file="func_scm.awk" < function.txt >> raw.scm.in
+awk --file="const_scm.awk" < constant.txt >> raw.scm.in
+awk --file="special_scm.awk" < special.txt >> raw.scm.in
+echo "))" >> raw.scm.in
 
 echo "
-(load-extension \"libguile-gucu\" \"gucu_init\")" >> raw.scm
+(load-extension \"XXlibdirXX/libguile-gucu\" \"gucu_init\")" >> raw.scm.in

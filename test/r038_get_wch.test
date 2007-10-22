@@ -1,0 +1,165 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r038_get_wch.test --- test suite for curses's get-wch
+
+(define-module (test r038_get_wch)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+(cbreak)
+(echo)
+
+(define win (newwin 5 10 5 5))
+
+;; Should be able to get characters from the keyboard
+(with-test-prefix "get-wch"
+		  
+		  (pass-if "unget-wch / get-wch"
+			   (begin
+			     (let ((x1 (char->integer #\x)))
+			       (unget-wch x1)
+			       (lset= equal? (get-wch) (list *ok* x1)))))
+
+
+		  (pass-if "wget-wch"
+			   (begin
+			     (let ((x1 (char->integer #\x)))
+			       (unget-wch x1)
+			       (lset= equal? (wget-wch win) (list *ok* x1)))))
+
+
+		  (pass-if "mvget-wch"
+			   (begin
+			     (let ((x1 (char->integer #\x)))
+			       (begin
+				 (clear)
+				 (unget-wch x1)
+				 (let ((x2 (mvget-wch 2 2))
+				       (pos (getyx (stdscr))))
+				   (and
+				    (lset= equal? x2 (list *ok* x1))
+				    (lset= equal? pos '(2 2))))))))
+					  
+		  (pass-if "mvwget-wch"
+			   (begin
+			     (let ((x1 (char->integer #\x)))
+			       (begin
+				 (wclear win)
+				 (unget-wch x1)
+				 (let ((x2 (mvwget-wch win 2 2))
+				       (pos (getyx win)))
+				   (and
+				    (lset= equal? x2 (list *ok* x1))
+				    (lset= eqv? pos '(2 2)))))))))
+
+(delwin win)
+(refresh)
+
+; 		  (map (lambda (key)
+; 			 (pass-if (keyname key) (has-key key)))
+; 		       `(
+; 			 *key-break*
+; 			 *key-down*
+; 			 *key-up*
+; 			 *key-left*
+; 			 *key-right*
+; 			 *key-home*
+; 			 *key-backspace*
+; 			 *key-f0*
+; 			 ,(key-f 1)
+; 			 ,(key-f 2)
+; 			 ,(key-f 3)
+; 			 ,(key-f 4)
+; 			 ,(key-f 5)
+; 			 ,(key-f 6)
+; 			 ,(key-f 7)
+; 			 ,(key-f 8)
+; 			 ,(key-f 9)
+; 			 ,(key-f 10)
+; 			 ,(key-f 11)
+; 			 ,(key-f 12)
+; 			 *key-dl*
+; 			 *key-il*
+; 			 *key-dc*
+; 			 *key-ic*
+; 			 *key-eic*
+; 			 *key-clear*
+; 			 *key-eos*
+; 			 *key-eol*
+; 			 *key-sf*
+; 			 *key-sr*
+; 			 *key-npage*
+; 			 *key-ppage*
+; 			 *key-stab*
+; 			 *key-ctab*
+; 			 *key-catab*
+; 			 *key-enter*
+; 			 *key-sreset*
+; 			 *key-reset*
+; 			 *key-print*
+; 			 *key-ll*
+; 			 *key-a1*
+; 			 *key-a3*
+; 			 *key-b2*
+; 			 *key-c1*
+; 			 *key-c3*
+; 			 *key-btab*
+; 			 *key-beg*
+; 			 *key-cancel*
+; 			 *key-close*
+; 			 *key-command*
+; 			 *key-copy*
+; 			 *key-create*
+; 			 *key-end*
+; 			 *key-exit*
+; 			 *key-find*
+; 			 *key-help*
+; 			 *key-mark*
+; 			 *key-message*
+; 			 *key-mouse*
+; 			 *key-move*
+; 			 *key-next*
+; 			 *key-open*
+; 			 *key-options*
+; 			 *key-previous*
+; 			 *key-redo*
+; 			 *key-reference*
+; 			 *key-refresh*
+; 			 *key-replace*
+; 			 *key-resize*
+; 			 *key-restart*
+; 			 *key-resume*
+; 			 *key-save*
+; 			 *key-sbeg*
+; 			 *key-scancel*
+; 			 *key-scommand*
+; 			 *key-scopy*
+; 			 *key-screate*
+; 			 *key-sdc*
+; 			 *key-sdl*
+; 			 *key-select*
+; 			 *key-send*
+; 			 *key-seol*
+; 			 *key-sexit*
+; 			 *key-sfind*
+; 			 *key-shelp*
+; 			 *key-shome*
+; 			 *key-sic*
+; 			 *key-sleft*
+; 			 *key-smessage*
+; 			 *key-smove*
+; 			 *key-snext*
+; 			 *key-soptions*
+; 			 *key-sprevious*
+; 			 *key-sprint*
+; 			 *key-sredo*
+; 			 *key-sreplace*
+; 			 *key-sright*
+; 			 *key-srsume*
+; 			 *key-ssave*
+; 			 *key-ssuspend*
+; 			 *key-sundo*
+; 			 *key-suspend*
+; 			 *key-undo*)))
+

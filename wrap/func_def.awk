@@ -4,7 +4,7 @@ function get_scheme_name(c_name)
 {
   scheme_name = c_name;
   gsub("_", "-", scheme_name);
-  return scheme_name;
+  return tolower(scheme_name);
 
 }
 
@@ -72,9 +72,13 @@ BEGIN {
     case "bool":
       test_func = "scm_is_bool";
       break;
+    case "cstring_t *":
+    case "const cstring_t *":
+      test_func = "_scm_is_cstring";
+      break;
     case "cchar_t *":
     case "const cchar_t *":
-      test_func = "_scm_is_ccstring";
+      test_func = "_scm_is_cchar";
       break;
     case "char":
       test_func = "scm_is_integer";
@@ -151,7 +155,11 @@ BEGIN {
       break;
     case "cchar_t *":
     case "const cchar_t *":
-      assign_func = "_scm_to_ccstring";
+      assign_func = "_scm_to_cchar";
+      break;
+    case "cstring_t *":
+    case "const cstring_t *":
+      assign_func = "_scm_to_cstring";
       break;
     case "char":
       assign_func = "scm_to_char";
@@ -200,7 +208,13 @@ BEGIN {
     }
 
     if (match(cur_type, "\*"))
-      printf "\t%s%s = %s (%s);\n", cur_type, cur_c_arg, assign_func, cur_arg;
+      if (match(cur_type, "const")) {
+	noconst_cur_type = cur_type;
+	sub(/const/, "", noconst_cur_type);
+	printf "\t%s%s = %s (%s);\n", noconst_cur_type, cur_c_arg, assign_func, cur_arg;
+      } else {
+	printf "\t%s%s = %s (%s);\n", cur_type, cur_c_arg, assign_func, cur_arg;
+      }
     else
       printf "\t%s %s = %s (%s);\n", cur_type, cur_c_arg, assign_func, cur_arg;
   } 
@@ -240,7 +254,11 @@ BEGIN {
     break;
   case "cchar_t *":
   case "const cchar_t *":
-    assign_func = "_scm_from_ccstring";
+    assign_func = "_scm_from_cchar";
+    break;
+  case "cstring_t *":
+  case "const cstring_t *":
+    assign_func = "_scm_from_cstring";
     break;
   case "const chtype":
   case "chtype":
@@ -265,6 +283,7 @@ BEGIN {
     assign_func = "_scm_from_window";
     break;
   case "wchar_t *":
+  case "const wchar_t *":
     assign_func = "_scm_from_wstring";
     break;
   case "wchar_t":
@@ -287,17 +306,16 @@ BEGIN {
     cur_c_arg = "c_" cur_arg;
     switch (cur_type) {
     case "const cchar_t *":
+    case "const cstring_t *":
     case "const char *":
     case "const chtype *":
     case "const wchar_t *":
-      free = 1;
+      printf "\tfree (%s);\n", cur_c_arg;
       n_freed += 1;
       break;
     default:
-      free = 0;
+      break;
     }
-    if (free)
-      printf "\tfree (%s);\n", cur_c_arg;
   } 
   if (n_freed > 0)
     print "";

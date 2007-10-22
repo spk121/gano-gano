@@ -3,8 +3,8 @@
 function get_scheme_name(c_name)
 {
   scheme_name = c_name;
-  sub("_", "-", scheme_name);
-  return scheme_name;
+  gsub("_", "-", scheme_name);
+  return tolower(scheme_name);
 }
 
 

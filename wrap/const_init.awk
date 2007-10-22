@@ -4,7 +4,7 @@ function get_scheme_name(c_name)
 {
   scheme_name = c_name;
   gsub("_", "-", scheme_name);
-  return scheme_name;
+  return "*" tolower(scheme_name) "*";
 
 }
 
@@ -27,6 +27,9 @@ BEGIN {
   switch (return_type) {
   case "int":
     type_func = "scm_from_int";
+    break;
+  case "unsigned":
+    type_func = "scm_from_uint";
     break;
   case "chtype":
     type_func = "_scm_from_chtype";

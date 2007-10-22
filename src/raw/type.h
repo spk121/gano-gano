@@ -38,6 +38,10 @@ int  _scm_is_file (SCM x);
 FILE *_scm_to_file (SCM x);
 SCM _scm_from_file (FILE *x);
 
+int _scm_is_mevent (SCM x);
+MEVENT *_scm_to_mevent (SCM x);
+SCM _scm_from_mevent (MEVENT *);
+
 int  _scm_is_screen (SCM x);
 SCREEN *_scm_to_screen (SCM x);
 SCM _scm_from_screen (SCREEN *x);

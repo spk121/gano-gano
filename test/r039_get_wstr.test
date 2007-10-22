@@ -1,0 +1,133 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r039_getstr.test --- test suite for curses's get_wstr
+
+(define-module (test r039_get_wstr)
+  #:use-module (test lib)
+  #:use-module (srfi srfi-1)
+  #:use-module (gucu raw))
+
+
+(define win (newwin 5 10 5 5))
+(define letter-h (char->integer #\h))
+(define letter-i (char->integer #\i))
+(define letter-p (char->integer #\p))
+(define newline (char->integer #\nl))
+(define wstring-hip (map char->integer (string->list "hip")))
+(define wstring-hi (map char->integer (string->list "hi")))
+(standend)
+(attron (logior (color-pair 0) *a-normal*))
+
+;; Should be able to get strings from the keyboard
+
+(with-test-prefix "get-wstr"
+		  
+		  (pass-if "get-wstr"
+			   (begin
+			     (erase)
+			     (refresh)
+			     (ungetch newline)
+			     (ungetch letter-p)
+			     (ungetch letter-i)
+			     (ungetch letter-h)
+			     (let ((s1 (get-wstr)))
+			       (begin
+				 (refresh)
+				 (lset= equal? s1 wstring-hip)))))
+
+		  (pass-if "getn-wstr"
+			   (begin
+			     (erase)
+			     (refresh)
+			     (ungetch newline)
+			     (ungetch letter-p)
+			     (ungetch letter-i)
+			     (ungetch letter-h)
+			     (let ((s1 (getn-wstr 2)))
+			       (begin
+				 (refresh)
+				 (lset= equal? s1 wstring-hi)))))
+
+
+		  (pass-if "mvget-wstr"
+			   (begin
+			     (erase)
+			     (refresh)
+			     (ungetch newline)
+			     (ungetch letter-p)
+			     (ungetch letter-i)
+			     (ungetch letter-h)
+			     (let ((s1 (mvget-wstr 1 1)))
+			       (begin
+				 (refresh)
+				 (lset= equal? s1 wstring-hip)))))
+
+		  (pass-if "mvgetn-wstr"
+			   (begin
+			     (erase)
+			     (refresh)
+			     (ungetch newline)
+			     (ungetch letter-p)
+			     (ungetch letter-i)
+			     (ungetch letter-h)
+			     (let ((s1 (mvgetn-wstr 1 1 2)))
+			       (begin
+				 (refresh)
+				 (lset= equal? s1 wstring-hi))))))
+
+
+(with-test-prefix "wget-wstr"
+		  
+		  (pass-if "wget-wstr"
+			   (begin
+			     (werase win)
+			     (wrefresh win)
+			     (ungetch newline)
+			     (ungetch letter-p)
+			     (ungetch letter-i)
+			     (ungetch letter-h)
+			     (let ((s1 (wget-wstr win)))
+			       (begin
+				 (wrefresh win)
+				 (lset= equal? s1 wstring-hip)))))
+
+		  (pass-if "getn-wstr"
+			   (begin
+			     (werase win)
+			     (wrefresh win)
+			     (ungetch newline)
+			     (ungetch letter-p)
+			     (ungetch letter-i)
+			     (ungetch letter-h)
+			     (let ((s1 (wgetn-wstr win 2)))
+			       (begin
+				 (wrefresh win)
+				 (lset= equal? s1 wstring-hi)))))
+
+
+		  (pass-if "mvget-wstr"
+			   (begin
+			     (werase win)
+			     (wrefresh win)
+			     (ungetch newline)
+			     (ungetch letter-p)
+			     (ungetch letter-i)
+			     (ungetch letter-h)
+			     (let ((s1 (mvwget-wstr win 1 1)))
+			       (begin
+				 (wrefresh win)
+				 (lset= equal? s1 wstring-hip)))))
+
+		  (pass-if "mvgetn-wstr"
+			   (begin
+			     (werase win)
+			     (wrefresh win)
+			     (ungetch newline)
+			     (ungetch letter-p)
+			     (ungetch letter-i)
+			     (ungetch letter-h)
+			     (let ((s1 (mvwgetn-wstr win 1 1 2)))
+			       (begin
+				 (wrefresh win)
+				 (lset= equal? s1 wstring-hi))))))
+
+

@@ -1,5 +1,5 @@
 The README file for Guile Curses
-$Id: README,v 1.2 2007/10/10 16:35:21 spike_gran Exp $
+$Id: README,v 1.3 2007/10/22 06:32:01 spike_gran Exp $
 
 
 This is gucu v0.0, the curses library from the Gano project.  It
@@ -11,7 +11,7 @@ This library can be found at http://gano.sourceforge.net .
 
 This distribution has the following subdirectories:
 - src: the source code for the library
-- test: test scripts to verify that the library functions correctly
+[FI- test: test scripts to verify that the library functions correctly
 - doc: documentation for the library source to generate it
 - wrap: scripts useful for writing the source
 - build_aux: files used by the configuration and building programs

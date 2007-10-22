@@ -1,3 +1,15 @@
+2007-10-21  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* wrap/func_def.awk: don't free const strings
+
+	* wrap/wrap.sh: add term.h
+
+	* wrap/special.txt: add mouse functions
+
+	* doc/Makefile.am: new file
+
+	* doc/gucu.texi: nodes, windows, etc 
+
 2007-10-19  Mike Gran  <spike_gran@users.sourceforge.net>
 
 	* doc/gucu.texi: update: colors

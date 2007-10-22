@@ -76,6 +76,9 @@ _scm_from_cchar (cchar_t *x)
   ret = getcchar(x, wch, &attr, &color_pair, NULL);
   
   assert (ret != ERR);
+  
+  // Strip the color info from attr
+  attr &= A_ATTRIBUTES ^ A_COLOR;
 
   total_list = scm_list_2 (_scm_from_attr (attr), scm_from_short (color_pair));
 
@@ -443,6 +446,61 @@ gucu_fclose (SCM fp)
 
 }
 
+// mevent -- in C, a MEVENT.  In scheme, a list of 5 elements
+int
+_scm_is_mevent (SCM x)
+{
+  int err = 0;
+  SCM member;
+  int i;
+
+  if (scm_is_true (scm_list_p (x)))
+    {
+      int len = scm_to_int (scm_length (x));
+      
+      for (i = 0; i < len; i ++)
+	{
+	  member = scm_list_ref (x, scm_from_int (i));
+	  if (!scm_is_integer (member))
+	    err ++;
+	}
+    }
+  err ++;
+
+  if (err > 0)
+    return 0;
+  else
+    return 1;
+}
+
+MEVENT *
+_scm_to_mevent (SCM x)
+{
+  MEVENT *me;
+
+  me = (MEVENT *) malloc (sizeof (MEVENT));
+
+  me->id = scm_to_short (scm_list_ref (x, scm_from_int (0)));
+  me->x = scm_to_int (scm_list_ref (x, scm_from_int (1)));
+  me->y = scm_to_int (scm_list_ref (x, scm_from_int (2)));
+  me->z = scm_to_int (scm_list_ref (x, scm_from_int (3)));
+  me->bstate = scm_to_ulong (scm_list_ref (x, scm_from_int (4)));
+
+  return (me);
+}
+
+SCM
+_scm_from_mevent (MEVENT *me)
+{
+  return scm_list_5 
+    ( 
+     scm_from_short (me->id),
+     scm_from_int (me->x),
+     scm_from_int (me->y), 
+     scm_from_int (me->z),
+     scm_from_ulong (me->bstate)
+     );
+}
 
 // screen -- in C, a SCREEN *.  In Scheme, a smob that contains that pointer.
 

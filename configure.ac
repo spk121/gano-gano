@@ -38,5 +38,5 @@ AC_PROG_CC_C99
 # Check for system services
 
 #  Output
-AC_CONFIG_FILES([Makefile src/raw/Makefile])
+AC_CONFIG_FILES([Makefile src/raw/Makefile doc/Makefile test/Makefile wrap/Makefile])
 AC_OUTPUT
