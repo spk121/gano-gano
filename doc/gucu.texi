@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.5 2007/10/22 06:32:04 spike_gran Exp $
+@c $Id: gucu.texi,v 1.6 2007/12/26 14:33:46 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -54,6 +54,7 @@ authorization.
 
 @titlepage
 @title GuCu: a Guile Curses Library
+@subtitle For version @value{VERSION}, @value{UPDATED}
 @author Michael L. Gran
 @author Tom Dickey
 @author Pradeep Padala

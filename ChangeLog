@@ -1,3 +1,47 @@
+2007-12-26  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* .cvsignore: create
+
+	* doc/.cvsignore: create
+
+2007-12-25  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* build_aux/Makefile.am: comment
+
+	* Makefile.am: comment
+
+	* test/Makefile.am: comment
+
+	* wrap/Makefile.am: comment
+
+	* src/raw/Makefile.am: comment
+
+	* Makefile.am (SUBDIRS): add build_aux to tree
+
+	* doc/gucu.texi: add version to titlepage
+
+	* build_aux/texinfo.tex: create
+
+	* build_aux/missing: create
+
+	* build_aux/mdate-sh: create
+
+	* build_aux/ltmain.sh: create
+
+	* build_aux/install-sh: create
+
+	* build_aux/depcomp: create
+
+	* build_aux/config.sub: create
+
+	* build_aux/config.guess: create
+
+	* build_aux/compile: create
+
+	* build_aux/Makefile.am: create
+
+	* COPYING: Moved license from GPLv3 to X11
+
 2007-10-21  Mike Gran  <spike_gran@users.sourceforge.net>
 
 	* wrap/func_def.awk: don't free const strings

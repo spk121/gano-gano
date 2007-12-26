@@ -1,3 +1,6 @@
+## Process this file with automake to produce Makefile.in
+## $Id: Makefile.am,v 1.2 2007/12/26 14:33:46 spike_gran Exp $
+
 pkglib_LTLIBRARIES = libguile-gucu.la
 libguile_gucu_la_SOURCES = constant.c function.c type.c special.c raw.c \
 	constant.h function.h type.h special.h
