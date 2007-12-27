@@ -1,4 +1,4 @@
-# icu.m4 - Configure ncursesw for linking against gucu. -*-Autoconf-*-
+# ncurses.m4 - Configure ncursesw for linking against gucu. -*-Autoconf-*-
 
 #serial 1 
 
