@@ -574,4 +574,4 @@
 			    window?
 ))
 
-(load-extension "XXlibdirXX/libguile-gucu" "gucu_init")
+(load-extension "XXlibnameXX" "gucu_init")

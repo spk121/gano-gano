@@ -36,7 +36,9 @@ host_triplet = @host@
 subdir = src/raw
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/m4/guile.m4 \
+	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ncurses.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -48,18 +50,15 @@ am__vpath_adj = case $$p in \
     *) f=$$p;; \
   esac;
 am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
-am__installdirs = "$(DESTDIR)$(pkglibdir)" \
+am__installdirs = "$(DESTDIR)$(libdir)" \
 	"$(DESTDIR)$(pkgguile_sitedir)"
-pkglibLTLIBRARIES_INSTALL = $(INSTALL)
-LTLIBRARIES = $(pkglib_LTLIBRARIES)
-libguile_gucu_la_LIBADD =
-am_libguile_gucu_la_OBJECTS = libguile_gucu_la-constant.lo \
-	libguile_gucu_la-function.lo libguile_gucu_la-type.lo \
-	libguile_gucu_la-special.lo libguile_gucu_la-raw.lo
-libguile_gucu_la_OBJECTS = $(am_libguile_gucu_la_OBJECTS)
-libguile_gucu_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(libguile_gucu_la_LDFLAGS) $(LDFLAGS) -o $@
+libLTLIBRARIES_INSTALL = $(INSTALL)
+LTLIBRARIES = $(lib_LTLIBRARIES)
+libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_LIBADD =
+am_libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_OBJECTS = constant.lo \
+	function.lo type.lo special.lo raw.lo
+libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_OBJECTS =  \
+	$(am_libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/build_aux/depcomp
 am__depfiles_maybe = depfiles
@@ -72,8 +71,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libguile_gucu_la_SOURCES)
-DIST_SOURCES = $(libguile_gucu_la_SOURCES)
+SOURCES = $(libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_SOURCES)
+DIST_SOURCES = $(libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_SOURCES)
 pkgguile_siteDATA_INSTALL = $(INSTALL_DATA)
 DATA = $(pkgguile_site_DATA)
 ETAGS = etags
@@ -119,6 +118,8 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LIBGUILE_GUCU_INTERFACE = @LIBGUILE_GUCU_INTERFACE@
+LIBGUILE_GUCU_MAJOR = @LIBGUILE_GUCU_MAJOR@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -126,6 +127,9 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
+NCURSESW_CFLAGS = @NCURSESW_CFLAGS@
+NCURSESW_CONFIG = @NCURSESW_CONFIG@
+NCURSESW_LDFLAGS = @NCURSESW_LDFLAGS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -191,13 +195,29 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-pkglib_LTLIBRARIES = libguile-gucu.la
-libguile_gucu_la_SOURCES = constant.c function.c type.c special.c raw.c \
-	constant.h function.h type.h special.h
+lib_LTLIBRARIES = libguile-gucu-v-@LIBGUILE_GUCU_MAJOR@.la
+AM_CPPFLAGS = \
+	$(GUILE_CFLAGS) \
+	$(NCURSESW_CFLAGS) \
+	-D_XOPEN_SOURCE_EXTENDED
 
-libguile_gucu_la_CPPFLAGS = $(GUILE_CFLAGS) -D_XOPEN_SOURCE_EXTENDED
-libguile_gucu_la_LDFLAGS = $(GUILE_LDFLAGS) -lcursesw
-guile_sitedir = $(GUILE_SITE)
+AM_LDFLAGS = \
+	$(GUILE_LDFLAGS) \
+	$(NCURSESW_LDFLAGS) \
+	-no-undefined \
+	-export-dynamic \
+	-version-info @LIBGUILE_GUCU_INTERFACE@
+
+libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_SOURCES = \
+	constant.c constant.h \
+	function.c function.h \
+	type.c type.h \
+	special.c special.h \
+	raw.c
+
+
+#guile_sitedir = $(GUILE_SITE)
+guile_sitedir = ${datadir}/guile/site
 pkgguile_sitedir = $(guile_sitedir)/$(PACKAGE)
 pkgguile_site_DATA = raw.scm 
 EXTRA_DIST = raw.scm.in
@@ -237,35 +257,35 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
-install-pkglibLTLIBRARIES: $(pkglib_LTLIBRARIES)
+install-libLTLIBRARIES: $(lib_LTLIBRARIES)
 	@$(NORMAL_INSTALL)
-	test -z "$(pkglibdir)" || $(MKDIR_P) "$(DESTDIR)$(pkglibdir)"
-	@list='$(pkglib_LTLIBRARIES)'; for p in $$list; do \
+	test -z "$(libdir)" || $(MKDIR_P) "$(DESTDIR)$(libdir)"
+	@list='$(lib_LTLIBRARIES)'; for p in $$list; do \
 	  if test -f $$p; then \
 	    f=$(am__strip_dir) \
-	    echo " $(LIBTOOL) --mode=install $(pkglibLTLIBRARIES_INSTALL) $(INSTALL_STRIP_FLAG) '$$p' '$(DESTDIR)$(pkglibdir)/$$f'"; \
-	    $(LIBTOOL) --mode=install $(pkglibLTLIBRARIES_INSTALL) $(INSTALL_STRIP_FLAG) "$$p" "$(DESTDIR)$(pkglibdir)/$$f"; \
+	    echo " $(LIBTOOL) --mode=install $(libLTLIBRARIES_INSTALL) $(INSTALL_STRIP_FLAG) '$$p' '$(DESTDIR)$(libdir)/$$f'"; \
+	    $(LIBTOOL) --mode=install $(libLTLIBRARIES_INSTALL) $(INSTALL_STRIP_FLAG) "$$p" "$(DESTDIR)$(libdir)/$$f"; \
 	  else :; fi; \
 	done
 
-uninstall-pkglibLTLIBRARIES:
+uninstall-libLTLIBRARIES:
 	@$(NORMAL_UNINSTALL)
-	@list='$(pkglib_LTLIBRARIES)'; for p in $$list; do \
+	@list='$(lib_LTLIBRARIES)'; for p in $$list; do \
 	  p=$(am__strip_dir) \
-	  echo " $(LIBTOOL) --mode=uninstall rm -f '$(DESTDIR)$(pkglibdir)/$$p'"; \
-	  $(LIBTOOL) --mode=uninstall rm -f "$(DESTDIR)$(pkglibdir)/$$p"; \
+	  echo " $(LIBTOOL) --mode=uninstall rm -f '$(DESTDIR)$(libdir)/$$p'"; \
+	  $(LIBTOOL) --mode=uninstall rm -f "$(DESTDIR)$(libdir)/$$p"; \
 	done
 
-clean-pkglibLTLIBRARIES:
-	-test -z "$(pkglib_LTLIBRARIES)" || rm -f $(pkglib_LTLIBRARIES)
-	@list='$(pkglib_LTLIBRARIES)'; for p in $$list; do \
+clean-libLTLIBRARIES:
+	-test -z "$(lib_LTLIBRARIES)" || rm -f $(lib_LTLIBRARIES)
+	@list='$(lib_LTLIBRARIES)'; for p in $$list; do \
 	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
 	  test "$$dir" != "$$p" || dir=.; \
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-libguile-gucu.la: $(libguile_gucu_la_OBJECTS) $(libguile_gucu_la_DEPENDENCIES) 
-	$(libguile_gucu_la_LINK) -rpath $(pkglibdir) $(libguile_gucu_la_OBJECTS) $(libguile_gucu_la_LIBADD) $(LIBS)
+libguile-gucu-v-@LIBGUILE_GUCU_MAJOR@.la: $(libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_OBJECTS) $(libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_DEPENDENCIES) 
+	$(LINK) -rpath $(libdir) $(libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_OBJECTS) $(libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -273,11 +293,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-constant.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-function.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-raw.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-special.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-type.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/constant.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/function.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/raw.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/special.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/type.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -299,41 +319,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
-
-libguile_gucu_la-constant.lo: constant.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-constant.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-constant.Tpo -c -o libguile_gucu_la-constant.lo `test -f 'constant.c' || echo '$(srcdir)/'`constant.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-constant.Tpo $(DEPDIR)/libguile_gucu_la-constant.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='constant.c' object='libguile_gucu_la-constant.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-constant.lo `test -f 'constant.c' || echo '$(srcdir)/'`constant.c
-
-libguile_gucu_la-function.lo: function.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-function.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-function.Tpo -c -o libguile_gucu_la-function.lo `test -f 'function.c' || echo '$(srcdir)/'`function.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-function.Tpo $(DEPDIR)/libguile_gucu_la-function.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='function.c' object='libguile_gucu_la-function.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-function.lo `test -f 'function.c' || echo '$(srcdir)/'`function.c
-
-libguile_gucu_la-type.lo: type.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-type.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-type.Tpo -c -o libguile_gucu_la-type.lo `test -f 'type.c' || echo '$(srcdir)/'`type.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-type.Tpo $(DEPDIR)/libguile_gucu_la-type.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='type.c' object='libguile_gucu_la-type.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-type.lo `test -f 'type.c' || echo '$(srcdir)/'`type.c
-
-libguile_gucu_la-special.lo: special.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-special.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-special.Tpo -c -o libguile_gucu_la-special.lo `test -f 'special.c' || echo '$(srcdir)/'`special.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-special.Tpo $(DEPDIR)/libguile_gucu_la-special.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='special.c' object='libguile_gucu_la-special.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-special.lo `test -f 'special.c' || echo '$(srcdir)/'`special.c
-
-libguile_gucu_la-raw.lo: raw.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-raw.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-raw.Tpo -c -o libguile_gucu_la-raw.lo `test -f 'raw.c' || echo '$(srcdir)/'`raw.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-raw.Tpo $(DEPDIR)/libguile_gucu_la-raw.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='raw.c' object='libguile_gucu_la-raw.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-raw.lo `test -f 'raw.c' || echo '$(srcdir)/'`raw.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -437,7 +422,7 @@ check: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) check-am
 all-am: Makefile $(LTLIBRARIES) $(DATA)
 installdirs:
-	for dir in "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(pkgguile_sitedir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkgguile_sitedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: $(BUILT_SOURCES)
@@ -469,7 +454,7 @@ maintainer-clean-generic:
 	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
-clean-am: clean-generic clean-libtool clean-pkglibLTLIBRARIES \
+clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-am
@@ -492,7 +477,7 @@ install-data-am: install-pkgguile_siteDATA
 
 install-dvi: install-dvi-am
 
-install-exec-am: install-pkglibLTLIBRARIES
+install-exec-am: install-libLTLIBRARIES
 
 install-html: install-html-am
 
@@ -524,28 +509,29 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-pkgguile_siteDATA uninstall-pkglibLTLIBRARIES
+uninstall-am: uninstall-libLTLIBRARIES uninstall-pkgguile_siteDATA
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-libtool clean-pkglibLTLIBRARIES ctags distclean \
+	clean-libLTLIBRARIES clean-libtool ctags distclean \
 	distclean-compile distclean-generic distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-pkgguile_siteDATA \
-	install-pkglibLTLIBRARIES install-ps install-ps-am \
+	install-html-am install-info install-info-am \
+	install-libLTLIBRARIES install-man install-pdf install-pdf-am \
+	install-pkgguile_siteDATA install-ps install-ps-am \
 	install-strip installcheck installcheck-am installdirs \
 	maintainer-clean maintainer-clean-generic mostlyclean \
 	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
 	pdf pdf-am ps ps-am tags uninstall uninstall-am \
-	uninstall-pkgguile_siteDATA uninstall-pkglibLTLIBRARIES
+	uninstall-libLTLIBRARIES uninstall-pkgguile_siteDATA
 
 
 raw.scm: raw.scm.in
-	sed 's|XXlibdirXX|$(pkglibdir)|' < raw.scm.in | \
+	cat raw.scm.in | \
+	sed 's|XXlibnameXX|libguile-gucu-v-@LIBGUILE_GUCU_MAJOR@|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > raw.scm
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

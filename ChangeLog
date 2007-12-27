@@ -1,4 +1,28 @@
+2007-12-27  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* configure.ac: add build_aux/Makefile
+
+	* doc/gucu.texi: converted from dos to unix, since this seems to confuse texinfo 4.11
+
+	* m4/Makefile.am (#EXTRA_DIST): create
+
+	* configure.ac: add m4/Makefile
+
+	* wrap/wrap.sh: remove explicit path in load library call
+
 2007-12-26  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* Makefile.am (SUBDIRS): add m4 to make
+
+	* m4/ncurses.m4: Create
+
+	* configure.ac: automake warning flags
+
+	* src/raw/raw.scm.in ("XXlibnameXX"): remove explicit path, add versioned libname
+
+	* src/raw/Makefile.am: use AM_LDFLAGS, add version info
+
+	* configure.ac: add consts for version
 
 	* .cvsignore: create
 

@@ -35,7 +35,9 @@ subdir = doc
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/stamp-vti $(srcdir)/version.texi
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/m4/guile.m4 \
+	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ncurses.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -104,6 +106,8 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LIBGUILE_GUCU_INTERFACE = @LIBGUILE_GUCU_INTERFACE@
+LIBGUILE_GUCU_MAJOR = @LIBGUILE_GUCU_MAJOR@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -111,6 +115,9 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
+NCURSESW_CFLAGS = @NCURSESW_CFLAGS@
+NCURSESW_CONFIG = @NCURSESW_CONFIG@
+NCURSESW_LDFLAGS = @NCURSESW_LDFLAGS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@

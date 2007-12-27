@@ -2,7 +2,7 @@
 
 # wrap.sh -- generate scheme wrapper functions
 
-# $Id: wrap.sh,v 1.3 2007/10/22 06:32:05 spike_gran Exp $
+# $Id: wrap.sh,v 1.4 2007/12/27 15:19:09 spike_gran Exp $
 
 # Put together a mostly complete wrapset from the files func_dir.txt
 # and const_dir.txt. 
@@ -109,4 +109,4 @@ awk --file="special_scm.awk" < special.txt >> raw.scm.in
 echo "))" >> raw.scm.in
 
 echo "
-(load-extension \"XXlibdirXX/libguile-gucu\" \"gucu_init\")" >> raw.scm.in
+(load-extension \"XXlibnameXX\" \"gucu_init\")" >> raw.scm.in
