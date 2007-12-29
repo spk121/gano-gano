@@ -15,12 +15,12 @@
 # The variables are marked for substitution, as by AC_SUBST.
 #
 AC_DEFUN([NCURSESW_PROGS],
- [AC_PATH_PROG(NCURSESW_CONFIG,ncursesw5-config)
-  if test "$NCURSESW_CONFIG" = "" ; then
-      AC_MSG_ERROR([ncursesw5-config from ncurses required but not found.])
-  fi
-  AC_SUBST(NCURSESW_CONFIG)
- ])
+         [AC_PATH_PROG(NCURSESW_CONFIG,ncursesw5-config)
+          if test "$NCURSESW_CONFIG" = "" ; then
+              AC_MSG_WARN([ncursesw5-config from ncurses not found.])
+          fi
+          AC_SUBST(NCURSESW_CONFIG)
+         ])
 
 # NCURSESW_FLAGS -- set flags for compiling and linking with NCURSESW
 #
@@ -42,15 +42,13 @@ AC_DEFUN([NCURSESW_PROGS],
 # The variables are marked for substitution, as by @code{AC_SUBST}.
 #
 AC_DEFUN([NCURSESW_FLAGS],
- [AC_REQUIRE([NCURSESW_PROGS])dnl
-  AC_MSG_CHECKING([ncursesw compile flags])
-  NCURSESW_CFLAGS="`$NCURSESW_CONFIG --cflags`"
-  AC_MSG_RESULT([$NCURSESW_CFLAGS])
-  AC_MSG_CHECKING([ncursesw link flags])
-  NCURSESW_LDFLAGS="`$NCURSESW_CONFIG --libs`"
-  AC_MSG_RESULT([$NCURSESW_LDFLAGS])
-  AC_SUBST(NCURSESW_CFLAGS)
-  AC_SUBST(NCURSESW_LDFLAGS)
- ])
-
-
+         [AC_REQUIRE([NCURSESW_PROGS])dnl
+          AC_MSG_CHECKING([ncursesw compile flags])
+          NCURSESW_CFLAGS="`$NCURSESW_CONFIG --cflags`"
+          AC_MSG_RESULT([$NCURSESW_CFLAGS])
+          AC_MSG_CHECKING([ncursesw link flags])
+          NCURSESW_LDFLAGS="`$NCURSESW_CONFIG --libs`"
+          AC_MSG_RESULT([$NCURSESW_LDFLAGS])
+          AC_SUBST(NCURSESW_CFLAGS)
+          AC_SUBST(NCURSESW_LDFLAGS)
+         ])

@@ -45,7 +45,6 @@
 		delch
 		deleteln
 		delscreen
-		delwin
 		derwin
 		doupdate
 		dupwin
@@ -445,6 +444,7 @@
 		*report-mouse-position*
 			    attr-get
 			    color-content
+			    delwin
 			    getbkgrnd
 			    getmouse
 			    getnstr

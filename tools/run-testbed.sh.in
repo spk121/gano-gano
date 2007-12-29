@@ -1,0 +1,13 @@
+#!/bin/sh
+# This copies over the libraries and runs the test suite
+
+# make a path to the guile modules
+ln -s ../src/raw XXXpackageXXX
+
+# This should be exported from the Makefile.am
+echo "major->" XXXmajorXXX
+
+# Run the library
+libtool -dlopen ../src/raw/libguile-gucu-v-XXXmajorXXX.la --mode=execute gdb testbed
+
+

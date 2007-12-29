@@ -634,19 +634,6 @@ gucu_delscreen (SCM arg1)
 }
 
 SCM
-gucu_delwin (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "delwin");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-
-	int ret = delwin (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
 gucu_derwin (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
 	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "derwin");
@@ -4341,7 +4328,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("delch", 0, 0, 0, gucu_delch);
 	scm_c_define_gsubr ("deleteln", 0, 0, 0, gucu_deleteln);
 	scm_c_define_gsubr ("delscreen", 1, 0, 0, gucu_delscreen);
-	scm_c_define_gsubr ("delwin", 1, 0, 0, gucu_delwin);
 	scm_c_define_gsubr ("derwin", 5, 0, 0, gucu_derwin);
 	scm_c_define_gsubr ("doupdate", 0, 0, 0, gucu_doupdate);
 	scm_c_define_gsubr ("dupwin", 1, 0, 0, gucu_dupwin);

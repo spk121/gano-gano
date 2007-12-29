@@ -41,7 +41,6 @@ int delay_output(int);
 int delch(void);
 int deleteln(void);
 void delscreen(SCREEN *);
-int delwin(WINDOW *);
 WINDOW *derwin(WINDOW *, int, int, int, int);
 int doupdate(void);
 WINDOW *dupwin(WINDOW *);

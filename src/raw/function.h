@@ -54,7 +54,6 @@ SCM gucu_delay_output (SCM arg1) API;
 SCM gucu_delch (void) API;
 SCM gucu_deleteln (void) API;
 SCM gucu_delscreen (SCM arg1) API;
-SCM gucu_delwin (SCM arg1) API;
 SCM gucu_derwin (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5) API;
 SCM gucu_doupdate (void) API;
 SCM gucu_dupwin (SCM arg1) API;

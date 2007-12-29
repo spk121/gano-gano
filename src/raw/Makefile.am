@@ -1,16 +1,15 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.3 2007/12/27 15:19:09 spike_gran Exp $
+## $Id: Makefile.am,v 1.4 2007/12/29 20:04:40 spike_gran Exp $
 
 lib_LTLIBRARIES = libguile-gucu-v-@LIBGUILE_GUCU_MAJOR@.la
 
+# -lguile and -lncursesw were added to LIBS by autoconf
+# in the AC_CHECK_LIB test
+
 AM_CPPFLAGS = \
-	$(GUILE_CFLAGS) \
-	$(NCURSESW_CFLAGS) \
 	-D_XOPEN_SOURCE_EXTENDED
 
 AM_LDFLAGS = \
-	$(GUILE_LDFLAGS) \
-	$(NCURSESW_LDFLAGS) \
 	-no-undefined \
 	-export-dynamic \
 	-version-info @LIBGUILE_GUCU_INTERFACE@
@@ -22,16 +21,17 @@ libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_SOURCES = \
 	special.c special.h \
 	raw.c
 
-#guile_sitedir = $(GUILE_SITE)
 guile_sitedir = ${datadir}/guile/site
 pkgguile_sitedir = $(guile_sitedir)/$(PACKAGE)
 pkgguile_site_DATA = raw.scm 
+
+ETAGS_ARGS = raw.scm
 EXTRA_DIST = raw.scm.in
 BUILT_SOURCES = raw.scm
 CLEANFILES = raw.scm
 
 raw.scm: raw.scm.in
-	cat raw.scm.in | \
+	cat $< | \
 	sed 's|XXlibnameXX|libguile-gucu-v-@LIBGUILE_GUCU_MAJOR@|' | \
-	sed 's|XXpackageXX|$(PACKAGE)|' > raw.scm
+	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 

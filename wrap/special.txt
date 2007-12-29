@@ -1,5 +1,6 @@
 	    attr-get
 	    color-content
+	    delwin
 	    getbkgrnd
 	    getmouse
 	    getnstr

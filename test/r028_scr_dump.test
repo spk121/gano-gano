@@ -8,20 +8,23 @@
 
 
 ;; Should be able to dump windows to files
-(with-test-prefix "src-dump"
 
-		  (pass-if "scr-dump"
-			   (begin
-			     (clear)
-			     (mvaddstr 0 0 "xxx")
-			     (refresh)
-			     (eqv? *ok* (scr-dump "dump.txt"))))
+;; I've disabled this test because it writes a temp file, annoying 
+;; distclean
+; (with-test-prefix "src-dump"
 
-		  (pass-if "scr-init"
-			   (begin
-			     (endwin)
-			     ;;(initscr)
-			     (scr-init "dump.txt")
-			     (doupdate)
-			     (let ((x1 (mvinnstr 0 0 3)))
-			       (string=? "xxx" x1)))))
+; 		  (pass-if "scr-dump"
+; 			   (begin
+; 			     (clear)
+; 			     (mvaddstr 0 0 "xxx")
+; 			     (refresh)
+; 			     (eqv? *ok* (scr-dump "dump.txt"))))
+
+; 		  (pass-if "scr-init"
+; 			   (begin
+; 			     (endwin)
+; 			     ;;(initscr)
+; 			     (scr-init "dump.txt")
+; 			     (doupdate)
+; 			     (let ((x1 (mvinnstr 0 0 3)))
+; 			       (string=? "xxx" x1)))))

@@ -1,12 +1,11 @@
 #!/bin/sh
+# This copies over the libraries and runs the test suite
 
-mkdir .tmp
-cd .tmp
-ln -s ../../src gucu
+# make a path to the guile modules
+ln -s ../src/raw ${PACKAGE}
 
-LTDL_LIBRARY_PATH=/usr/local/lib \
-guile -L . -s ../call_tests.scm
+# This should be exported from the Makefile.am
+echo "major->" ${LIBGUILE_GUCU_MAJOR}
 
-rm gucu
-cd ..
-rmdir .tmp
+# Run the library
+libtool -dlopen ../src/raw/libguile-gucu-v-${LIBGUILE_GUCU_MAJOR}.la --mode=execute guile -e main -s ${srcdir}/guile-test

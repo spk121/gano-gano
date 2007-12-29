@@ -1,6 +1,6 @@
-#!/usr/local/bin/guile \
--e main -s
-!#
+;#!/usr/local/bin/guile \
+;-e main -s
+;!#
 
 ;;;; guile-test --- run the Guile test suite
 ;;;; Jim Blandy <jimb@red-bean.com> --- May 1999
@@ -80,7 +80,19 @@
   (let ((module (resolve-module '(test guile-test))))
     (apply (module-ref module 'main) args)))
 
-(set! %load-path (append %load-path '("..")))
+;; Be sure to put local path first, so it picks up local source above
+;; already installed source
+(set! %load-path (append (list
+			  ;; This should be the directory that
+			  ;; "guile-test" and "lib" are in
+			  (string-append (getenv "srcdir") "/..") 
+			  ;; This should be the directory that "gucu"
+			  ;; aka $(PACKAGE) is in
+			  "."		
+			  ) %load-path ))
+
+(display "Load path: ") (newline)
+(display %load-path) (newline)
 
 (define-module (test guile-test)
   :use-module (test lib)
@@ -91,8 +103,7 @@
 
 
 ;;; User configurable settings:
-(define default-test
-  (string-append (getenv "HOME") "/curses/test"))
+(define default-test (getenv "srcdir"))
 
 
 ;;; Variables that will receive their actual values later.

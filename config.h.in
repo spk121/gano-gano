@@ -1,10 +1,26 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define to 1 if you have the <curses.h> header file. */
+#undef HAVE_CURSES_H
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the `guile' library (-lguile). */
+#undef HAVE_LIBGUILE
+
+/* Define to 1 if you have the <libguile.h> header file. */
+#undef HAVE_LIBGUILE_H
+
+/* Define to 1 if you have the `ncursesw' library (-lncursesw). */
+#undef HAVE_LIBNCURSESW
+
+/* Define to 1 if your system has a GNU libc compatible `malloc' function, and
+   to 0 otherwise. */
+#undef HAVE_MALLOC
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
@@ -29,6 +45,9 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the <wchar.h> header file. */
+#undef HAVE_WCHAR_H
 
 /* Name of package */
 #undef PACKAGE
@@ -65,3 +84,6 @@
 
 /* Version number of package */
 #undef VERSION
+
+/* Define to rpl_malloc if the replacement function should be used. */
+#undef malloc

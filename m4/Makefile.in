@@ -34,8 +34,7 @@ host_triplet = @host@
 subdir = m4
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/guile.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ncurses.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -73,12 +72,6 @@ EXEEXT = @EXEEXT@
 F77 = @F77@
 FFLAGS = @FFLAGS@
 GREP = @GREP@
-GUILE = @GUILE@
-GUILE_CFLAGS = @GUILE_CFLAGS@
-GUILE_CONFIG = @GUILE_CONFIG@
-GUILE_LDFLAGS = @GUILE_LDFLAGS@
-GUILE_SITE = @GUILE_SITE@
-GUILE_TOOLS = @GUILE_TOOLS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -94,9 +87,6 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
-NCURSESW_CFLAGS = @NCURSESW_CFLAGS@
-NCURSESW_CONFIG = @NCURSESW_CONFIG@
-NCURSESW_LDFLAGS = @NCURSESW_LDFLAGS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@

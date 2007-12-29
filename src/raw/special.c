@@ -48,6 +48,25 @@ gucu_color_content (SCM s_color)
 }
 
 SCM
+gucu_delwin (SCM win)
+{
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "delwin");
+  
+  WINDOW *c_win = _scm_to_window (win);
+
+  SCM_SET_SMOB_DATA (win, NULL);
+
+  if (c_win != NULL)
+    {
+      int ret = delwin (c_win);
+      SCM s_ret = scm_from_int (ret);
+      return s_ret;
+    }
+  return scm_from_int (ERR);
+}
+
+
+SCM
 gucu_erasewchar ()
 {
   wchar_t wch;
@@ -2100,6 +2119,7 @@ gucu_init_special ()
 {
   scm_c_define_gsubr ("attr-get", 0, 0, 0, gucu_attr_get);
   scm_c_define_gsubr ("color-content", 1, 0, 0, gucu_color_content);
+  scm_c_define_gsubr ("delwin", 1, 0, 0, gucu_delwin);
   scm_c_define_gsubr ("erasewchar", 0, 0, 0, gucu_erasewchar);
   scm_c_define_gsubr ("getbkgrnd", 0, 0, 0, gucu_getbkgrnd);
   scm_c_define_gsubr ("getmouse", 0, 0, 0, gucu_getmouse);

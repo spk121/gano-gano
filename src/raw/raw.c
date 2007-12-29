@@ -1,9 +1,10 @@
 #include <libguile.h>
 #include <curses.h>
+#include <config.h>
 #include "function.h"
 #include "special.h"
 #include "constant.h"
-#include <config.h>
+#include "type.h"
 
 #ifdef DLL_EXPORT
 #define API __attribute__ ((dllexport, cdecl))

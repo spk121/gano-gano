@@ -1,3 +1,30 @@
+2007-12-29  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* test/guile-test: improve path independence for distcheck
+
+	* test/Makefile.am (EXTRA_DIST): distcheck fixes
+
+	* src/raw/Makefile.am (libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_SOURCES): try to improve path independence for distcheck
+
+	* doc/gucu.texi: dos->unix
+
+	* doc/Makefile.am: dos -> unix
+
+	* configure.ac: rely on autoconf for library detection instead of 
+	{guile,ncurses}-config scripts
+
+	* Makefile.am: add tools directory
+
+2007-12-28  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* test/guile-test: make sure to use local source before installed source in test!
+
+	* src/raw/special.c: don't try to delwin NULL windows
+
+	* wrap/special.txt: move delwin to special
+
+	* wrap/function.txt: move delwin to special
+
 2007-12-27  Mike Gran  <spike_gran@users.sourceforge.net>
 
 	* configure.ac: add build_aux/Makefile

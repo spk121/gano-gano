@@ -34,8 +34,7 @@ host_triplet = @host@
 subdir = test
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/guile.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ncurses.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -73,12 +72,6 @@ EXEEXT = @EXEEXT@
 F77 = @F77@
 FFLAGS = @FFLAGS@
 GREP = @GREP@
-GUILE = @GUILE@
-GUILE_CFLAGS = @GUILE_CFLAGS@
-GUILE_CONFIG = @GUILE_CONFIG@
-GUILE_LDFLAGS = @GUILE_LDFLAGS@
-GUILE_SITE = @GUILE_SITE@
-GUILE_TOOLS = @GUILE_TOOLS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -94,9 +87,6 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
-NCURSESW_CFLAGS = @NCURSESW_CFLAGS@
-NCURSESW_CONFIG = @NCURSESW_CONFIG@
-NCURSESW_LDFLAGS = @NCURSESW_LDFLAGS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -162,50 +152,57 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+TESTS_ENVIRONMENT = LIBGUILE_GUCU_MAJOR=@LIBGUILE_GUCU_MAJOR@ \
+	PACKAGE=@PACKAGE@
+TESTS = dotest
+
+#check_SCRIPTS = guile-test
+CLEANFILES = guile.log
 EXTRA_DIST = \
-guile-test \
-lib.scm \
-r000_initscr.test \
-r001_color.test \
-r002_characters.test \
-r003_addch.test \
-r004_addchstr.test \
-r005_addstr.test \
-r006_attr.test \
-r007_beep.test \
-r008_bkgd.test \
-r009_border.test \
-r010_clear.test \
-r011_delch.test \
-r012_deleteln.test \
-r013_getch.test \
-r014_getstr.test \
-r015_getyx.test \
-r016_inch.test \
-r017_inchstr.test \
-r018_inopts.test \
-r019_insch.test \
-r020_insstr.test \
-r021_instr.test \
-r022_kernel.test \
-r023_move.test \
-r024_outputs.test \
-r025_overlay.test \
-r026_pad.test \
-r027_refresh.test \
-r028_scr_dump.test \
-r029_scroll.test \
-r030_termattrs.test \
-r031_touch.test \
-r032_util.test \
-r033_add_wch.test \
-r034_add_wchstr.test \
-r035_addwstr.test \
-r036_bkgrnd.test \
-r037_border_set.test \
-r038_get_wch.test \
-r039_get_wstr.test \
-r999-endwin.test 
+	dotest \
+	guile-test \
+	lib.scm \
+	r000_initscr.test \
+	r001_color.test \
+	r002_characters.test \
+	r003_addch.test \
+	r004_addchstr.test \
+	r005_addstr.test \
+	r006_attr.test \
+	r007_beep.test \
+	r008_bkgd.test \
+	r009_border.test \
+	r010_clear.test \
+	r011_delch.test \
+	r012_deleteln.test \
+	r013_getch.test \
+	r014_getstr.test \
+	r015_getyx.test \
+	r016_inch.test \
+	r017_inchstr.test \
+	r018_inopts.test \
+	r019_insch.test \
+	r020_insstr.test \
+	r021_instr.test \
+	r022_kernel.test \
+	r023_move.test \
+	r024_outputs.test \
+	r025_overlay.test \
+	r026_pad.test \
+	r027_refresh.test \
+	r028_scr_dump.test \
+	r029_scroll.test \
+	r030_termattrs.test \
+	r031_touch.test \
+	r032_util.test \
+	r033_add_wch.test \
+	r034_add_wchstr.test \
+	r035_addwstr.test \
+	r036_bkgrnd.test \
+	r037_border_set.test \
+	r038_get_wch.test \
+	r039_get_wstr.test \
+	r999-endwin.test 
 
 all: all-am
 
@@ -252,6 +249,79 @@ ctags: CTAGS
 CTAGS:
 
 
+check-TESTS: $(TESTS)
+	@failed=0; all=0; xfail=0; xpass=0; skip=0; ws='[	 ]'; \
+	srcdir=$(srcdir); export srcdir; \
+	list=' $(TESTS) '; \
+	if test -n "$$list"; then \
+	  for tst in $$list; do \
+	    if test -f ./$$tst; then dir=./; \
+	    elif test -f $$tst; then dir=; \
+	    else dir="$(srcdir)/"; fi; \
+	    if $(TESTS_ENVIRONMENT) $${dir}$$tst; then \
+	      all=`expr $$all + 1`; \
+	      case " $(XFAIL_TESTS) " in \
+	      *$$ws$$tst$$ws*) \
+		xpass=`expr $$xpass + 1`; \
+		failed=`expr $$failed + 1`; \
+		echo "XPASS: $$tst"; \
+	      ;; \
+	      *) \
+		echo "PASS: $$tst"; \
+	      ;; \
+	      esac; \
+	    elif test $$? -ne 77; then \
+	      all=`expr $$all + 1`; \
+	      case " $(XFAIL_TESTS) " in \
+	      *$$ws$$tst$$ws*) \
+		xfail=`expr $$xfail + 1`; \
+		echo "XFAIL: $$tst"; \
+	      ;; \
+	      *) \
+		failed=`expr $$failed + 1`; \
+		echo "FAIL: $$tst"; \
+	      ;; \
+	      esac; \
+	    else \
+	      skip=`expr $$skip + 1`; \
+	      echo "SKIP: $$tst"; \
+	    fi; \
+	  done; \
+	  if test "$$failed" -eq 0; then \
+	    if test "$$xfail" -eq 0; then \
+	      banner="All $$all tests passed"; \
+	    else \
+	      banner="All $$all tests behaved as expected ($$xfail expected failures)"; \
+	    fi; \
+	  else \
+	    if test "$$xpass" -eq 0; then \
+	      banner="$$failed of $$all tests failed"; \
+	    else \
+	      banner="$$failed of $$all tests did not behave as expected ($$xpass unexpected passes)"; \
+	    fi; \
+	  fi; \
+	  dashes="$$banner"; \
+	  skipped=""; \
+	  if test "$$skip" -ne 0; then \
+	    skipped="($$skip tests were not run)"; \
+	    test `echo "$$skipped" | wc -c` -le `echo "$$banner" | wc -c` || \
+	      dashes="$$skipped"; \
+	  fi; \
+	  report=""; \
+	  if test "$$failed" -ne 0 && test -n "$(PACKAGE_BUGREPORT)"; then \
+	    report="Please report to $(PACKAGE_BUGREPORT)"; \
+	    test `echo "$$report" | wc -c` -le `echo "$$banner" | wc -c` || \
+	      dashes="$$report"; \
+	  fi; \
+	  dashes=`echo "$$dashes" | sed s/./=/g`; \
+	  echo "$$dashes"; \
+	  echo "$$banner"; \
+	  test -z "$$skipped" || echo "$$skipped"; \
+	  test -z "$$report" || echo "$$report"; \
+	  echo "$$dashes"; \
+	  test "$$failed" -eq 0; \
+	else :; fi
+
 distdir: $(DISTFILES)
 	@srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
@@ -279,6 +349,7 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
+	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
 check: check-am
 all-am: Makefile
 installdirs:
@@ -299,6 +370,7 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -362,16 +434,17 @@ uninstall-am:
 
 .MAKE: install-am install-strip
 
-.PHONY: all all-am check check-am clean clean-generic clean-libtool \
-	distclean distclean-generic distclean-libtool distdir dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-man install-pdf \
-	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-generic \
-	mostlyclean-libtool pdf pdf-am ps ps-am uninstall uninstall-am
+.PHONY: all all-am check check-TESTS check-am clean clean-generic \
+	clean-libtool distclean distclean-generic distclean-libtool \
+	distdir dvi dvi-am html html-am info info-am install \
+	install-am install-data install-data-am install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	uninstall uninstall-am
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
