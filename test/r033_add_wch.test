@@ -3,7 +3,7 @@
 
 (define-module (test r033_add_wch)
   #:use-module (test lib)
-  #:use-module (gucu raw))
+  #:use-module (gucu curses-wide-raw))
 
 
 ;; U+041B CYRILLIC CAPITAL LETTER EL

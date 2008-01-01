@@ -4,7 +4,7 @@
 (define-module (test r999-endwin)
   #:use-module (test lib)
   #:use-module (ice-9 threads)
-  #:use-module (gucu raw))
+  #:use-module (gucu curses-raw))
 
 
 ;;;

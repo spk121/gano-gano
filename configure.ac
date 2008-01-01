@@ -9,10 +9,14 @@ AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 
 # Set some version constants
-LIBGUILE_GUCU_MAJOR=0
-LIBGUILE_GUCU_INTERFACE="0:0:0"
-AC_SUBST(LIBGUILE_GUCU_MAJOR)
-AC_SUBST(LIBGUILE_GUCU_INTERFACE)
+LIBGUILE_GUCU_CURSES_MAJOR=0
+LIBGUILE_GUCU_CURSES_INTERFACE="0:0:0"
+AC_SUBST(LIBGUILE_GUCU_CURSES_MAJOR)
+AC_SUBST(LIBGUILE_GUCU_CURSES_INTERFACE)
+LIBGUILE_GUCU_CURSES_WIDE_MAJOR=0
+LIBGUILE_GUCU_CURSES_WIDE_INTERFACE="0:0:0"
+AC_SUBST(LIBGUILE_GUCU_CURSES_WIDE_MAJOR)
+AC_SUBST(LIBGUILE_GUCU_CURSES_WIDE_INTERFACE)
 
 # Check for Programs
 AC_PROG_CC
@@ -28,10 +32,35 @@ AC_PROG_MKDIR_P
 
 # since no action is specified: ncursesw and guile get added to LIBS
 # by default
+AC_ARG_WITH([ncursesw],
+            [AS_HELP_STRING([--without-ncursesw],
+                            [disable support for wide curses])],
+            [],
+            [with_ncursesw=yes])
+LIBNCURSES=
+AS_IF(
+      # if
+      [test "x$with_ncursesw" != xno],
+      # then
+      [AC_CHECK_LIB([ncursesw],	
+                    [initscr],
+		    [AC_SUBST([LIBNCURSES], ["-lncursesw"])
+		     AC_DEFINE([HAVE_LIBNCURSESW], 
+                               [1],
+                               [Define if you have libncursesw])
+                    ],
+                    [AC_MSG_ERROR([wide ncurses not found (--without-ncursesw to disable)])])],
+      # else
+      [AC_CHECK_LIB([ncurses],	
+                    [initscr],
+		    [AC_SUBST([LIBNCURSES], ["-lncurses"])
+		     AC_DEFINE([HAVE_LIBNCURSESW], 
+                               [0],
+                               [Define if you have libncursesw])
+                    ],
+                    [AC_MSG_ERROR([ncurses not found])])])
+AM_CONDITIONAL([WIDE], [test "x$with_ncursesw" = xyes])
 
-AC_CHECK_LIB([ncursesw], 
-             [initscr], ,
-             [AC_MSG_ERROR([The ncursesw library was not found])])
 AC_CHECK_LIB([guile], 
              [scm_boot_guile], ,
              [AC_MSG_ERROR([The guile library was not found])])

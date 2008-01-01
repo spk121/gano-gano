@@ -78,8 +78,11 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
-LIBGUILE_GUCU_INTERFACE = @LIBGUILE_GUCU_INTERFACE@
-LIBGUILE_GUCU_MAJOR = @LIBGUILE_GUCU_MAJOR@
+LIBGUILE_GUCU_CURSES_INTERFACE = @LIBGUILE_GUCU_CURSES_INTERFACE@
+LIBGUILE_GUCU_CURSES_MAJOR = @LIBGUILE_GUCU_CURSES_MAJOR@
+LIBGUILE_GUCU_CURSES_WIDE_INTERFACE = @LIBGUILE_GUCU_CURSES_WIDE_INTERFACE@
+LIBGUILE_GUCU_CURSES_WIDE_MAJOR = @LIBGUILE_GUCU_CURSES_WIDE_MAJOR@
+LIBNCURSES = @LIBNCURSES@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -153,10 +156,10 @@ target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 EXTRA_DIST = \
-	const_def.awk const_head.awk const_init.awk const_scm.awk constant.txt \
-	func_def.awk func_head.awk func_init.awk func_scm.awk function.txt \
+	const_def.awk const_head.awk const_init.awk const_scm.awk \
+	func_def.awk func_head.awk func_init.awk func_scm.awk \
 	special_scm.awk special.txt \
-	wrap.sh
+	curs_func.txt curs_const.txt curs_spec.txt curs_wrap.sh
 
 all: all-am
 

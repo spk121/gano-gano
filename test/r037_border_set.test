@@ -4,7 +4,7 @@
 (define-module (test r037_border)
   #:use-module (test lib)
   #:use-module (srfi srfi-1)
-  #:use-module (gucu raw))
+  #:use-module (gucu curses-wide-raw))
 
 
 ;; Should be able to draw borders

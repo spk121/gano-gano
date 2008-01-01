@@ -15,7 +15,7 @@
 /* Define to 1 if you have the <libguile.h> header file. */
 #undef HAVE_LIBGUILE_H
 
-/* Define to 1 if you have the `ncursesw' library (-lncursesw). */
+/* Define if you have libncursesw */
 #undef HAVE_LIBNCURSESW
 
 /* Define to 1 if your system has a GNU libc compatible `malloc' function, and

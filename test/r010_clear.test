@@ -3,7 +3,7 @@
 
 (define-module (test r010_clear)
   #:use-module (test lib)
-  #:use-module (gucu raw))
+  #:use-module (gucu curses-raw))
 
 
 (define space (char->integer #\sp))

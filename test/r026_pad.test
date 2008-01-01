@@ -4,7 +4,7 @@
 (define-module (test r026_pad)
   #:use-module (test lib)
   #:use-module (srfi srfi-1)
-  #:use-module (gucu raw))
+  #:use-module (gucu curses-raw))
 
 
 ;; Should be able to make big windows

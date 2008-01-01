@@ -3,7 +3,7 @@
 
 (define-module (test r008_bkgd)
   #:use-module (test lib)
-  #:use-module (gucu raw))
+  #:use-module (gucu curses-raw))
 
 (define period (char->integer #\.))
 (define plus (char->integer #\+))

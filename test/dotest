@@ -5,7 +5,9 @@
 ln -s ../src/raw ${PACKAGE}
 
 # This should be exported from the Makefile.am
-echo "major->" ${LIBGUILE_GUCU_MAJOR}
+echo "major->" ${LIBGUILE_GUCU_CURSES_MAJOR}
+
+echo "testlist->" $(TESTLIST)
 
 # Run the library
-libtool -dlopen ../src/raw/libguile-gucu-v-${LIBGUILE_GUCU_MAJOR}.la --mode=execute guile -e main -s ${srcdir}/guile-test
+libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la --mode=execute guile -e main -s ${srcdir}/guile-test $(TESTLIST)

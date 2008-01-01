@@ -3,7 +3,7 @@
 
 (define-module (test r019_insch)
   #:use-module (test lib)
-  #:use-module (gucu raw))
+  #:use-module (gucu curses-raw))
 
 
 ;; Should be able to change input options

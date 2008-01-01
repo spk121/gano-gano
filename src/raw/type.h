@@ -18,14 +18,6 @@ int _scm_is_attr (SCM x);
 attr_t _scm_to_attr (SCM x) ;
 SCM _scm_from_attr (attr_t x);
 
-SCM _scm_from_cchar (cchar_t *x);
-int _scm_is_cchar (SCM x);
-cchar_t *_scm_to_cchar (SCM x);
-
-cchar_t *_scm_to_cstring (SCM x);
-SCM _scm_from_cstring (cchar_t *x);
-int _scm_is_cstring (SCM x);
-
 int _scm_is_chstring (SCM x);
 chtype *_scm_to_chstring (SCM x);
 SCM _scm_from_chstring (chtype *x);

@@ -4,7 +4,7 @@
 (define-module (test r013_getch)
   #:use-module (test lib)
   #:use-module (srfi srfi-1)
-  #:use-module (gucu raw))
+  #:use-module (gucu curses-raw))
 
 
 (cbreak)

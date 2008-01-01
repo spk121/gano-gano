@@ -1,8 +1,10 @@
 noinst_PROGRAMS = testbed
 
-testbed_LDADD = -lguile
-AM_CPPFLAGS = 
-AM_LDFLAGS = 
+# -lguile gets included into LIBS by configure
+#testbed_LDADD = -lguile
+
+AM_CPPFLAGS = -Wall
+AM_LDFLAGS = -static
 
 # not defining a testbed_SOURCES is the same as 
 #testbed_SOURCES = testbed.c
@@ -14,5 +16,5 @@ CLEANFILES = run-testbed.sh
 run-testbed.sh: run-testbed.sh.in
 	cat run-testbed.sh.in | \
 	sed 's|XXXpackageXXX|@PACKAGE@|' | \
-	sed 's|XXXmajorXXX|@LIBGUILE_GUCU_MAJOR@|' > run-testbed.sh
+	sed 's|XXXmajorXXX|@LIBGUILE_GUCU_CURSES_MAJOR@|' > run-testbed.sh
 	chmod +x run-testbed.sh

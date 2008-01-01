@@ -8,6 +8,6 @@ ln -s ../src/raw XXXpackageXXX
 echo "major->" XXXmajorXXX
 
 # Run the library
-libtool -dlopen ../src/raw/libguile-gucu-v-XXXmajorXXX.la --mode=execute gdb testbed
+libtool -dlopen ../src/raw/libguile-gucu-curses-v-XXXmajorXXX.la --mode=execute gdb testbed
 
 

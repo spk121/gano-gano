@@ -4,7 +4,7 @@
 (define-module (test r023_move)
   #:use-module (test lib)
   #:use-module (srfi srfi-1)
-  #:use-module (gucu raw))
+  #:use-module (gucu curses-raw))
 
 
 ;; Should be able to move the cursor

@@ -3,7 +3,7 @@
 
 (define-module (test r011_delch)
   #:use-module (test lib)
-  #:use-module (gucu raw))
+  #:use-module (gucu curses-raw))
 
 
 ;; Should be able to delete characters

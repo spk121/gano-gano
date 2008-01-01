@@ -1,37 +1,71 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.4 2007/12/29 20:04:40 spike_gran Exp $
+## $Id: Makefile.am,v 1.5 2008/01/01 16:03:07 spike_gran Exp $
 
-lib_LTLIBRARIES = libguile-gucu-v-@LIBGUILE_GUCU_MAJOR@.la
+lib_LTLIBRARIES = \
+	libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@.la 
 
-# -lguile and -lncursesw were added to LIBS by autoconf
-# in the AC_CHECK_LIB test
+if WIDE
+  lib_LTLIBRARIES += \
+	libguile-gucu-curses-wide-v-@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@.la 
+endif
 
-AM_CPPFLAGS = \
-	-D_XOPEN_SOURCE_EXTENDED
+# libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS = 
 
-AM_LDFLAGS = \
+libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LDFLAGS = \
 	-no-undefined \
 	-export-dynamic \
-	-version-info @LIBGUILE_GUCU_INTERFACE@
-
-libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_SOURCES = \
-	constant.c constant.h \
-	function.c function.h \
+	-version-info @LIBGUILE_GUCU_CURSES_INTERFACE@
+libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES = \
+	curs_const.c curs_const.h \
+	curs_func.c curs_func.h \
 	type.c type.h \
-	special.c special.h \
-	raw.c
+	curs_spec.c curs_spec.h \
+	curs_main.c
+# -lguile added to LIBS by autoconf
+# in the AC_CHECK_LIB test
+libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LIBADD = @LIBNCURSES@
+
+if WIDE
+  libguile_gucu_curses_wide_v_@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@_la_CPPFLAGS = \
+	-D_XOPEN_SOURCE_EXTENDED
+  libguile_gucu_curses_wide_v_@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@_la_LDFLAGS = \
+	-no-undefined \
+	-export-dynamic \
+	-version-info @LIBGUILE_GUCU_CURSES_WIDE_INTERFACE@
+  libguile_gucu_curses_wide_v_@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@_la_SOURCES = \
+	cursw_const.c cursw_const.h \
+	cursw_func.c cursw_func.h \
+	type.c type.h \
+	typew.c typew.h \
+	cursw_spec.c cursw_spec.h \
+	cursw_main.c
+  # -lguile added to LIBS by autoconf in the AC_CHECK_LIB test
+  libguile_gucu_curses_wide_v_@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@_la_LIBADD = \
+	@LIBNCURSES@
+endif
 
 guile_sitedir = ${datadir}/guile/site
 pkgguile_sitedir = $(guile_sitedir)/$(PACKAGE)
-pkgguile_site_DATA = raw.scm 
+pkgguile_site_DATA = curses-raw.scm 
+ETAGS_ARGS = curses-raw.scm
+EXTRA_DIST = curses-raw.scm.in
+BUILT_SOURCES = curses-raw.scm
+CLEANFILES = curses-raw.scm
 
-ETAGS_ARGS = raw.scm
-EXTRA_DIST = raw.scm.in
-BUILT_SOURCES = raw.scm
-CLEANFILES = raw.scm
-
-raw.scm: raw.scm.in
+curses-raw.scm: curses-raw.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-v-@LIBGUILE_GUCU_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
+if WIDE
+  pkgguile_site_DATA += curses-wide-raw.scm 
+  ETAGS_ARGS += curses-wide-raw.scm
+  EXTRA_DIST += curses-wide-raw.scm.in
+  BUILT_SOURCES += curses-wide-raw.scm
+  CLEANFILES += curses-wide-raw.scm
+
+  curses-wide-raw.scm: curses-wide-raw.scm.in
+	cat $< | \
+	sed 's|XXlibnameXX|libguile-gucu-curses-wide-v-@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@|' | \
+	sed 's|XXpackageXX|$(PACKAGE)|' > $@
+endif
