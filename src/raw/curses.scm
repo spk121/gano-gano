@@ -270,6 +270,29 @@
 	    
 	    ;; from instr
 	    extract-string
+
+	    ;; from kernel
+	    define-program-mode
+	    define-shell-mode
+	    reset-program-mode
+	    reset-shell-mode
+	    reset-tty
+	    save-tty
+	    virtual-cursor-position
+	    set-virtual-cursor-position
+	    
+
+	    ;; from mouse
+	    get-mouse
+	    unget-mouse
+	    mouse-mask
+	    is-in-window?
+	    stdscr-pos->screen-pos
+	    mouse-click-interval
+
+	    ;; from move
+	    set-cursor-position
+	    
 	    ))
 
 
@@ -1009,9 +1032,110 @@
 (define (set-virtual-cursor-position x y)
   (setsyx y x))
 
-(define (cursor-set vis)
+(define (set-cursor-visibility vis)
   (let ((old-vis (curs-set vis)))
     (if (eqv? *err* old-vis)
 	#f
 	old-vis)))
 
+;;-------------------------
+;; from mouse
+
+(define (get-mouse)
+  (getmouse))
+
+(define (unget-mouse)
+  (ungetmouse))
+
+(define (mouse-mask x)
+  (mousemask x))
+
+(define (is-in-window? win x y)
+  (wenclose win y x))
+
+(define (stdscr-pos->screen-pos pos)
+  (mouse-trafo pos))
+
+(define (mouse-click-interval x)
+  (mouseinterval x))
+
+;;-------------------------
+;; from move
+
+(define (set-cursor-position x y #:key win)
+  (if (eqv? *ok*
+	    (cond
+	     (win (wmove win y x))
+	     (else (move y x))))
+      #t
+      #f))
+
+;;-------------------------
+;; from outputs
+
+(define (set-clear bf#:key win)
+  (cond
+   (win (clearok win bf))
+   (else (clearok (stcscr) bf)))
+  *undefined*) 
+
+(define (use-hardware-insert-delete-line bf #:key win)
+  (cond
+   (win (idlok win bf))
+   (else (idlok (stcscr) bf)))
+  *undefined*) 
+
+(define (use-hardware-insert-delete-char bf #:key win)
+  (cond
+   (win (idcok win bf))
+   (else (idcok (stcscr) bf)))
+  *undefined*) 
+	
+(define (use-hardware-insert-delete-char bf #:key win)
+  (cond
+   (win (idcok win bf))
+   (else (idcok (stcscr) bf)))
+  *undefined*) 
+	
+(define (set-immediate bf #:key win)
+  (cond
+   (win (immedok win bf))
+   (else (immedok (stcscr) bf)))
+  *undefined*) 
+	
+(define (set-scroll bf #:key win)
+  (cond
+   (win (scrollok win bf))
+   (else (scrollok (stcscr) bf)))
+  *undefined*) 
+
+(define (set-newline)
+  (nl))
+
+(define (unset-newline)
+  (nonl))
+
+;;-------------------------
+;; from overlay
+	
+(define (overlay src dst)
+  (if (eqv? *ok*
+	    ((@ (gucu curses-raw) overlay) src dst))
+      #t
+      #f))
+
+(define (overwrite src dst)
+  (if (eqv? *ok*
+	    ((@ (gucu curses-raw) overwrite) src dst))
+      #t
+      #f))
+
+(define (copy-window src dst smr smc dmr dmc dxr dxc ov)
+  (if (eqv? *ok*
+	    (copywin src dst smr smc dmr dmc dxr dxc ov)
+      #t
+      #f))
+
+
+
+	
