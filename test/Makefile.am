@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.5 2008/01/01 18:04:44 spike_gran Exp $
+## $Id: Makefile.am,v 1.6 2008/01/04 08:07:07 spike_gran Exp $
 
 
 testlist_curses = \
@@ -38,7 +38,7 @@ r031_touch.test \
 r032_util.test \
 r999-endwin.test 
 if WIDE
-  testlist_curses_wide = \
+testlist_curses_wide = \
 r000_initscr.test \
 r033_add_wch.test \
 r034_add_wchstr.test \
@@ -50,30 +50,24 @@ r039_get_wstr.test \
 r999-endwin.test
 endif
 
-# TESTS_ENVIRONMENT = \
-# 	libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la \
-# 	--mode=execute guile -s
-
-# TESTS = curs000-initscr.scm \
-# 	cursw000-add-wch.scm
-
 TESTS_ENVIRONMENT = LIBGUILE_GUCU_CURSES_MAJOR=@LIBGUILE_GUCU_CURSES_MAJOR@
 TESTS_ENVIRONMENT += PACKAGE=@PACKAGE@
 TESTS_ENVIRONMENT += TEST_SUITE_DIR=$(srcdir)
 TESTS_ENVIRONMENT += TESTLIST_CURSES="${testlist_curses}"
 if WIDE
-  TESTS_ENVIRONMENT += TESTLIST_CURSES_WIDE=$(testlist_curses_wide)
+TESTS_ENVIRONMENT += LIBGUILE_GUCU_CURSES_WIDE_MAJOR=@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@
+TESTS_ENVIRONMENT += TESTLIST_CURSES_WIDE="${testlist_curses_wide}"
 endif
-TESTS_ENVIRONMENT += $(SHELL) -x
+#TESTS_ENVIRONMENT += $(SHELL) -x
 
 TESTS = dotest-curses 
 if WIDE
-  TESTS += dotest-curses-wide
+TESTS += dotest-curses-wide
 endif
 
 check_SCRIPTS = guile-test
 
-CLEANFILES = guile.log
+CLEANFILES = curses.log curses-wide.log
 
 EXTRA_DIST = \
 	dotest-curses \

@@ -79,6 +79,12 @@
 /* The size of `long', as computed by sizeof. */
 #undef SIZEOF_LONG
 
+/* The size of `wchar_t', as computed by sizeof. */
+#undef SIZEOF_WCHAR_T
+
+/* The size of `wint_t', as computed by sizeof. */
+#undef SIZEOF_WINT_T
+
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 

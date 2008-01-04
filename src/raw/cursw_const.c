@@ -8,6 +8,6 @@
 #define _GNU_SOURCE
 
 void 
-gucu_init_constant ()
+gucu_cursw_init_constant ()
 {
 }

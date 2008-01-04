@@ -42,14 +42,6 @@ int _scm_is_voidstring (SCM x);
 void *_scm_to_voidstring (SCM x);
 SCM _scm_from_voidstring (void *x);
 
-int _scm_is_wchar (SCM x);
-SCM _scm_from_wchar (wchar_t x);
-wchar_t _scm_to_wchar (SCM x);
-
-int _scm_is_wstring (SCM x);
-SCM _scm_from_wstring (wchar_t *x);
-wchar_t *_scm_to_wstring (SCM x);
-
 int _scm_is_window (SCM x);
 WINDOW *_scm_to_window (SCM x);
 SCM _scm_from_window (WINDOW *x);

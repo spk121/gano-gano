@@ -11,12 +11,12 @@
 #define API
 #endif
 
-void gucu_init (void) API;
+void gucu_cursw_init (void) API;
 
 void
-gucu_init ()
+gucu_cursw_init ()
 {
-  gucu_init_function ();
-  gucu_init_special ();
-  gucu_init_constant ();
+  gucu_cursw_init_function ();
+  gucu_cursw_init_special ();
+  gucu_cursw_init_constant ();
 }

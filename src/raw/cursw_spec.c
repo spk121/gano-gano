@@ -57,7 +57,7 @@ gucu_getn_wstr (SCM n)
   int ret = getn_wstr (c_str, scm_to_int (n));
   if (ret == OK)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wint_string (c_str);
     }
   else
     abort ();
@@ -74,7 +74,7 @@ gucu_get_wch ()
   wint_t wch = 0;
 
   int ret = get_wch (&wch);
-  return scm_list_2 (scm_from_int (ret), scm_from_uint (wch));
+  return scm_list_2 (scm_from_int (ret), _scm_from_wint (wch));
 }
 
 SCM
@@ -90,7 +90,7 @@ gucu_get_wstr ()
   int ret = get_wstr (c_str);
   if (ret == OK)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wint_string (c_str);
     }
   else
     abort ();
@@ -114,7 +114,7 @@ gucu_innwstr (SCM n)
   ret = innwstr (c_str, scm_to_int (n) + 1);
   if (ret != ERR)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wchar_string (c_str);
     }
   else
     abort ();
@@ -129,11 +129,11 @@ gucu_inwstr ()
   SCM s_str;
   int ret;
 
-  c_str = (char *) scm_malloc (sizeof (wchar_t) * (COLS + 1));
+  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (COLS + 1));
   ret = inwstr (c_str);
   if (ret != ERR)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wchar_string (c_str);
     }
   else
     abort ();
@@ -252,7 +252,7 @@ gucu_mvgetn_wstr (SCM y, SCM x, SCM n)
 
   if (ret == OK)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wint_string (c_str);
     }
   else
     abort ();
@@ -270,7 +270,7 @@ gucu_mvget_wch (SCM y, SCM x)
   wint_t wch = 0;
 
   int ret = mvget_wch (scm_to_int (y), scm_to_int (x), &wch);
-  return scm_list_2 (scm_from_int (ret), scm_from_uint (wch));
+  return scm_list_2 (scm_from_int (ret), _scm_from_wint (wch));
 
 }
 
@@ -290,7 +290,7 @@ gucu_mvget_wstr (SCM y, SCM x)
 
   if (ret == OK)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wint_string (c_str);
     }
   else
     abort ();
@@ -343,7 +343,7 @@ gucu_mvwgetn_wstr (SCM win, SCM y, SCM x, SCM n)
   int ret = mvwgetn_wstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), c_str, scm_to_int (n));
   if (ret == OK)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wint_string (c_str);
     }
   else
     abort ();
@@ -363,7 +363,7 @@ gucu_mvwget_wch (SCM win, SCM y, SCM x)
   wint_t wch = 0;
 
   int ret = mvwget_wch (_scm_to_window (win), scm_to_int (y), scm_to_int (x), &wch);
-  return scm_list_2 (scm_from_int (ret), scm_from_uint (wch));
+  return scm_list_2 (scm_from_int (ret), _scm_from_wint (wch));
 
 }
 
@@ -384,7 +384,7 @@ gucu_mvwget_wstr (SCM win, SCM y, SCM x)
 
   if (ret == OK)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wint_string (c_str);
     }
   else
     abort ();
@@ -427,7 +427,7 @@ gucu_mvinnwstr (SCM y, SCM x, SCM n)
   ret = mvinnwstr (scm_to_int (y), scm_to_int (x), c_str, scm_to_int (n) + 1);
   if (ret != ERR)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wchar_string (c_str);
     }
   else
     abort ();
@@ -450,7 +450,7 @@ gucu_mvinwstr (SCM y, SCM x)
   ret = mvinwstr (scm_to_int (y), scm_to_int (x), c_str);
   if (ret != ERR)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wchar_string (c_str);
     }
   else
     abort ();
@@ -476,7 +476,7 @@ gucu_mvwinwstr (SCM win, SCM y, SCM x)
 
   if (ret != ERR)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wchar_string (c_str);
     }
   else
     abort ();
@@ -576,7 +576,7 @@ gucu_mvwinnwstr (SCM win, SCM y, SCM x, SCM n)
 		   c_str, scm_to_int (n) + 1);
   if (ret != ERR)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wchar_string (c_str);
     }
   else
     abort ();
@@ -617,11 +617,11 @@ gucu_wgetn_wstr (SCM win, SCM n)
   c_str = (wint_t *) scm_malloc (sizeof (wint_t) * (scm_to_int (n) + 1));
 
   int ret = wgetn_wstr (_scm_to_window (win), c_str, scm_to_int (n));
-  c_str[scm_to_int (n)] = 0;
+  c_str[scm_to_int (n)] = (wint_t) 0;
 
   if (ret == OK)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wint_string (c_str);
     }
   else
     abort ();
@@ -639,7 +639,7 @@ gucu_wget_wch (SCM win)
   wint_t wch = 0;
 
   int ret = wget_wch (_scm_to_window (win), &wch);
-  return scm_list_2 (scm_from_int (ret), scm_from_uint (wch));
+  return scm_list_2 (scm_from_int (ret), _scm_from_wint (wch));
 }
 
 SCM
@@ -658,7 +658,7 @@ gucu_wget_wstr (SCM win)
 
   if (ret == OK)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wint_string (c_str);
     }
   else
     abort ();
@@ -683,7 +683,7 @@ gucu_winnwstr (SCM win, SCM n)
   ret = winnwstr (_scm_to_window (win), c_str, scm_to_int (n) + 1);
   if (ret != ERR)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wchar_string (c_str);
     }
   else
     abort ();
@@ -705,7 +705,7 @@ gucu_winwstr (SCM win)
   ret = winwstr (_scm_to_window (win), c_str);
   if (ret != ERR)
     {
-      s_str = _scm_from_wstring (c_str);
+      s_str = _scm_from_wchar_string (c_str);
     }
   else
     abort ();
@@ -1004,7 +1004,7 @@ gucu_WACS_BLOCK ()
 }
 
 void
-gucu_init_special ()
+gucu_cursw_init_special ()
 {
    scm_c_define_gsubr ("erasewchar", 0, 0, 0, gucu_erasewchar);
    scm_c_define_gsubr ("getbkgrnd", 0, 0, 0, gucu_getbkgrnd);

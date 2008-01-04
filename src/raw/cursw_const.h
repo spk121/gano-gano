@@ -10,5 +10,5 @@
 #define API
 #endif
 
-void gucu_init_constant (void) API;
+void gucu_cursw_init_constant (void) API;
 #endif /* not CONSTANT_H */

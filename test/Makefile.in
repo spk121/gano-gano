@@ -31,7 +31,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@WIDE_TRUE@am__append_1 = TESTLIST_CURSES_WIDE=$(testlist_curses_wide)
+@WIDE_TRUE@am__append_1 = LIBGUILE_GUCU_CURSES_WIDE_MAJOR=@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@ \
+@WIDE_TRUE@	TESTLIST_CURSES_WIDE="${testlist_curses_wide}"
 @WIDE_TRUE@am__append_2 = dotest-curses-wide
 subdir = test
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
@@ -204,21 +205,14 @@ r999-endwin.test
 @WIDE_TRUE@r039_get_wstr.test \
 @WIDE_TRUE@r999-endwin.test
 
-
-# TESTS_ENVIRONMENT = \
-# 	libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la \
-# 	--mode=execute guile -s
-
-# TESTS = curs000-initscr.scm \
-# 	cursw000-add-wch.scm
 TESTS_ENVIRONMENT =  \
 	LIBGUILE_GUCU_CURSES_MAJOR=@LIBGUILE_GUCU_CURSES_MAJOR@ \
 	PACKAGE=@PACKAGE@ TEST_SUITE_DIR=$(srcdir) \
-	TESTLIST_CURSES="${testlist_curses}" $(am__append_1) $(SHELL) \
-	-x
+	TESTLIST_CURSES="${testlist_curses}" $(am__append_1)
+#TESTS_ENVIRONMENT += $(SHELL) -x
 TESTS = dotest-curses $(am__append_2)
 check_SCRIPTS = guile-test
-CLEANFILES = guile.log
+CLEANFILES = curses.log curses-wide.log
 EXTRA_DIST = \
 	dotest-curses \
 	dotest-curses-wide \

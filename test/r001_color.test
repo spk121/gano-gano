@@ -25,7 +25,8 @@
 (with-test-prefix "can-chage-color"
 		  (pass-if "xterm default"
 			   (equal? #f
-				   (can-change-color))))
+				   (can-change-color))
+			   *unspecified*))
 
 ;; xterm has 8 colors
 (with-test-prefix "COLORS"
@@ -81,7 +82,8 @@
 				 (init-color 1 200 200 200)
 				 (lset= equal?
 					'(200 200 200)
-					(color-content 1)))))
+					(color-content 1))
+				 *unspecified*)))
 
 ;; can set color pairs on xterm
 (with-test-prefix "init-pair"

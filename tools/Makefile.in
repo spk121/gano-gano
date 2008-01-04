@@ -44,9 +44,11 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
-testbed_SOURCES = testbed.c
-testbed_OBJECTS = testbed.$(OBJEXT)
-testbed_LDADD = $(LDADD)
+am_testbed_OBJECTS = testbed.$(OBJEXT) curs_const.$(OBJEXT) \
+	curs_func.$(OBJEXT) curs_main.$(OBJEXT) curs_spec.$(OBJEXT) \
+	type.$(OBJEXT)
+testbed_OBJECTS = $(am_testbed_OBJECTS)
+testbed_DEPENDENCIES =
 DEFAULT_INCLUDES = -I. -I$(top_builddir)@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/build_aux/depcomp
 am__depfiles_maybe = depfiles
@@ -59,8 +61,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = testbed.c
-DIST_SOURCES = testbed.c
+SOURCES = $(testbed_SOURCES)
+DIST_SOURCES = $(testbed_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -178,11 +180,20 @@ top_srcdir = @top_srcdir@
 
 # -lguile gets included into LIBS by configure
 #testbed_LDADD = -lguile
-AM_CPPFLAGS = -Wall
-AM_LDFLAGS = -static
+testbed_LDADD = @LIBNCURSES@
+AM_CPPFLAGS = -Wall -I../src/raw -static -u gucu_initscr
+AM_LDFLAGS = -Bstatic
 
 # not defining a testbed_SOURCES is the same as 
 #testbed_SOURCES = testbed.c
+testbed_SOURCES = \
+	testbed.c \
+	../src/raw/curs_const.c \
+	../src/raw/curs_func.c \
+	../src/raw/curs_main.c  \
+	../src/raw/curs_spec.c \
+	../src/raw/type.c 
+
 EXTRA_DIST = run-testbed.sh.in
 BUILT_SOURCES = run-testbed.sh
 CLEANFILES = run-testbed.sh
@@ -237,7 +248,12 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/curs_const.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/curs_func.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/curs_main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/curs_spec.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/type.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -259,6 +275,76 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
+
+curs_const.o: ../src/raw/curs_const.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT curs_const.o -MD -MP -MF $(DEPDIR)/curs_const.Tpo -c -o curs_const.o `test -f '../src/raw/curs_const.c' || echo '$(srcdir)/'`../src/raw/curs_const.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/curs_const.Tpo $(DEPDIR)/curs_const.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/curs_const.c' object='curs_const.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o curs_const.o `test -f '../src/raw/curs_const.c' || echo '$(srcdir)/'`../src/raw/curs_const.c
+
+curs_const.obj: ../src/raw/curs_const.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT curs_const.obj -MD -MP -MF $(DEPDIR)/curs_const.Tpo -c -o curs_const.obj `if test -f '../src/raw/curs_const.c'; then $(CYGPATH_W) '../src/raw/curs_const.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/curs_const.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/curs_const.Tpo $(DEPDIR)/curs_const.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/curs_const.c' object='curs_const.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o curs_const.obj `if test -f '../src/raw/curs_const.c'; then $(CYGPATH_W) '../src/raw/curs_const.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/curs_const.c'; fi`
+
+curs_func.o: ../src/raw/curs_func.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT curs_func.o -MD -MP -MF $(DEPDIR)/curs_func.Tpo -c -o curs_func.o `test -f '../src/raw/curs_func.c' || echo '$(srcdir)/'`../src/raw/curs_func.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/curs_func.Tpo $(DEPDIR)/curs_func.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/curs_func.c' object='curs_func.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o curs_func.o `test -f '../src/raw/curs_func.c' || echo '$(srcdir)/'`../src/raw/curs_func.c
+
+curs_func.obj: ../src/raw/curs_func.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT curs_func.obj -MD -MP -MF $(DEPDIR)/curs_func.Tpo -c -o curs_func.obj `if test -f '../src/raw/curs_func.c'; then $(CYGPATH_W) '../src/raw/curs_func.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/curs_func.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/curs_func.Tpo $(DEPDIR)/curs_func.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/curs_func.c' object='curs_func.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o curs_func.obj `if test -f '../src/raw/curs_func.c'; then $(CYGPATH_W) '../src/raw/curs_func.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/curs_func.c'; fi`
+
+curs_main.o: ../src/raw/curs_main.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT curs_main.o -MD -MP -MF $(DEPDIR)/curs_main.Tpo -c -o curs_main.o `test -f '../src/raw/curs_main.c' || echo '$(srcdir)/'`../src/raw/curs_main.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/curs_main.Tpo $(DEPDIR)/curs_main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/curs_main.c' object='curs_main.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o curs_main.o `test -f '../src/raw/curs_main.c' || echo '$(srcdir)/'`../src/raw/curs_main.c
+
+curs_main.obj: ../src/raw/curs_main.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT curs_main.obj -MD -MP -MF $(DEPDIR)/curs_main.Tpo -c -o curs_main.obj `if test -f '../src/raw/curs_main.c'; then $(CYGPATH_W) '../src/raw/curs_main.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/curs_main.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/curs_main.Tpo $(DEPDIR)/curs_main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/curs_main.c' object='curs_main.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o curs_main.obj `if test -f '../src/raw/curs_main.c'; then $(CYGPATH_W) '../src/raw/curs_main.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/curs_main.c'; fi`
+
+curs_spec.o: ../src/raw/curs_spec.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT curs_spec.o -MD -MP -MF $(DEPDIR)/curs_spec.Tpo -c -o curs_spec.o `test -f '../src/raw/curs_spec.c' || echo '$(srcdir)/'`../src/raw/curs_spec.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/curs_spec.Tpo $(DEPDIR)/curs_spec.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/curs_spec.c' object='curs_spec.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o curs_spec.o `test -f '../src/raw/curs_spec.c' || echo '$(srcdir)/'`../src/raw/curs_spec.c
+
+curs_spec.obj: ../src/raw/curs_spec.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT curs_spec.obj -MD -MP -MF $(DEPDIR)/curs_spec.Tpo -c -o curs_spec.obj `if test -f '../src/raw/curs_spec.c'; then $(CYGPATH_W) '../src/raw/curs_spec.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/curs_spec.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/curs_spec.Tpo $(DEPDIR)/curs_spec.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/curs_spec.c' object='curs_spec.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o curs_spec.obj `if test -f '../src/raw/curs_spec.c'; then $(CYGPATH_W) '../src/raw/curs_spec.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/curs_spec.c'; fi`
+
+type.o: ../src/raw/type.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT type.o -MD -MP -MF $(DEPDIR)/type.Tpo -c -o type.o `test -f '../src/raw/type.c' || echo '$(srcdir)/'`../src/raw/type.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/type.Tpo $(DEPDIR)/type.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/type.c' object='type.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o type.o `test -f '../src/raw/type.c' || echo '$(srcdir)/'`../src/raw/type.c
+
+type.obj: ../src/raw/type.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT type.obj -MD -MP -MF $(DEPDIR)/type.Tpo -c -o type.obj `if test -f '../src/raw/type.c'; then $(CYGPATH_W) '../src/raw/type.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/type.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/type.Tpo $(DEPDIR)/type.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/type.c' object='type.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o type.obj `if test -f '../src/raw/type.c'; then $(CYGPATH_W) '../src/raw/type.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/type.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

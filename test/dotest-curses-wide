@@ -5,9 +5,10 @@
 ln -s ../src/raw ${PACKAGE}
 
 # This should be exported from the Makefile.am
-echo "major->" ${LIBGUILE_GUCU_CURSES_MAJOR}
+echo "major->" ${LIBGUILE_GUCU_CURSES_WIDE_MAJOR}
 
-echo "testlist->" $(TESTLIST)
+echo "testlist->" ${TESTLIST_CURSES_WIDE}
 
 # Run the library
-libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la --mode=execute guile -e main -s ${srcdir}/guile-test $(TESTLIST)
+libtool -dlopen ../src/raw/libguile-gucu-curses-wide-v-${LIBGUILE_GUCU_CURSES_WIDE_MAJOR}.la \
+    --mode=execute guile -e main -s ${srcdir}/guile-test --log-file=curses-wide.log ${TESTLIST_CURSES_WIDE}

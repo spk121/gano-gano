@@ -29,9 +29,6 @@ AC_PROG_MKDIR_P
 #NCURSESW_PROGS
 
 # Check for libraries
-
-# since no action is specified: ncursesw and guile get added to LIBS
-# by default
 AC_ARG_WITH([ncursesw],
             [AS_HELP_STRING([--without-ncursesw],
                             [disable support for wide curses])],
@@ -40,7 +37,7 @@ AC_ARG_WITH([ncursesw],
 LIBNCURSES=
 AS_IF(
       # if
-      [test "x$with_ncursesw" != xno],
+      [test "$with_ncursesw" = yes],
       # then
       [AC_CHECK_LIB([ncursesw],	
                     [initscr],
@@ -49,8 +46,13 @@ AS_IF(
                                [1],
                                [Define if you have libncursesw])
                     ],
-                    [AC_MSG_ERROR([wide ncurses not found (--without-ncursesw to disable)])])],
-      # else
+                    [AC_MSG_WARN([Wide NCurses not found.  Trying standard curses.])
+		     with_ncursesw=no])])
+
+AS_IF(
+      # if 
+      [test "$with_ncursesw" = no],
+      # then
       [AC_CHECK_LIB([ncurses],	
                     [initscr],
 		    [AC_SUBST([LIBNCURSES], ["-lncurses"])
@@ -59,8 +61,22 @@ AS_IF(
                                [Define if you have libncursesw])
                     ],
                     [AC_MSG_ERROR([ncurses not found])])])
-AM_CONDITIONAL([WIDE], [test "x$with_ncursesw" = xyes])
 
+AM_CONDITIONAL([WIDE], [test "$with_ncursesw" = yes])
+
+#
+# In Cygwin NCurses v5.5.20061104, there is a bug in the acs_map
+# table declaration in <curses.h>.  This enables a workaround
+#
+AC_ARG_ENABLE([cygwin-curses-acs-bug-fix],
+              [AS_HELP_STRING([--with-cygwin-curses-acs-buf-fix],
+                              [Work around bug in Cygwin NCurses v 5.5.20061104])],
+              [],
+              [enable_cygwin_curses_acs_bug_fix=no])
+
+AM_CONDITIONAL([CYGWIN_CURSES_BUG_FIX], [test "$enable_cygwin_curses_acs_bug_fix" = yes])
+
+# Guile gets added to LIBS here
 AC_CHECK_LIB([guile], 
              [scm_boot_guile], ,
              [AC_MSG_ERROR([The guile library was not found])])
@@ -77,6 +93,8 @@ AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([long])
 AC_CHECK_SIZEOF([chtype], ,[#include <curses.h>])
 AC_CHECK_SIZEOF([attr_t], ,[#include <curses.h>])
+AC_CHECK_SIZEOF([wchar_t], ,[#include <stddef.h>])
+AC_CHECK_SIZEOF([wint_t], ,[#include <wchar.h>])
 AC_PROG_CC_C99
 
 # Check for library functions

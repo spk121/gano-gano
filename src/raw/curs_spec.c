@@ -5,9 +5,11 @@
 
 #define MAXLEN 1000
 
-/* work around bug in Cygwin's ancient Ncurses */
-extern NCURSES_EXPORT_VAR(chtype*) _nc_acs_map(void);
-#define acs_map (_nc_acs_map())
+#ifdef CYGWIN_CURSES_BUG_FIX
+  /* work around bug in Cygwin's ancient NCurses */
+  extern NCURSES_EXPORT_VAR(chtype*) _nc_acs_map(void);
+  #define acs_map (_nc_acs_map())
+#endif 
 
 SCM
 gucu_attr_get ()
@@ -178,13 +180,16 @@ gucu_innstr (SCM n)
 
   char *c_str;
   SCM s_str;
+  int c_n;
   int ret;
 
-  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
+  c_n = scm_to_int (n);
+  c_str = (char *) scm_malloc (sizeof (char) * (c_n + 1));
 
-  ret = innstr (c_str, scm_to_int (n) + 1);
+  ret = innstr (c_str, c_n+1);
   if (ret != ERR)
     {
+      c_str[c_n] = 0;
       s_str = scm_take_locale_string (c_str);
     }
   else
@@ -392,13 +397,16 @@ gucu_mvinnstr (SCM y, SCM x, SCM n)
 
   char *c_str;
   SCM s_str;
+  int c_n;
   int ret;
 
-  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
+  c_n = scm_to_int (n);
+  c_str = (char *) scm_malloc (sizeof (char) * (c_n + 1));
 
-  ret = mvinnstr (scm_to_int (y), scm_to_int (x), c_str, scm_to_int (n) + 1);
+  ret = mvinnstr (scm_to_int (y), scm_to_int (x), c_str, c_n+1);
   if (ret != ERR)
     {
+      c_str[c_n] = 0;
       s_str = scm_take_locale_string (c_str);
     }
   else
@@ -493,14 +501,17 @@ gucu_mvwinnstr (SCM win, SCM y, SCM x, SCM n)
 
   char *c_str;
   SCM s_str;
+  int c_n;
   int ret;
 
-  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
+  c_n = scm_to_int (n);
+  c_str = (char *) scm_malloc (sizeof (char) * (c_n + 1));
 
   ret = mvwinnstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), 
-		   c_str, scm_to_int (n) + 1);
+		   c_str, c_n+1);
   if (ret != ERR)
     {
+      c_str[c_n] = 0;
       s_str = scm_take_locale_string (c_str);
     }
   else
@@ -735,13 +746,16 @@ gucu_winnstr (SCM win, SCM n)
 
   char *c_str;
   SCM s_str;
+  int c_n;
   int ret;
 
-  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
+  c_n = scm_to_int (n);
+  c_str = (char *) scm_malloc (sizeof (char) * (c_n + 1));
 
-  ret = winnstr (_scm_to_window (win), c_str, scm_to_int (n) + 1);
+  ret = winnstr (_scm_to_window (win), c_str, c_n+1);
   if (ret != ERR)
     {
+      c_str[c_n] = 0;
       s_str = scm_take_locale_string (c_str);
     }
   else

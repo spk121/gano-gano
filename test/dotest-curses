@@ -11,4 +11,4 @@ echo "testlist->" ${TESTLIST_CURSES}
 
 # Run the library
 libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la \
-    --mode=execute guile -e main -s ${srcdir}/guile-test ${TESTLIST_CURSES}
+    --mode=execute guile -e main -s ${srcdir}/guile-test --log-file=curses.log ${TESTLIST_CURSES}

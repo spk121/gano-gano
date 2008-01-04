@@ -4,6 +4,7 @@
 (define-module (test r036_bkgrnd)
   #:use-module (test lib)
   #:use-module (gucu curses-wide-raw)
+  #:use-module (gucu curses-raw)
   #:use-module (srfi srfi-1))
 
 (define period (char->integer #\.))
@@ -22,7 +23,7 @@
 			     (bkgrnd (list *a-bold* 0 period))
 			     (mvaddstr 1 0 "This is a new string")
 			     (refresh)
-			     (sleep 2)
+			     ;; (sleep 2)
 			     (let ((x1 (mvin-wch 0 4)) ;Loc of space between "This" and "is"
 				   (x2 (mvin-wch 1 4)))
 			       (begin
@@ -40,7 +41,7 @@
 			     (bkgrndset (list *a-dim* 1 plus))
 			     (mvaddstr 1 0 "This is another string")
 			     (refresh)
-			     (sleep 2)
+			     ;; (sleep 2)
 			     (let ((x1 (mvin-wch 0 4))
 				   (x2 (mvin-wch 1 4)))
 			       (begin
@@ -49,7 +50,7 @@
 				 (addstr (format #f "~a~%" x1))
 				 (addstr (format #f "~a~%" x2))
 				 (refresh)
-				 (sleep 2)
+				 ;; (sleep 2)
 				 (and
 				  (lset= equal? (list *a-normal* 0 space) x1)
 				  (lset= equal? 

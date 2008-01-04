@@ -1,3 +1,4 @@
+	    echo-wchar
 	    erasewchar
 	    getn-wstr
 	    get-wch
@@ -7,6 +8,7 @@
 	    in-wchnstr
 	    in-wchstr
 	    killwchar
+	    mvadd-wch
 	    mvgetn-wstr
 	    mvget-wch
 	    mvget-wstr
@@ -54,3 +56,4 @@
 	    wacs-ulcorner
 	    wacs-urcorner
 	    wacs-vline
+	    wecho-wchar

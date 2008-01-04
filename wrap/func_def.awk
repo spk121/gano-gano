@@ -111,18 +111,20 @@ BEGIN {
     case "const void *":
       test_func = "_scm_is_voidstring";
       break;
+    case "wchar_t":
+    case "const wchar_t":
+      test_func = "_scm_is_wchar";
+      break;
+    case "wchar_t *":
     case "const wchar_t *":
-      test_func = "_scm_is_wstring";
+      test_func = "_scm_is_wchar_string";
+      break;
+    case "const wint_t *":
+      test_func = "_scm_is_wint_string";
       break;
     case "WINDOW *":
     case "const WINDOW *":
       test_func = "_scm_is_window";
-      break;
-    case "wchar_t *":
-      test_func = "_scm_is_wstring";
-      break;
-    case "wchar_t":
-      test_func = "_scm_is_wchar";
       break;
     default:
       test_func = "_scm_blammo";
@@ -196,12 +198,20 @@ BEGIN {
     case "const WINDOW *":
       assign_func = "_scm_to_window";
       break;
-    case "const wchar_t *":
-    case "wchar_t *":
-      assign_func = "_scm_to_wstring";
-      break;
     case "wchar_t":
+    case "const wchar_t":
       assign_func = "_scm_to_wchar";
+      break;
+    case "wchar_t *":
+    case "const wchar_t *":
+      assign_func = "_scm_to_wchar_string";
+      break;
+    case "wint_t":
+      assign_func = "_scm_to_wint";
+      break;
+    case "wint_t *":
+    case "const wint_t *":
+      assign_func = "_scm_to_wint_string";
       break;
     default:
       assign_func = "_scm_to_blammo";
@@ -282,12 +292,20 @@ BEGIN {
   case "WINDOW *":
     assign_func = "_scm_from_window";
     break;
+  case "wchar_t":
+  case "const wchar_t":
+    assign_func = "_scm_from_wchar";
+    break;
   case "wchar_t *":
   case "const wchar_t *":
-    assign_func = "_scm_from_wstring";
+    assign_func = "_scm_from_wchar_string";
     break;
-  case "wchar_t":
-    assign_func = "_scm_from_wchar";
+  case "wint_t":
+    assign_func = "_scm_from_wint";
+    break;
+  case "wint_t *":
+  case "const wint_t *":
+    assign_func = "_scm_from_wint_string";
     break;
   default:
     assign_func = "_scm_from_blammo";
@@ -310,6 +328,7 @@ BEGIN {
     case "const char *":
     case "const chtype *":
     case "const wchar_t *":
+    case "const wint_t *":
       printf "\tfree (%s);\n", cur_c_arg;
       n_freed += 1;
       break;

@@ -1373,6 +1373,29 @@ gucu_mvwaddchstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 }
 
 SCM
+gucu_mvwaddnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
+{
+	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "mvwaddnstr");
+	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvwaddnstr");
+	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "mvwaddnstr");
+	SCM_ASSERT (scm_is_string (arg4), arg4, SCM_ARG4, "mvwaddnstr");
+	SCM_ASSERT (scm_is_integer (arg5), arg5, SCM_ARG5, "mvwaddnstr");
+
+	WINDOW *c_arg1 = _scm_to_window (arg1);
+	int c_arg2 = scm_to_int (arg2);
+	int c_arg3 = scm_to_int (arg3);
+	 char *c_arg4 = scm_to_locale_string (arg4);
+	int c_arg5 = scm_to_int (arg5);
+
+	int ret = mvwaddnstr (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5);
+	SCM s_ret = scm_from_int (ret);
+
+	free (c_arg4);
+
+	return s_ret;
+}
+
+SCM
 gucu_mvwaddstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
 	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "mvwaddstr");
@@ -2596,6 +2619,25 @@ gucu_waddchstr (SCM arg1, SCM arg2)
 }
 
 SCM
+gucu_waddnstr (SCM arg1, SCM arg2, SCM arg3)
+{
+	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "waddnstr");
+	SCM_ASSERT (scm_is_string (arg2), arg2, SCM_ARG2, "waddnstr");
+	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "waddnstr");
+
+	WINDOW *c_arg1 = _scm_to_window (arg1);
+	 char *c_arg2 = scm_to_locale_string (arg2);
+	int c_arg3 = scm_to_int (arg3);
+
+	int ret = waddnstr (c_arg1, c_arg2, c_arg3);
+	SCM s_ret = scm_from_int (ret);
+
+	free (c_arg2);
+
+	return s_ret;
+}
+
+SCM
 gucu_waddstr (SCM arg1, SCM arg2)
 {
 	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "waddstr");
@@ -3348,6 +3390,7 @@ gucu_init_function ()
 	scm_c_define_gsubr ("mvwaddch", 4, 0, 0, gucu_mvwaddch);
 	scm_c_define_gsubr ("mvwaddchnstr", 5, 0, 0, gucu_mvwaddchnstr);
 	scm_c_define_gsubr ("mvwaddchstr", 4, 0, 0, gucu_mvwaddchstr);
+	scm_c_define_gsubr ("mvwaddnstr", 5, 0, 0, gucu_mvwaddnstr);
 	scm_c_define_gsubr ("mvwaddstr", 4, 0, 0, gucu_mvwaddstr);
 	scm_c_define_gsubr ("mvwchgat", 7, 0, 0, gucu_mvwchgat);
 	scm_c_define_gsubr ("mvwdelch", 3, 0, 0, gucu_mvwdelch);
@@ -3435,6 +3478,7 @@ gucu_init_function ()
 	scm_c_define_gsubr ("waddch", 2, 0, 0, gucu_waddch);
 	scm_c_define_gsubr ("waddchnstr", 3, 0, 0, gucu_waddchnstr);
 	scm_c_define_gsubr ("waddchstr", 2, 0, 0, gucu_waddchstr);
+	scm_c_define_gsubr ("waddnstr", 3, 0, 0, gucu_waddnstr);
 	scm_c_define_gsubr ("waddstr", 2, 0, 0, gucu_waddstr);
 	scm_c_define_gsubr ("wattroff", 2, 0, 0, gucu_wattroff);
 	scm_c_define_gsubr ("wattron", 2, 0, 0, gucu_wattron);

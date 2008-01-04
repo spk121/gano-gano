@@ -3,7 +3,8 @@
 
 (define-module (test r033_add_wch)
   #:use-module (test lib)
-  #:use-module (gucu curses-wide-raw))
+  #:use-module (gucu curses-wide-raw)
+  #:use-module (gucu curses-raw))
 
 
 ;; U+041B CYRILLIC CAPITAL LETTER EL
@@ -27,7 +28,8 @@
 			     (add-wch el_normal)
 			     (refresh)
 			     (let ((x (mvin-wch 0 0)))
-			       (equal? x el_normal))))
+			       (equal? x el_normal))
+			     *unspecified*))
 		  ;; (sleep 1)
 
 		  (pass-if "mvadd-wch"
@@ -35,7 +37,8 @@
 			     (mvadd-wch 1 0 el_bold)
 			     (refresh)
 			     (let ((x (mvin-wch 1 0)))
-			       (equal? x el_bold))))
+			       (equal? x el_bold))
+			     *unspecified*))
 
 		  ;; (sleep 1)
 
@@ -44,9 +47,10 @@
 			     (move 2 0)
 			     (echo-wchar chuu_normal)
 			     (let ((x (mvin-wch 2 0)))
-			       (equal? x chuu_normal)))))
+			       (equal? x chuu_normal))
+			     *unspecified*)))
 
-(sleep 1)
+;; (sleep 1)
 
 (define win (newwin 5 5 5 5))
 
@@ -59,7 +63,8 @@
 			     (wadd-wch win el_normal)
 			     (wrefresh win)
 			     (let ((x (mvwin-wch win 0 0)))
-			       (equal? x el_normal))))
+			       (equal? x el_normal))
+			     *unspecified*))
 
 
 		  (pass-if "mvwadd-wch"
@@ -68,7 +73,8 @@
 			     (mvwadd-wch win 1 0 el_bold)
 			     (wrefresh win)
 			     (let ((x (mvwin-wch win 1 0)))
-			       (equal? x el_bold))))
+			       (equal? x el_bold))
+			     *unspecified*))
 
 		  (pass-if "wecho-wchar"
 			   (begin
@@ -76,7 +82,8 @@
 			     (wmove win 2 0)
 			     (wecho-wchar win chuu_bold)
 			     (let ((x (mvwin-wch win 2 0)))
-			       (equal? x chuu_bold))))
+			       (equal? x chuu_bold))
+			     *unspecified*))
 
 		  (pass-if "wecho-wchar combining chars"
 			   (begin
@@ -87,8 +94,9 @@
 			     (let ((x (mvwin-wch win 3 0)))
 			       ;(addstr (format #f "~a" x))
 			       ;(refresh)
-			       (equal? x o_macron)))))
+			       (equal? x o_macron))
+			     *unspecified*)))
 
-(sleep 4)
+;; (sleep 4)
 (delwin win)
 (refresh)

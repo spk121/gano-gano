@@ -25,6 +25,8 @@
 			     (refresh)
 			     (move 0 0)
 			     (let ((w2 (innstr 2)))
+			       (mvaddstr 1 0 w2)
+			       (refresh)
 			       (string=? "he" w2))))
 
 		  (pass-if "mvinstr"

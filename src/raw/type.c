@@ -370,77 +370,6 @@ _scm_from_voidstring (void *x)
   return SCM_EOL;
 }
 
-// wstring -- in C, wchar_t * array.  In scheme, a list of integers
-
-int
-_scm_is_wstring (SCM x)
-{
-  int i;
-  int err = 0;			
-  SCM member;			
-  
-  if (scm_is_true (scm_list_p (x)))
-    {
-      int len = scm_to_int (scm_length (x));
-      for (i=0; i<len; i++)
-	{
-	  member = scm_list_ref (x, scm_from_int (i));
-	  if (!_scm_is_wchar (member))
-	    err ++;
-	}
-    }
-  else
-    err ++;
-  
-  if (err > 0)
-    return 0;
-  else
-    return 1;
-}
-
-wchar_t *
-_scm_to_wstring (SCM x)
-{
-  int i;
-  wchar_t *str;
-  SCM member;
-  
-  int len = scm_to_int (scm_length (x));
-  
-  str = (wchar_t *) scm_malloc ((len + 1)* sizeof (wchar_t));
-  for (i=0; i<len; i++)
-    {
-      member = scm_list_ref (x, scm_from_int (i));
-      str[i] = _scm_to_wchar (member);
-    }
-  str[len] = (chtype) 0;
-  
-  return str;
-}
-
-SCM
-_scm_from_wstring (wchar_t *x)
-{
-  int i;
-  SCM element;
-  SCM element_list;
-  SCM total_list = SCM_EOL;
-
-  assert (x != NULL);
-  
-  /* FIXME: possible infinite loop if X is junk */
-  i = 0;
-  while (x[i] != 0) 
-    {
-      element = _scm_from_wchar (x[i]);
-      element_list = scm_list_1 (element);
-      total_list = scm_append (scm_list_2 (total_list, element_list));
-      i ++;
-    }
-  return (total_list);
-}
-
-
 // window -- in C, a WINDOW *.  In Scheme, a smob that contains the pointer
 
 
@@ -499,9 +428,9 @@ mark_window (SCM x)
 }
 
 size_t
-free_window (SCM x)
+free_window (SCM x __attribute__ ((unused)))
 {
-  WINDOW *win = (WINDOW *) SCM_SMOB_DATA (x);
+  // WINDOW *win = (WINDOW *) SCM_SMOB_DATA (x);
 
   // Should windows ever be allowed to be GC'd?
   // No, until I know better.
@@ -545,25 +474,6 @@ gucu_is_window_p (SCM x)
   return scm_from_bool (_scm_is_window (x));
 }
 
-// wchar_t.  In C, an int.  In scheme, an integer.
-
-int
-_scm_is_wchar (SCM x)
-{
-  return scm_is_integer (x);
-}
-
-wchar_t
-_scm_to_wchar (SCM x)
-{
-  return scm_to_uint32 (x);
-}
-
-SCM
-_scm_from_wchar (wchar_t x)
-{
-  return scm_from_uint32 (x);
-}
 
 
 void 

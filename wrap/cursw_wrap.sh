@@ -2,7 +2,7 @@
 
 # cursw_wrap.sh -- generate scheme wrapper functions for wide curses
 
-# $Id: cursw_wrap.sh,v 1.1 2008/01/01 16:05:36 spike_gran Exp $
+# $Id: cursw_wrap.sh,v 1.2 2008/01/04 08:07:12 spike_gran Exp $
 
 # Put together a mostly complete wrapset from the files cursw_func.txt
 # and cursw_const.txt. 
@@ -25,7 +25,7 @@ awk --file="func_def.awk" < cursw_func.txt >> cursw_func.c
 
 echo "
 void 
-gucu_init_function ()
+gucu_cursw_init_function ()
 {" >> cursw_func.c
 
 awk --file="func_init.awk" < cursw_func.txt >> cursw_func.c
@@ -51,7 +51,7 @@ echo "
 awk --file="func_head.awk" < cursw_func.txt >> cursw_func.h
 
 echo "
-void gucu_init_function (void) API;
+void gucu_cursw_init_function (void) API;
 #endif
 " >> cursw_func.h
 
@@ -71,7 +71,7 @@ awk --file="const_def.awk" < cursw_const.txt >> cursw_const.c
 
 echo "
 void 
-gucu_init_constant ()
+gucu_cursw_init_constant ()
 {" >> cursw_const.c
 
 awk --file="const_init.awk" < cursw_const.txt >> cursw_const.c
@@ -96,7 +96,7 @@ echo "
 awk --file="const_head.awk" < cursw_const.txt >> cursw_const.h
 
 echo "
-void gucu_init_constant (void) API;
+void gucu_cursw_init_constant (void) API;
 #endif /* not CONSTANT_H */" >> cursw_const.h
 
 
@@ -113,4 +113,4 @@ awk --file="special_scm.awk" < cursw_spec.txt >> curses-wide-raw.scm.in
 echo "))" >> curses-wide-raw.scm.in
 
 echo "
-(load-extension \"XXlibnameXX\" \"gucu_init\")" >> curses-wide-raw.scm.in
+(load-extension \"XXlibnameXX\" \"gucu_cursw_init\")" >> curses-wide-raw.scm.in

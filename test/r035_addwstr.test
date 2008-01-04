@@ -4,7 +4,8 @@
 (define-module (test r035_addwstr)
   #:use-module (test lib)
   #:use-module (srfi srfi-1)
-  #:use-module (gucu curses-wide-raw))
+  #:use-module (gucu curses-wide-raw)
+  #:use-module (gucu curses-raw))
 
 (define (string->wstring str)	
   (map char->integer (string->list str)))

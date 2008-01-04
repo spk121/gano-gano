@@ -4,7 +4,8 @@
 (define-module (test r037_border)
   #:use-module (test lib)
   #:use-module (srfi srfi-1)
-  #:use-module (gucu curses-wide-raw))
+  #:use-module (gucu curses-wide-raw)
+  #:use-module (gucu curses-raw))
 
 
 ;; Should be able to draw borders
@@ -40,7 +41,8 @@
 				;; U+2514 BOX DRAWINGS LIGHT UP AND RIGHT
 				(lset= equal? bl '(0 0 #x2514))
 				;; U+2518 BOX DRAWINGS LIGHT UP AND LEFT
-				(lset= equal? br '(0 0 #x2518))))))
+				(lset= equal? br '(0 0 #x2518))))
+			     *unspecified*))
 
 		  (pass-if "border dashed"
 			   (begin
@@ -160,7 +162,8 @@
 				;; U+2514 BOX DRAWINGS LIGHT UP AND RIGHT
 				(lset= equal? bl '(0 0 #x2514))
 				;; U+2518 BOX DRAWINGS LIGHT UP AND LEFT
-				(lset= equal? br '(0 0 #x2518))))))
+				(lset= equal? br '(0 0 #x2518))))
+			     *unspecified*))
 		  
 		  
 		  (pass-if "box-set"

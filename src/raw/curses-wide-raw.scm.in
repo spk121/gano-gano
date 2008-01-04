@@ -36,6 +36,7 @@
 		mvwins-wch
 		mvwins-wstr
 		mvwvline-set
+		unget-wch
 		vline-set
 		waddnwstr
 		waddwstr
@@ -51,6 +52,7 @@
 		wins-wch
 		wins-wstr
 		wvline-set
+			    echo-wchar
 			    erasewchar
 			    getn-wstr
 			    get-wch
@@ -60,6 +62,7 @@
 			    in-wchnstr
 			    in-wchstr
 			    killwchar
+			    mvadd-wch
 			    mvgetn-wstr
 			    mvget-wch
 			    mvget-wstr
@@ -107,6 +110,7 @@
 			    wacs-ulcorner
 			    wacs-urcorner
 			    wacs-vline
+			    wecho-wchar
 ))
 
-(load-extension "XXlibnameXX" "gucu_init")
+(load-extension "XXlibnameXX" "gucu_cursw_init")

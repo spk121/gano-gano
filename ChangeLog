@@ -1,10 +1,78 @@
+2008-01-03  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* test/dotest-curses-wide: Distcheck and wide/narrow fixes.
+
+	* test/dotest-curses: Distcheck fixes, and wide/narrow fixes.
+
+	* test/r038_get_wch.test ("get-wch"): Wide/narrow fixes.
+
+	* test/r021_instr.test ("instr"): Off by 1 error in innstr.
+
+	* test/r037_border_set.test: Wide/narrow fixes.
+
+	* test/r039_get_wstr.test: Wide/narrow fixes.
+
+	* test/r034_add_wchstr.test (test): Wide/narrow fixes.
+
+	* test/r036_bkgrnd.test: Ignore terminal-dependent test results.
+
+	* test/r030_termattrs.test: Ignore terminal-dependent test results.
+
+	* test/r035_addwstr.test (test): Wide/narrow fixes.
+
+	* test/r033_add_wch.test: Ignore terminal-dependent test results.
+
+	* test/r001_color.test: Ignore terminal-dependent test results.
+
+	* tools/testbed.c: Staticly link testbed.
+
+	* tools/Makefile.am: staticly link testbed 
+
+	* wrap/curs_func.txt: Wide/narrow fixes.
+
+	* wrap/cursw_func.txt: Wide/narrow fixes.
+
+	* wrap/curs_spec.txt: Wide/Narrow fixes.
+
+	* wrap/cursw_wrap.sh: Rename init functions to avoid name collision.
+
+	* configure.ac: Add a flagged bugfix for cygwin curses.  Split
+	wide string functions into wchar_t and wint_t types.
+
+	* src/raw/type.c: Remove wide string functions.
+
+	* src/raw/curses-wide-raw.scm.in: Rename init functions to avoid
+	name collision.  Duplicate and forgotton function exports.
+
+	* src/raw/typew.c (_scm_is_wchar_string): Split wide string
+	functions into wchar_t and wint_t types.
+
+	* src/raw/cursw_main.c (gucu_init): Rename init functions to avoid
+	name collision.
+
+	* src/raw/Makefile.am: Add a flagged bugfix for cygwin curses.
+	Automake cleanup on wide/narrow library split.
+	
+	* src/raw/type.h: move wstring to typew.h
+
+	* src/raw/typew.h: Split wide string functions into wchar_t and
+	wint_t types.
+
+	* src/raw/cursw_spec.h (gucu_cursw_init_special): rename init
+	functions to avoid name collision
+
+	* src/raw/curs_spec.c: Add a flagged bugfix for cygwin curses.
+	Fix off by one error in innstr funcs.
+
 2007-12-29  Mike Gran  <spike_gran@users.sourceforge.net>
 
 	* test/guile-test: improve path independence for distcheck
 
 	* test/Makefile.am (EXTRA_DIST): distcheck fixes
 
-	* src/raw/Makefile.am (libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_SOURCES): try to improve path independence for distcheck
+	* src/raw/Makefile.am
+	(libguile_gucu_v_@LIBGUILE_GUCU_MAJOR@_la_SOURCES): try to improve
+	path independence for distcheck
 
 	* doc/gucu.texi: dos->unix
 

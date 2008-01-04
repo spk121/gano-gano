@@ -32,6 +32,7 @@ int mvwins_nwstr(WINDOW *, int, int, const wchar_t *, int);
 int mvwins_wch(WINDOW *, int, int, const cchar_t *);
 int mvwins_wstr(WINDOW *, int, int, const wchar_t *);
 int mvwvline_set(WINDOW *, int, int, const cchar_t *, int);
+int unget_wch(const wchar_t);
 int vline_set(const cchar_t *, int);
 int waddnwstr(WINDOW *, const wchar_t *, int);
 int waddwstr(WINDOW *, const wchar_t *);
