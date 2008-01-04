@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.5 2008/01/04 15:19:42 spike_gran Exp $
+## $Id: Makefile.am,v 1.6 2008/01/04 15:26:49 spike_gran Exp $
 
-nodist_SCRIPTS = curs_wrap.sh cursw_wrap.sh
+nodist_bin_SCRIPTS = curs_wrap.sh cursw_wrap.sh
 
 EXTRA_DIST = \
 	const_def.awk const_head.awk const_init.awk const_scm.awk \
