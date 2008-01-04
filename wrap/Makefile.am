@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.4 2008/01/04 15:13:17 spike_gran Exp $
+## $Id: Makefile.am,v 1.5 2008/01/04 15:19:42 spike_gran Exp $
 
 nodist_SCRIPTS = curs_wrap.sh cursw_wrap.sh
 
@@ -9,3 +9,8 @@ EXTRA_DIST = \
 	special_scm.awk special.txt \
 	curs_func.txt curs_const.txt curs_spec.txt \
 	cursw_func.txt cursw_const.txt cursw_spec.txt
+
+CLEANFILES = \
+	curs_const.c curs_const.h curs_func.c curs_func.h \
+	cursw_const.c cursw_const.h cursw_func.c cursw_func.h \
+	curses-raw.scm.in curses-wide-raw.scm.in
