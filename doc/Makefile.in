@@ -33,7 +33,7 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = doc
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/stamp-vti $(srcdir)/version.texi
+	$(srcdir)/stamp-vti $(srcdir)/version.texi texinfo.tex
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/configure.ac
@@ -52,7 +52,6 @@ PDFS = gucu.pdf
 PSS = gucu.ps
 HTMLS = gucu.html
 TEXINFOS = gucu.texi
-TEXI2DVI = texi2dvi
 TEXI2PDF = $(TEXI2DVI) --pdf --batch
 MAKEINFOHTML = $(MAKEINFO) --html
 AM_MAKEINFOHTMLFLAGS = $(AM_MAKEINFOFLAGS)
@@ -176,6 +175,14 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+
+# Cygwin's texi2dvi can try to call etex, resulting in this error:
+#   "texinfo.tex appears to be broken, quitting"
+# The problem lies in Cygwin's etex.fmt file
+# Forcing TEX to tex works around this problem
+# This should not harm other platforms
+TEX = tex
+TEXI2DVI = TEX=${TEX} texi2dvi
 info_TEXINFOS = gucu.texi
 all: all-am
 

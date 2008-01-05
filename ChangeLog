@@ -1,3 +1,33 @@
+2008-01-05  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* src/raw/Makefile.in: should not do -Werror
+
+	* src/raw/Makefile.am (libguile_gucu_curses_wide_v_@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@_la_CPPFLAGS): should not do -Werror
+
+	* src/raw/.cvsignore: ignore built scm files
+
+	* configure (Configuration): Typo in --with-cygwin-curses-acs-bug-fix
+
+	* configure.ac: Typo in --with-cygwin-curses-acs-bug-fix name
+
+	* Makefile.in (TEXI2DVI): To make dvi files on Cygwin, had
+	to force texi2dvi to call plain tex.
+
+	* doc/Makefile.am: To make dvi files on Cygwin, had to 
+	force texi2dvi to call plain tex.
+
+	* Makefile.in (DISTCHECK_CONFIGURE_FLAGS): Added distcheck
+	configure flags
+
+	* Makefile.am (#DISTCHECK_CONFIGURE_FLAGS): Added distcheck
+	configure flags.
+
+2008-01-04  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* wrap/Makefile.am (EXTRA_DIST): shell scripts should be
+	nodist_SCRIPTS.  Wide/Narrow fixes.
+	CLEANFILES the generated sources.
+
 2008-01-03  Mike Gran  <spike_gran@users.sourceforge.net>
 
 	* test/dotest-curses-wide: Distcheck and wide/narrow fixes.

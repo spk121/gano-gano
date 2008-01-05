@@ -1484,7 +1484,7 @@ Optional Features:
   --enable-shared[=PKGS]  build shared libraries [default=yes]
   --enable-static[=PKGS]  build static libraries [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
-  --with-cygwin-curses-acs-buf-fix
+  --with-cygwin-curses-acs-bug-fix
                           Work around bug in Cygwin NCurses v 5.5.20061104
 
 Optional Packages:

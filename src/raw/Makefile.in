@@ -246,7 +246,7 @@ libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES = \
 # -lguile added to LIBS by autoconf in the AC_CHECK_LIB test
 libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LIBADD = @LIBNCURSES@
 @WIDE_TRUE@libguile_gucu_curses_wide_v_@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@_la_CPPFLAGS = \
-@WIDE_TRUE@	-D_XOPEN_SOURCE_EXTENDED -Wall -Werror
+@WIDE_TRUE@	-D_XOPEN_SOURCE_EXTENDED -Wall 
 
 @WIDE_TRUE@libguile_gucu_curses_wide_v_@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@_la_LDFLAGS = \
 @WIDE_TRUE@	-no-undefined \

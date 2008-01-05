@@ -69,7 +69,7 @@ AM_CONDITIONAL([WIDE], [test "$with_ncursesw" = yes])
 # table declaration in <curses.h>.  This enables a workaround
 #
 AC_ARG_ENABLE([cygwin-curses-acs-bug-fix],
-              [AS_HELP_STRING([--with-cygwin-curses-acs-buf-fix],
+              [AS_HELP_STRING([--with-cygwin-curses-acs-bug-fix],
                               [Work around bug in Cygwin NCurses v 5.5.20061104])],
               [],
               [enable_cygwin_curses_acs_bug_fix=no])

@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.6 2008/01/04 08:07:00 spike_gran Exp $
+## $Id: Makefile.am,v 1.7 2008/01/05 05:03:27 spike_gran Exp $
 
 lib_LTLIBRARIES = \
 	libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@.la 
@@ -33,7 +33,7 @@ libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LIBADD = @LIBNCURSES@
 
 if WIDE
 libguile_gucu_curses_wide_v_@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@_la_CPPFLAGS = \
-	-D_XOPEN_SOURCE_EXTENDED -Wall -Werror
+	-D_XOPEN_SOURCE_EXTENDED -Wall 
 
 libguile_gucu_curses_wide_v_@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@_la_LDFLAGS = \
 	-no-undefined \
