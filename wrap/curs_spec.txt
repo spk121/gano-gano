@@ -23,6 +23,7 @@
 	    mvwinnstr
 	    mvwinstr
 	    newterm
+	    newterm-port
 	    pair-content
 	    ungetmouse
 	    wattr-get

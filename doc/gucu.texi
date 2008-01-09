@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.7 2007/12/27 15:19:09 spike_gran Exp $
+@c $Id: gucu.texi,v 1.8 2008/01/09 04:13:33 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -57,8 +57,8 @@ authorization.
 @title GuCu: a Guile Curses Library
 @subtitle For version @value{VERSION}, @value{UPDATED}
 @author Michael L. Gran
-@author Tom Dickey
 @author Pradeep Padala
+@author Tom Dickey and the NCurses Team
 
 
 @page
@@ -267,6 +267,13 @@ specific to this Guile binding.  The NCurses library is maintained by
 Tom Dickey, and the manual pages in the library note that the Free
 Software Foundation holds the copyright.
 
+I've put his name on the title page, because it would seem rude not to
+do so; however, one should not get the impression that he approves of
+the GuCu project or that he is involved
+with the GuCu project, or, indeed, that he is even aware of it.
+
+The license for the original NCurses documentation is as follows. 
+
 @quotation
 Copyright (c) 1998-2005,2006 Free Software Foundation, Inc.              
                                                                          
@@ -295,10 +302,16 @@ sale, use or other dealings in this Software without prior written
 authorization.                                                           
 @end quotation
 
-The tutorial for the raw curses library is from the NCurses
+The tutorial for the raw curses library is adapted from the NCurses
 Programming HowTo by Pradeep Padala, modified by Michael Gran to make
-it specific to the Guile binding.  That document holds the following
-license.
+it specific to the Guile binding.  
+
+Again, I've put his name on the title page, because it would seem rude
+not to do so; however, one should not get the impression that he
+approves of the GuCu project or that he is involved with the GuCu
+project, or, again, that he is even aware of it.
+
+That document holds the following license.
 
 @quotation
 
@@ -328,9 +341,6 @@ holders shall not be used in advertising or otherwise to promote the
 sale, use or other dealings in this Software without prior written       
 authorization.                                                           
 @end quotation
-
-
-
 
 @node Components of a Curses Interface, Types and encodings, Introduction, Top
 @chapter Components of a Curses Interface
@@ -467,7 +477,7 @@ information.  There are no raw curses functions that use unrendered,
 narrow characters.  Usually curses functions that take a single narrow
 character will, in fact, be expecting a @emph{rendered character}.  
 
-A narrow, unrendered character can be converted into a narrow rendered
+Ab unrendered narrow character can be converted into a rendered narrow
 character by using @code{char->integer}.
 
 @item rendered, narrow characters
@@ -561,6 +571,12 @@ would as follows:@*
 ;; U+5FE1 Japanese Ideograph Chuu
 #x4F7E
 @end example
+
+For most Unix-like computer systems, the underlying C type
+@code{wchar_t} is a 32-bit integer, which allows the full range of
+Unicode codepoints to be referenced.  For some systems, however,
+@code{wchar_t} is a 16-bit integer, which would only allow the
+first 64k codepoints of the Basic Multilingual Plane to be used.
 
 @item unrendered, wide strings
 

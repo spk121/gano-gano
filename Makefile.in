@@ -192,9 +192,6 @@ SUBDIRS = \
 	build_aux
 
 ACLOCAL_AMFLAGS = -I m4 --install
-
-# Distcheck flags for GNU/Linux
-DISTCHECK_CONFIGURE_FLAGS = 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -641,6 +638,9 @@ uninstall-am:
 
 # Distcheck flags for GNU/Linux
 #DISTCHECK_CONFIGURE_FLAGS = 
+
+# Distcheck flags for Cygwin
+#DISTCHECK_CONFIGURE_FLAGS = --without-ncursesw --with-cygwin-curses-acs-bug-fix
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:
