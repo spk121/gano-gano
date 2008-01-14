@@ -197,11 +197,8 @@ top_srcdir = @top_srcdir@
 # -lguile gets included into LIBS by configure
 #testbed_LDADD = -lguile
 testbed_LDADD = @LIBNCURSES@
-testbed_CPPFLAGS = -Wall -I../src/raw -static -u gucu_initscr
+testbed_CPPFLAGS = -Wextra -Wall -I../src/raw -static -u gucu_initscr
 testbed_LDFLAGS = -Bstatic
-
-# not defining a testbed_SOURCES is the same as 
-#testbed_SOURCES = testbed.c
 testbed_SOURCES = \
 	testbed.c \
 	../src/raw/curs_const.c \
@@ -216,11 +213,7 @@ gucushell_LDFLAGS = `guile-config link`
 gucushell_SOURCES = \
 	shell.c
 
-EXTRA_DIST = run-testbed.sh.in
-BUILT_SOURCES = run-testbed.sh
-CLEANFILES = run-testbed.sh
-all: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) all-am
+all: all-am
 
 .SUFFIXES:
 .SUFFIXES: .c .lo .o .obj
@@ -525,15 +518,13 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) check-am
+check: check-am
 all-am: Makefile $(PROGRAMS)
 installdirs:
 	for dir in "$(DESTDIR)$(bindir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) install-am
+install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
 uninstall: uninstall-am
@@ -550,7 +541,6 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
-	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -558,7 +548,6 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-binPROGRAMS clean-generic clean-libtool \
@@ -635,12 +624,6 @@ uninstall-am: uninstall-binPROGRAMS
 	mostlyclean-libtool pdf pdf-am ps ps-am tags uninstall \
 	uninstall-am uninstall-binPROGRAMS
 
-
-run-testbed.sh: run-testbed.sh.in
-	cat run-testbed.sh.in | \
-	sed 's|XXXpackageXXX|@PACKAGE@|' | \
-	sed 's|XXXmajorXXX|@LIBGUILE_GUCU_CURSES_MAJOR@|' > run-testbed.sh
-	chmod +x run-testbed.sh
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

@@ -4,7 +4,7 @@
 (define-module (test r006_attr)
   #:use-module (test lib)
   #:use-module (srfi srfi-1)
-  #:use-module (gucu curses-raw))
+  #:use-module (gucu curses))
 
 
 (with-test-prefix "attr"

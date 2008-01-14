@@ -3,7 +3,7 @@
 
 (define-module (test r009_border)
   #:use-module (test lib)
-  #:use-module (gucu curses-raw))
+  #:use-module (gucu curses))
 
 
 ;; Should be able to draw borders

@@ -272,7 +272,10 @@ ETAGS_ARGS = curses.scm curses-alt.scm $(am__append_3)
 
 # Note that the "wide" .scm.in file needs to appear here.  It is part of
 # the distribution regardless of whether it is used.
-EXTRA_DIST = curses.scm.in curses-wide.scm.in
+EXTRA_DIST = \
+	curses.scm.in curses-wide.scm.in \
+	curses-alt.scm curses-wide-alt.scm
+
 BUILT_SOURCES = curses.scm $(am__append_4)
 CLEANFILES = curses.scm $(am__append_5)
 all: $(BUILT_SOURCES)

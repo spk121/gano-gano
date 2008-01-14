@@ -5,7 +5,7 @@
   #:use-module (test lib)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 format)
-  #:use-module (gucu curses-raw))
+  #:use-module (gucu curses))
 
 
 ;; Should be able to get term attributes

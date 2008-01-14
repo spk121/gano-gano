@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.8 2008/01/14 03:32:07 spike_gran Exp $
+## $Id: Makefile.am,v 1.9 2008/01/14 06:46:57 spike_gran Exp $
 
 lib_LTLIBRARIES = \
 	libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@.la 
@@ -56,7 +56,9 @@ ETAGS_ARGS = curses.scm curses-alt.scm
 
 # Note that the "wide" .scm.in file needs to appear here.  It is part of
 # the distribution regardless of whether it is used.
-EXTRA_DIST = curses.scm.in curses-wide.scm.in
+EXTRA_DIST = \
+	curses.scm.in curses-wide.scm.in \
+	curses-alt.scm curses-wide-alt.scm
 
 BUILT_SOURCES = curses.scm
 CLEANFILES = curses.scm

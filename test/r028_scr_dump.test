@@ -4,7 +4,7 @@
 (define-module (test r028_scr_dump)
   #:use-module (test lib)
   #:use-module (srfi srfi-1)
-  #:use-module (gucu curses-raw))
+  #:use-module (gucu curses))
 
 
 ;; Should be able to dump windows to files

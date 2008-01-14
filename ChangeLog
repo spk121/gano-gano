@@ -1,5 +1,14 @@
 2008-01-14  Mike Gran  <spike_gran@users.sourceforge.net>
 
+	* tools/shell.c (is_unix98_pty): add code to deal with different
+	pty filenames
+
+	* tools/run-testbed.sh.in: removing this script
+
+	* tools/Makefile.am: removing testbed script, adding gucushell program
+
+	* tools/README: removing testbed script
+
 	* config.h.in: make acs_map fix a config.h flag.
 
 	* configure.ac: make defaults a function of $host. Make acs_map fix

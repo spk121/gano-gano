@@ -4,7 +4,7 @@
 (define-module (test r017_inchstr)
   #:use-module (test lib)
   #:use-module (srfi srfi-1)
-  #:use-module (gucu curses-raw))
+  #:use-module (gucu curses))
 
 
 (define hello (map char->integer (string->list "hello")))

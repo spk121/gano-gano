@@ -4,7 +4,7 @@
 (define-module (test r001_color)
   #:use-module (test lib)
   #:use-module (srfi srfi-1)
-  #:use-module (gucu curses-raw))
+  #:use-module (gucu curses))
 
 
 ;;; These values are the xterm values

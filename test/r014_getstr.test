@@ -3,7 +3,7 @@
 
 (define-module (test r014_getstr)
   #:use-module (test lib)
-  #:use-module (gucu curses-raw))
+  #:use-module (gucu curses))
 
 
 (define win (newwin 5 10 5 5))

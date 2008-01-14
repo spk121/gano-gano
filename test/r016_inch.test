@@ -3,7 +3,7 @@
 
 (define-module (test r016_inch)
   #:use-module (test lib)
-  #:use-module (gucu curses-raw))
+  #:use-module (gucu curses))
 
 
 (define x-normal (char->integer #\x))

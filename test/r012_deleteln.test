@@ -3,7 +3,7 @@
 
 (define-module (test r011_deleteln)
   #:use-module (test lib)
-  #:use-module (gucu curses-raw))
+  #:use-module (gucu curses))
 
 
 (with-test-prefix "deleteln"
