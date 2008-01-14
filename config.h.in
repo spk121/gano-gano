@@ -1,5 +1,11 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define if you have to explicitly declare the curses acs_map */
+#undef ENABLE_ACS_MAP_FIX
+
+/* Define to 1 if you have cfmakeraw */
+#undef HAVE_CFMAKERAW
+
 /* Define to 1 if you have the <curses.h> header file. */
 #undef HAVE_CURSES_H
 
@@ -17,10 +23,6 @@
 
 /* Define if you have libncursesw */
 #undef HAVE_LIBNCURSESW
-
-/* Define to 1 if your system has a GNU libc compatible `malloc' function, and
-   to 0 otherwise. */
-#undef HAVE_MALLOC
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
@@ -90,6 +92,3 @@
 
 /* Version number of package */
 #undef VERSION
-
-/* Define to rpl_malloc if the replacement function should be used. */
-#undef malloc

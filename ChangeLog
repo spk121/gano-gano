@@ -1,3 +1,33 @@
+2008-01-14  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* config.h.in: make acs_map fix a config.h flag.
+
+	* configure.ac: make defaults a function of $host. Make acs_map fix
+	a config.h flag.  Simplify logic
+
+	* wrap/cursw_wrap.sh: rename *-raw libraries as * libraries
+
+	* wrap/curs_wrap.sh: rename *-raw libaries as * libraries
+
+	* src/raw/cursw_spec.c: make the acs fix a config.h flag
+
+	* src/raw/Makefile.am: rename *-raw guile libraries as * libraries.
+	Make the acs fix a config.h flag.
+
+	* src/raw/cursesw.scm: renamed to curses-wide-alt.scm
+
+	* src/raw/curses-wide-raw.scm.in: renamed to curses-wide.scm.in
+
+	* src/raw/constant.c: removed due to wide/narrow split
+
+	* src/raw/curses-wide-alt.scm: renamed from cursesw.scm
+
+	* src/raw/curses-alt.scm: renamed from curses.scm
+
+	* src/raw/curses-wide.scm.in: renamed from curses-wide-raw.scm.in
+
+	* src/raw/curses.scm.in: renamed from curses-raw.scm.in
+
 2008-01-09  Mike Gran  <spike_gran@users.sourceforge.net>
 
 	* tools/shell.c:  first commit 
