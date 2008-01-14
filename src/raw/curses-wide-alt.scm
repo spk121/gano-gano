@@ -1,8 +1,8 @@
 ;; -*- Mode: scheme; -*-
-(define-module (gucu curses)
+(define-module (gucu curses-wide-alt)
   #:use-module (ice-9 optargs)
-  #:use-module (gucu curses-raw)
-  #:use-module (gucu curses-wide-raw)
+  #:use-module (gucu curses)
+  #:use-module (gucu curses-wide)
   #:re-export ( 
 	       ;; from add_wch
 	       wacs-block

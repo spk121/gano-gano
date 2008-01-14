@@ -1,6 +1,6 @@
 
 ;; -*- Mode: scheme; -*-
-(define-module (XXpackageXX curses-wide-raw)
+(define-module (XXpackageXX curses-wide)
 	#:export ( 
 		addnwstr
 		add-wch
