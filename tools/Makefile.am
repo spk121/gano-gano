@@ -1,14 +1,13 @@
 noinst_PROGRAMS = testbed
+bin_PROGRAMS = gucushell
 
 # -lguile gets included into LIBS by configure
 #testbed_LDADD = -lguile
 
 testbed_LDADD =	@LIBNCURSES@
-AM_CPPFLAGS = -Wall -I../src/raw -static -u gucu_initscr
-AM_LDFLAGS = -Bstatic
+testbed_CPPFLAGS = -Wextra -Wall -I../src/raw -static -u gucu_initscr
+testbed_LDFLAGS = -Bstatic
 
-# not defining a testbed_SOURCES is the same as 
-#testbed_SOURCES = testbed.c
 testbed_SOURCES = \
 	testbed.c \
 	../src/raw/curs_const.c \
@@ -17,12 +16,10 @@ testbed_SOURCES = \
 	../src/raw/curs_spec.c \
 	../src/raw/type.c 
 
-EXTRA_DIST = run-testbed.sh.in
-BUILT_SOURCES = run-testbed.sh
-CLEANFILES = run-testbed.sh
+gucushell_LDADD = @LIBNCURSES@ -lutil
+gucushell_CPPFLAGS = -Wextra -Wall `guile-config compile`
+gucushell_LDFLAGS = `guile-config link`
 
-run-testbed.sh: run-testbed.sh.in
-	cat run-testbed.sh.in | \
-	sed 's|XXXpackageXXX|@PACKAGE@|' | \
-	sed 's|XXXmajorXXX|@LIBGUILE_GUCU_CURSES_MAJOR@|' > run-testbed.sh
-	chmod +x run-testbed.sh
+gucushell_SOURCES = \
+	shell.c
+

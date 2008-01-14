@@ -1,6 +1,8 @@
 This directory contains miscellaneous tools.
 
-run-testbed.sh -- This script starts the GDB debugger on a C program
-	that just shells out to Guile after loading the GuCu library.  This
-	is here as a debugging an development tool, because one can put
-	breakpoints on the underlying C functions in the GuCu library.
+testbed -- This is a guile shell statically linked with the curses
+	library.  It is for debugging purposes.
+
+gucushell -- This starts an interactive guile session that opens an
+	xterm that will be controlled by ncurses.
+	

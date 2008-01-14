@@ -1,63 +1,126 @@
 #define _GNU_SOURCE
 #define _XOPEN_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
+#include <config.h>
+
+/* libc and libutil */
+#include <ctype.h>
+#include <pty.h>
 #include <signal.h>
+#include <stdio.h>
+#include <string.h>
 #include <termios.h>
-#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+
+/* curses and guile */
 #include <curses.h>
 #include <libguile.h>
-#include <pty.h>
 
-int
-open_pty_pair (int *amaster, int *aslave, char **name)
+int open_terminal (char *, int, int);
+int is_unix98_pty (const char *);
+int is_bsd_pty (const char *);
+int is_cygwin_pty (const char *);
+
+#ifdef HAVE_CFMAKERAW
+const int _HAVE_CFMAKERAW = TRUE;
+#else
+const int _HAVE_CFMAKERAW = FALSE;
+#endif
+
+
+/* This function checks if NAME looks like a Unix98 pseudo-terminal
+   device name, aka "/dev/pts/XXX".  Returns TRUE or FALSE. */
+int 
+is_unix98_pty (const char *name)
 {
-  int master, slave;
-  struct termios tio;
-
-  /* Get file descriptor of next available pseudo-terminal */
-  master = getpt ();
-  if (master < 0)
-    return 0;
-
-  printf ("Pseudo-terminal ID #%d\n", master);
-
-  /* Change the ownership and access permissions to match the mastern
-     terminal */
-  if (grantpt (master) < 0 || unlockpt (master) < 0)
-    goto close_master;
-
-  *name = strdup(ptsname (master));
-  if (*name == NULL)
-    goto close_master;
-  printf ("Pseudo-terminal slave name: %s\n", *name);
-
-  slave = open (*name, O_RDWR);
-  if (slave == -1)
-    goto close_master;
-  printf ("Slave ID #%d\n", slave);
-
-  *amaster = master;
-  *aslave = slave;
-
-  if (tcgetattr (slave, &tio))
-    goto close_slave;
-
+  const char unix_pty_root[] = "/dev/pts/";
+  const size_t unix_pty_root_length = strlen (unix_pty_root);
+  size_t name_length = strlen (name);
+  char const *slave_name;
+  size_t i;
   
 
-  return 1;
+  name_length = strlen (name);
 
- close_slave:
-  close (slave);
-  
- close_master:
-  close (master);
-  return 0;
+  if (name_length < unix_pty_root_length)
+      return FALSE;
+
+  if (strncmp (name, unix_pty_root, unix_pty_root_length) != 0)
+    return FALSE;
+
+  slave_name = name + unix_pty_root_length;
+  if (strlen (slave_name) == 0)
+    return FALSE;
+
+  /* All the remaining characters in NAME should be numeric */
+  for (i = 0; i < name_length - unix_pty_root_length; i++)
+    if (!isdigit ((int) slave_name[i]))
+      return FALSE;
+
+  return TRUE;
 }
 
+/* This function checks if NAME looks like a BSD pseudo-terminal
+   device name, aka "/dev/ttyXY".  Returns TRUE or FALSE. */
+int 
+is_bsd_pty (const char *name)
+{
+  const char bsd_pty_root[] = "/dev/tty";
+  const size_t bsd_pty_root_length = strlen (bsd_pty_root);
+  size_t name_length = strlen (name);
+  int X, Y;
+  
+  name_length = strlen (name);
+
+  if (name_length != bsd_pty_root_length + 2)
+      return FALSE;
+
+  if (strncmp (name, bsd_pty_root, bsd_pty_root_length) != 0)
+    return FALSE;
+
+  X = name[bsd_pty_root_length];
+  Y = name[bsd_pty_root_length + 1];
+
+  return (isalnum (X) && isalnum (Y));
+}
+
+/* This function checks if NAME looks like a Cygwin pseudo-terminal
+   device name, aka "/dev/ttyN".  Returns TRUE or FALSE. */
+int 
+is_cygwin_pty (const char *name)
+{
+  const char cygwin_pty_root[] = "/dev/tty";
+  const size_t cygwin_pty_root_length = strlen (cygwin_pty_root);
+  size_t name_length = strlen (name);
+  char const *slave_name;
+  size_t i;
+
+  name_length = strlen (name);
+
+  if (name_length < cygwin_pty_root_length)
+      return FALSE;
+
+  if (strncmp (name, cygwin_pty_root, cygwin_pty_root_length) != 0)
+    return FALSE;
+
+  slave_name = name + cygwin_pty_root_length;
+  if (strlen (slave_name) == 0)
+    return FALSE;
+
+  /* All the remaining characters in NAME should be numeric */
+  for (i = 0; i < name_length - cygwin_pty_root_length; i++)
+    if (!isdigit ((int) slave_name[i]))
+      return FALSE;
+
+  return TRUE;
+}
+
+/* This function forks an xterm that listens to a pseudoterminal,
+   PSEUDO_TERMINAL_SLAVE_NAME is the path in /dev of the pty,
+   MASTER_FILE_DESCRIPTOR is the file id of the front of the pty, and
+   SLAVE_FILE_DESCRIPTOR is the back of the pty.  
+   It returns the process id of the xterm. */
 int
 open_terminal (char *pseudo_terminal_slave_name, 
 	       int master_file_descriptor,
@@ -67,6 +130,9 @@ open_terminal (char *pseudo_terminal_slave_name,
   int name_length;
   struct termios terminal_attributes;
   char *s_flag;
+  const size_t unix98_offset = strlen("/dev/pts/");
+  const size_t bsd_offset = strlen("/dev/tty");
+  const size_t cygwin_offset = strlen("/dev/tty");
 
   name_length = strlen(pseudo_terminal_slave_name);
 
@@ -82,16 +148,30 @@ open_terminal (char *pseudo_terminal_slave_name,
       /* This is the child process */
       close (slave_file_descriptor);
 
-      if (pseudo_terminal_slave_name[name_length - 2] == '/')
+      if (is_unix98_pty (pseudo_terminal_slave_name))
 	{
-	  asprintf (&s_flag, "-S%c/%d",
-		    pseudo_terminal_slave_name[name_length - 1],
+	  asprintf (&s_flag, "-S%s/%d",
+		    pseudo_terminal_slave_name + unix98_offset,
+		    master_file_descriptor);
+	}
+      else if (is_bsd_pty (pseudo_terminal_slave_name))
+	{
+	  asprintf(&s_flag, "-S%c%c%d", 
+		   pseudo_terminal_slave_name[bsd_offset],
+		   pseudo_terminal_slave_name[bsd_offset+1],
+		   master_file_descriptor);
+	}
+      else if (is_cygwin_pty (pseudo_terminal_slave_name))
+	{
+	  asprintf (&s_flag, "-S%s/%d",
+		    pseudo_terminal_slave_name + cygwin_offset,
 		    master_file_descriptor);
 	}
       else
 	{
-	  printf ("error in name\n");
-	  return 0;
+	  fprintf (stderr, "Unrecognized pseudo-terminal name: %s\n",
+		   pseudo_terminal_slave_name);
+	  _exit (EXIT_FAILURE);
 	}
 
       printf ("xterm %s\n", s_flag);
@@ -106,14 +186,28 @@ open_terminal (char *pseudo_terminal_slave_name,
 
       /* Set to raw mode */
       tcgetattr (slave_file_descriptor, &terminal_attributes);
-      cfmakeraw (&terminal_attributes);
+      if (_HAVE_CFMAKERAW)
+	cfmakeraw (&terminal_attributes);
+      else
+	{
+	  terminal_attributes.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP
+					   |INLCR|IGNCR|ICRNL|IXON);
+	  terminal_attributes.c_oflag &= ~OPOST;
+	  terminal_attributes.c_lflag &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);
+	  terminal_attributes.c_cflag &= ~(CSIZE|PARENB);
+	  terminal_attributes.c_cflag |= CS8;
+	}
+
       tcsetattr (slave_file_descriptor, TCSANOW, &terminal_attributes); 
       return process_id;
     }
   return 0;
 }
-    
-int main(int argc, char **argv)
+
+static void
+inner_main (void *data    __attribute__ ((unused)), 
+	    int  argc, 
+	    char **argv)
 {
   int master, slave;
   pid_t pid;
@@ -124,45 +218,38 @@ int main(int argc, char **argv)
   struct termios tio;
   struct winsize win;
   
-  scm_init_guile ();
-
-#if 0
-  if (!open_pty_pair (&master, &slave, &name))
+  if (openpty (&master, &slave, name, &tio, &win) >= 0)
     {
-      return EXIT_FAILURE;
+      if ((pid = open_terminal (name, master, slave)))
+	{
+	  slave_read = dup (slave);
+	  slave_write = dup (slave);
+	  close (slave);
+	  fp_slave_read = fdopen (slave_read, "r");
+	  fp_slave_write = fdopen (slave_write, "w");
+	  
+	  screen = newterm ("xterm", fp_slave_write, fp_slave_read);
+	  erase ();
+	  refresh ();
+	  
+	  scm_shell (argc, argv);
+	  
+	  endwin ();
+	  fclose (fp_slave_read);
+	  fclose (fp_slave_write);
+	  close (slave_write);
+	  close (slave_read);
+	  
+	  kill (pid, SIGTERM);
+	}
     }
-#else
-  if (openpty (&master, &slave, name, &tio, &win) < 0)
-    {
-      return EXIT_FAILURE;
-    }
-#endif
+}
 
-  if (!(pid = open_terminal (name, master, slave)))
-    {
-      return EXIT_FAILURE;
-    }
-  
-  slave_read = dup (slave);
-  slave_write = dup (slave);
-  close (slave);
-  fp_slave_read = fdopen (slave_read, "r");
-  fp_slave_write = fdopen (slave_write, "w");
-
-  screen = newterm ("xterm", fp_slave_write, fp_slave_read);
-  erase ();
-  refresh ();
-
-  scm_shell (argc, argv);
-
-  endwin ();
-  fclose (fp_slave_read);
-  fclose (fp_slave_write);
-  close (slave_write);
-  close (slave_read);
-
-  kill (pid, SIGTERM);
-  return EXIT_SUCCESS;
+int 
+main (int argc, char **argv) 
+{
+  scm_boot_guile (argc, argv, inner_main, 0);
+  return 0;
 }
 
 
