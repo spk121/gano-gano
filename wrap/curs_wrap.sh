@@ -2,7 +2,7 @@
 
 # curs_wrap.sh -- generate scheme wrapper functions for narrow curses
 
-# $Id: curs_wrap.sh,v 1.1 2008/01/01 16:05:36 spike_gran Exp $
+# $Id: curs_wrap.sh,v 1.2 2008/01/14 03:32:54 spike_gran Exp $
 
 # Put together a mostly complete wrapset from the files curs_func.txt
 # and curs_const.txt. 
@@ -101,13 +101,13 @@ void gucu_init_constant (void) API;
 # SCM file
 echo "
 ;; -*- Mode: scheme; -*-
-(define-module (XXpackageXX curses-raw)
-	#:export ( " > curses-raw.scm.in
+(define-module (XXpackageXX curses)
+	#:export ( " > curses.scm.in
 
-awk --file="func_scm.awk" < curs_func.txt >> curses-raw.scm.in
-awk --file="const_scm.awk" < curs_const.txt >> curses-raw.scm.in
-awk --file="special_scm.awk" < curs_spec.txt >> curses-raw.scm.in
-echo "))" >> curses-raw.scm.in
+awk --file="func_scm.awk" < curs_func.txt >> curses.scm.in
+awk --file="const_scm.awk" < curs_const.txt >> curses.scm.in
+awk --file="special_scm.awk" < curs_spec.txt >> curses.scm.in
+echo "))" >> curses.scm.in
 
 echo "
-(load-extension \"XXlibnameXX\" \"gucu_init\")" >> curses-raw.scm.in
+(load-extension \"XXlibnameXX\" \"gucu_init\")" >> curses.scm.in

@@ -2,7 +2,7 @@
 
 # cursw_wrap.sh -- generate scheme wrapper functions for wide curses
 
-# $Id: cursw_wrap.sh,v 1.2 2008/01/04 08:07:12 spike_gran Exp $
+# $Id: cursw_wrap.sh,v 1.3 2008/01/14 03:32:54 spike_gran Exp $
 
 # Put together a mostly complete wrapset from the files cursw_func.txt
 # and cursw_const.txt. 
@@ -104,13 +104,13 @@ void gucu_cursw_init_constant (void) API;
 # SCM file
 echo "
 ;; -*- Mode: scheme; -*-
-(define-module (XXpackageXX curses-wide-raw)
-	#:export ( " > curses-wide-raw.scm.in
+(define-module (XXpackageXX curses-wide)
+	#:export ( " > curses-wide.scm.in
 
-awk --file="func_scm.awk" < cursw_func.txt >> curses-wide-raw.scm.in
-awk --file="const_scm.awk" < cursw_const.txt >> curses-wide-raw.scm.in
-awk --file="special_scm.awk" < cursw_spec.txt >> curses-wide-raw.scm.in
-echo "))" >> curses-wide-raw.scm.in
+awk --file="func_scm.awk" < cursw_func.txt >> curses-wide.scm.in
+awk --file="const_scm.awk" < cursw_const.txt >> curses-wide.scm.in
+awk --file="special_scm.awk" < cursw_spec.txt >> curses-wide.scm.in
+echo "))" >> curses-wide.scm.in
 
 echo "
-(load-extension \"XXlibnameXX\" \"gucu_cursw_init\")" >> curses-wide-raw.scm.in
+(load-extension \"XXlibnameXX\" \"gucu_cursw_init\")" >> curses-wide.scm.in
