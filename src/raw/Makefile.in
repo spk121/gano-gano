@@ -36,13 +36,10 @@ host_triplet = @host@
 @WIDE_TRUE@am__append_1 = \
 @WIDE_TRUE@	libguile-gucu-curses-wide-v-@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@.la 
 
-@CYGWIN_CURSES_BUG_FIX_TRUE@am__append_2 = \
-@CYGWIN_CURSES_BUG_FIX_TRUE@	-DCYGWIN_CURSES_BUG_FIX
-
-@WIDE_TRUE@am__append_3 = curses-wide-raw.scm 
-@WIDE_TRUE@am__append_4 = curses-wide-raw.scm
-@WIDE_TRUE@am__append_5 = curses-wide-raw.scm
-@WIDE_TRUE@am__append_6 = curses-wide-raw.scm
+@WIDE_TRUE@am__append_2 = curses-wide.scm curses-wide-alt.scm
+@WIDE_TRUE@am__append_3 = curses-wide.scm curses-wide-alt.scm
+@WIDE_TRUE@am__append_4 = curses-wide.scm
+@WIDE_TRUE@am__append_5 = curses-wide.scm
 subdir = src/raw
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -117,6 +114,7 @@ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AR = @AR@
+AS = @AS@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -133,6 +131,7 @@ CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DLLTOOL = @DLLTOOL@
 ECHO = @ECHO@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -160,6 +159,7 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
+OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -228,8 +228,7 @@ top_srcdir = @top_srcdir@
 lib_LTLIBRARIES =  \
 	libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@.la \
 	$(am__append_1)
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS =  \
-	-Wall $(am__append_2)
+libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS = -Wall
 libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LDFLAGS = \
 	-no-undefined \
 	-export-dynamic \
@@ -268,14 +267,14 @@ libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LIBADD = @LIBNCURSES@
 
 guile_sitedir = ${datadir}/guile/site
 pkgguile_sitedir = $(guile_sitedir)/$(PACKAGE)
-pkgguile_site_DATA = curses-raw.scm $(am__append_3)
-ETAGS_ARGS = curses-raw.scm $(am__append_4)
+pkgguile_site_DATA = curses.scm curses-alt.scm $(am__append_2)
+ETAGS_ARGS = curses.scm curses-alt.scm $(am__append_3)
 
 # Note that the "wide" .scm.in file needs to appear here.  It is part of
 # the distribution regardless of whether it is used.
-EXTRA_DIST = curses-raw.scm.in curses-wide-raw.scm.in
-BUILT_SOURCES = curses-raw.scm $(am__append_5)
-CLEANFILES = curses-raw.scm $(am__append_6)
+EXTRA_DIST = curses.scm.in curses-wide.scm.in
+BUILT_SOURCES = curses.scm $(am__append_4)
+CLEANFILES = curses.scm $(am__append_5)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -667,12 +666,12 @@ uninstall-am: uninstall-libLTLIBRARIES uninstall-pkgguile_siteDATA
 	uninstall-libLTLIBRARIES uninstall-pkgguile_siteDATA
 
 
-curses-raw.scm: curses-raw.scm.in
+curses.scm: curses.scm.in
 	cat $< | \
 	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
-@WIDE_TRUE@curses-wide-raw.scm: curses-wide-raw.scm.in
+@WIDE_TRUE@curses-wide.scm: curses-wide.scm.in
 @WIDE_TRUE@	cat $< | \
 @WIDE_TRUE@	sed 's|XXlibnameXX|libguile-gucu-curses-wide-v-@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@|' | \
 @WIDE_TRUE@	sed 's|XXpackageXX|$(PACKAGE)|' > $@

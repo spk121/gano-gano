@@ -1,12 +1,17 @@
 #include <curses.h>
 #include <libguile.h>
+#include <config.h>
 #include "type.h"
 #include "typew.h"
 #include "cursw_spec.h"
 
-/* work around bug in Cygwin's ancient Ncurses */
-extern NCURSES_EXPORT_VAR(chtype*) _nc_acs_map(void);
-#define acs_map (_nc_acs_map())
+/* The Cygwin version of NCurses does not properly declare the
+ * acs_map, which is the array that holds the line-drawing
+ * characters. */
+#ifdef ENABLE_ACS_MAP_FIX
+  extern NCURSES_EXPORT_VAR(chtype*) _nc_acs_map(void);
+  #define acs_map (_nc_acs_map())
+#endif
 
 #define MAXLEN 1000
 

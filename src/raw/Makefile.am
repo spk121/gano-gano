@@ -1,20 +1,15 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.7 2008/01/05 05:03:27 spike_gran Exp $
+## $Id: Makefile.am,v 1.8 2008/01/14 03:32:07 spike_gran Exp $
 
 lib_LTLIBRARIES = \
 	libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@.la 
 
 if WIDE
-  lib_LTLIBRARIES += \
+lib_LTLIBRARIES += \
 	libguile-gucu-curses-wide-v-@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@.la 
 endif
 
 libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS = -Wall
-
-if CYGWIN_CURSES_BUG_FIX
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS += \
-	-DCYGWIN_CURSES_BUG_FIX
-endif
 
 libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LDFLAGS = \
 	-no-undefined \
@@ -55,28 +50,29 @@ endif
 
 guile_sitedir = ${datadir}/guile/site
 pkgguile_sitedir = $(guile_sitedir)/$(PACKAGE)
-pkgguile_site_DATA = curses-raw.scm
-ETAGS_ARGS = curses-raw.scm
+pkgguile_site_DATA = curses.scm curses-alt.scm
+ETAGS_ARGS = curses.scm curses-alt.scm
+
 
 # Note that the "wide" .scm.in file needs to appear here.  It is part of
 # the distribution regardless of whether it is used.
-EXTRA_DIST = curses-raw.scm.in curses-wide-raw.scm.in
+EXTRA_DIST = curses.scm.in curses-wide.scm.in
 
-BUILT_SOURCES = curses-raw.scm
-CLEANFILES = curses-raw.scm
+BUILT_SOURCES = curses.scm
+CLEANFILES = curses.scm
 
-curses-raw.scm: curses-raw.scm.in
+curses.scm: curses.scm.in
 	cat $< | \
 	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 if WIDE
-pkgguile_site_DATA += curses-wide-raw.scm 
-ETAGS_ARGS += curses-wide-raw.scm
-BUILT_SOURCES += curses-wide-raw.scm
-CLEANFILES += curses-wide-raw.scm
+pkgguile_site_DATA += curses-wide.scm curses-wide-alt.scm
+ETAGS_ARGS += curses-wide.scm curses-wide-alt.scm
+BUILT_SOURCES += curses-wide.scm
+CLEANFILES += curses-wide.scm
 
-curses-wide-raw.scm: curses-wide-raw.scm.in
+curses-wide.scm: curses-wide.scm.in
 	cat $< | \
 	sed 's|XXlibnameXX|libguile-gucu-curses-wide-v-@LIBGUILE_GUCU_CURSES_WIDE_MAJOR@|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
