@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.9 2008/01/15 16:47:50 spike_gran Exp $
+@c $Id: gucu.texi,v 1.10 2008/01/16 14:54:11 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -834,7 +834,7 @@ Upon initialization @code{gucushell} automatically calls these functions.
 @noindent Thus, you must not call @code{(initscr)} in your
 interactive session.
 
-When exiting an interactive session, by ^D for example,
+When exiting an interactive session, by @kbd{C-D} for example,
 @code{gucushell} automatically calls @code{(endwin)}.
 
 @node The Gory Details, Initialization, Hello World!!!, Curses Tutorial
@@ -1079,7 +1079,7 @@ the given window at the given coordinates.
 @node Complex characters and @code{add_wch},  , mvaddch, The @code{addch} class of functions
 @subsubsection Complex characters and @code{add_wch}
 
-For ever function that operates on narrow characters, there is a
+For every function that operates on narrow characters, there is a
 parallel function that operates on wide characters.  The functions
 that operate on wide characters are in the library @code{(gucu
 curses-wide)}.
@@ -1154,7 +1154,7 @@ number of columns and the number of rows in a given window.
 @code{getmaxyx} does this by returning a list of two elements,
 @code{y} and @code{x}.
 
-@node A word of caution, Adding wide strings, A simple @code{addstr} example, Output functions
+@node A word of caution, Adding wide strings (tutorial), A simple @code{addstr} example, Output functions
 @subsection A word of caution
 
 All these functions take a @code{y} coordinate first and then @code{x}
@@ -1163,7 +1163,7 @@ in their arguments.  A common mistake by beginners is to pass
 manipulations of @code{(y,x)} coordinates, think of dividing the
 screen into windows and manipulate each one separately. 
 
-@node Adding wide strings,  , A word of caution, Output functions
+@node Adding wide strings (tutorial),  , A word of caution, Output functions
 @subsection Adding wide strings
 
 The @code{addstr} functions print unrendered, narrow strings, which
@@ -2334,7 +2334,6 @@ writes an appropriate error message to standard error and exits;
 otherwise, a @code{#<window>} referencing @code{stdscr} is returned.
 @end deffn
 
-@findex newterm
 @tindex #<screen>
 @vindex TERM
 @tindex #<file>
@@ -2367,7 +2366,6 @@ exiting from curses.  If @code{newterm} is called more than once for
 the same terminal, the first terminal referred to must be the last one
 for which @code{endwin} is called.
 
-@findex endwin
 @findex doupdate
 @findex refresh
 
@@ -2385,15 +2383,12 @@ visual mode.
 has not yet been initialized and @code{*ok*} upon successful completion.
 @end deffn
 
-@findex isendwin
-
 @deffn Procedure isendwin
 The @code{isendwin} routine returns @code{#t} if @code{endwin} has
 been called without any subsequent calls to @code{wrefresh}, and
 @code{#f} otherwise.
 @end deffn
 
-@findex set_term
 @tindex #<screen>
 
 @deffn Procedure set-term new
@@ -2481,10 +2476,11 @@ call to @code{addch} followed by a call to @code{refresh}, or a call
 to @code{waddch} followed by a call to @code{wrefresh}.  The knowledge
 that only a single character is being output allows for efficiency.
 
+These functions return @code{*ok*} on success and @code{*err*} otherwise.
 @end deffn
 
 @deffn Procecure tabsize
-Returns the current tabsize for this screen.
+Returns the current tabsize for this screen.  The default is eight.
 @end deffn
 
 @deffn Procedure set-tabsize tab
@@ -2511,12 +2507,12 @@ and returns a character.  The following prints a less-than-or-equal-to
 sign to the screen, for example.
 
 @example
-(addch (ACS_LEQUAL))
+(addch (acs-lequal))
 @end example
 
 The set of line-graphics characters is given in @ref{tab:ACS}.
 
-@float table,tab:ACS
+@float Table,tab:ACS
 @multitable {acs_xxxxxxxxx} {default} {xxxxxxxxxxxxxxxxxxxxxxxxx}
 @headitem name @tab default @tab description
 
@@ -2620,77 +2616,8 @@ The set of line-graphics characters is given in @ref{tab:ACS}.
 @caption{the line-graphics procedures}
 @end float
 
-@node Adding strings of characters and attributes, Adding strings, Adding characters, Curses Reference
-@subsection Adding strings of characters and attributes
-
-@deffn Procedure addchstr chstr
-@deffnx Procedure addchnstr chstr n
-@deffnx Procedure waddchstr win chstr
-@deffnx Procedure waddchnstr win chstr n
-@deffnx Procedure mvaddchstr y x chstr
-@deffnx Procedure mvaddchnstr y x chstr n
-@deffnx Procedure mvwaddchstr win y x chstr
-@deffnx Procedure mvwaddchnstr win y x chstr n
-
-These routines copy the rendered, narrow string @var{chstr} into the
-window image structure at and after the current cursor position.  The
-four routines with @var{n} as the last argument copy at most n
-elements, but no more than will fit on the line.  If @var{n}=-1 then
-the whole string is copied, to the maximum number of characters that
-will fit on the line.
-
-@findex waddnstr
-
-The window cursor is not advanced, and these routines work faster than
-@code{waddnstr}.  On the other hand, they do not perform any kind of
-checking (such as for the newline, backspace, or carriage return
-characters), they do not advance the current cursor position, they do
-not expand other control characters to ^-escapes, and they truncate
-the string if it crosses the right margin, rather than wrapping it
-around to the new line.
-
-All routines return the integer @code{*err*} if the window has already
-been deleted and @code{*ok*} on success.
-
-@end deffn
-
-@deffn Procedure add-wchstr wchstr
-@deffnx Procedure add-wchnstr wchstr n
-@deffnx Procedure wadd-wchstr win wchstr
-@deffnx Procedure wadd-wchnstr win wchstr n
-@deffnx Procedure mvadd-wchstr y x wchstr
-@deffnx Procedure mvadd-wchnstr y x wchstr n
-@deffnx Procedure mvwadd-wchstr win y x wchstr
-@deffnx Procedure mvwadd-wchnstr win y x wchstr n
-
-These routines copy the array of complex characters @var{wchstr} into
-the window image structure at and after the current cursor position.
-The four routines with @var{n} as the last argument copy at most
-@var{n} elements, but no more than will fit on the line.  If
-@var{n}=-1 then the whole array is copied, to the maximum number of
-characters that will fit on the line.
-
-The window cursor is not advanced.  These routines work faster than
-@var{wadd-wnstr}.  On the other hand, they do not perform checking (such as
-for the newline, backspace, or carriage return characters), they do
-not advance the current cursor position, they do not expand other
-control characters to ^-escapes, and they truncate the string if it
-crosses the right margin, rather than wrapping it around to the new
-line.
-
-If a complex character cannot
-completely fit at the end of the current line, the remaining columns
-are filled with the background character and rendition.
-
-All routines return the integer @code{*err*} upon failure and
-@code{*ok*} on success.
-
-@end deffn
-
-
-
-@node Adding strings, Character and window attribute control routines, Adding strings of characters and attributes, Curses Reference
-@subsection Adding strings 
+@node Adding strings of characters and attributes, Character and window attribute control routines, Adding characters, Curses Reference
+@subsection Adding strings
 
 @deffn Procecure addstr
 @deffnx Procedure addnstr str n
@@ -2716,33 +2643,38 @@ on success.
 
 @end deffn
 
-@deffn Procecure addwstr str
-@deffnx Procedure addnwstr str n
-@deffnx Procedure waddwstr win str
-@deffnx Procedure waddnwstr win str n
-@deffnx Procedure mvaddwstr y x str
-@deffnx Procecure mvaddnwstr y x str n
-@deffnx Procecure mvwaddwstr win y x str
-@deffnx Procecure mvwaddnwstr win y x str n
+@deffn Procedure addchstr chstr
+@deffnx Procedure addchnstr chstr n
+@deffnx Procedure waddchstr win chstr
+@deffnx Procedure waddchnstr win chstr n
+@deffnx Procedure mvaddchstr y x chstr
+@deffnx Procedure mvaddchnstr y x chstr n
+@deffnx Procedure mvwaddchstr win y x chstr
+@deffnx Procedure mvwaddchnstr win y x chstr n
 
-@findex waddch
+These routines copy the rendered, narrow string @var{chstr} into the
+window image structure at and after the current cursor position.  The
+four routines with @var{n} as the last argument copy at most n
+elements, but no more than will fit on the line.  If @var{n} equals -1
+then the whole string is copied, to the maximum number of characters
+that will fit on the line.
 
-These routines write the characters of the unrendered, wide string
-@var{str} on the given window. It is similar to constructing a
-rendered, complex character for each unrendered wide character in the
-string, and then calling @code{wadd-wch} once for each resulting
-rendered, complex character.  The four routines with @var{n} as the
-last argument write at most n characters.  If @var{n} is -1, then the
-entire string will be added, up to the maximum number of characters
-that will fit on the line, or until a terminating null is reached.
+@findex waddnstr
 
-All routines return the integer @code{*err*} upon failure and @code{*ok*}
-on success.
+The window cursor is not advanced, and these routines work faster than
+@code{waddnstr}.  On the other hand, they do not perform any kind of
+checking (such as for the newline, backspace, or carriage return
+characters), they do not advance the current cursor position, they do
+not expand other control characters to ^-escapes, and they truncate
+the string if it crosses the right margin, rather than wrapping it
+around to the new line.
+
+All routines return the integer @code{*err*} if the window has already
+been deleted and @code{*ok*} on success.
 
 @end deffn
 
-
-@node Character and window attribute control routines, Bell and screen flash routines, Adding strings, Curses Reference
+@node Character and window attribute control routines, Bell and screen flash routines, Adding strings of characters and attributes, Curses Reference
 @subsection Character and window attribute control routines
 
 @findex waddch
@@ -2754,7 +2686,7 @@ written into the window with @code{waddch} and @code{waddstr}.
 Attributes are a property of the character, and move with the
 character through any scrolling and insert/delete line/character
 operations.  To the extent possible, they are displayed as appropriate
-modifications to the graphic rendition of characters put on the
+modifications to the graphic rendition of characters put on the 
 screen.
 
 @deffn Procedure attrset attrs
@@ -2783,33 +2715,29 @@ any others.  The routine @code{standout} is the same as @code{(attron
 @code{(attrset *a-normal*)} or @code{(attrset 0)}, that is, it turns off
 all attributes.
 
-@code{attr_set} is the same as @code{attrset}.  @code{attr_on} is the
-same as @code{attron}, etc.q
+@code{attr-set} is the same as @code{attrset}.  @code{attr-on} is the
+same as @code{attron}, etc.
 @end deffn
 
-@findex attrset
-
 The @code{attrset} and related routines do not affect the attributes
-used when erasing portions of the window. See FIXME for functions
-which modify the attributes used for erasing and clearing.
+used when erasing portions of the window. @xref{Window background
+manipulation routines} for functions which modify the attributes used
+for erasing and clearing.
 
-@findex color_set
-@findex wcolor_set
+@deffn Procedure color-set color-pair-number opts
+@deffnx Procedure wcolor-set win color-pair-number opts
 
-@deffn Procedure color_set color_pair_number opts
-@deffnx Procedure wcolor_set win color_pair_number opts
-
-The routine @code{color_set} sets the current color of the given window to
+The routine @code{color-set} sets the current color of the given window to
 the foreground/background combination described by the
-@var{color_pair_number}.  The parameter @var{opts} is reserved for
+@var{color-pair-number}.  The parameter @var{opts} is reserved for
 future use.  For now, set it to @code{#t}.
 
 @end deffn
 
-@deffn Procedure attr_get
-@deffnx Procedure wattr_get win
+@deffn Procedure attr-get
+@deffnx Procedure wattr-get win
  
-The routine @code{wattr_get} returns the current attribute and color
+The routine @code{wattr-get} returns the current attribute and color
 pair for the given window; @code{attr_get} returns the current
 attribute and color pair for @code{stdscr}.  They are returned as a
 list containing two elements.  The first element is the rendition: a
@@ -2823,7 +2751,7 @@ bitmap containing all the attributes and the color pair value under
 @deffnx Procedure mvchgat y x n attr color opts
 @deffnx Procedure mvwchgat win y x n attr color opts
 
-@findex init_pair
+@findex init-pair
 
 The routine @code{chgat} changes the attributes of a given number of
 characters starting at the current cursor location of @code{stdscr}.
@@ -2832,76 +2760,73 @@ character count of -1 or greater than the remaining window width means
 to change attributes all the way to the end of the current line.  The
 @code{wchgat} function generalizes this to any window; the
 @code{mvwchgat} function does a cursor move before acting. In these
-functions, the @var{color} argument is a color-pair index (as in the
-first argument of @code{init_pair}, see FIXME).  The @var{opts}
-argument is not presently used, but is reserved for the future (leave
-it @code{#t}).
+functions, the @var{color} argument is a color-pair index as in the
+first argument of @code{init-pair}. @xref{Color manipulation
+routines}.  The @var{opts} argument is not presently used, but is
+reserved for the future (leave it @code{#t}).
 
 @end deffn
 
-
-The following video attributes can be passed to the routines
+@xref{tab:a} for the attributes can be passed to the routines
 @code{attron}, @code{attroff}, and @code{attrset}, or @code{logior}'d
-with the characters passed to @code{addch}.
+with the characters passed to @code{addch}.  For the color part of the
+rendition, use @code{color-pair}.
 
-@defvr Constant *a-normal*
-Normal display (no highlight)
-@end defvr
+@deffn Procedure color-pair n
 
-@defvr Constant *a-standout*
-Best highlighting mode of the terminal.
-@end defvr
-
-@defvr Constant *a-underline*
-Underlining
-@end defvr
-
-@defvr Constant *a-reverse*
-Reverse video
-@end defvr
-
-@defvr Constant *a-blink*
-Blinking
-@end defvr
-
-@defvr Constant *a-dim*
-Half bright
-@end defvr
-
-@defvr Constant *a-bold*
-Extra bright or bold
-@end defvr
-
-@defvr Constant *a-protect*
-Protected mode
-@end defvr
-
-@defvr Constant *a-invis*
-Invisible or blank mode
-@end defvr
-
-@defvr Constant *a-altcharset*
-Alternate character set
-@end defvr
-
-@defvr Constant *a-chartext*
-Bit-mask to extract a character
-@end defvr
-
-@deffn Procedure COLOR_PAIR n
 Returns a bit mask to apply the color pair @var{n} to a rendition.
-@code{COLOR_PAIR} values can only be @code{logior}'ed with attributes
+@code{color-pair} values can only be @code{logior}'ed with attributes
 if the pair number is less than 256.  The alternate functions such as
-@code{color_set} can pass a color pair value directly.
+@code{color-set} can pass a color pair value directly.
 @end deffn
 
-@deffn Procedure PAIR_NUMBER attrs
+@deffn Procedure pair-number attrs
 Returns the pair number number associated with attribute @var{attrs}.
 @end deffn
 
+@float Table,tab:a
+@multitable {A_ALTCHARSET} {Best highlighting mode of the terminal.}
+@headitem Name @tab Description
+
+@item  *a-normal*
+@tab Normal display (no highlight)
+
+@item  *a-standout*
+@tab Best highlighting mode of the terminal.
+
+@item  *a-underline*
+@tab Underlining
+
+@item  *a-reverse*
+@tab Reverse video
+
+@item  *a-blink*
+@tab Blinking
+
+@item  *a-dim*
+@tab Half bright
+
+@item  *a-bold*
+@tab Extra bright or bold
+
+@item  *a-protect*
+@tab Protected mode
+
+@item  *a-invis*
+@tab Invisible or blank mode
+
+@item  *a-altcharset*
+@tab Alternate character set
+
+@item  *a-chartext*
+@tab Bit-mask to extract a character
+
+@end multitable
+@caption{Attributes}
+@end float
+
 @node Bell and screen flash routines, Window background manipulation routines, Character and window attribute control routines, Curses Reference
 @subsection Bell and screen flash routines
-
 
 @deffn Procedure beep
 @deffnx Procedure flash
@@ -2914,8 +2839,8 @@ sounds the alert.  If neither alert is possible, nothing happens.
 Nearly all terminals have an audible alert (bell or beep), but only
 some can flash the screen.
 
-These routines return @code{*ok*} if they succeed in beeping or flashing, @code{*err*}
-otherwise.
+These routines return @code{*ok*} if they succeed in beeping or
+flashing, @code{*err*} otherwise.
 
 @end deffn
 
@@ -2955,7 +2880,7 @@ character on the screen is changed to the new background rendition.
 Wherever the former background character appears, it is changed to the
 new background character.
 
-The integer @code{*ok*} is returned
+The integer @code{*ok*} is returned.
 @end deffn
 
 @deffn Procedure getbkgd win
@@ -2981,20 +2906,19 @@ and @var{br} - bottom right-hand corner.
 If  any of these arguments is zero, then the corresponding default
 values are used instead.  The default values are the line drawing
 characters that create a box, and they would be @var{ls} =
-@code{ACS-VLINE}, @var{rs} = @code{ACS-VLINE}, @var{ts} =
-@code{ACS-HLINE}, @var{bs} = @code{ACS-HLINE}, @var{tl} =
-@code{ACS-ULCORNER}, @var{tr} = @code{ACS-URCORNER}, @var{bl} =
-@code{ACS-LLCORNER}, @var{br} = @code{ACS-LRCORNER}.
+@code{acs-vline}, @var{rs} = @code{acs-vline}, @var{ts} =
+@code{acs-hline}, @var{bs} = @code{acs-hline}, @var{tl} =
+@code{acs-ulcorner}, @var{tr} = @code{acs-urcorner}, @var{bl} =
+@code{acs-llcorner}, @var{br} = @code{acs-lrcorner}.
 
 @end deffn
 
 @deffn Procedure box win verch horch
-@code{box} is a shorthand for  the  following  call:	 
+@code{box} is a shorthand for the following call:	 
 @example
 (wborder win verch verch horch horch 0 0 0 0)
 @end example
 @end deffn
-
 
 
 @deffn Procedure hline ch n
@@ -4893,7 +4817,7 @@ complex strings.
 This optional module may or may not exist depending on the how GuCu
 was compiled.
 
-@node Adding wide characters,  , Overview (wide), The wide curses library
+@node Adding wide characters, Adding wide strings, Overview (wide), The wide curses library
 @subsection Adding wide characters
 
 @deffn Procedure add-wch wch
@@ -4909,13 +4833,14 @@ follows:
 
 If @var{wch} refers to a spacing character, then any previous
 character at that location is removed.  A new character specified by
-wch is placed at that location with rendition specified by wch.  The
-cursor then advances to the next spacing character on the screen.
+@var{wch} is placed at that location with rendition specified by
+@var{wch}.  The cursor then advances to the next spacing character on
+the screen.
 
 If @var{wch} refers to a non-spacing character, all previous
 characters at that location are preserved.  The non-spacing characters
 of @var{wch} are added to the spacing complex character, and the
-rendition specified by wch is ignored.
+rendition specified by @var{wch} is ignored.
 
 @findex addch
 
@@ -4937,14 +4862,121 @@ The @code{echo-wchar} function is functionally equivalent to a call to
 @code{wadd-wch} followed by a call to @code{wrefresh}.  The knowledge
 that only a single character is being output is taken into
 consideration and, for non-control characters, a considerable
-performance gain might be seen by using the *echo* functions instead
-of their equivalents.
+performance gain might be seen by using the @code{echo} functions
+instead of their equivalents.
 
 All routines return the integer @code{*err*} upon failure and
 @code{*ok*} on success.
 
 @end deffn
 
+@node Adding wide strings, Clearing windows or parts of windows (wide), Adding wide characters, The wide curses library
+@subsection Adding wide strings
+
+@deffn Procecure addwstr str
+@deffnx Procedure addnwstr str n
+@deffnx Procedure waddwstr win str
+@deffnx Procedure waddnwstr win str n
+@deffnx Procedure mvaddwstr y x str
+@deffnx Procecure mvaddnwstr y x str n
+@deffnx Procecure mvwaddwstr win y x str
+@deffnx Procecure mvwaddnwstr win y x str n
+
+@findex waddch
+
+These routines write the characters of the unrendered, wide string
+@var{str} on the given window. It is similar to constructing a
+rendered, complex character for each unrendered wide character in the
+string, and then calling @code{wadd-wch} once for each resulting
+rendered, complex character.  The four routines with @var{n} as the
+last argument write at most n characters.  If @var{n} is -1, then the
+entire string will be added, up to the maximum number of characters
+that will fit on the line, or until a terminating null is reached.
+
+All routines return the integer @code{*err*} upon failure and @code{*ok*}
+on success.
+
+@end deffn
+
+@deffn Procedure add-wchstr wchstr
+@deffnx Procedure add-wchnstr wchstr n
+@deffnx Procedure wadd-wchstr win wchstr
+@deffnx Procedure wadd-wchnstr win wchstr n
+@deffnx Procedure mvadd-wchstr y x wchstr
+@deffnx Procedure mvadd-wchnstr y x wchstr n
+@deffnx Procedure mvwadd-wchstr win y x wchstr
+@deffnx Procedure mvwadd-wchnstr win y x wchstr n
+
+These routines copy the array of complex characters @var{wchstr} into
+the window image structure at and after the current cursor position.
+The four routines with @var{n} as the last argument copy at most
+@var{n} elements, but no more than will fit on the line.  If @var{n}
+is -1 then the whole array is copied, to the maximum number of
+characters that will fit on the line.
+
+The window cursor is not advanced.  These routines work faster than
+@var{wadd-wnstr}.  On the other hand, they do not perform checking
+(such as for the newline, backspace, or carriage return characters),
+they do not advance the current cursor position, they do not expand
+other control characters to @kbd{^}-escapes, and they truncate the
+string if it crosses the right margin, rather than wrapping it around
+to the new line.
+
+If a complex character cannot completely fit at the end of the current
+line, the remaining columns are filled with the background character
+and rendition.
+
+All routines return the integer @code{*err*} upon failure and
+@code{*ok*} on success.
+
+@end deffn
+
+@node Clearing windows or parts of windows (wide),  , Adding wide strings, The wide curses library
+@subsection Clearing windows or parts of windows (wide)
+
+@deffn Procedure bkgrndset wch
+@deffnx Procedure wbkgrndset win wch
+
+The @code{bkgrndset} and @code{wbkgrndset} routines manipulate the
+background of the named window.  The window background is a rendered,
+complex character.  The attribute part of the background is combined
+(@code{logior}'ed) with all non-blank characters that are written into
+the window with @code{waddch}.  Both the character and attribute parts
+of the background are combined with the blank characters.  The
+background becomes a property of the character and moves with the
+character through any scrolling and insert/delete line/character
+operations.
+
+To the extent possible on a particular terminal, the attribute part of
+the background is displayed as the graphic rendition of the character
+put on the screen.
+
+The return value of @code{bkgrndset} and @code{wbkgrndset} is
+undefined.
+@end deffn
+
+@deffn Procedure bkgrnd wch
+@deffnx Procedure wbkgrnd win wch
+
+The @code{bkgrnd} and @code{wbkgrnd} functions set the background
+property of the current or specified window and then apply this
+setting to every character position in that window:
+
+The rendition of every character on the screen is changed to the new
+background rendition.
+
+Wherever the former background character appears, it is changed to the
+new background character.
+
+These return @code{*ok*} on success or {*err*} on failure. 
+@end deffn
+
+@deffn Procedure getbkgrnd
+@deffnx Procedure wgetbkgrnd win
+
+These return the rendered, complex character that is the current
+background.
+@end deffn
 
 @node Hacking the module, Index, Curses Reference, Top
 @chapter Hacking the module
