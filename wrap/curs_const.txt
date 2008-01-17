@@ -3,7 +3,6 @@ int ERR
 int FALSE
 int OK
 int TRUE
-unsigned WEOF
 chtype A_ALTCHARSET    
 chtype A_ATTRIBUTES
 chtype A_BLINK         

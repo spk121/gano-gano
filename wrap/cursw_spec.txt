@@ -2,7 +2,6 @@
 	    erasewchar
 	    getn-wstr
 	    get-wch
-	    get-wstr
 	    inwstr
 	    in-wch
 	    in-wchnstr
@@ -11,10 +10,8 @@
 	    mvadd-wch
 	    mvgetn-wstr
 	    mvget-wch
-	    mvget-wstr
 	    mvwgetn-wstr
 	    mvwget-wch
-	    mvwget-wstr
 	    mvinnwstr
 	    mvinwstr
 	    mvin-wch
@@ -27,7 +24,6 @@
 	    wgetbkgrnd
 	    wgetn-wstr
 	    wget-wch
-	    wget-wstr
 	    win-wch
 	    win-wchnstr
 	    win-wchstr

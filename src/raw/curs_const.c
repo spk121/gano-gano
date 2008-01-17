@@ -10,7 +10,6 @@ SCM gucu_ERR;
 SCM gucu_FALSE;
 SCM gucu_OK;
 SCM gucu_TRUE;
-SCM gucu_WEOF;
 SCM gucu_A_ALTCHARSET;
 SCM gucu_A_ATTRIBUTES;
 SCM gucu_A_BLINK;
@@ -174,7 +173,6 @@ gucu_init_constant ()
 	gucu_FALSE = scm_permanent_object (scm_c_define ("*false*", scm_from_int (FALSE)));
 	gucu_OK = scm_permanent_object (scm_c_define ("*ok*", scm_from_int (OK)));
 	gucu_TRUE = scm_permanent_object (scm_c_define ("*true*", scm_from_int (TRUE)));
-	gucu_WEOF = scm_permanent_object (scm_c_define ("*weof*", scm_from_uint (WEOF)));
 	gucu_A_ALTCHARSET = scm_permanent_object (scm_c_define ("*a-altcharset*", _scm_from_chtype (A_ALTCHARSET)));
 	gucu_A_ATTRIBUTES = scm_permanent_object (scm_c_define ("*a-attributes*", _scm_from_chtype (A_ATTRIBUTES)));
 	gucu_A_BLINK = scm_permanent_object (scm_c_define ("*a-blink*", _scm_from_chtype (A_BLINK)));

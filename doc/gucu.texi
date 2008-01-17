@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.10 2008/01/16 14:54:11 spike_gran Exp $
+@c $Id: gucu.texi,v 1.11 2008/01/17 16:02:08 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -147,7 +147,7 @@ Output functions
 * @code{addstr} class of functions::  
 * A simple @code{addstr} example::  
 * A word of caution::           
-* Adding wide strings::         
+* Adding wide strings (tutorial)::  
 
 The @code{addch} class of functions
 
@@ -203,7 +203,6 @@ The basic curses library: @code{(gucu curses)}
 * Curses screen initialization and manipulation routines::  
 * Adding characters::           
 * Adding strings of characters and attributes::  
-* Adding strings::              
 * Character and window attribute control routines::  
 * Bell and screen flash routines::  
 * Window background manipulation routines::  
@@ -251,6 +250,11 @@ The wide curses library: @code{(gucu curses-wide)}
 
 * Overview (wide)::             
 * Adding wide characters::      
+* Adding wide strings::         
+* Clearing windows or parts of windows (wide)::  
+* Borders and lines (wide)::    
+* Getting characters from the keyboard (wide)::  
+* Getting wide strings from the keyboard::  
 
 @end detailmenu
 @end menu
@@ -1016,7 +1020,7 @@ The @code{addchstr} class: print rendered, narrow strings
 * @code{addstr} class of functions::  
 * A simple @code{addstr} example::  
 * A word of caution::           
-* Adding wide strings::         
+* Adding wide strings (tutorial)::  
 @end menu
 
 @node The @code{addch} class of functions, @code{addstr} class of functions, Output functions, Output functions
@@ -2094,7 +2098,6 @@ integers @code{*ok*} and @code{*err*}, instead of @code{#t} and
 * Curses screen initialization and manipulation routines::  
 * Adding characters::           
 * Adding strings of characters and attributes::  
-* Adding strings::              
 * Character and window attribute control routines::  
 * Bell and screen flash routines::  
 * Window background manipulation routines::  
@@ -2966,7 +2969,6 @@ The following family of functions @dfn{clear} all or part of a window.
 When clearing a window, the blanks created by erasure have the current
 background rendition (as set by @code{wbkgdset}) merged into them.
 
-
 @deffn Procedure erase
 @deffnx Procedure werase win
 The @code{erase} and @code{werase} routines copy blanks to every
@@ -3016,125 +3018,121 @@ Otherwise they return @code{*ok*}.
 @node Color manipulation routines, Deleting the character under the cursor, Clearing windows and parts of window, Curses Reference
 @subsection Color manipulation routines
 
-@findex start_color
 @findex initscr
-@findex init_pair
-@findex COLOR_PAIR
+@findex init-pair
+@findex color-pair
 
 GuCu supports color attributes on terminals with that capability.  To
-use these routines @code{start_color} must be called, usually right
+use these routines @code{start-color} must be called, usually right
 after @code{initscr}.  Colors are always used in pairs (referred to as
 color-pairs).  A color-pair consists of a foreground color (for
 characters) and a background color (for the blank field on which the
 characters are displayed).  A programmer initializes a color-pair with
-the routine @code{init_pair}.  After it has been initialized,
-@code{COLOR_PAIR} can be used as a new video attribute.
-
-@findex init_color
-@findex has_colors
-@findex can_change_color
-@findex color_content
-@findex pair_content
+the routine @code{init-pair}.  After it has been initialized,
+@code{color-pair} can be used as a new video attribute.
 
 If a terminal is capable of redefining colors, the programmer can use
-the routine @code{init_color} to change the definition of a color.
-The routines @code{has_colors} and @code{can_change_color} return @code{#t}
-or @code{#f}, depending on whether the terminal has color capabilities and
-whether the programmer can change the colors.  The routine
-@code{color_content} allows a programmer to extract the amounts of red,
-green, and blue components in an initialized color.  The routine
-@code{pair_content} allows a programmer to find out how a given color-pair is
-currently defined.
+the routine @code{init-color} to change the definition of a color.
+The routines @code{has-colors} and @code{can-change-color} return
+@code{#t} or @code{#f}, depending on whether the terminal has color
+capabilities and whether the programmer can change the colors.  The
+routine @code{color-content} allows a programmer to extract the
+amounts of red, green, and blue components in an initialized color.
+The routine @code{pair-content} allows a programmer to find out how a
+given color-pair is currently defined.
 
-@deffn Procedure start_color
+@deffn Procedure start-color
 
 @findex initscr
-@findex COLORS
-@findex COLOR_PAIRS
+@findex colors
+@findex color-pairs
 
-The @code{start_color} routine requires no arguments.  It must be called if
-the programmer wants to use colors, and before any other color manipu-
-lation routine is called.  It is good practice to call this routine
-right after @code{initscr}. @code{start_color} initializes eight basic colors
-(black, red, green, yellow, blue, magenta, cyan, and white), and prepares
-procedures, @code{COLORS} and @code{COLOR_PAIRS} (respectively defining the
-maximum number of colors and color-pairs the terminal can support).
-It also restores the colors on the terminal to the values they had
-when the terminal was just turned on.
+The @code{start-color} routine requires no arguments.  It must be
+called if the programmer wants to use colors, and before any other
+color manipulation routine is called.  It is good practice to call
+this routine right after @code{initscr}. @code{start-color}
+initializes eight basic colors (black, red, green, yellow, blue,
+magenta, cyan, and white), and prepares the procedures @code{colors} and
+@code{color-pairs} (respectively defining the maximum number of colors
+and color-pairs the terminal can support).  It also restores the
+colors on the terminal to the values they had when the terminal was
+just turned on.
 @end deffn
 
-@deffn Procedure COLORS
+@deffn Procedure colors
 Returns the maximum number of colors the terminal can support.
 @end deffn
 
-@deffn Procedure COLOR_PAIRS
+@deffn Procedure color-pairs
 Returns the maximum number of color-pairs the terminal can support.
 @end deffn
 
 
-@defvr Constant COLOR_BLACK
-@defvrx Constant COLOR_RED
-@defvrx Constant COLOR_GREEN
-@defvrx Constant COLOR_YELLOW
-@defvrx Constant COLOR_BLUE
-@defvrx Constant COLOR_MAGENTA
-@defvrx Constant COLOR_CYAN
-@defvrx Constant COLOR_WHITE
+@defvr Constant *color-black*
+@defvrx Constant *color-red*
+@defvrx Constant *color-green*
+@defvrx Constant *color-yellow*
+@defvrx Constant *color-blue*
+@defvrx Constant *color-magenta*
+@defvrx Constant *color-cyan*
+@defvrx Constant *color-white*
 
-@findex init_color
+@findex init-color
 These variables contain the color number of the eight default colors,
-as would be used in the procedure @code{init_pair}
+as would be used in the procedure @code{init-pair}.
 @end defvr
 
 
-@deffn Procedure init_color color red green blue
+@deffn Procedure init-color color red green blue
 
-The @code{init_color} routine changes the definition of a color.  It
+The @code{init-color} routine changes the definition of a color.  It
 takes four arguments: the number of the color to be changed followed
 by three RGB values (for the amounts of @var{red}, @var{green}, and
 @var{blue} components).  The value of the first argument must be
-between 0 and COLORS.  (See the section FIXME for the default color
-index.)  Each of the last three arguments must be a value between 0
-and 1000.  When @code{init_color} is used, all occurrences of that
-color on the screen immediately change to the new definition.
+between 0 and the value returned by the @code{colors} procedure. Each
+of the last three arguments must be a value between 0 and 1000.  When
+@code{init-color} is used, all occurrences of that color on the screen
+immediately change to the new definition.
 @end deffn
 
 
-@deffn Procedure init_pair color_pair fore_color back_color
+@deffn Procedure init-pair color-pair fore-color back-color
 
 The @code{init_pair} routine changes the definition of a color-pair.
 It takes three arguments: the number of the color-pair to be changed,
 the fore-ground color number, and the background color number.
 
-@findex COLOR_PAIRS
+@findex color-pairs
 
-The value of the first argument must be between 1 and @code{COLOR_PAIRS-1}.
+The value of the first argument must be between 1 and
+@code{color-pairs - 1}.
 
-@findex COLORS
+@findex colors
 
 The value of the second and third arguments must be between 0 and
-@code{COLORS}.  Color pair 0 is assumed to be white on black, but is
+@code{colors}.  Color pair 0 is assumed to be white on black, but is
 actually whatever the terminal implements before color is initialized.
 
 If the color-pair was previously initialized, the screen is refreshed
 and all occurrences of that color-pair are changed to the new definition.
 
-@findex assume_default_colors
-@findex use_default_colors
+@findex assume-default-colors
+@findex use-default-colors
 
-Color pair 0 is set via the @code{assume_default_colors} routine.
-After @code{use_default_colors} has been called, the special color
-number -1 can be used as @var{fore_color} or @var{back_color}. Color
-number -1 is set to contain the default foreground or background
-color for this screen, which is usually white on black.
+Color pair 0 is set via the @code{assume-default-colors} routine.
+After @w{@code{use-default-colors}} has been called, the special color
+number @code{-1} can be used as @var{fore-color} or
+@var{back-color}. Color number @code{-1} is set to contain the default
+foreground or background color for this screen, which is usually white
+on black.
 
 Returns @code{*ok*} on success and @code{*err*} on failure.
 @end deffn
 
 
-@deffn Procedure has_colors
+@deffn Procedure has-colors
 
-The @code{has_colors} routine returns @code{#t} if the terminal can
+The @code{has-colors} routine returns @code{#t} if the terminal can
 manipulate colors; otherwise, it returns @code{#f}.  This routine
 facilitates writing terminal-independent programs. For example, a
 programmer can use it to decide whether to use color or some other
@@ -3142,31 +3140,32 @@ video attribute.
 
 @end deffn
 
-@deffn Procedure can_change_color
-The @code{can_change_color} routine returns @code{#t}
+@deffn Procedure can-change-color
+The @code{can-change-color} routine returns @code{#t}
 if the terminal supports colors and can change their definitions;
 otherwise, it returns @code{#f}.
 @end deffn
 
-@deffn Procedure color_content color
-@findex COLORS
-The color_content routine gives programmers a way to find the
+@deffn Procedure color-content color
+@findex colors
+The @code{color-content} routine gives programmers a way to find the
 intensity of the red, green, and blue (RGB) components in a color.
 Given @var{color} as its argument, it returns a list of three values
 indicating the red, green, and blue components in the given color.
-The value of the @var{color} argument must be between 0 and
-@code{COLORS}.  The values returned are between 0 (no component) and
-1000 (maximum amount of component).
+The value of the @var{color} argument must be between 0 and the value
+returned by the @code{colors} procedure.  The values returned are
+between 0 (no component) and 1000 (maximum amount of component).
 
 @end deffn
 
-@deffn Procedure pair_content pair
+@deffn Procedure pair-content pair
 
-The pair_content routine allows programmers to find out what colors
-color-pair @var{pair} consists of.  The value of @var{pair} must be
-between 1 and COLOR_PAIRS-1.  It returns a list of two elements: the
-forground color number and the background color number. The values
-are between 0 and COLORS.
+The @code{pair-content} routine allows programmers to find out what
+colors color-pair @var{pair} consists of.  The value of @var{pair}
+must be between 1 and @code{color-pairs - 1}.  It returns a list of
+two elements: the forground color number and the background color
+number. The values are between 0 and the value returned by
+@code{colors}.
 
 @end deffn
 
@@ -4805,6 +4804,11 @@ in the C-language @acronym{API, application programming interface}.
 @menu
 * Overview (wide)::             
 * Adding wide characters::      
+* Adding wide strings::         
+* Clearing windows or parts of windows (wide)::  
+* Borders and lines (wide)::    
+* Getting characters from the keyboard (wide)::  
+* Getting wide strings from the keyboard::  
 @end menu
 
 @node Overview (wide), Adding wide characters, The wide curses library, The wide curses library
@@ -4931,7 +4935,7 @@ All routines return the integer @code{*err*} upon failure and
 
 @end deffn
 
-@node Clearing windows or parts of windows (wide),  , Adding wide strings, The wide curses library
+@node Clearing windows or parts of windows (wide), Borders and lines (wide), Adding wide strings, The wide curses library
 @subsection Clearing windows or parts of windows (wide)
 
 @deffn Procedure bkgrndset wch
@@ -4968,7 +4972,7 @@ background rendition.
 Wherever the former background character appears, it is changed to the
 new background character.
 
-These return @code{*ok*} on success or {*err*} on failure. 
+These return @code{*ok*} on success or @code{*err*} on failure. 
 @end deffn
 
 @deffn Procedure getbkgrnd
@@ -4976,6 +4980,141 @@ These return @code{*ok*} on success or {*err*} on failure.
 
 These return the rendered, complex character that is the current
 background.
+@end deffn
+
+@node Borders and lines (wide), , Clearing windows or parts of windows (wide), The wide curses library
+@subsection Borders and lines (wide)
+
+@deffn Procedure border-set ls rs ts bs tl tr bl br
+@deffnx Procedure wborder-set win ls rs ts bs tl tr bl br
+
+The @code{border-set} and @code{wborder-set} routines draw a border
+around the edges of a window. Other than the window, each argument is
+a rendered, complex character representing a side or a corner of the
+border.  The arguments are @var{ls} - left side, @var{rs} - right
+side, @var{ts} - top side, @var{bs} - bottom side, @var{tl} - top
+left-hand corner, @var{tr} - top right-hand corner, @var{bl} - bottom
+left-hand corner, and @var{br} - bottom right-hand corner.
+
+These return @code{*ok*} on success or @code{*err*} on failure. 
+@end deffn 
+
+@deffn Procedure box-set win vert horiz
+The function @code{box-set} is shorthand for the following function
+call.
+@lisp
+(wborder-set win 
+             vert vert 
+             horiz horiz 
+             *wacs-ulcorner* *wacs-urcorner* 
+             *wacs-llcorner* *wacs-lrcorner*)
+@end lisp
+@end deffn
+
+@deffn Procedure hline-set wch n
+@deffnx Procedure whline-set win wch n
+@deffnx Procedure mvhline-set y x wch n
+@deffnx Procedure mvwhline-set win y x wch n
+@deffnx Procedure vline-set wch n
+@deffnx Procedure wvline-set win wch n
+@deffnx Procedure mvvline-set y x wch n
+@deffnx Procedure mvwvline-set win y x wch n
+
+These function draw a line beginning at the current cursor position
+and proceeding toward the right or to the bottom of the window.  The
+@code{hline-set} procedures are for horizontal lines and the
+@code{vline-set} procedures are for vertical lines.  The
+line is at most @var{n} characters long, or as many as will fit into 
+the window.  The current cursor position is not changed.
+
+Note that only single-width characters are supported.
+
+These return @code{*ok*} on success or @code{*err*} on failure. 
+@end deffn
+
+@node Getting characters from the keyboard (wide), , Borders and lines (wide), The wide curses library
+@subsection Getting characters from the keyboard (wide)
+
+@deffn Procedure get-wch
+@deffnx Procedure wget-wch win
+@deffnx Procedure mvget-wch y x
+@deffnx Procedure mvwget-wch win y x
+
+The @code{get-wch}, @code{wget-wch}, @code{mvget-wch}, and
+@code{mvwget-wch} functions read a character from the terminal
+associated with the current or specified window.  It returns a list of
+two elements.  The first element is @code{*ok*} and the second is the
+codepoint of the character pressed.  In no-delay mode, if
+no input is waiting, a list of two elements is returned where the first
+element is @code{*err*} and the second element is zero.  In
+@code{delay} mode, the program waits until the system passes text
+through to the program.  Depending on the setting of @code{cbreak},
+this is after one character (cbreak mode), or after the first newline
+(nocbreak mode).  In half-delay mode, the program waits until
+the user types a character or the specified timeout interval has
+elapsed.
+
+Unless @code{noecho} has been set, these routines echo the character
+into the designated window.
+
+If the window is not a pad and has been moved or modified since the
+last call to @code{wrefresh}, @code{wrefresh} will be called before
+another character is read.
+
+If @code{keypad} is enabled, these functions respond to the pressing
+of a function key by returning a list of two elements where the first
+element it @code{*key-code-yes*} and the second is the corresponding
+@code{*key-} constant. @xref{Getting characters from the keyboard} for
+the list of key codes.  If a character (such as @key{ESC}) that could
+be the beginning of a function key is received, curses sets a timer.
+If the remainder of the sequence does arrive within the designated
+time, curses passes through the character; otherwise, curses returns
+the function key value.  For this reason, many terminals experience a
+delay between the time a user presses the escape key and the time the
+escape is returned to the program.
+
+@end deffn
+
+@deffn Procedure unget-wch wch
+The procedure pushed @var{wch} back onto the input queue, so the wide
+character is returned on the next call to @code{get-wch}.  If a
+program calls @code{unget-wch} too many times without a call to
+@code{get-wch}, the procedure may fail.
+
+This returns @code{*ok*} on success or @code{*err*} on failure.
+@end deffn
+
+@node Getting wide strings from the keyboard,  , Getting characters from the keyboard (wide), The wide curses library
+@subsection Getting wide strings from the keyboard
+
+@deffn Procedure getn-wstr n
+@deffnx Procedure wgetn-wstr win n
+@deffnx Procedure mvgetn-wstr y x n
+@deffnx Procedure mvwgetn-wstr win y x n
+
+@vindex *weof*
+
+The procedure @code{getn-wstr} returns a list of unrendered, wide
+characters from the keyboard of the specified terminal is as though a
+series of calls to @code{get-wch} were made, until a @key{NL}, other
+end-of-line, or end-of-file condition is processed.  An end-of-file
+condition will be represented in the returned string by the constant
+@code{*weof*}.  The
+@key{NL} and end-of-line conditions are represented by the @code{NL}
+value.  The returned list will be constrained to have no more than
+@var{n} wide characters.
+
+The user's erase and kill characters are interpreted.  If keypad mode
+is on for the window, @key{LEFT} and @key{BS} are both considered
+equivalent to the user's kill character.
+
+Characters input are echoed only if echo is currently on.  In that
+case, @key{BS} is echoed as deletion of the previous character
+(typically a left motion).
+
+These functions will throw an error if the window is invalid or if the
+underlying @code{get-wch} functions fail for some reason.
+
 @end deffn
 
 @node Hacking the module, Index, Curses Reference, Top

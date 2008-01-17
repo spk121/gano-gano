@@ -52,6 +52,7 @@
 		wins-wch
 		wins-wstr
 		wvline-set
+		*weof*
 			    echo-wchar
 			    erasewchar
 			    getn-wstr
