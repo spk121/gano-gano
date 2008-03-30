@@ -1,0 +1,50 @@
+
+;; -*- Mode: scheme; -*-
+(define-module (XXpackageXX menu)
+	#:export ( 
+		set-menu-fore
+		set-menu-back
+		set-menu-format
+		set-menu-win
+		set-menu-sub
+		post-menu
+		unpost-menu
+		set-menu-mark
+		menu-win
+		menu-sub
+		menu-driver
+		item-count
+		menu-mark
+		menu-pattern
+		*e-ok*
+		*e-bad-argument*
+		*e-bad-state*
+		*e-connected*
+		*e-not-connected*
+		*e-not-posted*
+		*e-posted*
+		*e-request-denied*
+		*e-system-error*
+		*e-unknown-command*
+		*max-command*
+		*req-scr-uline*
+		*req-scr-dline*
+		*req-scr-upage*
+		*req-scr-dpage*
+		*req-left-item*
+		*req-right-item*
+		*req-next-item*
+		*req-prev-item*
+		*req-toggle-item*
+		*req-first-item*
+		*req-last-item*
+		*o-onevalue*
+		new-menu
+		free-menu
+		scale-menu
+		item-index
+		menu-spacing
+		menu-itemlen
+))
+
+(load-extension "XXlibnameXX" "gucu_menu_init")
