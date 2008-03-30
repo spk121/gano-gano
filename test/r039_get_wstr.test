@@ -22,19 +22,6 @@
 
 (with-test-prefix "get-wstr"
 		  
-		  (pass-if "get-wstr"
-			   (begin
-			     (erase)
-			     (refresh)
-			     (ungetch newline)
-			     (ungetch letter-p)
-			     (ungetch letter-i)
-			     (ungetch letter-h)
-			     (let ((s1 (get-wstr)))
-			       (begin
-				 (refresh)
-				 (lset= equal? s1 wstring-hip)))))
-
 		  (pass-if "getn-wstr"
 			   (begin
 			     (erase)
@@ -48,19 +35,6 @@
 				 (refresh)
 				 (lset= equal? s1 wstring-hi)))))
 
-
-		  (pass-if "mvget-wstr"
-			   (begin
-			     (erase)
-			     (refresh)
-			     (ungetch newline)
-			     (ungetch letter-p)
-			     (ungetch letter-i)
-			     (ungetch letter-h)
-			     (let ((s1 (mvget-wstr 1 1)))
-			       (begin
-				 (refresh)
-				 (lset= equal? s1 wstring-hip)))))
 
 		  (pass-if "mvgetn-wstr"
 			   (begin
@@ -78,20 +52,7 @@
 
 (with-test-prefix "wget-wstr"
 		  
-		  (pass-if "wget-wstr"
-			   (begin
-			     (werase win)
-			     (wrefresh win)
-			     (ungetch newline)
-			     (ungetch letter-p)
-			     (ungetch letter-i)
-			     (ungetch letter-h)
-			     (let ((s1 (wget-wstr win)))
-			       (begin
-				 (wrefresh win)
-				 (lset= equal? s1 wstring-hip)))))
-
-		  (pass-if "getn-wstr"
+		  (pass-if "wgetn-wstr"
 			   (begin
 			     (werase win)
 			     (wrefresh win)
@@ -104,19 +65,6 @@
 				 (wrefresh win)
 				 (lset= equal? s1 wstring-hi)))))
 
-
-		  (pass-if "mvget-wstr"
-			   (begin
-			     (werase win)
-			     (wrefresh win)
-			     (ungetch newline)
-			     (ungetch letter-p)
-			     (ungetch letter-i)
-			     (ungetch letter-h)
-			     (let ((s1 (mvwget-wstr win 1 1)))
-			       (begin
-				 (wrefresh win)
-				 (lset= equal? s1 wstring-hip)))))
 
 		  (pass-if "mvgetn-wstr"
 			   (begin

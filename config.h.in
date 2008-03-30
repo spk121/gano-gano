@@ -21,11 +21,20 @@
 /* Define to 1 if you have the <libguile.h> header file. */
 #undef HAVE_LIBGUILE_H
 
+/* Define to 1 if you have the `menu' library (-lmenu). */
+#undef HAVE_LIBMENU
+
 /* Define if you have libncursesw */
 #undef HAVE_LIBNCURSESW
 
+/* Define to 1 if you have the `panel' library (-lpanel). */
+#undef HAVE_LIBPANEL
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
+
+/* Define to 1 if you have the <menu.h> header file. */
+#undef HAVE_MENU_H
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H

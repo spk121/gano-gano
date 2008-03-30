@@ -16,7 +16,8 @@
 			     (clear)
 			     (refresh)
 			     (let ((b (baudrate)))
-			       (eqv? b 38400))))
+			       (eqv? b 38400)
+			       *unspecified*)))
 
 		  ;; Not sure what the correct answer for
 		  ;; erasechar should be.  Gnu/Linux xterm gives

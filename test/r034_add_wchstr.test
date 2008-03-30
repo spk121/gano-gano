@@ -25,32 +25,32 @@
 			     (move 0 0)
 			     (add-wchstr hello)
 			     (refresh)
-			     (let ((w2 (mvin-wchstr 0 0)))
+			     (let ((w2 (mvin-wchnstr 0 0 10)))
 			       (lset= equal? hello (list-head w2 (length hello))))))
-
+		  
 		  (pass-if "add-wchnstr"
 			   (begin
 			     (clear)
 			     (move 0 0)
 			     (add-wchnstr hello 2)
 			     (refresh)
-			     (let ((w2 (mvin-wchstr 0 0)))
+			     (let ((w2 (mvin-wchnstr 0 0 10)))
 			       (lset= equal? he (list-head w2 (length he))))))
-
+		  
 		  (pass-if "mvadd-wchstr"
 			   (begin
 			     (clear)
 			     (mvadd-wchstr 1 0 hello-bold)
 			     (refresh)
-			     (let ((x2 (mvin-wchstr 1 0)))
+			     (let ((x2 (mvin-wchnstr 1 0 10)))
 			       (equal? hello-bold (list-head x2 (length hello-bold))))))
-
+		  
 		  (pass-if "mvadd-wchnstr"
 			   (begin
 			     (clear)
 			     (mvadd-wchnstr 1 0 hello-bold 2)
 			     (refresh)
-			     (let ((x2 (mvin-wchstr 1 0)))
+			     (let ((x2 (mvin-wchnstr 1 0 10)))
 			       (equal? he-bold (list-head x2 (length he-bold)))))))
 
 (define win (newwin 5 10 5 5))
@@ -63,33 +63,33 @@
 			     (wmove win 0 0)
 			     (wadd-wchstr win hello)
 			     (wrefresh win)
-			     (let ((w2 (mvwin-wchstr win 0 0)))
-			       (lset= equal? hello (list-head w2 (length hello))))))
-
+			     (let ((w2 (mvwin-wchnstr win 0 0 10)))f
+				  (lset= equal? hello (list-head w2 (length hello))))))
+			   
 		  (pass-if "wadd-wchnstr"
 			   (begin
 			     (wclear win)
 			     (wmove win 0 0)
 			     (wadd-wchnstr win hello 2)
 			     (wrefresh win)
-			     (let ((w2 (mvwin-wchstr win 0 0)))
+			     (let ((w2 (mvwin-wchnstr win 0 0 10)))
 			       (lset= equal? he (list-head w2 (length he))))))
-
+		  
 		  (pass-if "mvwadd-wchstr"
 			   (begin
 			     (wclear win)
 			     (mvwadd-wchstr win 1 0 hello-bold)
 			     (wrefresh win)
-			     (let ((x2 (mvwin-wchstr win 1 0)))
+			     (let ((x2 (mvwin-wchnstr win 1 0 10)))
 			       (equal? hello-bold (list-head x2 (length hello-bold))))))
-
+		  
 		  (pass-if "mvwadd-wchnstr"
 			   (begin
 			     (wclear win)
 			     (mvwadd-wchnstr win 1 0 hello-bold 2)
 			     (wrefresh win)
-			     (let ((x2 (mvwin-wchstr win 1 0)))
+			     (let ((x2 (mvwin-wchnstr win 1 0 10)))
 			       (equal? he-bold (list-head x2 (length he-bold)))))))
-			      
+
 (delwin win)
 (refresh)

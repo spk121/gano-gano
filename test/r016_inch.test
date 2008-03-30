@@ -19,7 +19,7 @@
 			     (refresh)
 			     (let ((x1 (inch)))
 			       (equal? x-normal x1))))
-
+		  
 		  (pass-if "mvinch"
 			   (begin
 			     (clear)
@@ -27,7 +27,7 @@
 			     (refresh)
 			     (let ((x2 (mvinch 1 0)))
 			       (equal? x-bold x2)))))
-			      
+
 (define win (newwin 5 5 5 5))
 
 (with-test-prefix "winch"
@@ -40,7 +40,7 @@
 			     (wmove win 2 3)
 			     (let ((x1 (winch win)))
 			       (equal? x-normal x1))))
-
+		  
 		  (pass-if "mvwinch"
 			   (begin
 			     (wclear win)

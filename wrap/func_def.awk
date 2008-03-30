@@ -101,6 +101,14 @@ BEGIN {
     case "int":
       test_func = "scm_is_integer";
       break;
+    case "MENU *":
+    case "const MENU *":
+      test_func = "_scm_is_menu";
+      break;
+    case "PANEL *":
+    case "const PANEL *":
+      test_func = "_scm_is_panel";
+      break;
     case "SCREEN *":
       test_func = "_scm_is_screen";
       break;
@@ -183,6 +191,14 @@ BEGIN {
       break;
     case "FILE *":
       assign_func = "_scm_to_file";
+      break;
+    case "MENU *":
+    case "const MENU *":
+      assign_func = "_scm_to_menu";
+      break;
+    case "PANEL *":
+    case "const PANEL *":
+      assign_func = "_scm_to_panel";
       break;
     case "SCREEN *":
       assign_func = "_scm_to_screen";
@@ -282,6 +298,14 @@ BEGIN {
     break;
   case "int":
     assign_func = "scm_from_int";
+    break;
+  case "MENU *":
+  case "const MENU *":
+    assign_func = "_scm_from_menu";
+    break;
+  case "PANEL *":
+  case "const PANEL *":
+    assign_func = "_scm_from_panel";
     break;
   case "SCREEN *":
     assign_func = "_scm_from_screen";

@@ -394,23 +394,17 @@
 			    delwin
 			    getmouse
 			    getnstr
-			    getstr
 			    inchnstr
-			    inchstr
 			    innstr
 			    instr
 			    mousemask
 			    mouse-trafo
 			    mvgetnstr
-			    mvgetstr
 			    mvwgetnstr
-			    mvwgetstr
 			    mvinchnstr
-			    mvinchstr
 			    mvinnstr
 			    mvinstr
 			    mvwinchnstr
-			    mvwinchstr
 			    mvwinnstr
 			    mvwinstr
 			    newterm
@@ -419,9 +413,7 @@
 			    ungetmouse
 			    wattr-get
 			    wgetnstr
-			    wgetstr
 			    winchnstr
-			    winchstr
 			    winnstr
 			    winstr
 			    wmouse-trafo

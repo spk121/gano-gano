@@ -208,8 +208,8 @@ testbed_SOURCES = \
 	../src/raw/type.c 
 
 gucushell_LDADD = @LIBNCURSES@ -lutil
-gucushell_CPPFLAGS = -Wextra -Wall `guile-config compile`
-gucushell_LDFLAGS = `guile-config link`
+gucushell_CPPFLAGS = -Wextra -Wall 
+gucushell_LDFLAGS = 
 gucushell_SOURCES = \
 	shell.c
 

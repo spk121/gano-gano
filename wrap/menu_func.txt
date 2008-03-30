@@ -1,0 +1,14 @@
+int set_menu_fore(MENU *, chtype);
+int set_menu_back(MENU *, chtype);
+int set_menu_format(MENU *, int, int);
+int set_menu_win(MENU *, WINDOW *);
+int set_menu_sub(MENU *, WINDOW *);
+int post_menu(MENU *);
+int unpost_menu(MENU *);
+int set_menu_mark(MENU *, const char *);
+WINDOW *menu_win(const MENU *);
+WINDOW *menu_sub(const MENU *);
+int menu_driver(MENU *, int);
+int item_count(const MENU *);
+const char *menu_mark(const MENU *);
+char *menu_pattern(const MENU *);

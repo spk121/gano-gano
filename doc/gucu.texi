@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.11 2008/01/17 16:02:08 spike_gran Exp $
+@c $Id: gucu.texi,v 1.12 2008/03/30 16:56:01 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -152,7 +152,7 @@ Output functions
 The @code{addch} class of functions
 
 * mvaddch::                     
-* Complex characters and @code{add_wch}::  
+* Complex characters and @code{add-wch}::  
 
 @code{addstr} class of functions
 
@@ -163,14 +163,14 @@ The @code{addch} class of functions
 Input functions
 
 * @code{getch} class of functions::  
-* @code{getstr} class of functions::  
-* An example of @code{getstr} and @code{getch}::  
+* @code{getnstr} class of functions::  
+* An example of @code{getnstr} and @code{getch}::  
 
 Attributes
 
 * The details::                 
 * @code{attron} vs @code{attrset}::  
-* @code{attr_get}::             
+* @code{attr-get}::             
 * @code{wattr} functions::      
 * @code{chgat} functions::      
 
@@ -197,6 +197,11 @@ Interfacing with the mouse
 * Getting the events::          
 * Miscellaneous functions::     
 
+Curses Reference
+
+* The basic curses library::    
+* The wide curses library::     
+
 The basic curses library: @code{(gucu curses)}
 
 * Overview::                    
@@ -221,7 +226,7 @@ The basic curses library: @code{(gucu curses)}
 * Inserting a string before the cursor::  
 * Getting a string of characters from the screen::  
 * Low-level routines::          
-* Mouse handline::              
+* Mouse handling::              
 * Moving the cursor ::          
 * Output options::              
 * Overlay and manipulate overlapped windows::  
@@ -255,6 +260,11 @@ The wide curses library: @code{(gucu curses-wide)}
 * Borders and lines (wide)::    
 * Getting characters from the keyboard (wide)::  
 * Getting wide strings from the keyboard::  
+* Getting a rendered complex character::  
+* Getting a rendered complex string::  
+* Inserting a complex character before the cursor::  
+* Inserting a unrendered wide string into a window::  
+* Getting a string of unrendered wide characters from a window::  
 
 @end detailmenu
 @end menu
@@ -678,7 +688,7 @@ by the function @code{newwin} and is used and most curses functions.
 The @code{#<screen>} type is an opaque types that contain information
 about the physical terminal.  Variables of type @code{#<screen>} are
 created with the function @code{newterm} and used by the function
-@code{set_term}.
+@code{set-term}.
 
 This type is usually only found in programs that use multiple
 terminals.
@@ -1056,10 +1066,10 @@ lines.  Try looking for the procedures beginning with @code{acs-}.
 
 @menu
 * mvaddch::                     
-* Complex characters and @code{add_wch}::  
+* Complex characters and @code{add-wch}::  
 @end menu
 
-@node mvaddch, Complex characters and @code{add_wch}, The @code{addch} class of functions, The @code{addch} class of functions
+@node mvaddch, Complex characters and @code{add-wch}, The @code{addch} class of functions, The @code{addch} class of functions
 @subsubsection mvaddch, waddch, and mvwaddch
 
 @code{mvaddch} is used to move the cursor to a given point, and then
@@ -1080,8 +1090,8 @@ character into the window @code{stdscr}.
 In a similar fashion, @code{mvwaddch} is used to add a character into
 the given window at the given coordinates.
 
-@node Complex characters and @code{add_wch},  , mvaddch, The @code{addch} class of functions
-@subsubsection Complex characters and @code{add_wch}
+@node Complex characters and @code{add-wch},  , mvaddch, The @code{addch} class of functions
+@subsubsection Complex characters and @code{add-wch}
 
 For every function that operates on narrow characters, there is a
 parallel function that operates on wide characters.  The functions
@@ -1192,17 +1202,17 @@ be divided into two categories.
 @item
 @code{getch} class: get a character
 @item
-@code{getstr} class: get a string
+@code{getnstr} class: get a string
 @end enumerate
 
 
 @menu
 * @code{getch} class of functions::  
-* @code{getstr} class of functions::  
-* An example of @code{getstr} and @code{getch}::  
+* @code{getnstr} class of functions::  
+* An example of @code{getnstr} and @code{getch}::  
 @end menu
 
-@node @code{getch} class of functions, @code{getstr} class of functions, Input functions, Input functions
+@node @code{getch} class of functions, @code{getnstr} class of functions, Input functions, Input functions
 @subsection @code{getch} class of functions
 
 These functions read a single character from the terminal.  But there
@@ -1216,10 +1226,9 @@ function is @code{noecho}.  As the name suggests, when this function
 is set (used), the characters that are keyed in by the user will not
 show up on the screen.  The two functions @code{cbreak} and
 @code{noecho} are typical examples of key management.
-@xref{@code{echo} and @code{noecho}} for details.
-
-@node @code{getstr} class of functions, An example of @code{getstr} and @code{getch}, @code{getch} class of functions, Input functions
-@subsection @code{getstr} class of functions
+For details @xref{@code{echo} and @code{noecho}}.
+@node @code{getnstr} class of functions, An example of @code{getnstr} and @code{getch}, @code{getch} class of functions, Input functions
+@subsection @code{getnstr} class of functions
 
 These functions are used to get strings from the terminal.  In
 essence, these functions perform the same task as would be achieved by
@@ -1227,8 +1236,8 @@ a series of calls to @code{getch} until a @key{NL}, @key{CR}, or
 @key{EOF} is received.  The resulting string of characters is
 returned.
 
-@node An example of @code{getstr} and @code{getch},  , @code{getstr} class of functions, Input functions
-@subsection An example of @code{getstr} and @code{getch}
+@node An example of @code{getnstr} and @code{getch},  , @code{getnstr} class of functions, Input functions
+@subsection An example of @code{getnstr} and @code{getch}
 
 @example
 (use-modules (gucu curses)
@@ -1245,7 +1254,7 @@ returned.
 	    0
 	    mesg)
   (refresh)
-  (let ((str (getstr)))
+  (let ((str (getnstr 80)))
     (mvaddstr (- row 2) 
 	      0
 	      (format #f "You entered: ~a~%" str))
@@ -1335,7 +1344,7 @@ file, parses it, and prints it in different colors.
 @menu
 * The details::                 
 * @code{attron} vs @code{attrset}::  
-* @code{attr_get}::             
+* @code{attr-get}::             
 * @code{wattr} functions::      
 * @code{chgat} functions::      
 @end menu
@@ -1345,7 +1354,7 @@ file, parses it, and prints it in different colors.
 
 Let's get into more details of attributes.  The functions
 @code{attron}, @code{attroff}, @code{attrset}, and their sister
-functions @code{attr_get} etc., can be used to switch attributes on
+functions @code{attr-get} etc., can be used to switch attributes on
 and off, get attributes, and produce a colorful display.
 
 The functions @code{attron} and @code{attroff} take a bit-mask of
@@ -1388,7 +1397,7 @@ use
 (attron (logior *a-reverse* *a-blink*))
 @end example
 
-@node @code{attron} vs @code{attrset}, @code{attr_get}, The details, Attributes
+@node @code{attron} vs @code{attrset}, @code{attr-get}, The details, Attributes
 @subsection @code{attron} vs @code{attrset}
 
 Then what is the difference between @code{attron} and @code{attrset}?
@@ -1405,10 +1414,10 @@ to it.  You can always use @code{standend} which is equivalent to
 @code{(attrset *a-normal*)} which turns off all attributes and brings
 you back to normal mode.
 
-@node @code{attr_get}, @code{wattr} functions, @code{attron} vs @code{attrset}, Attributes
-@subsection @code{attr_get}
+@node @code{attr-get}, @code{wattr} functions, @code{attron} vs @code{attrset}, Attributes
+@subsection @code{attr-get}
 
-The function @code{attr_get} gets the current attributes and color
+The function @code{attr-get} gets the current attributes and color
 pair of the window.  Though we might not use this as often as the
 above runctions, this is useful in scanning areas of a screen.  Say we
 wanted to do some complex update on the screen and we are not sure
@@ -1416,7 +1425,7 @@ what attribute each character is associated with.  Then this function
 can be used with either @code{attrset} or @code{attron} to produce the
 desired effect.
 
-@node @code{wattr} functions, @code{chgat} functions, @code{attr_get}, Attributes
+@node @code{wattr} functions, @code{chgat} functions, @code{attr-get}, Attributes
 @subsection @code{wattr} functions
 
 For each of the above functions, we have a corresponding function with
@@ -2074,10 +2083,16 @@ The GuCu package provides the following modules:
 @item
 @code{(gucu curses-wide)}: Input/output with wide strings.
 @item
-@code{(gucu curses-alt)}: A reworking of the commonly used functions
-@code{(gucu curses)} with a more scheme-like interface.
+@code{(gucu curses-alt)}: A reworking of the commonly used functions 
+@code{(gucu curses)} with a more scheme-like interface.  This is undocumented.
 @end enumerate
 
+@menu
+* The basic curses library::    
+* The wide curses library::     
+@end menu
+
+@node The basic curses library, The wide curses library, Curses Reference, Curses Reference
 @section The basic curses library: @code{(gucu curses)}
 
 These are the functions in the @code{(gucu curses)} module.
@@ -2116,7 +2131,7 @@ integers @code{*ok*} and @code{*err*}, instead of @code{#t} and
 * Inserting a string before the cursor::  
 * Getting a string of characters from the screen::  
 * Low-level routines::          
-* Mouse handline::              
+* Mouse handling::              
 * Moving the cursor ::          
 * Output options::              
 * Overlay and manipulate overlapped windows::  
@@ -2131,7 +2146,7 @@ integers @code{*ok*} and @code{*err*}, instead of @code{#t} and
 * Window creation::             
 @end menu
 
-@node Overview, Curses screen initialization and manipulation routines, Curses Reference, Curses Reference
+@node Overview, Curses screen initialization and manipulation routines, The basic curses library, The basic curses library
 @subsection Overview
 
 The GuCu library routines give the user a terminal-independent
@@ -2300,7 +2315,7 @@ specified before the coordinates.
 @menu
 @end menu
 
-@node Curses screen initialization and manipulation routines, Adding characters, Overview, Curses Reference
+@node Curses screen initialization and manipulation routines, Adding characters, Overview, The basic curses library
 @subsection Curses screen initialization and manipulation routines
 
 @cindex initialization
@@ -2310,10 +2325,10 @@ specified before the coordinates.
 @cindex curses, termination
 
 @findex initscr
-@findex slk_init
+@findex slk-init
 @findex filter
 @findex ripoffline
-@findex use_env
+@findex use-env
 @findex newterm
 
 @code{initscr} is normally the first curses routine to call when
@@ -2338,7 +2353,7 @@ otherwise, a @code{#<window>} referencing @code{stdscr} is returned.
 @end deffn
 
 @tindex #<screen>
-@vindex TERM
+@vindex $TERM
 @tindex #<file>
 @findex fopen
 
@@ -2420,7 +2435,7 @@ data structure.  The @code{endwin} routine does not do this, so
 Its return value is @code{*unspecified*}.
 @end deffn
 
-@node Adding characters, Adding strings of characters and attributes, Curses screen initialization and manipulation routines, Curses Reference
+@node Adding characters, Adding strings of characters and attributes, Curses screen initialization and manipulation routines, The basic curses library
 @subsection Adding characters 
 
 There is a family of functions that add a rendered, narrow character
@@ -2516,7 +2531,7 @@ sign to the screen, for example.
 The set of line-graphics characters is given in @ref{tab:ACS}.
 
 @float Table,tab:ACS
-@multitable {acs_xxxxxxxxx} {default} {xxxxxxxxxxxxxxxxxxxxxxxxx}
+@multitable {acs-xxxxxxxxx} {default} {xxxxxxxxxxxxxxxxxxxxxxxxx}
 @headitem name @tab default @tab description
 
 @item @code{acs-block}
@@ -2619,7 +2634,7 @@ The set of line-graphics characters is given in @ref{tab:ACS}.
 @caption{the line-graphics procedures}
 @end float
 
-@node Adding strings of characters and attributes, Character and window attribute control routines, Adding characters, Curses Reference
+@node Adding strings of characters and attributes, Character and window attribute control routines, Adding characters, The basic curses library
 @subsection Adding strings
 
 @deffn Procecure addstr
@@ -2677,7 +2692,7 @@ been deleted and @code{*ok*} on success.
 
 @end deffn
 
-@node Character and window attribute control routines, Bell and screen flash routines, Adding strings of characters and attributes, Curses Reference
+@node Character and window attribute control routines, Bell and screen flash routines, Adding strings of characters and attributes, The basic curses library
 @subsection Character and window attribute control routines
 
 @findex waddch
@@ -2702,12 +2717,12 @@ screen.
 @deffnx Procedure wstandend win
 @deffnx Procedure standout
 @deffnx Procedure wstandout win
-@deffnx Procedure attr_set attrs
-@deffnx Procedure wattr_set win attrs
-@deffnx Procedure attr_on attrs
-@deffnx Procedure wattr_on win attrs
-@deffnx Procedure attr_off attrs
-@deffnx Procedure wattr_off win attrs
+@deffnx Procedure attr-set attrs
+@deffnx Procedure wattr-set win attrs
+@deffnx Procedure attr-on attrs
+@deffnx Procedure wattr-on win attrs
+@deffnx Procedure attr-off attrs
+@deffnx Procedure wattr-off win attrs
 
 The routine @code{attrset} sets the current attributes of the given
 window to @var{attrs}.  The routine @code{attroff} turns off the named
@@ -2723,9 +2738,9 @@ same as @code{attron}, etc.
 @end deffn
 
 The @code{attrset} and related routines do not affect the attributes
-used when erasing portions of the window. @xref{Window background
-manipulation routines} for functions which modify the attributes used
-for erasing and clearing.
+used when erasing portions of the window. For functions which modify
+the attributes used for erasing and clearing @xref{Window background
+manipulation routines}.
 
 @deffn Procedure color-set color-pair-number opts
 @deffnx Procedure wcolor-set win color-pair-number opts
@@ -2741,7 +2756,7 @@ future use.  For now, set it to @code{#t}.
 @deffnx Procedure wattr-get win
  
 The routine @code{wattr-get} returns the current attribute and color
-pair for the given window; @code{attr_get} returns the current
+pair for the given window; @code{attr-get} returns the current
 attribute and color pair for @code{stdscr}.  They are returned as a
 list containing two elements.  The first element is the rendition: a
 bitmap containing all the attributes and the color pair value under
@@ -2828,7 +2843,7 @@ Returns the pair number number associated with attribute @var{attrs}.
 @caption{Attributes}
 @end float
 
-@node Bell and screen flash routines, Window background manipulation routines, Character and window attribute control routines, Curses Reference
+@node Bell and screen flash routines, Window background manipulation routines, Character and window attribute control routines, The basic curses library
 @subsection Bell and screen flash routines
 
 @deffn Procedure beep
@@ -2847,7 +2862,7 @@ flashing, @code{*err*} otherwise.
 
 @end deffn
 
-@node Window background manipulation routines, Borders and lines, Bell and screen flash routines, Curses Reference
+@node Window background manipulation routines, Borders and lines, Bell and screen flash routines, The basic curses library
 @subsection Window background manipulation routines
 
 @deffn Procedure bkgdset ch
@@ -2891,7 +2906,7 @@ The @code{getbkgd} function returns the given window's current background
 character/attribute pair.
 @end deffn
 
-@node Borders and lines, Clearing windows and parts of window, Window background manipulation routines, Curses Reference
+@node Borders and lines, Clearing windows and parts of window, Window background manipulation routines, The basic curses library
 @subsection Borders and lines
 
 
@@ -2960,7 +2975,7 @@ These functions return @code{*ok*}.
 
 @end deffn
 
-@node Clearing windows and parts of window, Color manipulation routines, Borders and lines, Curses Reference
+@node Clearing windows and parts of window, Color manipulation routines, Borders and lines, The basic curses library
 @subsection Clearing windows and parts of window
 
 @findex wbkgdset
@@ -3015,7 +3030,7 @@ These functions return @code{*err*} if the window does not exist.
 Otherwise they return @code{*ok*}.
 @end deffn
 
-@node Color manipulation routines, Deleting the character under the cursor, Clearing windows and parts of window, Curses Reference
+@node Color manipulation routines, Deleting the character under the cursor, Clearing windows and parts of window, The basic curses library
 @subsection Color manipulation routines
 
 @findex initscr
@@ -3098,7 +3113,7 @@ immediately change to the new definition.
 
 @deffn Procedure init-pair color-pair fore-color back-color
 
-The @code{init_pair} routine changes the definition of a color-pair.
+The @code{init-pair} routine changes the definition of a color-pair.
 It takes three arguments: the number of the color-pair to be changed,
 the fore-ground color number, and the background color number.
 
@@ -3169,7 +3184,7 @@ number. The values are between 0 and the value returned by
 
 @end deffn
 
-@node Deleting the character under the cursor, Deleting and inserting lines, Color manipulation routines, Curses Reference
+@node Deleting the character under the cursor, Deleting and inserting lines, Color manipulation routines, The basic curses library
 @subsection Deleting the character under the cursor
 
 @deffn Procedure delch
@@ -3187,7 +3202,7 @@ All routines return the integer @code{*err*} upon failure and an
 
 @end deffn
 
-@node Deleting and inserting lines, Getting characters from the keyboard, Deleting the character under the cursor, Curses Reference
+@node Deleting and inserting lines, Getting characters from the keyboard, Deleting the character under the cursor, The basic curses library
 @subsection Deleting and inserting lines
 
 
@@ -3225,7 +3240,7 @@ Returns @code{*ok*} on success or @code{*err*} on failure.
 @end deffn
 
 
-@node Getting characters from the keyboard, Receiving strings from the keyboard, Deleting and inserting lines, Curses Reference
+@node Getting characters from the keyboard, Receiving strings from the keyboard, Deleting and inserting lines, The basic curses library
 @subsection Getting characters from the keyboard
 
 @deffn Procedure getch
@@ -3237,13 +3252,14 @@ Returns @code{*ok*} on success or @code{*err*} on failure.
 @findex nocbreak
 
 The @code{getch}, @code{wgetch}, @code{mvgetch} and @code{mvwgetch},
-routines read a character from the window.  In no-delay mode, if no
-input is waiting, the value @code{*err*} is returned.  In delay mode,
-the program waits until the system passes text through to the program.
-Depending on the setting of cbreak, this is after one character
-(@code{cbreak} mode), or after the first newline (@code{nocbreak}
-mode).  In @code{half_delay} mode, the program waits until a character
-is typed or the specified timeout has been reached.
+routines read a character from the terminal associated with the given
+window.  In no-delay mode, if no input is waiting, the value
+@code{*err*} is returned.  In delay mode, the program waits until the
+system passes text through to the program.  Depending on the setting
+of cbreak, this is after one character (@code{cbreak} mode), or after
+the first newline (@code{nocbreak} mode).  In @code{half-delay} mode,
+the program waits until a character is typed or the specified timeout
+has been reached.
 
 @findex noecho
 @findex delch
@@ -3254,15 +3270,15 @@ echoed into the designated window according to the following rules: If
 the character is the current erase character, left arrow, or
 backspace, the cursor is moved one space to the left and that screen
 position is erased as if @code{delch} had been called.  If the
-character value is any other *key- define, the user is alerted with a
+character value is any other @code{*key-} define, the user is alerted with a
 @code{beep} call.  Otherwise the character is simply output to the
 screen.
 
 @findex keypad
 
 If @code{keypad} is @code{#t}, and a function key is pressed, the token for that
-function key is returned instead of the raw characters. Possible
-function keys are defined in table FIXME.
+function key is returned instead of the raw characters. @xref{tab:key}
+and the procedure @code{key-f} for the list of possible function keys.
 
 When a character that could be the beginning of a function key is
 received (which, on modern terminals, means an escape character),
@@ -3302,302 +3318,135 @@ The following function keys, might be returned by @code{getch} if
 Note that almost all of these function keys do not exist on modern
 keyboards.  The standard PC keyboard cannot be depended upon to have
 more than @code{(key-f 1)} through @code{(key-f 12)},
-@code{*key-home*}, @code{*key-ppage*} (Page Up), @code{*key-npage*}
+@code{*key-ppage*} (Page Up), @code{*key-npage*}
 (Page Down), @code{*key-home*}, @code{*key-end*}, @code{*key-ic*}
 (Insert), @code{*key-dc*} (Delete), @code{*key-backspace*},
 @code{*key-dc*} (Delete), @code{*key-up*}, @code{*key-down*}, @code{*key-left*}, and
 @code{*key-right*}.
 
-Also, a common terminal is more likely to return ^M than @code{*key-enter*}
+Also, a common terminal is more likely to return @kbd{C-M} than @code{*key-enter*}
 when the @key{RET} key is pressed.
-
-
-@defvr Constant *key-break*
-Break key
-@end defvr
-
-@defvr Constant *key-down*
-@defvrx Constant *key-up*
-@defvrx Constant *key-left*
-@defvrx Constant *key-right*
-The four arrow keys...
-@end defvr
-
-@defvr Constant *key-home*
-Home key
-@end defvr
-
-@defvr Constant *key-backspace*	  
-Backspace
-@end defvr
-
-@defvr Constant *key-f0*	 
-Function keys zero
-@end defvr
 
 @deffn Procedure key-f n
 This procedure returns the keycode for function key @var{n}.
 @end deffn
 
-@defvr Constant *key-dl*
-	  Delete line
-@end defvr
-@defvr Constant *key-il*	  
-Insert line
-@end defvr
-@defvr Constant *key-dc*	  
-Delete character
-@end defvr
-@defvr Constant *key-ic*	
-  Insert char or enter insert mode
-@end defvr
-@defvr Constant *key-eic*
-	  Exit insert char mode
-@end defvr
-@defvr Constant *key-clear*	 
- Clear screen
-@end defvr
-@defvr Constant *key-eos*	
-  Clear to end of screen
-@end defvr
-@defvr Constant *key-eol*	
-  Clear to end of line
-@end defvr
-@defvr Constant *key-sf*	
-  Scroll 1 line forward
-@end defvr
-@defvr Constant *key-sr*	
-  Scroll 1 line backward (reverse)
-@end defvr
-@defvr Constant *key-npage*	  
-Next page
-@end defvr
-@defvr Constant *key-ppage*	
-  Previous page
-@end defvr
-@defvr Constant *key-stab*	 
- Set tab
-@end defvr
-@defvr Constant *key-ctab*	 
- Clear tab
-@end defvr
-@defvr Constant *key-catab*
-	  Clear all tabs
-@end defvr
-@defvr Constant *key-enter*	
-  Enter or send
-@end defvr
-@defvr Constant *key-sreset*	
-  Soft (partial) reset
-@end defvr
-@defvr Constant *key-reset*	
-  Reset or hard reset
-@end defvr
-@defvr Constant *key-print*	
-  Print or copy
-@end defvr
-@defvr Constant *key-ll*
-	  Home down or bottom (lower left)
-@end defvr
-@defvr Constant *key-a1*
-	  Upper left of keypad
-@end defvr
-@defvr Constant *key-a3*	
-  Upper right of keypad
-@end defvr
-@defvr Constant *key-b2*
-	  Center of keypad
-@end defvr
-@defvr Constant *key-c1*
-	  Lower left of keypad
-@end defvr
-@defvr Constant *key-c3*	
-  Lower right of keypad
-@end defvr
-@defvr Constant *key-btab*	
-  Back tab key
-@end defvr
-@defvr Constant *key-beg*
-	  Beg(inning) key
-@end defvr
-@defvr Constant *key-cancel*	 
- Cancel key
-@end defvr
-@defvr Constant *key-close*	
-  Close key
-@end defvr
-@defvr Constant *key-command*	
-  Cmd (command) key
-@end defvr
-@defvr Constant *key-copy*
-	  Copy key
-@end defvr
-@defvr Constant *key-create*
-	  Create key
-@end defvr
-@defvr Constant *key-end*
-	  End key
-@end defvr
-@defvr Constant *key-exit*
-	  Exit key
-@end defvr
-@defvr Constant *key-find*
-	  Find key
-@end defvr
-@defvr Constant *key-help*
-	  Help key
-@end defvr
-@defvr Constant *key-mark*	 
- Mark key
-@end defvr
-@defvr Constant *key-message*
-	  Message key
-@end defvr
-@defvr Constant *key-mouse*	
-  Mouse event read
-@end defvr
-@defvr Constant *key-move*	  
-Move key
-@end defvr
-@defvr Constant *key-next*	 
- Next object key
-@end defvr
-@defvr Constant *key-open*	
-  Open key
-@end defvr
-@defvr Constant *key-options*	
-  Options key
-@end defvr
-@defvr Constant *key-previous*	
-  Previous object key
-@end defvr
-@defvr Constant *key-redo*	 
- Redo key
-@end defvr
-@defvr Constant *key-reference*
-	  Ref(erence) key
-@end defvr
-@defvr Constant *key-refresh*
-	  Refresh key
-@end defvr
-@defvr Constant *key-replace*
-	  Replace key
-@end defvr
-@defvr Constant *key-resize*
-	  Screen resized
-@end defvr
-@defvr Constant *key-restart*
-	  Restart key
-@end defvr
-@defvr Constant *key-resume*
-	  Resume key
-@end defvr
-@defvr Constant *key-save*
-	  Save key
-@end defvr
-@defvr Constant *key-sbeg*
-	  Shifted beginning key
-@end defvr
-@defvr Constant *key-scancel*
-	  Shifted cancel key
-@end defvr
-@defvr Constant *key-scommand*
-	  Shifted command key
-@end defvr
-@defvr Constant *key-scopy*	
-  Shifted copy key
-@end defvr
-@defvr Constant *key-screate*	
-  Shifted create key
-@end defvr
-@defvr Constant *key-sdc*
-	  Shifted delete char key
-@end defvr
-@defvr Constant *key-sdl*
-	  Shifted delete line key
-@end defvr
-@defvr Constant *key-select*	
-  Select key
-@end defvr
-@defvr Constant *key-send*	
-  Shifted end key
-@end defvr
-@defvr Constant *key-seol*
-	  Shifted clear line key
-@end defvr
-@defvr Constant *key-sexit*	 
- Shifted exit key
-@end defvr
-@defvr Constant *key-sfind*
-	  Shifted find key
-@end defvr
-@defvr Constant *key-shelp*	
-  Shifted help key
-@end defvr
-@defvr Constant *key-shome*
-	  Shifted home key
-@end defvr
-@defvr Constant *key-sic*
-	  Shifted input key
-@end defvr
-@defvr Constant *key-sleft*	
-  Shifted left arrow key
-@end defvr
-@defvr Constant *key-smessage*
-	  Shifted message key
-@end defvr
-@defvr Constant *key-smove*
-	  Shifted move key
-@end defvr
-@defvr Constant *key-snext*	
-  Shifted next key
-@end defvr
-@defvr Constant *key-soptions*	
-  Shifted options key
-@end defvr
-@defvr Constant *key-sprevious*	
-  Shifted prev key
-@end defvr
-@defvr Constant *key-sprint*	
-  Shifted print key
-@end defvr
-@defvr Constant *key-sredo*	
-  Shifted redo key
-@end defvr
-@defvr Constant *key-sreplace*
-	  Shifted replace key
-@end defvr
-@defvr Constant *key-sright*	
-  Shifted right arrow
-@end defvr
-@defvr Constant *key-srsume*
-	  Shifted resume key
-@end defvr
-@defvr Constant *key-ssave*
-	  Shifted save key
-@end defvr
-@defvr Constant *key-ssuspend*
-	  Shifted suspend key
-@end defvr
-@defvr Constant *key-sundo*
-	  Shifted undo key
-@end defvr
-@defvr Constant *key-suspend*
-	  Suspend key
-@end defvr
-@defvr Constant *key-undo*
-	  Undo key
-@end defvr
+@float Table,tab:key
+@multitable {@code{*key-backspace*} xx} {Home down or bottom (lower left) xxxx}
+@headitem name @tab description
+@item @code{*key-break*} @tab Break key
+@item @code{*key-down*} @tab Arrow down
+@item @code{*key-up*} @tab Arrow up
+@item @code{*key-left*} @tab Arrow left
+@item @code{*key-right*} @tab Arrow right
+@item @code{*key-home*} @tab Home key
+@item @code{*key-backspace*} @tab Backspace
+@item @code{*key-f0*} @tab Function key zero
+@item @code{*key-dl*} @tab Delete line
+@item @code{*key-il*} @tab Insert line
+@item @code{*key-dc*} @tab Delete character
+@item @code{*key-ic*} @tab Insert char or enter insert mode
+@item @code{*key-eic*} @tab Exit insert char mode
+@item @code{*key-clear*} @tab Clear screen
+@item @code{*key-eos*} @tab Clear to end of screen
+@item @code{*key-eol*} @tab Clear to end of line
+@item @code{*key-sf*} @tab Scroll 1 line forward
+@item @code{*key-sr*} @tab Scroll 1 line backward (reverse)
+@item @code{*key-npage*} @tab Next page
+@item @code{*key-ppage*} @tab Previous page
+@item @code{*key-stab*} @tab Set tab
+@item @code{*key-ctab*} @tab Clear tab
+@item @code{*key-catab*} @tab Clear all tabs
+@item @code{*key-enter*} @tab Enter or send
+@item @code{*key-sreset*} @tab Soft (partial) reset
+@item @code{*key-reset*} @tab Reset or hard reset
+@item @code{*key-print*} @tab Print or copy
+@item @code{*key-ll*} @tab Home down or bottom (lower left)
+@item @code{*key-a1*} @tab Upper left of keypad
+@item @code{*key-a3*} @tab Upper right of keypad
+@item @code{*key-b2*} @tab Center of keypad
+@item @code{*key-c1*} @tab Lower left of keypad
+@item @code{*key-c3*} @tab Lower right of keypad
+@item @code{*key-btab*} @tab Back tab key
+@item @code{*key-beg*} @tab Beg(inning) key
+@item @code{*key-cancel*} @tab Cancel key
+@item @code{*key-close*} @tab Close key
+@item @code{*key-command*} @tab Cmd (command) key
+@item @code{*key-copy*} @tab Copy key
+@item @code{*key-create*} @tab Create key
+@item @code{*key-end*} @tab End key
+@item @code{*key-exit*} @tab Exit key
+@item @code{*key-find*} @tab Find key
+@item @code{*key-help*} @tab Help key
+@item @code{*key-mark*} @tab Mark key
+@item @code{*key-message*} @tab Message key
+@end multitable
+@caption{the keypad constants, part 1}
+@end float
 
 
-@deffn Procedure has_key ch
+@float Table,tab:key2
+@multitable {@code{*key-backspace*} xx} {Home down or bottom (lower left) xxxx}
+@headitem name @tab description
+@item @code{*key-mouse*} @tab Mouse event read
+@item @code{*key-move*} @tab Move key
+@item @code{*key-next*} @tab Next object key
+@item @code{*key-open*} @tab Open key
+@item @code{*key-options*} @tab Options key
+@item @code{*key-previous*} @tab Previous object key
+@item @code{*key-redo*} @tab Redo key
+@item @code{*key-reference*} @tab Ref(erence) key
+@item @code{*key-refresh*} @tab Refresh key
+@item @code{*key-replace*} @tab Replace key
+@item @code{*key-resize*} @tab Screen resized
+@item @code{*key-restart*} @tab Restart key
+@item @code{*key-resume*} @tab Resume key
+@item @code{*key-save*} @tab Save key
+@item @code{*key-sbeg*} @tab Shifted beginning key
+@item @code{*key-scancel*} @tab Shifted cancel key
+@item @code{*key-scommand*} @tab Shifted command key
+@item @code{*key-scopy*} @tab Shifted copy key
+@item @code{*key-screate*} @tab Shifted create key
+@item @code{*key-sdc*} @tab Shifted delete char key
+@item @code{*key-sdl*} @tab Shifted delete line key
+@item @code{*key-select*} @tab Select key
+@item @code{*key-send*} @tab Shifted end key
+@item @code{*key-seol*} @tab Shifted clear line key
+@item @code{*key-sexit*} @tab Shifted exit key
+@item @code{*key-sfind*} @tab Shifted find key
+@item @code{*key-shelp*} @tab Shifted help key
+@item @code{*key-shome*} @tab Shifted home key
+@item @code{*key-sic*} @tab Shifted input key
+@item @code{*key-sleft*} @tab Shifted left arrow key
+@item @code{*key-smessage*} @tab Shifted message key
+@item @code{*key-smove*} @tab Shifted move key
+@item @code{*key-snext*} @tab Shifted next key
+@item @code{*key-soptions*} @tab Shifted options key
+@item @code{*key-sprevious*} @tab Shifted prev key
+@item @code{*key-sprint*} @tab Shifted print key
+@item @code{*key-sredo*} @tab Shifted redo key
+@item @code{*key-sreplace*} @tab Shifted replace key
+@item @code{*key-sright*} @tab Shifted right arrow
+@item @code{*key-srsume*} @tab Shifted resume key
+@item @code{*key-ssave*} @tab Shifted save key
+@item @code{*key-ssuspend*} @tab Shifted suspend key
+@item @code{*key-sundo*} @tab Shifted undo key
+@item @code{*key-suspend*} @tab Suspend key
+@item @code{*key-undo*} @tab Undo key
+@end multitable
+@caption{the keypad constants, part 2}
+@end float
+
+
+
+@deffn Procedure has-key ch
 @findex resizeterm
-The @code{has_key} routine takes a key value @var{ch} from the above
-list, and returns @code{#t} or @code{#f} according to whether the current
-terminal type recognizes a key with that value.  Note that a few
-values do not correspond to a real key, e.g., *key-resize* and
-*key-mouse*.  See @code{resizeterm} for more details about *key-resize*, and
-FIXME for a discussion of *key-mouse*.
+The @code{has-key} routine takes a key value @var{ch} from the above
+list, and returns @code{#t} or @code{#f} according to whether the
+current terminal type recognizes a key with that value.  Note that a
+few values do not correspond to a real key, e.g., @code{*key-resize*}
+and @code{*key-mouse*}.  See @code{resizeterm} for more details about
+@code{*key-resize*}.  @xref{Mouse handling} for a discussion of @code{*key-mouse*}.
 @end deffn
 
 
@@ -3606,17 +3455,18 @@ is discouraged, as it will cause a delay of up to one second while the
 keypad code looks for a following function-key sequence.
 
 Note that some keys may be the same as commonly used control keys,
-e.g., *key-enter* versus control/M, *key-backspace* versus control/H.
+e.g., *key-enter* versus @kbd{C-M}, *key-backspace* versus @kbd{C-H}.
 Some curses implementations may differ according to whether they treat
 these control keys specially (and ignore the terminfo), or use the
 terminfo definitions.  Ncurses uses the terminfo definition.  If it
-says that *key-enter* is control/M, getch will return *key-enter* when you
-press control/M.
+says that *key-enter* is @kbd{C-M}, @code{getch} will return
+@code{*key-enter*} when you press @kbd{C-M}.
 
-When using getch, wgetch, mvgetch, or mvwgetch, nocbreak mode
-(nocbreak) and echo mode (echo) should not be used at the same time.
-Depending on the state of the tty driver when each character is typed,
-the program may produce undesirable results.
+When using @code{getch}, @code{wgetch}, @code{mvgetch}, or
+@code{mvwgetch}, nocbreak mode (@code{nocbreak}) and echo mode
+(@code{echo}) should not be used at the same time.  Depending on the
+state of the tty driver when each character is typed, the program may
+produce undesirable results.
 
 Historically, the set of keypad macros was largely defined by the
 extremely function-key-rich keyboard of the AT&T 7300, aka 3B1, aka
@@ -3627,21 +3477,17 @@ of these.  IBM PC-style consoles typically support little more than
 @code{*key-npage*}, @code{*key-ppage*}, and function keys 1 through
 12.  The ins key is usually mapped to @code{*key-ic*}
 
-@node Receiving strings from the keyboard, Cursor location and window coordinates, Getting characters from the keyboard, Curses Reference
+@node Receiving strings from the keyboard, Cursor location and window coordinates, Getting characters from the keyboard, The basic curses library
 @subsection Receiving strings from the keyboard
 
-@deffn Procedure getstr
-@deffnx Procedure getnstr n
-@deffnx Procedure wgetstr win
+@deffn Procedure getnstr n
 @deffnx Procedure wgetnstr win n
-@deffnx Procedure mvgetstr y x
-@deffnx Procedure mvwgetstr win y x
 @deffnx Procedure mvgetnstr y x n
 @deffnx Procedure mvwgetnstr win y x n
 
 @findex getch
 
-The proceudre @code{getstr} is equivalent to a series of calls to
+The proceudre @code{getnstr} is equivalent to a series of calls to
 @code{getch}, until a newline or carriage return is received (the
 terminating character is not included in the returned string).  The
 resulting string is returned.
@@ -3653,18 +3499,18 @@ causes a beep.  Function keys also cause a beep and are ignored. The
 @code{getnstr} function reads from the @code{stdscr} default window.
 
 The user's erase and kill characters are interpreted. If keypad mode
-is on for the window, *key-left* and *key-backspace* are both considered
-equivalent to the user's kill character.
+is on for the window, @code{*key-left*} and @code{*key-backspace*} are
+both considered equivalent to the user's kill character.
 
 Characters input are echoed only if @code{echo} is currently on.  In
 that case, backspace is echoed as deletion of the previous character
 (typically a left motion).
 
 FIXME (MAKE THE CODE DO THIS) If a SIGWINCH interrupts the function,
-it will return *key-resize* as the first character in the string.
+it will do something clever with the *key-resize*.
 @end deffn
 
-@node Cursor location and window coordinates, Getting a rendered character from the window, Receiving strings from the keyboard, Curses Reference
+@node Cursor location and window coordinates, Getting a rendered character from the window, Receiving strings from the keyboard, The basic curses library
 @subsection Cursor location and window coordinates
 
 @deffn Procedure getyx win
@@ -3690,7 +3536,7 @@ Returns the size of a window as two element list
 @code{(y x)}.
 @end deffn
 
-@node Getting a rendered character from the window, Getting a string of characters and attributes from a window, Cursor location and window coordinates, Curses Reference
+@node Getting a rendered character from the window, Getting a string of characters and attributes from a window, Cursor location and window coordinates, The basic curses library
 @subsection Getting a rendered character from the window
 
 These functions examine a character on the screen and return it, along
@@ -3708,31 +3554,26 @@ with its rendition.
 These routines return the rendered 8-bit character at the current
 position in the named window.  If any attributes are set for that
 position, their values are @code{logior}'ed into the value returned.
-The constants @code{*a-chartext*}, @code{*a-attributes*}, and @code{*a-color*} can be used with
-@code{logand} to extract the character, attributes, or color of the
-rendered character.
+The constants @code{*a-chartext*}, @code{*a-attributes*}, and
+@code{*a-color*} can be used with @code{logand} to extract the
+character, attributes, or color of the rendered character.
 @end deffn
 
 
-@node Getting a string of characters and attributes from a window, Input options, Getting a rendered character from the window, Curses Reference
+@node Getting a string of characters and attributes from a window, Input options, Getting a rendered character from the window, The basic curses library
 @subsection Getting a string of characters and attributes from a window
 
-@deffn Procedure inchstr
-@deffnx Procedure inchnstr n
-@deffnx Procedure winchstr win
+@deffn Procedure inchnstr n
 @deffnx Procedure winchnstr win n
-@deffnx Procedure mvinchstr y x
 @deffnx Procedure mvinchnstr y x n 
-@deffnx Procedure mvwinchstr win y x
 @deffnx Procedure mvwinchnstr win y x n
 
 These routines return a list of rendered characters, starting at the
 current cursor position in the named window and ending at the right
-margin of the window.  The four functions with @var{n} as the last
-argument, return a leading substring at most @var{n} characters long.
+margin of the window or until @var{n} characters have been found.
 @end deffn
 
-@node Input options, Inserting a character before the cursor, Getting a string of characters and attributes from a window, Curses Reference
+@node Input options, Inserting a character before the cursor, Getting a string of characters and attributes from a window, The basic curses library
 @subsection Input options
 
 @deffn Procedure cbreak
@@ -3756,15 +3597,23 @@ mode is inherited; therefore, a program should call @code{cbreak} or
 set the @code{cbreak} mode.  Note that @code{cbreak} overrides
 @code{raw}.  
 
-@findex echo
-@findex noecho
+@end deffn
 
-See
-curs_getch FIXME for a discussion of how these routines interact with
-@code{echo} and @code{noecho}.]
+@deffn Procedure echo
+@deffnx Procedure noecho
 
+The @code{echo} and @code{noecho} routines control whether characters
+typed by the user are echoed by getch as they are typed.  Echoing by
+the tty driver is always disabled, but initially @code{getch} is in
+echo mode, so characters typed are echoed.  Authors of most
+interactive programs prefer to do their own echoing in a controlled
+area of the screen, or not to echo at all, so they disable echoing by
+calling noecho.  @xref{Getting characters from the keyboard} for a
+discussion of how these routines interact with @code{echo} and
+@code{noecho}.
 
 @end deffn
+
 
 @deffn Procedure halfdelay tenths
 
@@ -3813,16 +3662,16 @@ is @code{#f}.
 @deffn Procedure meta win bf
 
 Initially, whether the terminal returns 7 or 8 significant bits on
-input depends on the control mode of the tty driver [see termio(
-FIXME].  To force 8 bits to be returned, invoke @code{(meta win #t)}.
-This is equivalent, under POSIX, to setting the CS8 flag on the
-terminal.  To force 7 bits to be returned, invoke @code{(meta win
-#f)}.  This is equivalent, under POSIX, to setting the CS7 flag on the
-terminal.  The window argument, @var{win}, is always ignored. If the
-terminfo capabilities @code{smm} (@code{meta_on}) and @code{rmm}
-(@code{meta_off}) are defined for the terminal.  The code for
-@code{smm} is sent to the terminal when @code{(meta win #t)} is called
-and @code{rmm} is sent when @code{(meta win #f)} is called.
+input depends on the control mode of the tty driver.  To force 8 bits
+to be returned, invoke @code{(meta win #t)}.  This is equivalent,
+under POSIX, to setting the CS8 flag on the terminal.  To force 7 bits
+to be returned, invoke @code{(meta win #f)}.  This is equivalent,
+under POSIX, to setting the CS7 flag on the terminal.  The window
+argument, @var{win}, is always ignored. If the terminfo capabilities
+@code{smm} (@code{meta-on}) and @code{rmm} (@code{meta-off}) are
+defined for the terminal.  The code for @code{smm} is sent to the
+terminal when @code{(meta win #t)} is called and @code{rmm} is sent
+when @code{(meta win #f)} is called.
 @end deffn
 
 @deffn Procedure nodelay win bf
@@ -3861,15 +3710,12 @@ on other bits in the tty driver that are not set by curses.
 
 When the @code{noqiflush} routine is used, normal flush of input and
 output queues associated with the INTR, QUIT and SUSP characters will
-not be done [see termio FIXME].  When @code{qiflush} is called, the
-queues will be flushed when these control characters are read. You may
-want to call @code{noqiflush} in a signal handler if you want output to
-continue as though the interrupt had not occurred, after the handler
-exits.
+not be done.  When @code{qiflush} is called, the queues will be
+flushed when these control characters are read. You may want to call
+@code{noqiflush} in a signal handler if you want output to continue as
+though the interrupt had not occurred, after the handler exits.
 
 @end deffn
-
-
 
 @deffn Procedure timeout delay
 @deffnx Procedure wtimeout win delay
@@ -3880,12 +3726,12 @@ The @code{timeout} and @code{wtimeout} routines set blocking or
 non-blocking read for a given window.  If @var{delay} is negative,
 blocking read is used (i.e., waits indefinitely for input).  If
 @var{delay} is zero, then non-blocking read is used (i.e., read
-returns @code{*err*} if no input is waiting).  If @var{delay} is positive, then
-read blocks for delay milliseconds, and returns @code{*err*} if there is
-still no input. Hence, these routines provide the same functionality
-as @code{nodelay}, plus the additional capability of being able to
-block for only @var{delay} milliseconds (where @var{delay} is
-positive).
+returns @code{*err*} if no input is waiting).  If @var{delay} is
+positive, then read blocks for delay milliseconds, and returns
+@code{*err*} if there is still no input. Hence, these routines provide
+the same functionality as @code{nodelay}, plus the additional
+capability of being able to block for only @var{delay} milliseconds
+(where @var{delay} is positive).
 
 @end deffn
 
@@ -3899,13 +3745,13 @@ refresh or doupdate is called again.  This allows faster response to
 commands typed in advance.  Normally, the input @code{#<file>} passed
 to newterm, or @code{stdin} in the case that initscr was used, will be
 used to do this typeahead checking.  The typeahead routine specifies
-that the @code{#<file>} @var{fd} is to be used to check for typeahead
-instead.  If @var{fd} is -1, then no typeahead checking is
-done. FIXME: is this true?
+that the (integer) file descriptor @var{fd} is to be used to check for
+typeahead instead.  If @var{fd} is -1, then no typeahead checking is
+done.
 
 @end deffn 
 
-@node Inserting a character before the cursor, Inserting a string before the cursor, Input options, Curses Reference
+@node Inserting a character before the cursor, Inserting a string before the cursor, Input options, The basic curses library
 @subsection Inserting a character before the cursor
 
 @deffn Procedure insch ch
@@ -3924,7 +3770,7 @@ All routines that return an integer return @code{*err*} upon failure and
 
 @end deffn
 
-@node Inserting a string before the cursor, Getting a string of characters from the screen, Inserting a character before the cursor, Curses Reference
+@node Inserting a string before the cursor, Getting a string of characters from the screen, Inserting a character before the cursor, The basic curses library
 @subsection Inserting a string before the cursor
 
 @deffn Procedure insstr str
@@ -3953,7 +3799,7 @@ All routines that return an integer return @code{*err*} upon failure and
 
 @end deffn
 
-@node Getting a string of characters from the screen, Low-level routines, Inserting a string before the cursor, Curses Reference
+@node Getting a string of characters from the screen, Low-level routines, Inserting a string before the cursor, The basic curses library
 @subsection Getting a string of characters from the screen
 
 @deffn Procedure instr
@@ -3972,22 +3818,22 @@ argument return a leading substring at most n characters long.
 
 @end deffn
 
-@node Low-level routines, Mouse handline, Getting a string of characters from the screen, Curses Reference
+@node Low-level routines, Mouse handling, Getting a string of characters from the screen, The basic curses library
 @subsection Low-level routines
 
 The following routines give low-level access to various curses
 capabilities.  Theses routines typically are used inside library
 routines.
 
-@deffn Procedure def_prog_mode
-@deffnx Procedure def_shell_mode
+@deffn Procedure def-prog-mode
+@deffnx Procedure def-shell-mode
 
 @findex initscr
 @findex newterm
-The @code{def_prog_mode} and @code{def_shell_mode} routines save the
+The @code{def-prog-mode} and @code{def-shell-mode} routines save the
 current terminal modes as the "program" (in curses) or "shell" (not in
-curses) state for use by the @code{reset_prog_mode} and
-@code{reset_shell_mode} routines.  This is done automatically by
+curses) state for use by the @code{reset-prog-mode} and
+@code{reset-shell-mode} routines.  This is done automatically by
 @code{initscr}.  There is one such save area for each screen context
 allocated by @code{newterm}.
 
@@ -3996,13 +3842,13 @@ allocated by @code{newterm}.
 @end deffn
 
 
-@deffn Procedure reset_prog_mode
-@deffnx Procedure reset_shell_mode
+@deffn Procedure reset-prog-mode
+@deffnx Procedure reset-shell-mode
 
 @findex endwin
 @findex doupdate
 
-The @code{reset_prog_mode} and @code{reset_shell_mode} routines
+The @code{reset-prog-mode} and @code{reset-shell-mode} routines
 restore the terminal to "program" (in curses) or "shell" (out of
 curses) state.  These are done automatically by @code{endwin} and,
 after an @code{endwin}, by @code{doupdate}, so they normally are not
@@ -4020,9 +3866,9 @@ the last call to @code{savetty}.
 
 @end deffn
 
-@deffn Procedure curs_set visibility
+@deffn Procedure curs-set visibility
 
-The @code{curs_set} routine sets the cursor state is set to invisible,
+The @code{curs-set} routine sets the cursor state is set to invisible,
 normal, or very visible for @var{visibility} equal to 0, 1, or 2
 respectively.  If the terminal supports the visibility requested, the
 previous cursor state is returned; otherwise, @code{*err*} is
@@ -4030,12 +3876,153 @@ returned. FIXME: test this.
 
 @end deffn
 
-@node Mouse handline, Moving the cursor , Low-level routines, Curses Reference
-@subsection Mouse handline
+@node Mouse handling, Moving the cursor , Low-level routines, The basic curses library
+@subsection Mouse handling
 
-FIXME
+These functions provide an interface to mouse events.
+Mouse events are represented by @code{*key-mouse*} pseudo-key values in the
+@code{wgetch} input stream.
 
-@node Moving the cursor , Output options, Mouse handline, Curses Reference
+To make mouse events visible, use the @code{mousemask} function.  
+
+@deffn Procedure mousemask mask
+
+This will set the mouse events to be reported.  By default, no mouse
+events are reported.  The function will return a mask to indicate
+which of the specified mouse events can be reported; on complete
+failure it returns 0.  
+
+As a side effect, setting a zero mousemask may turn off the mouse
+pointer; setting a nonzero mask may turn it on.  Whether this happens
+is device-dependent.
+
+@xref{tab:mouse} for the mouse event types mask that may be defined.
+@end deffn
+
+
+@float Table,tab:mouse
+@multitable {BUTTONX_DOUBLE_CLICKED} {control was down during button state change XX}
+@headitem name @tab description
+
+@item @code{*button1-pressed*} @tab mouse button 1 down
+@item @code{*button1-released*} @tab mouse button 1 up
+@item @code{*button1-clicked*} @tab mouse button 1 clicked
+@item @code{*button1-double-clicked*} @tab mouse button 1 double clicked
+@item @code{*button1-triple-clicked*} @tab mouse button 1 triple
+clicked
+@item
+@item @code{*button2-pressed*} @tab mouse button 2 down
+@item @code{*button2-released*} @tab mouse button 2 up
+@item @code{*button2-clicked*} @tab mouse button 2 clicked
+@item @code{*button2-double-clicked*} @tab mouse button 2 double clicked
+@item @code{*button2-triple-clicked*} @tab mouse button 2 triple clicked
+@item
+@item @code{*button3-pressed*} @tab mouse button 3 down
+@item @code{*button3-released*} @tab mouse button 3 up
+@item @code{*button3-clicked*} @tab mouse button 3 clicked
+@item @code{*button3-double-clicked*} @tab mouse button 3 double clicked
+@item @code{*button3-triple-clicked*} @tab mouse button 3 triple clicked
+@item
+@item @code{*button4-pressed*} @tab mouse button 4 down
+@item @code{*button4-released*} @tab mouse button 4 up
+@item @code{*button4-clicked*} @tab mouse button 4 clicked
+@item @code{*button4-double-clicked*} @tab mouse button 4 double clicked
+@item @code{*button4-triple-clicked*} @tab mouse button 4 triple clicked
+@item
+@item @code{*button5-pressed*} @tab mouse button 5 down
+@item @code{*button5-released*} @tab mouse button 5 up
+@item @code{*button5-clicked*} @tab mouse button 5 clicked
+@item @code{*button5-double-clicked*} @tab mouse button 5 double clicked
+@item @code{*button5-triple-clicked*} @tab mouse button 5 triple clicked
+@item 
+@item @code{*button-shift*} @tab shift was down during button state
+change
+@item @code{*button-ctrl*} @tab control was down during button state
+change
+@item @code{*button-alt*} @tab alt was down during button state change
+@item @code{*all-mouse-events*} @tab report all button state changes
+@item @code{*report-mouse-position*} @tab report mouse movement
+@end multitable
+@caption{Mouse mask constants}
+@end float
+
+Once a class of mouse events have been made visible in a window,
+calling the @code{wgetch} function on that window may return
+@code{*key-mouse*} as an indicator that a mouse event has been queued.
+To read the event data and pop the event off the queue, call
+@code{getmouse}.
+
+@deffn Procedure getmouse
+This will retrn either a list of mouse information, or @code{#f}.  If
+it does return a list, it will have the following form:
+@example
+(id                             ; @r{id to distinguish multiple devices}
+x y z                           ; @r{event coordinates}
+bstate)                         ; @r{button state bits}
+@end example
+
+When @code{getmouse} returns a list, the data deposited as y and x in
+the list will be screen-relative character-cell coordinates.  The
+returned state mask will have exactly one bit set to indicate the
+event type.
+
+@end deffn
+
+@deffn Procedure ungetmouse mouse-event
+
+The @code{ungetmouse} function behaves analogously to @code{ungetch}.
+It pushes a @code{*key-mouse*} event onto the input queue, and
+associates with that event the given state data and screen-relative
+character-cell coordinates in the @var{mouse-event} list, where
+@var{mouse-event} is a list of five elements as described above.
+
+@end deffn
+
+@deffn Procedure mouse-trafo y x to-screen
+@deffnx Procedure wmouse-trafo win y xto-screen
+
+@findex slk-init
+
+The @code{wmouse-trafo} function transforms a given pair of
+coordinates @var{y}, @var{x} from @code{stdscr}-relative coordinates
+to coordinates relative to the given window @var{win} or vice versa.
+Please remember, that @code{stdscr}-relative coordinates are not
+always identical to window-relative coordinates due to the mechanism
+to reserve lines on top or bottom of the screen for other purposes
+(see @code{slk-init}, for example).  If the parameter @var{to-screen}
+is @code{#t}, the procedure returns either a list of two elements
+(@code{y}, @code{x}) which is the location inside the window
+@var{win}, or @code{#f} if the location was not inside the window.  If
+@var{to-screen} is @code{#f}, the return a list of two elements of
+where the window-relative location @var{y}, @var{x} would be in
+stdscr-relative coordinates.
+
+The @code{mouse-trafo} procedure performs the same translation as
+@code{wmouse-trafo}, using @code{stdscr} for @var{win}.
+@end deffn
+
+@deffn Procedure wenclose win y x
+
+The @code{wenclose} function tests whether a given pair of
+screen-relative character-cell coordinates is enclosed by the given
+window @var{win}, returning @code{#t} if it is and @code{#f}
+otherwise.  It is useful for determining what subset of the screen
+windows enclose the location of a mouse event.
+
+@end deffn
+
+
+@deffn Procedure mouseinterval erval
+
+The @code{mouseinterval} function sets the maximum time (in thousands of a
+second) that can elapse between press and release events for them to
+be recognized as a click.  Use @code{(mouseinterval 0)} to disable click
+resolution.  This function returns the previous interval value.  Use
+@code{(mouseinterval -1)} to obtain the interval without altering it.  The
+default is one sixth of a second.
+@end deffn
+
+@node Moving the cursor , Output options, Mouse handling, The basic curses library
 @subsection Moving the cursor 
 
 @deffn Procedure move y x
@@ -4053,7 +4040,7 @@ successful completion.
 
 @end deffn
 
-@node Output options, Overlay and manipulate overlapped windows, Moving the cursor , Curses Reference
+@node Output options, Overlay and manipulate overlapped windows, Moving the cursor , The basic curses library
 @subsection Output options
 
 
@@ -4185,7 +4172,7 @@ curses will then be able to detect the return key.
 @end deffn
 
 
-@node Overlay and manipulate overlapped windows, Create and display pads, Output options, Curses Reference
+@node Overlay and manipulate overlapped windows, Create and display pads, Output options, The basic curses library
 @subsection Overlay and manipulate overlapped windows
 
 
@@ -4222,7 +4209,7 @@ could indicate that the windows are freed or if some part of the
 window would be placed offscreen.
 @end deffn
 
-@node Create and display pads, Refresh windows and lines, Overlay and manipulate overlapped windows, Curses Reference
+@node Create and display pads, Refresh windows and lines, Overlay and manipulate overlapped windows, The basic curses library
 @subsection Create and display pads
 
 A pad is like a window, except that it is not restricted by the screen
@@ -4243,7 +4230,7 @@ given number of lines, @var{nlines}, and columns, @var{ncols}.
 
 @end deffn
 
-@deffn Procedure subpad orig nlines ncols begin_y begin_x
+@deffn Procedure subpad orig nlines ncols begin-y begin-x
 
 @findex subwin
 @findex touchwin
@@ -4254,7 +4241,7 @@ given number of lines, @var{nlines}, and columns, @var{ncols}.
 The @code{subpad} routine creates and returns a pointer to a subwindow
 within a pad with the given number of lines, @var{nlines}, and
 columns, @var{ncols}.  Unlike @code{subwin}, which uses screen
-coordinates, the window is at position (@var{begin_x}, @var{begin_y})
+coordinates, the window is at position (@var{begin-x}, @var{begin-y})
 on the pad.  The window is made in the middle of the window orig, so
 that changes made to one window affect both windows.  During the use
 of this routine, it will often be necessary to call @code{touchwin} or
@@ -4311,7 +4298,7 @@ completion.
 @end deffn
 
 
-@node Refresh windows and lines, Reading and writing a curses screen to a file, Create and display pads, Curses Reference
+@node Refresh windows and lines, Reading and writing a curses screen to a file, Create and display pads, The basic curses library
 @subsection Refresh windows and lines
 
 @deffn Procedure refresh
@@ -4376,7 +4363,7 @@ you can refresh them in either order and the overlap region will be
 modified only when it is explicitly changed.  
 
 @deffn Procedure redrawwin win
-@deffnx Procedure wredrawln win beg_line num_lines
+@deffnx Procedure wredrawln win beg-line num-lines
 
 The @code{wredrawln} routine indicates to curses that some screen
 lines are corrupted and should be thrown away before anything is
@@ -4385,55 +4372,55 @@ changed).  The routine @code{redrawwin} touches the entire window.
 
 @end deffn
 
-@node Reading and writing a curses screen to a file, Scroll a window, Refresh windows and lines, Curses Reference
+@node Reading and writing a curses screen to a file, Scroll a window, Refresh windows and lines, The basic curses library
 @subsection Reading and writing a curses screen to a file
 
-@deffn Procedure scr_dump filename
+@deffn Procedure scr-dump filename
 
-The @code{scr_dump} routine dumps the current contents of the virtual screen
+The @code{scr-dump} routine dumps the current contents of the virtual screen
 to the file @var{filename}.
 
 @end deffn
 
 
-@deffn Procedure scr_restore filename
+@deffn Procedure scr-restore filename
 
 @findex doupdate
 
-The @code{scr_restore} routine sets the virtual screen to the contents
-of @var{filename}, which must have been written using scr_dump.  The
+The @code{scr-restore} routine sets the virtual screen to the contents
+of @var{filename}, which must have been written using scr-dump.  The
 next call to @code{doupdate} restores the screen to the way it looked
 in the dump file.
 
 @end deffn
 
-@deffn Procedure scr_init filename
+@deffn Procedure scr-init filename
 
 @findex initscr
-@findex scr_dump
+@findex scr-dump
 @findex endwin
 
-The @code{scr_init} routine reads in the contents of @var{filename}
+The @code{scr-init} routine reads in the contents of @var{filename}
 and uses them to initialize the curses data structures about what the
 terminal currently has on its screen.  If the data is determined to be
 valid, curses bases its next update of the screen on this information
 rather than clearing the screen and starting from scratch.
-@code{scr_init} is used after @code{initscr} or a system call to share
-the screen with another process which has done a @code{scr_dump} after
+@code{scr-init} is used after @code{initscr} or a system call to share
+the screen with another process which has done a @code{scr-dump} after
 its @code{endwin} call.  The data is declared invalid if the terminfo
 capabilities @code{rmcup} and @code{nrrmc} exist; also if the terminal
-has been written to since the preceding @code{scr_dump} call.
+has been written to since the preceding @code{scr-dump} call.
 
 @end deffn
 
 
-@deffn Procedure scr_set filename
+@deffn Procedure scr-set filename
 
-@findex scr_restore
-@findex scr_init
+@findex scr-restore
+@findex scr-init
 
-The @code{scr_set} routine is a combination of @code{scr_restore} and
-@code{scr_init}.  It tells the program that the information in
+The @code{scr-set} routine is a combination of @code{scr-restore} and
+@code{scr-init}.  It tells the program that the information in
 @var{filename} is what is currently on the screen, and also what the
 program wants on the screen.  This can be thought of as a screen
 inheritance function.
@@ -4446,7 +4433,7 @@ routines [see FIXME.
 All routines return the integer @code{*err*} upon failure and @code{*ok*}
 upon success.
 
-@node Scroll a window, Function key labels, Reading and writing a curses screen to a file, Curses Reference
+@node Scroll a window, Function key labels, Reading and writing a curses screen to a file, The basic curses library
 @subsection Scroll a window
 
 @deffn Procedure scroll win
@@ -4476,22 +4463,103 @@ successful completion.
 
 @end deffn
 
-@node Function key labels, Terminal attributes, Scroll a window, Curses Reference
+@node Function key labels, Terminal attributes, Scroll a window, The basic curses library
 @subsection Function key labels
 
-The slk* functions manipulate the set of soft function-key labels that
-exist on many terminals.  For those terminals that do not have soft
-labels, curses takes over the bottom line of @code{stdscr}, reducing
-the size of @code{stdscr} (and thus the return value of the procedure
-@code{LINES}). curses standardizes on eight labels of up to eight
-characters each. In addition to this, the ncurses implementation
+The @code{slk} functions manipulate the set of soft function-key
+labels that exist on many terminals.  For those terminals that do not
+have soft labels, curses takes over the bottom line of @code{stdscr},
+reducing the size of @code{stdscr} (and thus the return value of the
+procedure @code{lines}). curses standardizes on eight labels of up to
+eight characters each. In addition to this, the ncurses implementation
 supports a mode where it simulates 12 labels of up to five characters
 each. This is most common for todays PC like enduser devices.  Please
 note that ncurses simulates this mode by taking over up to two lines
 at the bottom of the screen, it doesn't try to use any hardware
 support for this mode.
 
-@node Terminal attributes, Refresh routines, Function key labels, Curses Reference
+@deffn Procedure slk-init fmt
+
+@findex initscr
+@findex newterm
+The @code{slk-init} routine must be called before @code{initscr} or
+@code{newterm} is called.  If @code{initscr} eventually uses a line
+from @code{stdscr} to emulate the soft labels, then @var{fmt}
+determines how the labels are arranged on the screen.  Setting
+@var{fmt} to @code{0} indicates a 3-2-3 arrangement of the labels,
+@code{1} indicates a 4-4 arrangement and @code{2} indicates the
+PC-like 4-4-4 mode. If @code{fmt} is set to 3, it is again the PC like
+4-4-4 mode, but in addition an index line is generated, helping the
+user to identify the key numbers easily.
+
+It return @code{*ok*} if @var{fmt} is a valid value, or @code{*err*} otherwise.
+
+@end deffn
+
+@deffn Procedure slk-set labnum label fmt
+The @code{slk-set} routine requires @var{labnum} to be a label number,
+from 1 to 8 (resp. 12); @var{label} must be the string to be put on
+the label, up to eight (resp. five) characters in length.  @var{fmt}
+is either 0, 1, or 2, indicating whether the label is to be
+left-justified, centered, or right-justified, respectively, within
+the label.
+
+The procedure returns @code{*err*} if the terminal or the softkeys
+were not initialized, or the @var{labnum} parameter is outside the
+range of label counts, or if the format parameter is outside the range
+0..2, or if memory for the labels cannot be allocated. Otherwise it
+return @code{*ok*}
+@end deffn
+
+@deffn Procedure slk-refresh
+@deffnx Procedure slk-noutrefresh
+
+These procedure do a @code{refresh} or @code{noutrefresh} operation on
+the slk window.
+
+@end deffn
+
+@deffn Procedure slk-label labnum
+The @code{slk-label} routine returns the current label for label
+number @var{labnum}, with leading and trailing blanks stripped.
+@end deffn
+
+@deffn Procedure slk-clear
+This routine clears the soft labels from the screen.
+@end deffn
+
+@deffn Procedure slk-restore
+This procedure restores the soft labels after an @code{slk-clear} has
+been performed.
+@end deffn
+
+@deffn Procedure slk-touch
+This routine forces all the soft labels to be output next time
+@code{slk-noutrefresh} is performed.
+@end deffn
+
+@deffn Procedure slk-attron attrs
+@deffnx Procedure slk-attroff attrs
+@deffnx Procedure slk-attrset attrs
+@deffnx Procedure slk-attr-on attrs void
+@deffnx Procedure slk-attr-off attrs void
+@deffnx Procedure slk-attr-set attrs color-pair void
+@deffnx Procedure slk-color color-pair
+@deffnx Procedure slk-attr
+
+The @code{slk-attron}, @code{slk-attrset}, @code{slk-attroff} and
+@code{slk-attr} routines correspond to @code{attron}, @code{attrset},
+@code{attroff} and @code{attr-get}.  They have an effect only if soft
+labels are simulated on the bottom line of the screen.  The default
+highlight for soft keys is @code{*a-standout*}.
+
+The @code{slk-color} routine corresponds to @code{color-set}. It has
+an effect only if soft labels are simulated on the bottom line of the
+screen.
+@end deffn
+
+
+@node Terminal attributes, Refresh routines, Function key labels, The basic curses library
 @subsection Terminal attributes
 
 
@@ -4509,19 +4577,19 @@ The erasechar routine returns the user's current erase character.
 
 @end deffn
 
-@deffn Procedure has_ic
+@deffn Procedure has-ic
 
-The has_ic routine is true if the terminal has insert- and delete-
+The has-ic routine is true if the terminal has insert- and delete-
 character capabilities.
 
 @end deffn
 
 
-@deffn Procedure has_il
+@deffn Procedure has-il
 
 @findex scrollok
 
-The @code{has_il} routine is true if the terminal has insert- and
+The @code{has-il} routine is true if the terminal has insert- and
 delete-line capabilities, or can simulate them using scrolling
 regions.  This might be used to determine if it would be appropriate
 to turn on physical scrolling using @code{scrollok}.
@@ -4542,10 +4610,10 @@ verbose description of the current terminal.
 @end deffn
 
 @deffn Procedure termattrs
-@deffnx Procedure term_attrs
+@deffnx Procedure term-attrs
 
 The @code{termattrs} function return a @code{logior} of all video attributes
-supported by the terminal using @code{*a-xxx*} constants.  The @code{term_attrs}
+supported by the terminal using @code{*a-xxx*} constants.  The @code{term-attrs}
 function is identical.
 
 @end deffn
@@ -4557,7 +4625,7 @@ The @code{termname} routine returns the terminal name used by
 
 @end deffn
 
-@node Refresh routines, Miscellaneous utilities, Terminal attributes, Curses Reference
+@node Refresh routines, Miscellaneous utilities, Terminal attributes, The basic curses library
 @subsection Refresh routines
 
 @deffn Procedure touchwin win
@@ -4594,19 +4662,19 @@ starting at line @var{y}, look as if they have (@var{changed}=1) or have not
 
 @end deffn
 
-@deffn Procedure is_linetouched win line
-@deffnx Procedure is_wintouched win 
+@deffn Procedure is-linetouched win line
+@deffnx Procedure is-wintouched win 
 @findex wrefresh
 
-The @code{is_linetouched} and @code{is_wintouched} routines return
+The @code{is-linetouched} and @code{is-wintouched} routines return
 @code{#t} if the specified line/window was modified since the last
 call to @code{wrefresh}; otherwise they return @code{#f}. In addition,
-@code{is_linetouched} returns @code{*err*} if line is not valid for the given
+@code{is-linetouched} returns @code{*err*} if line is not valid for the given
 window. FIXME: the code doesn't do this.
 
 @end deffn
 
-@node Miscellaneous utilities, Window creation, Refresh routines, Curses Reference
+@node Miscellaneous utilities, Window creation, Refresh routines, The basic curses library
 @subsection Miscellaneous utilities
 
 @deffn Procedure unctrl ch
@@ -4627,11 +4695,11 @@ notation.  Values above 128 are either meta characters, shown in the
 
 @end deffn
 
-@deffn Procedure use_env f
+@deffn Procedure use-env f
 
 @findex initscr
 
-The @code{use_env} routine, if used, is called before @code{initscr}
+The @code{use-env} routine, if used, is called before @code{initscr}
 or @code{newterm} are called. When called with @code{#f} as an
 argument, the values of lines and columns specified in the terminfo
 database will be used, even if environment variables @env{LINES} and
@@ -4664,9 +4732,9 @@ window using that data.  It returns a new @code{#<window>}
 
 @end deffn
 
-@deffn Procedure delay_output ms
+@deffn Procedure delay-output ms
 
-The @code{delay_output} routine inserts an @var{ms} millisecond pause
+The @code{delay-output} routine inserts an @var{ms} millisecond pause
 in output.  This routine should not be used extensively because
 padding characters are used rather than a CPU pause. 
  
@@ -4679,17 +4747,17 @@ typed by the user and has not yet been read by the program.
 
 @end deffn
 
-@node Window creation,  , Miscellaneous utilities, Curses Reference
+@node Window creation,  , Miscellaneous utilities, The basic curses library
 @subsection Window creation
 
 
-@deffn Procedure newwin nlines ncols begin_y begin_x
+@deffn Procedure newwin nlines ncols begin-y begin-x
 
 Calling @code{newwin} creates and returns a pointer to a new window
 with the given number of lines and columns.  The upper left-hand
-corner of the window is at line @var{begin_y}, column @var{begin_x}.
+corner of the window is at line @var{begin-y}, column @var{begin-x}.
 If either @var{nlines} or @var{ncols} is zero, they default to
-@code{(- (LINES) begin_y)} and @code{(- (COLS) begin_x)}.  A new
+@code{(- (LINES) begin-y)} and @code{(- (COLS) begin-x)}.  A new
 full-screen window is created by calling @code{(newwin 0 0 0 0)}.
 
 @end deffn
@@ -4715,7 +4783,7 @@ moved.  Moving subwindows is allowed, but should be avoided.
 @end deffn
 
 
-@deffn Procedure subwin orig nlines ncols begin_y begin_x
+@deffn Procedure subwin orig nlines ncols begin-y begin-x
 
 @findex touchwin
 @findex touchline
@@ -4723,7 +4791,7 @@ moved.  Moving subwindows is allowed, but should be avoided.
 
 Calling @code{subwin} creates and returns a pointer to a new window
 with the given number of lines, @var{nlines}, and columns,
-@var{ncols}.  The window is at position (@var{begin_y}, @var{begin_x})
+@var{ncols}.  The window is at position (@var{begin-y}, @var{begin-x})
 on the screen.  (This position is relative to the screen, and not to
 the window orig.)  The window is made in the middle of the window
 @var{orig}, so that changes made to one window will affect both
@@ -4734,17 +4802,17 @@ subwindow.
 
 @end deffn
 
-@deffn Procedure derwin orign nlines ncols begin_y begin_x
+@deffn Procedure derwin orign nlines ncols begin-y begin-x
 
 Calling @code{derwin} is the same as calling @code{subwin}, except
-that @var{begin_y} and @var{begin_x} are relative to the origin of the
+that @var{begin-y} and @var{begin-x} are relative to the origin of the
 window @var{orig} rather than the screen. There is no difference
 between the subwindows and the derived windows.
 
 @end deffn
 
 
-@deffn Procedure mvderwin win par_y par_x
+@deffn Procedure mvderwin win par-y par-x
 
 Calling @code{mvderwin} moves a derived window (or subwindow) inside
 its parent window.  The screen-relative parameters of the window are
@@ -4793,7 +4861,7 @@ of the window.
 Routines that return an integer return the integer @code{*err*} upon failure
 and @code{*ok*} upon successful completion.
 
-@node The wide curses library,  , Curses Reference, Curses Reference
+@node The wide curses library,  , The basic curses library, Curses Reference
 @section The wide curses library: @code{(gucu curses-wide)}
 
 These are the functions in the @code{(gucu curses-wide)} module.
@@ -4809,6 +4877,11 @@ in the C-language @acronym{API, application programming interface}.
 * Borders and lines (wide)::    
 * Getting characters from the keyboard (wide)::  
 * Getting wide strings from the keyboard::  
+* Getting a rendered complex character::  
+* Getting a rendered complex string::  
+* Inserting a complex character before the cursor::  
+* Inserting a unrendered wide string into a window::  
+* Getting a string of unrendered wide characters from a window::  
 @end menu
 
 @node Overview (wide), Adding wide characters, The wide curses library, The wide curses library
@@ -4982,7 +5055,7 @@ These return the rendered, complex character that is the current
 background.
 @end deffn
 
-@node Borders and lines (wide), , Clearing windows or parts of windows (wide), The wide curses library
+@node Borders and lines (wide), Getting characters from the keyboard (wide), Clearing windows or parts of windows (wide), The wide curses library
 @subsection Borders and lines (wide)
 
 @deffn Procedure border-set ls rs ts bs tl tr bl br
@@ -5032,7 +5105,7 @@ Note that only single-width characters are supported.
 These return @code{*ok*} on success or @code{*err*} on failure. 
 @end deffn
 
-@node Getting characters from the keyboard (wide), , Borders and lines (wide), The wide curses library
+@node Getting characters from the keyboard (wide), Getting wide strings from the keyboard, Borders and lines (wide), The wide curses library
 @subsection Getting characters from the keyboard (wide)
 
 @deffn Procedure get-wch
@@ -5084,7 +5157,7 @@ program calls @code{unget-wch} too many times without a call to
 This returns @code{*ok*} on success or @code{*err*} on failure.
 @end deffn
 
-@node Getting wide strings from the keyboard,  , Getting characters from the keyboard (wide), The wide curses library
+@node Getting wide strings from the keyboard, Getting a rendered complex character, Getting characters from the keyboard (wide), The wide curses library
 @subsection Getting wide strings from the keyboard
 
 @deffn Procedure getn-wstr n
@@ -5117,18 +5190,121 @@ underlying @code{get-wch} functions fail for some reason.
 
 @end deffn
 
+@node Getting a rendered complex character, Getting a rendered complex string, Getting wide strings from the keyboard, The wide curses library
+@subsection Getting a rendered complex character from the window
+
+@deffn Procedure in-wch
+@deffnx Procedure mvin-wch y x
+@deffnx Procedure mvwin-wch win y x
+@deffnx Procedure win-wch win
+
+These functions extract the rendered complex character from the given
+position in the named window.
+
+@end deffn
+
+@node Getting a rendered complex string, Inserting a complex character before the cursor, Getting a rendered complex character, The wide curses library
+@subsection Getting a rendered complex string from the window
+
+@deffn in-wchnstr n
+@deffnx win-wchnstr win n
+@deffnx mvin-wchnstr y x n
+@deffnx mvwin-wchstr win y x n
+
+These functions return an array of complex characters in wchstr,
+starting at the current cursor position in the named window.
+Attributes (rendition) are stored with the characters.  The array has
+at most @var{n} complex characters.
+
+Upon successful completion, these functions return @code{*ok*}.
+Otherwise, they return @code{*err*}.
+@end deffn
+
+@node Inserting a complex character before the cursor, Inserting a unrendered wide string into a window, Getting a rendered complex string, The wide curses library
+@subsection Inserting a complex character before the cursor
+
+@deffn Procedure ins-wch ch
+@deffnx Procedure wins-wch win ch
+@deffnx Procedure mvins-wch y x ch
+@deffnx Procedure mvwins-wch win y x ch
+
+These routines insert the rendered complex character @var{ch} before
+the character under the cursor.  All characters to the right of the
+cursor are moved one space to the right, with the possibility of the
+rightmost character on the line being lost.  The insertion operation
+does not change the cursor position.
+
+All routines that return an integer return @code{*err*} upon failure and
+@code{*ok*} upon successful completion .
+
+@end deffn
+
+@node Inserting a unrendered wide string into a window, Getting a string of unrendered wide characters from a window, Inserting a complex character before the cursor, The wide curses library
+@subsection Inserting a unrendered wide string into a window
+
+@deffn Procedure ins-wstr str
+@deffnx Procedure ins-nwstr str n
+@deffnx Procedure wins-wstr win str
+@deffnx Procedure wins-nwstr win str n
+@deffnx Procedure mvins-wstr y x str
+@deffnx Procedure mvins-nwstr y x str n
+@deffnx Procedure mvwins-wstr win y x str
+@deffnx Procedure mvwins-nwstr win y x str n
+
+These routines insert an unrendered wide character string (as many
+characters as will fit on the line) before the character under the
+cursor. All characters to the right of the cursor are shifted right
+with the possibility of the rightmost characters on the line being
+lost.  The cursor position does not change (after moving to @var{y},
+@var{x}, if specified). The functions with @var{n} as the last
+argument insert a leading substring of at most n characters.  If
+@var{n}<=0, then the entire string is inserted.
+
+If a character in @var{str} is a tab, newline, carriage return or
+backspace, the cursor is moved appropriately within the window.  A
+newline also does a clrtoeol before moving.  Tabs are considered to be
+at every eighth column.  If a character in @code{wstr} is another
+control character, it is drawn in the ^X notation.  Calling
+@code{win-wch} after adding a control character (and moving to it, if
+neces- sary) does not return the control character, but instead
+returns a character in the ^-representation of the control character.
+
+All routines that return an integer return @code{*err*} upon failure and
+@code{*ok*}upon successful completion.  These routines will fail if
+the first character in @var{wstr} is not a spacing character.
+
+@end deffn
+
+@node Getting a string of unrendered wide characters from a window,  , Inserting a unrendered wide string into a window, The wide curses library
+@subsection Getting a string of unrendered wide characters from a window
+
+@deffn Procedure innwstr n
+@deffnx Procedure winnwstr win n
+@deffnx Procedure mvinnwstr y x n
+@deffnx Procedure mvwinnwstr win y x n
+
+These routines return a string of unrendered wide characters,
+extracted starting at the current cursor position in the named window.
+The rendition is stripped from the characters.  Up to @var{n}
+characters will be returned.
+
+If the size @var{n} is not large enough to store a complete character,
+an error will be thrown.
+
+@end deffn
+
 @node Hacking the module, Index, Curses Reference, Top
 @chapter Hacking the module
 
-Much of the code for the bindings is generated by awk and shell
-scripts in the @file{wrap} directory of the distribution.
+Much of the code for the bindings is generated by @command{awk} and
+shell scripts in the @file{wrap} directory of the distribution.
 
-The script @file{wrap.sh} calls a set of awk scripts that generate
-@file{function.c}, @file{function.h}, @file{constant.c},
-@file{constant.h}, and @file{raw.scm.in}.
+The script @file{curs_wrap.sh} calls a set of @command{awk} scripts
+that generate @file{curs_func.c}, @file{curs_func.h}, @file{curs_const.c},
+@file{curs_const.h}, and @file{curses.scm.in}.
 
-The generate the code from a set of template files @file{function.txt}
-and @file{constant.txt}.  The template files look a lot like c header
+The generate the code from a set of template files @file{curs_func.txt}
+and @file{curs_const.txt}.  The template files look a lot like c header
 files.
 
 The scripts generate code based on the c types in the template files.
@@ -5137,14 +5313,16 @@ disambiguate the difference between a @code{cchar_t *} that points to
 a single character, and a @code{cchar_t *} that points at a
 null-terminated @code{cchar_t} array.
 
-There is also a file @file{special.txt} that lists the functions not
-wrapped by @file{wrap.sh} script.  The procedures listed in
-@file{special.txt} are copied into the generated @file{raw.scm.in}
+There is also a file @file{curs_spec.txt} that lists the functions not
+wrapped by @file{curs_wrap.sh} script.  The procedures listed in
+@file{curs_spec.txt} are copied into the generated @file{curses.scm.in}
 file, but the c code for them was coded by hand in
-@file{special.c}.
+@file{curs_spec.c}.
 
 Also coded by hand was @file{type.c}, which does the type conversions.
 
+For the wide curses library, there is a similar set of scripts and
+functions beginning with @file{cursw}.
 
 @node Index,  , Hacking the module, Top
 @unnumbered Index

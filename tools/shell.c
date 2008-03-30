@@ -174,7 +174,9 @@ open_terminal (char *pseudo_terminal_slave_name,
 	  _exit (EXIT_FAILURE);
 	}
 
-      printf ("xterm %s\n", s_flag);
+      printf ("Attemping to connect an xterm to %s\n",
+	      pseudo_terminal_slave_name);
+      printf ("Calling 'xterm %s'\n", s_flag);
       execlp ("xterm", "xterm", s_flag, NULL);
       /* Should not return */
       return 0;
@@ -217,9 +219,13 @@ inner_main (void *data    __attribute__ ((unused)),
   SCREEN *screen;
   struct termios tio;
   struct winsize win;
+  int i;
   
+
+  /* Create a pseudo-terminal */
   if (openpty (&master, &slave, name, &tio, &win) >= 0)
     {
+      /* Connect the pseudo-terminal to an xterm */
       if ((pid = open_terminal (name, master, slave)))
 	{
 	  slave_read = dup (slave);
@@ -228,13 +234,48 @@ inner_main (void *data    __attribute__ ((unused)),
 	  fp_slave_read = fdopen (slave_read, "r");
 	  fp_slave_write = fdopen (slave_write, "w");
 	  
-	  screen = newterm ("xterm", fp_slave_write, fp_slave_read);
+
+	  /* Need to wait for xterm to be ready before trying to initalize curses */
+	  for (i = 0; i < 5; i++)
+	    {
+	      /* Connect curses to xterm */
+	      screen = newterm ("xterm", fp_slave_write, fp_slave_read);
+	      if (screen == NULL)
+		{
+		  printf ("Waiting for xterm...\n");
+		  sleep (1);
+		}
+	      else
+		break;
+	    }
+	  if (screen == NULL)
+	    {
+	      fprintf (stderr, "gucushell: couldn't initialize ncurses on the xterm\n");
+	      exit (EXIT_FAILURE);
+	    }
+	  else
+	    printf ("Initialized curses on xterm\n");
 	  erase ();
 	  refresh ();
 	  
+	  /* Call the curses libraries */
+	  if (HAVE_LIBNCURSESW)
+	    {
+	      printf ("Loading (gucu curses)\n");
+	      printf ("Loading (gucu curses-wide)\n");
+	      scm_c_eval_string ("(use-modules (gucu curses) (gucu curses-wide))");
+	    }
+	  else
+	    {
+	      printf ("Loading (gucu curses)\n");
+	      scm_c_eval_string ("(use-modules (gucu curses))");
+	    }
+
 	  scm_shell (argc, argv);
 	  
-	  endwin ();
+	  if (!isendwin ())
+	    endwin ();
+	  delscreen (screen);
 	  fclose (fp_slave_read);
 	  fclose (fp_slave_write);
 	  close (slave_write);

@@ -61,7 +61,6 @@
 			    inwstr
 			    in-wch
 			    in-wchnstr
-			    in-wchstr
 			    killwchar
 			    mvadd-wch
 			    mvgetn-wstr
@@ -74,18 +73,15 @@
 			    mvinwstr
 			    mvin-wch
 			    mvin-wchnstr
-			    mvin-wchstr
 			    mvwinwstr
 			    mvwin-wch
 			    mvwin-wchnstr
-			    mvwin-wchstr
 			    wgetbkgrnd
 			    wgetn-wstr
 			    wget-wch
 			    wget-wstr
 			    win-wch
 			    win-wchnstr
-			    win-wchstr
 			    wacs-block
 			    wacs-board
 			    wacs-btee

@@ -108,6 +108,14 @@ AC_CHECK_LIB([guile],
              [scm_boot_guile], ,
              [AC_MSG_ERROR([The guile library was not found])])
 
+AC_CHECK_LIB([menu],
+             [new_menu], ,
+             [AC_MSG_ERROR([The guile menu library was not found])])
+
+AC_CHECK_LIB([panel],
+             [top_panel], ,
+             [AC_MSG_ERROR([The guile panel library was not found])])
+
 AC_CHECK_FUNC([cfmakeraw],
               AC_DEFINE([HAVE_CFMAKERAW], 
                         [1],
@@ -118,6 +126,8 @@ AC_CHECK_FUNC([cfmakeraw],
 AC_CHECK_HEADERS([wchar.h])
 AC_CHECK_HEADERS([curses.h], , 
                  [AC_MSG_ERROR([<curses.h> was not found])])
+AC_CHECK_HEADERS([menu.h], , 
+                 [AC_MSG_ERROR([<menu.h> was not found])])
 AC_CHECK_HEADERS([libguile.h], , 
                  [AC_MSG_ERROR([<libguile.h> was not found])])
 

@@ -111,25 +111,6 @@ gucu_getnstr (SCM n)
   
   return (s_str);
 }
-SCM
-gucu_getstr ()
-{
-  char *c_str;
-  SCM s_str;
-  int ret;
-
-  // This function is inherently unsafe
-  c_str = (char *) scm_malloc (sizeof (char) * MAXLEN);
-  ret = getstr (c_str);
-  if (ret == OK)
-    {
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-  
-  return (s_str);
-}
 
 SCM
 gucu_inchnstr (SCM n)
@@ -142,26 +123,6 @@ gucu_inchnstr (SCM n)
   
   c_str = (chtype *) scm_malloc (sizeof (chtype) + (scm_to_int (n) + 1));
   ret = inchnstr (c_str, scm_to_int (n));
-  if (ret != ERR)
-    {
-      s_str = _scm_from_chstring (c_str);
-      free (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
-}
-
-SCM
-gucu_inchstr ()
-{
-  chtype *c_str;
-  SCM s_str;
-  int ret;
-  
-  c_str = (chtype *) scm_malloc (sizeof(chtype) * (COLS + 1));
-  ret = inchstr (c_str);
   if (ret != ERR)
     {
       s_str = _scm_from_chstring (c_str);
@@ -225,12 +186,16 @@ gucu_mousemask (SCM x)
 }
 
 SCM 
-gucu_mouse_trafo (SCM to_screen)
+gucu_mouse_trafo (SCM sy, SCM sx, SCM to_screen)
 {
-  SCM_ASSERT (scm_is_bool (to_screen), to_screen, SCM_ARG1, "mouse-trafo");
+  SCM_ASSERT (scm_is_integer (sy), sy, SCM_ARG1, "mouse-trafo");
+  SCM_ASSERT (scm_is_integer (sx), sx, SCM_ARG2, "mouse-trafo");
+  SCM_ASSERT (scm_is_bool (to_screen), to_screen, SCM_ARG3, "mouse-trafo");
 
   int x, y, ret;
 
+  y = scm_to_int (sy);
+  x = scm_to_int (sx);
   ret = mouse_trafo (&y, &x, scm_to_bool (to_screen));
   if (ret)
     {
@@ -267,29 +232,6 @@ gucu_mvgetnstr (SCM y, SCM x, SCM n)
 
 }
 
-SCM
-gucu_mvgetstr (SCM y, SCM x)
-{
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvgetstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvgetstr");
-
-  char *c_str;
-  SCM s_str;
-  int ret;
-
-  // This function is inherently unsafe
-  c_str = (char *) scm_malloc (sizeof (char) * MAXLEN);
-  ret = mvgetstr (scm_to_int (y), scm_to_int (x), c_str);
-  if (ret == OK)
-    {
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-  
-  return (s_str);
-}
-
 
 SCM
 gucu_mvwgetnstr (SCM win, SCM y, SCM x, SCM n)
@@ -316,30 +258,6 @@ gucu_mvwgetnstr (SCM win, SCM y, SCM x, SCM n)
 }
 
 SCM
-gucu_mvwgetstr (SCM win, SCM y, SCM x)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwgetstr");
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwgetstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwgetstr");
-
-  char *c_str;
-  SCM s_str;
-  int ret;
-
-  // This function is inherently unsafe
-  c_str = (char *) scm_malloc (sizeof (char) * MAXLEN);
-  ret = mvwgetstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), c_str);
-  if (ret == OK)
-    {
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-  
-  return (s_str);
-}
-
-SCM
 gucu_mvinchnstr (SCM y, SCM x, SCM n)
 {
   SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvinchnstr");
@@ -353,30 +271,6 @@ gucu_mvinchnstr (SCM y, SCM x, SCM n)
   c_str = (chtype *) scm_malloc (sizeof (chtype) + (scm_to_int (n) + 1));
   
   ret = mvinchnstr (scm_to_int (y), scm_to_int (x), c_str, scm_to_int (n));
-  if (ret != ERR)
-    {
-      s_str = _scm_from_chstring (c_str);
-      free (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
-}
-
-SCM
-gucu_mvinchstr(SCM y, SCM x)
-{
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvinchstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvinchstr");
-
-  chtype *c_str;
-  SCM s_str;
-  int ret;
-  
-  c_str = (chtype *) scm_malloc (sizeof(chtype) * (COLS + 1));
-
-  ret = mvinchstr (scm_to_int (y), scm_to_int (x), c_str);
   if (ret != ERR)
     {
       s_str = _scm_from_chstring (c_str);
@@ -455,31 +349,6 @@ gucu_mvwinchnstr (SCM win, SCM y, SCM x, SCM n)
 
   ret = mvwinchnstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x),
 		     c_str, scm_to_int (n));
-  if (ret != ERR)
-    {
-      s_str = _scm_from_chstring (c_str);
-      free (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
-}
-
-SCM
-gucu_mvwinchstr (SCM win, SCM y, SCM x)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwinchstr");
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwinchstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwinchstr");
-
-  chtype *c_str;
-  SCM s_str;
-  int ret;
-  
-  c_str = (chtype *) scm_malloc (sizeof(chtype) * (COLS + 1));
-  ret = mvwinchstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), 
-		     c_str);
   if (ret != ERR)
     {
       s_str = _scm_from_chstring (c_str);
@@ -708,31 +577,6 @@ gucu_wgetnstr (SCM win, SCM n)
 }
 
 SCM
-gucu_wgetstr (SCM win)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wgetstr");
-
-  char *c_str;
-  SCM s_str;
-  int ret;
-
-  // This function is inherently unsafe
-  c_str = (char *) scm_malloc (sizeof (char) * MAXLEN);
-
-  ret = wgetstr (_scm_to_window (win), c_str);
-  if (ret == OK)
-    {
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-  
-  return (s_str);
-}
-
-
-
-SCM
 gucu_winchnstr (SCM win, SCM n)
 {
   SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "winchnstr");
@@ -745,28 +589,6 @@ gucu_winchnstr (SCM win, SCM n)
   c_str = (chtype *) scm_malloc (sizeof (chtype) + (scm_to_int (n) + 1));
 
   ret = winchnstr (_scm_to_window (win), c_str, scm_to_int (n));
-  if (ret != ERR)
-    {
-      s_str = _scm_from_chstring (c_str);
-      free (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
-}
-
-SCM
-gucu_winchstr (SCM win)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "winchstr");
-
-  chtype *c_str;
-  SCM s_str;
-  int ret;
-  
-  c_str = (chtype *) scm_malloc (sizeof(chtype) * (COLS + 1));
-  ret = winchstr (_scm_to_window (win), c_str);
   if (ret != ERR)
     {
       s_str = _scm_from_chstring (c_str);
@@ -830,12 +652,16 @@ gucu_winstr (SCM win)
 
 
 SCM 
-gucu_wmouse_trafo (SCM win, SCM to_screen)
+gucu_wmouse_trafo (SCM win, SCM sy, SCM sx, SCM to_screen)
 {
   SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wmouse-trafo");
-  SCM_ASSERT (scm_is_bool (to_screen), to_screen, SCM_ARG2, "wmouse-trafo");
+  SCM_ASSERT (scm_is_integer (sy), sy, SCM_ARG2, "wmouse-trafo");
+  SCM_ASSERT (scm_is_integer (sx), sx, SCM_ARG3, "wmouse-trafo");
+  SCM_ASSERT (scm_is_bool (to_screen), to_screen, SCM_ARG4, "wmouse-trafo");
 
   int x, y, ret;
+  x = scm_to_int (sx);
+  y = scm_to_int (sy);
 
   ret = wmouse_trafo (_scm_to_window (win), &y, &x, scm_to_bool (to_screen));
   if (ret)
@@ -1009,6 +835,24 @@ gucu_ACS_S1 ()
 }
 
 SCM
+gucu_ACS_S3 ()
+{
+	chtype ret = ACS_S3;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+
+SCM
+gucu_ACS_S7 ()
+{
+	chtype ret = ACS_S7;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+
+SCM
 gucu_ACS_S9 ()
 {
 	chtype ret = ACS_S9;
@@ -1124,6 +968,53 @@ gucu_ACS_BLOCK ()
 
 	return s_ret;
 }
+
+SCM
+gucu_ACS_GEQUAL ()
+{
+	chtype ret = ACS_GEQUAL;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+
+SCM
+gucu_ACS_NEQUAL ()
+{
+	chtype ret = ACS_NEQUAL;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+
+SCM
+gucu_ACS_LEQUAL ()
+{
+	chtype ret = ACS_LEQUAL;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+
+SCM
+gucu_ACS_PI ()
+{
+	chtype ret = ACS_PI;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+
+SCM
+gucu_ACS_STERLING ()
+{
+	chtype ret = ACS_STERLING;
+	SCM s_ret = _scm_from_chtype (ret);
+
+	return s_ret;
+}
+
+
 SCM
 gucu_LINES ()
 {
@@ -1186,6 +1077,15 @@ gucu_stdscr ()
 
   return s_ret;
 }
+
+SCM
+gucu_curscr ()
+{
+  WINDOW *ret = curscr;
+  SCM s_ret = _scm_from_window (ret);
+
+  return s_ret;
+}
   
 void
 gucu_init_special ()
@@ -1195,23 +1095,17 @@ gucu_init_special ()
   scm_c_define_gsubr ("delwin", 1, 0, 0, gucu_delwin);
   scm_c_define_gsubr ("getmouse", 0, 0, 0, gucu_getmouse);
   scm_c_define_gsubr ("getnstr", 1, 0, 0, gucu_getnstr);
-  scm_c_define_gsubr ("getstr", 0, 0, 0, gucu_getstr);
   scm_c_define_gsubr ("inchnstr", 1, 0, 0, gucu_inchnstr);
-  scm_c_define_gsubr ("inchstr", 0, 0, 0, gucu_inchstr);
   scm_c_define_gsubr ("innstr", 1, 0, 0, gucu_innstr);
   scm_c_define_gsubr ("instr", 0, 0, 0, gucu_instr);
   scm_c_define_gsubr ("mousemask", 1, 0, 0, gucu_mousemask);
-  scm_c_define_gsubr ("mouse-trafo", 1, 0, 0, gucu_mouse_trafo);
+  scm_c_define_gsubr ("mouse-trafo", 3, 0, 0, gucu_mouse_trafo);
   scm_c_define_gsubr ("mvgetnstr", 3, 0, 0, gucu_mvgetnstr);
-  scm_c_define_gsubr ("mvgetstr", 2, 0, 0, gucu_mvgetstr);
   scm_c_define_gsubr ("mvinchnstr", 3, 0, 0, gucu_mvinchnstr);
-  scm_c_define_gsubr ("mvinchstr", 2, 0, 0, gucu_mvinchstr);
   scm_c_define_gsubr ("mvinnstr", 3, 0, 0, gucu_mvinnstr);
   scm_c_define_gsubr ("mvinstr", 2, 0, 0, gucu_mvinstr);
   scm_c_define_gsubr ("mvwgetnstr", 4, 0, 0, gucu_mvwgetnstr);
-  scm_c_define_gsubr ("mvwgetstr", 3, 0, 0, gucu_mvwgetstr);
   scm_c_define_gsubr ("mvwinchnstr", 4, 0, 0, gucu_mvwinchnstr);
-  scm_c_define_gsubr ("mvwinchstr", 3, 0, 0, gucu_mvwinchstr);
   scm_c_define_gsubr ("mvwinnstr", 4, 0, 0, gucu_mvwinnstr);
   scm_c_define_gsubr ("mvwinstr", 3, 0, 0, gucu_mvwinstr);
   scm_c_define_gsubr ("newterm", 3, 0, 0, gucu_newterm);
@@ -1220,12 +1114,10 @@ gucu_init_special ()
   scm_c_define_gsubr ("ungetmouse", 1, 0, 0, gucu_ungetmouse);
   scm_c_define_gsubr ("wattr-get", 1, 0, 0, gucu_wattr_get);
   scm_c_define_gsubr ("wgetnstr", 2, 0, 0, gucu_wgetnstr);
-  scm_c_define_gsubr ("wgetstr", 1, 0, 0, gucu_wgetstr);
   scm_c_define_gsubr ("winchnstr", 2, 0, 0, gucu_winchnstr);
-  scm_c_define_gsubr ("winchstr", 1, 0, 0, gucu_winchstr);
   scm_c_define_gsubr ("winnstr", 2, 0, 0, gucu_winnstr);
   scm_c_define_gsubr ("winstr", 1, 0, 0, gucu_winstr);
-  scm_c_define_gsubr ("wmouse-trafo", 2, 0, 0, gucu_wmouse_trafo);
+  scm_c_define_gsubr ("wmouse-trafo", 4, 0, 0, gucu_wmouse_trafo);
   scm_c_define_gsubr ("getbegyx", 1, 0, 0, gucu_getbegyx);
   scm_c_define_gsubr ("getmaxyx", 1, 0, 0, gucu_getmaxyx);
   scm_c_define_gsubr ("getparyx", 1, 0, 0, gucu_getparyx);
@@ -1238,18 +1130,25 @@ gucu_init_special ()
   scm_c_define_gsubr ("acs-darrow", 0, 0, 0, gucu_ACS_DARROW);
   scm_c_define_gsubr ("acs-degree", 0, 0, 0, gucu_ACS_DEGREE);
   scm_c_define_gsubr ("acs-diamond", 0, 0, 0, gucu_ACS_DIAMOND);
+  scm_c_define_gsubr ("acs-gequal", 0, 0, 0, gucu_ACS_GEQUAL);
   scm_c_define_gsubr ("acs-hline", 0, 0, 0, gucu_ACS_HLINE);
   scm_c_define_gsubr ("acs-lantern", 0, 0, 0, gucu_ACS_LANTERN);
   scm_c_define_gsubr ("acs-larrow", 0, 0, 0, gucu_ACS_LARROW);
+  scm_c_define_gsubr ("acs-lequal", 0, 0, 0, gucu_ACS_LEQUAL);
   scm_c_define_gsubr ("acs-llcorner", 0, 0, 0, gucu_ACS_LLCORNER);
   scm_c_define_gsubr ("acs-lrcorner", 0, 0, 0, gucu_ACS_LRCORNER);
   scm_c_define_gsubr ("acs-ltee", 0, 0, 0, gucu_ACS_LTEE);
+  scm_c_define_gsubr ("acs-nequal", 0, 0, 0, gucu_ACS_NEQUAL);
+  scm_c_define_gsubr ("acs-pi", 0, 0, 0, gucu_ACS_PI);
   scm_c_define_gsubr ("acs-plminus", 0, 0, 0, gucu_ACS_PLMINUS);
   scm_c_define_gsubr ("acs-plus", 0, 0, 0, gucu_ACS_PLUS);
   scm_c_define_gsubr ("acs-rarrow", 0, 0, 0, gucu_ACS_RARROW);
   scm_c_define_gsubr ("acs-rtee", 0, 0, 0, gucu_ACS_RTEE);
   scm_c_define_gsubr ("acs-s1", 0, 0, 0, gucu_ACS_S1);
+  scm_c_define_gsubr ("acs-s3", 0, 0, 0, gucu_ACS_S3);
+  scm_c_define_gsubr ("acs-s7", 0, 0, 0, gucu_ACS_S7);
   scm_c_define_gsubr ("acs-s9", 0, 0, 0, gucu_ACS_S9);
+  scm_c_define_gsubr ("acs-sterling", 0, 0, 0, gucu_ACS_STERLING);
   scm_c_define_gsubr ("acs-ttee", 0, 0, 0, gucu_ACS_TTEE);
   scm_c_define_gsubr ("acs-uarrow", 0, 0, 0, gucu_ACS_UARROW);
   scm_c_define_gsubr ("acs-ulcorner", 0, 0, 0, gucu_ACS_ULCORNER);
@@ -1262,5 +1161,6 @@ gucu_init_special ()
   scm_c_define_gsubr ("tabsize", 0, 0, 0, gucu_TABSIZE);
   scm_c_define_gsubr ("set-tabsize", 1, 0, 0, gucu_set_TABSIZE);
   scm_c_define_gsubr ("stdscr", 0, 0, 0, gucu_stdscr);
+  scm_c_define_gsubr ("curscr", 0, 0, 0, gucu_curscr);
 }
 
