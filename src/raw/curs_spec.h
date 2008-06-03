@@ -10,7 +10,8 @@
 #define API
 #endif
 
-SCM gucu_attr_get () API;
+SCM gucu_attr_get (void) API;
+SCM gucu_attr_set (SCM attrs, SCM pair) API;
 SCM gucu_color_content (SCM s_color) API;
 SCM gucu_delwin (SCM win) API;
 SCM gucu_getmouse (void) API;
@@ -18,7 +19,7 @@ SCM gucu_getnstr (SCM n) API;
 SCM gucu_inchnstr (SCM n) API;
 SCM gucu_innstr (SCM n) API;
 SCM gucu_innwstr (SCM n) API;
-SCM gucu_instr () API;
+SCM gucu_instr (void) API;
 SCM gucu_mousemask (SCM x) API;
 SCM gucu_mouse_trafo (SCM y, SCM x, SCM to) API;
 SCM gucu_mvgetnstr (SCM y, SCM x, SCM n) API;
@@ -35,12 +36,13 @@ SCM gucu_newterm (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_pair_content (SCM s_color) API;
 SCM gucu_ungetmouse (SCM event) API;
 SCM gucu_wattr_get (SCM win) API;
+SCM gucu_wattr_set (SCM win, SCM attrs, SCM pair) API;
 SCM gucu_wgetnstr (SCM win, SCM n) API;
 SCM gucu_winchnstr (SCM win, SCM n) API;
 SCM gucu_winnstr (SCM win, SCM n) API;
 SCM gucu_winstr (SCM win) API;
 SCM gucu_wmouse_trafo (SCM win, SCM y, SCM x, SCM to) API;
-SCM gugu_getbegyx (SCM win) API;
+SCM gucu_getbegyx (SCM win) API;
 SCM gucu_getmaxyx (SCM win) API;
 SCM gucu_getparyx (SCM win) API;
 SCM gucu_getyx (SCM win) API;

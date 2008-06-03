@@ -1,10 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r018_inopts.test --- test suite for curse's input options
 
-(define-module (test r018_inopts)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to change input options
 (with-test-prefix "inopts"
@@ -15,12 +20,12 @@
 			     (refresh)
 			     (cbreak)
 			     (nodelay (stdscr) #t)
-			     (equal? *err* (getch))))
+			     (equal? ERR (getch))))
 
 		  (pass-if "halfdelay"
 			   (begin
 			     (halfdelay 1)
-			     (equal? *err* (getch))))
+			     (equal? ERR (getch))))
 
 ; 		  (pass-if "meta"
 ; 			   (begin
@@ -59,12 +64,16 @@
 ; 			       (addstr (format #f "~s~%" k1))
 ; 			       (addstr (format #f "~s~%" k2))
 ; 			       (addstr (format #f "~s~%" k3))
-; 			       (addstr (format #f "~s~%" *key-up*))
+; 			       (addstr (format #f "~s~%" KEY_UP))
 ; 			       (refresh)
 ; 			       (sleep 5)
-; 			       (equal? k1 *key-up*))))
+; 			       (equal? k1 KEY_UP))))
 
 
 )
 
 
+
+(endwin)
+
+(curses-test-end test "r018_inopts.out")		  

@@ -11,13 +11,13 @@ function get_scheme_name(c_name)
 BEGIN {
   FS = "[\(\),;]";
   prefix = "gucu"
-}
+    }
 {
-  # First, split the return type and function name in $1 into component parts
-  # the pointer form
+# First, split the return type and function name in $1 into component parts
+# the pointer form
   where = match($1, /([_a-zA-Z0-9]* \*)([_a-zA-Z0-9]*)/, arr);
   if (where == 0) 
-    # the non-pointer form
+# the non-pointer form
     where = match($1, /([_a-zA-Z0-9]*) ([_a-zA-Z0-9]*)/, arr);
 
   return_type = arr[1];
@@ -25,12 +25,16 @@ BEGIN {
   scheme_function_name = get_scheme_name(c_function_name);
   n_args = NF-3;
 
+  for(i=1;i<=NF;i++) {
+    print "// " i ": " $i;
+  }
+
   if(return_type ~ "void")
     void_func = 1;
   else
     void_func = 0;
 
-  # trim leading whitespace
+# trim leading whitespace
   for(i=1; i<=n_args; i++)
     sub(/^ +/, "", $(i+1));
 
@@ -59,7 +63,7 @@ BEGIN {
   printf ")\n";
   printf "{\n";
 
-  # INPUT CHECKING
+# INPUT CHECKING
   for(i=1; i<=n_args; i++) {
     cur_type = $(i+1);
     cur_arg = "arg" i;
@@ -95,8 +99,16 @@ BEGIN {
     case "const chtype *":
       test_func = "_scm_is_chstring";
       break;
+    case "FIELD *":
+    case "const FIELD *":
+      test_func = "_scm_is_field";
+      break;
     case "FILE *":
       test_func = "_scm_is_file";
+      break;
+    case "FORM *":
+    case "const FORM *":
+      test_func = "_scm_is_form";
       break;
     case "int":
       test_func = "scm_is_integer";
@@ -148,13 +160,14 @@ BEGIN {
   if (n_args)
     print "";  
 
-  # MALLOC
+# MALLOC
 
-  # ASSIGN
+# ASSIGN
   for(i=1; i<=n_args; i++) {
     cur_type = $(i+1);
     cur_arg = "arg" i;
     cur_c_arg = "c_" cur_arg;
+    # print "// type :\"" cur_type "\" arg :\"" cur_arg "\"";
     switch (cur_type) {
     case "attr_t":
     case "const attr_t":
@@ -189,8 +202,16 @@ BEGIN {
     case "int":
       assign_func = "scm_to_int";
       break;
+    case "FIELD *":
+    case "const FIELD *":
+      assign_func = "_scm_to_field";
+      break;
     case "FILE *":
       assign_func = "_scm_to_file";
+      break;
+    case "FORM *":
+    case "const FORM *":
+      assign_func = "_scm_to_form";
       break;
     case "MENU *":
     case "const MENU *":
@@ -247,7 +268,7 @@ BEGIN {
   if (n_args)
     print "";
 
-  # CALL
+# CALL
   if (void_func)
     printf "\t %s (", c_function_name;
   else
@@ -293,8 +314,16 @@ BEGIN {
   case "const chtype *":
     assign_func = "_scm_from_chstring";
     break;
-  case "FILE *":
-    assign_func = "_scm_from_file";
+  case "FIELD *":
+  case "const FIELD *":
+    assign_func = "_scm_from_field";
+    break
+      case "FILE *":
+      assign_func = "_scm_from_file";
+    break;
+  case "FORM *":
+  case "const FORM *":
+    assign_func = "_scm_from_form";
     break;
   case "int":
     assign_func = "scm_from_int";
@@ -309,7 +338,7 @@ BEGIN {
     break;
   case "SCREEN *":
     assign_func = "_scm_from_screen";
-      break;
+    break;
   case "short":
     assign_func = "scm_from_short";
     break;
@@ -340,7 +369,7 @@ BEGIN {
     printf "\tSCM s_ret = %s (ret);\n", assign_func;
   print "";
 
-  # FREE
+# FREE
   n_freed = 0;
   for(i=1; i<=n_args; i++) {
     cur_type = $(i+1);
@@ -364,7 +393,7 @@ BEGIN {
     print "";
 
     
-  # RETURN
+# RETURN
   printf "\treturn s_ret;\n";
   print "}";
   print "";

@@ -80,7 +80,7 @@ gucu_panel_userdata (SCM pan)
 
 
 void
-gucu_menu_init_special ()
+gucu_panel_init_special (void)
 {
    scm_c_define_gsubr ("panel-above", 1, 0, 0, gucu_panel_above);
    scm_c_define_gsubr ("panel-below", 1, 0, 0, gucu_panel_below);

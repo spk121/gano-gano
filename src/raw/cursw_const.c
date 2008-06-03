@@ -11,5 +11,5 @@ SCM gucu_WEOF;
 void 
 gucu_cursw_init_constant ()
 {
-	gucu_WEOF = scm_permanent_object (scm_c_define ("*weof*", scm_from_uint (WEOF)));
+	gucu_WEOF = scm_permanent_object (scm_c_define ("WEOF", scm_from_uint (WEOF)));
 }

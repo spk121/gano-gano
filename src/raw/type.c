@@ -22,6 +22,8 @@ size_t free_window (SCM x);
 SCM mark_window (SCM x);
 int print_window (SCM x, SCM port, scm_print_state *pstate);
 
+int print_screen (SCM x, SCM port, scm_print_state *pstate);
+
 // attr -- character attributes, bit flags packed into an unsigned:
 // probably uint32
 
@@ -376,6 +378,25 @@ _scm_from_voidstring (void *x)
 int 
 _scm_is_window (SCM x)
 {
+  scm_t_bits tag;
+  if (! SCM_IMP(x))
+    {
+      tag = SCM_TYP16(x);
+    }
+  else
+    {
+      tag = -1;
+    }
+  
+  if (window_tag == tag)
+    {
+      return 1;
+    }
+  else
+    {
+      return 0;
+    }
+
   return SCM_SMOB_PREDICATE (window_tag, x);
 }
 
@@ -428,14 +449,29 @@ mark_window (SCM x)
 }
 
 size_t
-free_window (SCM x __attribute__ ((unused)))
+free_window (SCM x)
 {
-  // WINDOW *win = (WINDOW *) SCM_SMOB_DATA (x);
+  WINDOW *win = (WINDOW *) SCM_SMOB_DATA (x);
 
   // Should windows ever be allowed to be GC'd?
-  // No, until I know better.
-  // if (x != NULL)
-  //  delwin (win);
+  // I'm not sure.
+  if (win != NULL)
+    {
+      if (win == stdscr)
+	{
+	}
+      else if (win == curscr)
+	{
+	}
+      else if (win == newscr)
+	{
+	}
+      else
+	{
+	  // delwin (win);
+	  // SCM_SET_SMOB_DATA (x, NULL);
+	}
+    }
 
   return 0;
 }
@@ -479,17 +515,24 @@ gucu_is_window_p (SCM x)
 void 
 gucu_init_type ()
 {
-  screen_tag = scm_make_smob_type ("screen", sizeof (SCREEN *));
-  scm_set_smob_print (screen_tag, print_screen);
+  static int first = 1;
 
-  window_tag = scm_make_smob_type ("window", sizeof (WINDOW *));
-  scm_set_smob_mark (window_tag, mark_window);
-  scm_set_smob_free (window_tag, free_window);
-  scm_set_smob_print (window_tag, print_window);
-  scm_set_smob_equalp (window_tag, equalp_window);
-  scm_c_define_gsubr ("window?", 1, 0, 0, gucu_is_window_p);
-
-  file_tag = scm_make_smob_type ("file", sizeof (FILE *));
-  scm_c_define_gsubr ("fopen", 2, 0, 0, gucu_fopen);
-  scm_c_define_gsubr ("fclose", 1, 0, 0, gucu_fclose);
+  if (first)
+    {
+      screen_tag = scm_make_smob_type ("screen", sizeof (SCREEN *));
+      scm_set_smob_print (screen_tag, print_screen);
+      
+      window_tag = scm_make_smob_type ("window", sizeof (WINDOW *));
+      scm_set_smob_mark (window_tag, mark_window);
+      scm_set_smob_free (window_tag, free_window);
+      scm_set_smob_print (window_tag, print_window);
+      scm_set_smob_equalp (window_tag, equalp_window);
+      scm_c_define_gsubr ("window?", 1, 0, 0, gucu_is_window_p);
+      
+      file_tag = scm_make_smob_type ("file", sizeof (FILE *));
+      scm_c_define_gsubr ("fopen", 2, 0, 0, gucu_fopen);
+      scm_c_define_gsubr ("fclose", 1, 0, 0, gucu_fclose);
+      
+      first = 0;
+    }
 }

@@ -1,10 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r009_border.test --- test suite for curses's border
 
-(define-module (test r009_border)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
 
+
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to draw borders
 (with-test-prefix "border"
@@ -243,6 +248,10 @@
 
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r009_border.out")
 
 
 

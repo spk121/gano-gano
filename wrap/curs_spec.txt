@@ -1,4 +1,5 @@
 	    attr-get
+	    attr-set
 	    color-content
 	    delwin
 	    getmouse
@@ -21,6 +22,7 @@
 	    pair-content
 	    ungetmouse
 	    wattr-get
+	    wattr-set
 	    wgetnstr
 	    winchnstr
 	    winnstr

@@ -12,6 +12,11 @@
 #include "typew.h"
 
 
+
+static int wchstrlen(const cchar_t *s);
+
+
+
 // wchar --  In C, a wchar_t.  In scheme, an integer.
 
 int
@@ -223,7 +228,7 @@ _scm_from_cchar (cchar_t *x)
   int i;
   int len;
   int ret;
-  wchar_t wch[6];
+  wchar_t wch[10];
   attr_t attr;
   short color_pair;
   SCM element;
@@ -250,7 +255,7 @@ _scm_from_cchar (cchar_t *x)
   return total_list;
 }
 
-int
+static int
 wchstrlen(const cchar_t *s)
 {
   int i = 0;

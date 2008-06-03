@@ -1,10 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r015_getyx.test --- test suite for curses's position reporting functions
 
-(define-module (test r015_getyx)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
+
+
+(define test (curses-test-start))
+
+(initscr)
 
 (define win (newwin 5 6 7 8))
 (define win2 (subwin win 2 2 8 9))
@@ -44,3 +49,7 @@
 (wrefresh win)
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r015_getyx.out")

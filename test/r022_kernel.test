@@ -1,13 +1,17 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r022_kernel.test --- test suite for curses's low level functions
 
-(define-module (test r022_kernel)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
 
-;; Should be able to beep and flash
+(initscr)
+
+;; Should be able to save and reset tty
 (with-test-prefix "kernel"
 		  
 ; 		  (pass-if "getsyx / setsyx"
@@ -26,3 +30,7 @@
 
 		  )
 
+
+(endwin)
+
+(curses-test-end test "r022_kernel.out")		  

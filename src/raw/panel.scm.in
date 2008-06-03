@@ -13,7 +13,7 @@
 		move-panel
 		panel-hidden
 		del-panel
-		**
+		
 		panel-above
 		panel-below
 		set-panel-userdata

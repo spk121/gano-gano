@@ -1,19 +1,22 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r004_addchstr.test --- test suite for curses's addchstr functions
 
-(define-module (test r004_addchstr)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
 
+(define test (curses-test-start))
+
+(initscr)
 
 (define hello (map char->integer (string->list "hello")))
 (define he (map char->integer (string->list "he")))
 (define hello-bold (map (lambda (x) 
-			  (logior *a-bold* (char->integer x)))
+			  (logior A_BOLD (char->integer x)))
 			(string->list "hello")))
 (define he-bold (map (lambda (x) 
-		       (logior *a-bold* (char->integer x)))
+		       (logior A_BOLD (char->integer x)))
 		     (string->list "he")))
 
 (with-test-prefix "addchstr"
@@ -92,3 +95,7 @@
 			      
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r004_addchstr.out")

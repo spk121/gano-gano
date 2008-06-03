@@ -1,11 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r024_outopts.test --- test suite for curses's output options
 
-(define-module (test r024_outopts)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to move the cursor
 (with-test-prefix "outopts"
@@ -49,3 +53,8 @@
 				(string=? x3 "ccc"))))))
 
 (setscrreg 0 (- (lines) 1))
+
+
+(endwin)
+
+(curses-test-end test "r024_outputs.out")		  

@@ -1,10 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r010_beep.test --- test suite for curses's clear and erase
 
-(define-module (test r010_clear)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
 
+
+(define test (curses-test-start))
+
+(initscr)
 
 (define space (char->integer #\sp))
 
@@ -128,3 +133,7 @@
 
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r010_clear.out")

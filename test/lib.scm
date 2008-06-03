@@ -19,6 +19,7 @@
 (define-module (test lib)
   :use-module (ice-9 stack-catch)
   :use-module (ice-9 regex)
+  :use-module (srfi srfi-1)
   :export (
 
  ;; Exceptions which are commonly being tested for.
@@ -477,7 +478,8 @@
 	  (if (pair? args)
 	      (begin
 		(display " - arguments: " port)
-		(write args port)))
+		(write args port)
+		))
 	  (newline port))
 	(error "(test-suite lib) FULL-REPORTER: unrecognized result: "
 	       result))))

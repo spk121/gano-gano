@@ -1,14 +1,35 @@
 #!/bin/sh
-# This copies over the libraries and runs the test suite
 
-# make a path to the guile modules
+# This contains contains skeletons of commands that might be useful
+# when debugging specific tests
+
+# Make a path to the guile modules
 ln -s ../src/raw ${PACKAGE}
 
-# This should be exported from the Makefile.am
+# MODIFY_ME: A specific test to debug 
+TESTS=f001_new_form.test
+
+# This should be the same as in Makefile.am
+LIBGUILE_GUCU_CURSES_MAJOR=0
+
+# Some info
 echo "major->" ${LIBGUILE_GUCU_CURSES_MAJOR}
 
-echo "testlist->" ${TESTLIST_CURSES}
+echo "testlist->" ${TESTS}
+
+
+#### Uncomment one of the following ####
 
 # Run the library
+#libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la \
+#    --mode=execute guile -L .. -L . -s ${TESTS}
+
+
+# Debug the library with GDB
 libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la \
-    --mode=execute guile -e main -s ${srcdir}/guile-test --log-file=curses.log ${TESTLIST_CURSES}
+    --mode=execute gdb --tui --args guile -L .. -L . -s ${TESTS}
+
+# Grind the library
+#libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la \
+#    --mode=execute valgrind --leak-check=full --show-reachable=yes \
+#     guile -e main -s ${srcdir}/guile-test --log-file=curses.log ${TESTS} 2> vgrind.out

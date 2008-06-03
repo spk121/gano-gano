@@ -79,7 +79,7 @@ mark_panel (SCM x)
    called del_panel. Note that del_panel doesn't free the underlying
    window. */
 size_t
-free_panel (SCM panel)
+gc_free_panel (SCM panel)
 {
   SCM_ASSERT (_scm_is_panel (panel), panel, SCM_ARG1, "free-panel");
 

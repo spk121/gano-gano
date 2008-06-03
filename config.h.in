@@ -12,6 +12,9 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
+/* Define to 1 if you have the <form.h> header file. */
+#undef HAVE_FORM_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -21,20 +24,17 @@
 /* Define to 1 if you have the <libguile.h> header file. */
 #undef HAVE_LIBGUILE_H
 
-/* Define to 1 if you have the `menu' library (-lmenu). */
-#undef HAVE_LIBMENU
-
 /* Define if you have libncursesw */
 #undef HAVE_LIBNCURSESW
-
-/* Define to 1 if you have the `panel' library (-lpanel). */
-#undef HAVE_LIBPANEL
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
 /* Define to 1 if you have the <menu.h> header file. */
 #undef HAVE_MENU_H
+
+/* Define to 1 if you have the <panel.h> header file. */
+#undef HAVE_PANEL_H
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -59,6 +59,10 @@
 
 /* Define to 1 if you have the <wchar.h> header file. */
 #undef HAVE_WCHAR_H
+
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
 
 /* Define to 1 if your C compiler doesn't accept -c and -o together. */
 #undef NO_MINUS_C_MINUS_O

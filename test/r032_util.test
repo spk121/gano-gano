@@ -1,10 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r032_util.test --- test suite for curses's utility routines
 
-(define-module (test r032_util)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to get term attributes
 (define fp #f)
@@ -18,7 +23,7 @@
 			   (string=? "x" (keyname (char->integer #\x))))
 
 		  (pass-if "keyname home"
-			   (string=? "KEY_HOME" (keyname *key-home*))))
+			   (string=? "KEY_HOME" (keyname KEY_HOME))))
 
 ;; This test doesn't work with the "make distcheck", because of
 ;; file read/write permissions
@@ -31,7 +36,7 @@
 ; 			     (mvwaddstr win 0 0 "zzz")
 ; 			     (wrefresh win)
 ; 			     (set! fp (fopen "win.tmp" "w"))
-; 			     (eqv? *ok* (putwin win fp))))
+; 			     (eqv? OK (putwin win fp))))
 		  
 ; 		  (fclose fp)
 ; 		  (delwin win)
@@ -47,3 +52,6 @@
 ; 			     (string=? "zzz" (mvwinnstr win 0 0 3))
 ; 			     )))
 
+(endwin)
+
+(curses-test-end test "r032_util.out")		  

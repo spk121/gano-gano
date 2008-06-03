@@ -8,6 +8,11 @@
 #include "term.h"
 #define _GNU_SOURCE
 #define cstring_t cchar_t
+// 1: int addnwstr
+// 2: const wchar_t *
+// 3:  int
+// 4: 
+// 5: 
 SCM
 gucu_addnwstr (SCM arg1, SCM arg2)
 {
@@ -25,6 +30,10 @@ gucu_addnwstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int add_wch
+// 2: const cchar_t *
+// 3: 
+// 4: 
 SCM
 gucu_add_wch (SCM arg1)
 {
@@ -40,6 +49,11 @@ gucu_add_wch (SCM arg1)
 	return s_ret;
 }
 
+// 1: int add_wchnstr
+// 2: const cstring_t *
+// 3:  int
+// 4: 
+// 5: 
 SCM
 gucu_add_wchnstr (SCM arg1, SCM arg2)
 {
@@ -57,6 +71,10 @@ gucu_add_wchnstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int add_wchstr
+// 2: const cstring_t *
+// 3: 
+// 4: 
 SCM
 gucu_add_wchstr (SCM arg1)
 {
@@ -72,6 +90,10 @@ gucu_add_wchstr (SCM arg1)
 	return s_ret;
 }
 
+// 1: int addwstr
+// 2: const wchar_t *
+// 3: 
+// 4: 
 SCM
 gucu_addwstr (SCM arg1)
 {
@@ -87,6 +109,10 @@ gucu_addwstr (SCM arg1)
 	return s_ret;
 }
 
+// 1: int bkgrnd
+// 2: const cchar_t *
+// 3: 
+// 4: 
 SCM
 gucu_bkgrnd (SCM arg1)
 {
@@ -102,6 +128,10 @@ gucu_bkgrnd (SCM arg1)
 	return s_ret;
 }
 
+// 1: void bkgrndset
+// 2: const cchar_t *
+// 3: 
+// 4: 
 SCM
 gucu_bkgrndset (SCM arg1)
 {
@@ -117,6 +147,17 @@ gucu_bkgrndset (SCM arg1)
 	return s_ret;
 }
 
+// 1: int border_set
+// 2: const cchar_t *
+// 3:  const cchar_t *
+// 4:  const cchar_t *
+// 5:  const cchar_t *
+// 6:  const cchar_t *
+// 7:  const cchar_t *
+// 8:  const cchar_t *
+// 9:  const cchar_t *
+// 10: 
+// 11: 
 SCM
 gucu_border_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7, SCM arg8)
 {
@@ -153,6 +194,12 @@ gucu_border_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM
 	return s_ret;
 }
 
+// 1: int box_set
+// 2: WINDOW *
+// 3:  const cchar_t *
+// 4:  const cchar_t *
+// 5: 
+// 6: 
 SCM
 gucu_box_set (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -173,6 +220,10 @@ gucu_box_set (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+// 1: int echo_wchar
+// 2: const cchar_t *
+// 3: 
+// 4: 
 SCM
 gucu_echo_wchar (SCM arg1)
 {
@@ -188,6 +239,11 @@ gucu_echo_wchar (SCM arg1)
 	return s_ret;
 }
 
+// 1: int hline_set
+// 2: const cchar_t *
+// 3:  int
+// 4: 
+// 5: 
 SCM
 gucu_hline_set (SCM arg1, SCM arg2)
 {
@@ -205,6 +261,11 @@ gucu_hline_set (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int ins_nwstr
+// 2: const wchar_t *
+// 3:  int
+// 4: 
+// 5: 
 SCM
 gucu_ins_nwstr (SCM arg1, SCM arg2)
 {
@@ -222,6 +283,10 @@ gucu_ins_nwstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int ins_wch
+// 2: const cchar_t *
+// 3: 
+// 4: 
 SCM
 gucu_ins_wch (SCM arg1)
 {
@@ -237,6 +302,10 @@ gucu_ins_wch (SCM arg1)
 	return s_ret;
 }
 
+// 1: int ins_wstr
+// 2: const wchar_t *
+// 3: 
+// 4: 
 SCM
 gucu_ins_wstr (SCM arg1)
 {
@@ -252,6 +321,13 @@ gucu_ins_wstr (SCM arg1)
 	return s_ret;
 }
 
+// 1: int mvaddnwstr
+// 2: int
+// 3:  int
+// 4:  const wchar_t *
+// 5:  int
+// 6: 
+// 7: 
 SCM
 gucu_mvaddnwstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -273,6 +349,12 @@ gucu_mvaddnwstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
+// 1: int mvadd_wch
+// 2: int
+// 3:  int
+// 4:  const cchar_t *
+// 5: 
+// 6: 
 SCM
 gucu_mvadd_wch (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -292,6 +374,13 @@ gucu_mvadd_wch (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+// 1: int mvadd_wchnstr
+// 2: int
+// 3:  int
+// 4:  const cstring_t *
+// 5:  int
+// 6: 
+// 7: 
 SCM
 gucu_mvadd_wchnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -313,6 +402,12 @@ gucu_mvadd_wchnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
+// 1: int mvadd_wchstr
+// 2: int
+// 3:  int
+// 4:  const cstring_t *
+// 5: 
+// 6: 
 SCM
 gucu_mvadd_wchstr (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -332,6 +427,12 @@ gucu_mvadd_wchstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+// 1: int mvaddwstr
+// 2: int
+// 3:  int
+// 4:  const wchar_t *
+// 5: 
+// 6: 
 SCM
 gucu_mvaddwstr (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -351,6 +452,13 @@ gucu_mvaddwstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+// 1: int mvhline_set
+// 2: int
+// 3:  int
+// 4:  const cchar_t *
+// 5:  int
+// 6: 
+// 7: 
 SCM
 gucu_mvhline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -372,6 +480,13 @@ gucu_mvhline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
+// 1: int mvins_nwstr
+// 2: int
+// 3:  int
+// 4:  const wchar_t *
+// 5:  int
+// 6: 
+// 7: 
 SCM
 gucu_mvins_nwstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -393,6 +508,12 @@ gucu_mvins_nwstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
+// 1: int mvins_wch
+// 2: int
+// 3:  int
+// 4:  const cchar_t *
+// 5: 
+// 6: 
 SCM
 gucu_mvins_wch (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -412,6 +533,12 @@ gucu_mvins_wch (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+// 1: int mvins_wstr
+// 2: int
+// 3:  int
+// 4:  const wchar_t *
+// 5: 
+// 6: 
 SCM
 gucu_mvins_wstr (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -431,6 +558,13 @@ gucu_mvins_wstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+// 1: int mvvline_set
+// 2: int
+// 3:  int
+// 4:  const cchar_t *
+// 5:  int
+// 6: 
+// 7: 
 SCM
 gucu_mvvline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -452,6 +586,14 @@ gucu_mvvline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
+// 1: int mvwaddnwstr
+// 2: WINDOW *
+// 3:  int
+// 4:  int
+// 5:  const wchar_t *
+// 6:  int
+// 7: 
+// 8: 
 SCM
 gucu_mvwaddnwstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -475,6 +617,13 @@ gucu_mvwaddnwstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
+// 1: int mvwaddwstr
+// 2: WINDOW *
+// 3:  int
+// 4:  int
+// 5:  const wchar_t *
+// 6: 
+// 7: 
 SCM
 gucu_mvwaddwstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -496,6 +645,13 @@ gucu_mvwaddwstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
+// 1: int mvwadd_wch
+// 2: WINDOW *
+// 3:  int
+// 4:  int
+// 5:  const cchar_t *
+// 6: 
+// 7: 
 SCM
 gucu_mvwadd_wch (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -517,6 +673,14 @@ gucu_mvwadd_wch (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
+// 1: int mvwadd_wchnstr
+// 2: WINDOW *
+// 3:  int
+// 4:  int
+// 5:  const cstring_t *
+// 6:  int
+// 7: 
+// 8: 
 SCM
 gucu_mvwadd_wchnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -540,6 +704,13 @@ gucu_mvwadd_wchnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
+// 1: int mvwadd_wchstr
+// 2: WINDOW *
+// 3:  int
+// 4:  int
+// 5:  const cstring_t *
+// 6: 
+// 7: 
 SCM
 gucu_mvwadd_wchstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -561,6 +732,14 @@ gucu_mvwadd_wchstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
+// 1: int mvwhline_set
+// 2: WINDOW *
+// 3:  int
+// 4:  int
+// 5:  const cchar_t *
+// 6:  int
+// 7: 
+// 8: 
 SCM
 gucu_mvwhline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -584,6 +763,14 @@ gucu_mvwhline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
+// 1: int mvwins_nwstr
+// 2: WINDOW *
+// 3:  int
+// 4:  int
+// 5:  const wchar_t *
+// 6:  int
+// 7: 
+// 8: 
 SCM
 gucu_mvwins_nwstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -607,6 +794,13 @@ gucu_mvwins_nwstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
+// 1: int mvwins_wch
+// 2: WINDOW *
+// 3:  int
+// 4:  int
+// 5:  const cchar_t *
+// 6: 
+// 7: 
 SCM
 gucu_mvwins_wch (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -628,6 +822,13 @@ gucu_mvwins_wch (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
+// 1: int mvwins_wstr
+// 2: WINDOW *
+// 3:  int
+// 4:  int
+// 5:  const wchar_t *
+// 6: 
+// 7: 
 SCM
 gucu_mvwins_wstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -649,6 +850,14 @@ gucu_mvwins_wstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
+// 1: int mvwvline_set
+// 2: WINDOW *
+// 3:  int
+// 4:  int
+// 5:  const cchar_t *
+// 6:  int
+// 7: 
+// 8: 
 SCM
 gucu_mvwvline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -672,6 +881,10 @@ gucu_mvwvline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
+// 1: int unget_wch
+// 2: const wchar_t
+// 3: 
+// 4: 
 SCM
 gucu_unget_wch (SCM arg1)
 {
@@ -685,6 +898,11 @@ gucu_unget_wch (SCM arg1)
 	return s_ret;
 }
 
+// 1: int vline_set
+// 2: const cchar_t *
+// 3:  int
+// 4: 
+// 5: 
 SCM
 gucu_vline_set (SCM arg1, SCM arg2)
 {
@@ -702,6 +920,12 @@ gucu_vline_set (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int waddnwstr
+// 2: WINDOW *
+// 3:  const wchar_t *
+// 4:  int
+// 5: 
+// 6: 
 SCM
 gucu_waddnwstr (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -721,6 +945,11 @@ gucu_waddnwstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+// 1: int waddwstr
+// 2: WINDOW *
+// 3:  const wchar_t *
+// 4: 
+// 5: 
 SCM
 gucu_waddwstr (SCM arg1, SCM arg2)
 {
@@ -738,10 +967,15 @@ gucu_waddwstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int wadd_wch
+// 2: WINDOW *
+// 3:  const cchar_t *
+// 4: 
+// 5: 
 SCM
 gucu_wadd_wch (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wadd-wch");
+        SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wadd-wch");
 	SCM_ASSERT (_scm_is_cchar (arg2), arg2, SCM_ARG2, "wadd-wch");
 
 	WINDOW *c_arg1 = _scm_to_window (arg1);
@@ -755,12 +989,21 @@ gucu_wadd_wch (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int wadd_wchnstr
+// 2: WINDOW *
+// 3:  const cstring_t *
+// 4:  int
+// 5: 
+// 6: 
 SCM
 gucu_wadd_wchnstr (SCM arg1, SCM arg2, SCM arg3)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wadd-wchnstr");
-	SCM_ASSERT (_scm_is_cstring (arg2), arg2, SCM_ARG2, "wadd-wchnstr");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "wadd-wchnstr");
+  if (!_scm_is_window (arg1)) 
+    scm_wrong_type_arg ("wadd-wchnstr", SCM_ARG1, arg1);
+	
+  //SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wadd-wchnstr");
+  SCM_ASSERT (_scm_is_cstring (arg2), arg2, SCM_ARG2, "wadd-wchnstr");
+  SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "wadd-wchnstr");
 
 	WINDOW *c_arg1 = _scm_to_window (arg1);
 	 cstring_t *c_arg2 = _scm_to_cstring (arg2);
@@ -774,6 +1017,11 @@ gucu_wadd_wchnstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+// 1: int wadd_wchstr
+// 2: WINDOW *
+// 3:  const cstring_t *
+// 4: 
+// 5: 
 SCM
 gucu_wadd_wchstr (SCM arg1, SCM arg2)
 {
@@ -791,6 +1039,11 @@ gucu_wadd_wchstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int wbkgrnd
+// 2: WINDOW *
+// 3:  const cchar_t *
+// 4: 
+// 5: 
 SCM
 gucu_wbkgrnd (SCM arg1, SCM arg2)
 {
@@ -808,6 +1061,11 @@ gucu_wbkgrnd (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: void wbkgrndset
+// 2: WINDOW *
+// 3:  const cchar_t *
+// 4: 
+// 5: 
 SCM
 gucu_wbkgrndset (SCM arg1, SCM arg2)
 {
@@ -825,6 +1083,18 @@ gucu_wbkgrndset (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int wborder_set
+// 2: WINDOW *
+// 3:  const cchar_t *
+// 4:  const cchar_t *
+// 5:  const cchar_t *
+// 6:  const cchar_t *
+// 7:  const cchar_t *
+// 8:  const cchar_t *
+// 9:  const cchar_t *
+// 10:  const cchar_t *
+// 11: 
+// 12: 
 SCM
 gucu_wborder_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7, SCM arg8, SCM arg9)
 {
@@ -863,6 +1133,11 @@ gucu_wborder_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SC
 	return s_ret;
 }
 
+// 1: int wecho_wchar
+// 2: WINDOW *
+// 3:  const cchar_t *
+// 4: 
+// 5: 
 SCM
 gucu_wecho_wchar (SCM arg1, SCM arg2)
 {
@@ -880,6 +1155,12 @@ gucu_wecho_wchar (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int whline_set
+// 2: WINDOW *
+// 3:  const cchar_t *
+// 4:  int
+// 5: 
+// 6: 
 SCM
 gucu_whline_set (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -899,6 +1180,12 @@ gucu_whline_set (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+// 1: int wins_nwstr
+// 2: WINDOW *
+// 3:  const wchar_t *
+// 4:  int
+// 5: 
+// 6:  
 SCM
 gucu_wins_nwstr (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -918,6 +1205,11 @@ gucu_wins_nwstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+// 1: int wins_wch
+// 2: WINDOW *
+// 3:  const cchar_t *
+// 4: 
+// 5: 
 SCM
 gucu_wins_wch (SCM arg1, SCM arg2)
 {
@@ -935,6 +1227,11 @@ gucu_wins_wch (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int wins_wstr
+// 2: WINDOW *
+// 3:  const wchar_t *
+// 4: 
+// 5: 
 SCM
 gucu_wins_wstr (SCM arg1, SCM arg2)
 {
@@ -952,6 +1249,12 @@ gucu_wins_wstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+// 1: int wvline_set
+// 2: WINDOW *
+// 3:  const cchar_t *
+// 4:  int
+// 5: 
+// 6: 
 SCM
 gucu_wvline_set (SCM arg1, SCM arg2, SCM arg3)
 {

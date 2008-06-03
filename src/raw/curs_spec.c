@@ -12,7 +12,7 @@
 #endif 
 
 SCM
-gucu_attr_get ()
+gucu_attr_get (void)
 {
   attr_t c_attrs;
   short c_pair;
@@ -27,6 +27,22 @@ gucu_attr_get ()
 
   return s_list;
 }
+
+SCM
+gucu_attr_set (SCM attrs, SCM pair)
+{
+  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG1, "attr-set");
+  SCM_ASSERT (scm_is_integer (pair), pair, SCM_ARG2, "attr-set");
+  
+  attr_t c_attrs = _scm_to_attr (attrs);
+  short c_pair = scm_to_short (pair);
+  
+  int ret = attr_set (c_attrs, c_pair, NULL);
+  SCM s_ret = scm_from_int (ret);
+  
+  return s_ret;
+}
+
 
 
 // FIXME: since color_content can return #f for nonsense values of COLOR,
@@ -121,7 +137,7 @@ gucu_inchnstr (SCM n)
   SCM s_str;
   int ret;
   
-  c_str = (chtype *) scm_malloc (sizeof (chtype) + (scm_to_int (n) + 1));
+  c_str = (chtype *) scm_malloc (sizeof (chtype) * (scm_to_int (n) + 1));
   ret = inchnstr (c_str, scm_to_int (n));
   if (ret != ERR)
     {
@@ -160,7 +176,7 @@ gucu_innstr (SCM n)
 }
 
 SCM
-gucu_instr ()
+gucu_instr (void)
 {
   char *c_str;
   SCM s_str;
@@ -268,7 +284,7 @@ gucu_mvinchnstr (SCM y, SCM x, SCM n)
   SCM s_str;
   int ret;
 
-  c_str = (chtype *) scm_malloc (sizeof (chtype) + (scm_to_int (n) + 1));
+  c_str = (chtype *) scm_malloc (sizeof (chtype) * (scm_to_int (n) + 1));
   
   ret = mvinchnstr (scm_to_int (y), scm_to_int (x), c_str, scm_to_int (n));
   if (ret != ERR)
@@ -345,7 +361,7 @@ gucu_mvwinchnstr (SCM win, SCM y, SCM x, SCM n)
   SCM s_str;
   int ret;
   
-  c_str = (chtype *) scm_malloc (sizeof (chtype) + (scm_to_int (n) + 1));
+  c_str = (chtype *) scm_malloc (sizeof (chtype) * (scm_to_int (n) + 1));
 
   ret = mvwinchnstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x),
 		     c_str, scm_to_int (n));
@@ -554,6 +570,25 @@ gucu_wattr_get (SCM win)
 }
 
 SCM
+gucu_wattr_set (SCM win, SCM attrs, SCM pair)
+{
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wattr-set");
+  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG2, "wattr-set");
+  SCM_ASSERT (scm_is_integer (pair), pair, SCM_ARG3, "wattr-set");
+  
+  WINDOW *c_win = _scm_to_window (win);
+  attr_t c_attrs = _scm_to_attr (attrs);
+  short c_pair = scm_to_short (pair);
+  
+  int ret = wattr_set (c_win, c_attrs, c_pair, NULL);
+  SCM s_ret = scm_from_int (ret);
+  
+  return s_ret;
+}
+
+
+
+SCM
 gucu_wgetnstr (SCM win, SCM n)
 {
   SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wgetnstr");
@@ -586,7 +621,7 @@ gucu_winchnstr (SCM win, SCM n)
   SCM s_str;
   int ret;
   
-  c_str = (chtype *) scm_malloc (sizeof (chtype) + (scm_to_int (n) + 1));
+  c_str = (chtype *) scm_malloc (sizeof (chtype) * (scm_to_int (n) + 1));
 
   ret = winchnstr (_scm_to_window (win), c_str, scm_to_int (n));
   if (ret != ERR)
@@ -1091,6 +1126,7 @@ void
 gucu_init_special ()
 {
   scm_c_define_gsubr ("attr-get", 0, 0, 0, gucu_attr_get);
+  scm_c_define_gsubr ("attr-set", 2, 0, 0, gucu_attr_set);
   scm_c_define_gsubr ("color-content", 1, 0, 0, gucu_color_content);
   scm_c_define_gsubr ("delwin", 1, 0, 0, gucu_delwin);
   scm_c_define_gsubr ("getmouse", 0, 0, 0, gucu_getmouse);
@@ -1113,6 +1149,7 @@ gucu_init_special ()
   scm_c_define_gsubr ("pair-content", 1, 0, 0, gucu_pair_content);
   scm_c_define_gsubr ("ungetmouse", 1, 0, 0, gucu_ungetmouse);
   scm_c_define_gsubr ("wattr-get", 1, 0, 0, gucu_wattr_get);
+  scm_c_define_gsubr ("wattr-set", 3, 0, 0, gucu_wattr_set);
   scm_c_define_gsubr ("wgetnstr", 2, 0, 0, gucu_wgetnstr);
   scm_c_define_gsubr ("winchnstr", 2, 0, 0, gucu_winchnstr);
   scm_c_define_gsubr ("winnstr", 2, 0, 0, gucu_winnstr);

@@ -1,0 +1,30 @@
+;;;; -*- Mode: scheme; -*-
+;;;; f001_new_form.test --- test suite for curses's form functions
+
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses)
+	     (gucu form))
+
+(define test (curses-test-start))
+
+(initscr)
+
+;;; These values are the xterm values
+
+;; Should be able to start color
+(with-test-prefix "new-form"
+		  
+		  (pass-if-exception "no fields" exception:wrong-type-arg
+				     (let ((f (new-form '())))
+				       (form? f)))
+	   
+		  (pass-if "one fields"
+			   (let* ((field (new-field 5 5 0 0 0 0))
+				  (f (new-form (list field))))
+			     (form? f))))
+	   
+(endwin)
+
+(curses-test-end test "f001_new_form.out")

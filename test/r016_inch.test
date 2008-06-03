@@ -1,13 +1,18 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r016_inch.test --- test suite for curses's inch
 
-(define-module (test r016_inch)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
 
+
+(define test (curses-test-start))
+
+(initscr)
 
 (define x-normal (char->integer #\x))
-(define x-bold (logior x-normal *a-bold*))
+(define x-bold (logior x-normal A_BOLD))
 
 (with-test-prefix "inch"
 		  
@@ -52,3 +57,7 @@
 			      
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r016_inch.out")

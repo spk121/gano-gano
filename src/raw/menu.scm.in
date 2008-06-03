@@ -16,29 +16,29 @@
 		item-count
 		menu-mark
 		menu-pattern
-		*e-ok*
-		*e-bad-argument*
-		*e-bad-state*
-		*e-connected*
-		*e-not-connected*
-		*e-not-posted*
-		*e-posted*
-		*e-request-denied*
-		*e-system-error*
-		*e-unknown-command*
-		*max-command*
-		*req-scr-uline*
-		*req-scr-dline*
-		*req-scr-upage*
-		*req-scr-dpage*
-		*req-left-item*
-		*req-right-item*
-		*req-next-item*
-		*req-prev-item*
-		*req-toggle-item*
-		*req-first-item*
-		*req-last-item*
-		*o-onevalue*
+		E_OK
+		E_BAD_ARGUMENT
+		E_BAD_STATE
+		E_CONNECTED
+		E_NOT_CONNECTED
+		E_NOT_POSTED
+		E_POSTED
+		E_REQUEST_DENIED
+		E_SYSTEM_ERROR
+		E_UNKNOWN_COMMAND
+		MAX_COMMAND
+		REQ_SCR_ULINE
+		REQ_SCR_DLINE
+		REQ_SCR_UPAGE
+		REQ_SCR_DPAGE
+		REQ_LEFT_ITEM
+		REQ_RIGHT_ITEM
+		REQ_NEXT_ITEM
+		REQ_PREV_ITEM
+		REQ_TOGGLE_ITEM
+		REQ_FIRST_ITEM
+		REQ_LAST_ITEM
+		O_ONEVALUE
 		new-menu
 		free-menu
 		scale-menu

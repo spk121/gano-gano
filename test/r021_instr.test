@@ -1,11 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r021_instr.test --- test suite for curses's instr
 
-(define-module (test r021_instr)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 (with-test-prefix "instr"
 		  
@@ -86,3 +90,8 @@
 			      
 (delwin win)
 (refresh)
+
+
+(endwin)
+
+(curses-test-end test "r021_instr.out")		  

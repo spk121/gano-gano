@@ -1,3 +1,21 @@
+2008-06-03  Mike Gran  <spike_gran@users.sourceforge.net>
+
+	* src/raw/curs_const.c: change constant naming to XXX_XXX style.
+	* src/raw/cursw_const.c:
+	* src/raw/menu_const.c:
+
+	* m4/libtool.m4: move to libtool 2.2.4
+
+	* doc/gucu.texi: add some form documentation
+
+	* build_aux/ltmain.sh: move to libtool 2.2.4
+
+	* configure.ac: Add form, panel libraries
+
+	* config.h.in: Add constants for form, panel
+
+	* aclocal.m4: Move to libtool 2.2.4
+
 2008-01-17  Mike Gran  <spike_gran@users.sourceforge.net>
 
 	* src/raw/cursw_const.c: move WEOF to wide curses

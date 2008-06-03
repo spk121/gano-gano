@@ -1,11 +1,14 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r001_color.test --- test suite for curses's color functions
 
-(define-module (test r001_color)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;;; These values are the xterm values
 
@@ -13,7 +16,7 @@
 (with-test-prefix "start-color"
 		  
 		  (pass-if "(default)"
-			   (equal? *ok* (start-color))))
+			   (equal? OK (start-color))))
 	   
 ;; xterm has colors
 (with-test-prefix "has-colors"
@@ -45,35 +48,35 @@
 		  (pass-if "BLACK"
 			   (lset= equal?
 				  '(0 0 0)
-				  (color-content *color-black*)))
+				  (color-content COLOR_BLACK)))
 		  (pass-if "RED"
 			   (lset= equal?
 				  '(680 0 0)
-				  (color-content *color-red*)))
+				  (color-content COLOR_RED)))
 		  (pass-if "GREEN"
 			   (lset= equal?
 				  '(0 680 0)
-				  (color-content *color-green*)))
+				  (color-content COLOR_GREEN)))
 		  (pass-if "YELLOW"
 			   (lset= equal?
 				  '(680 680 0)
-				  (color-content *color-yellow*)))
+				  (color-content COLOR_YELLOW)))
 		  (pass-if "BLUE"
 			   (lset= equal?
 				  '(0 0 680)
-				  (color-content *color-blue*)))
+				  (color-content COLOR_BLUE)))
 		  (pass-if "MAGENTA"
 			   (lset= equal?
 				  '(680 0 680)
-				  (color-content *color-magenta*)))
+				  (color-content COLOR_MAGENTA)))
 		  (pass-if "CYAN"
 			   (lset= equal?
 				  '(0 680 0)
-				  (color-content *color-cyan*)))
+				  (color-content COLOR_CYAN)))
 		  (pass-if "WHITE"
 			   (lset= equal?
 				  '(680 680 680)
-				  (color-content *color-white*))))
+				  (color-content COLOR_WHITE))))
 				    
 ;; can't set colors on xterm
 (with-test-prefix "init-color"
@@ -89,7 +92,12 @@
 (with-test-prefix "init-pair"
 		  (pass-if "set pair #1"
 			   (begin
-			     (init-pair 1 *color-black* *color-red*)
+			     (init-pair 1 COLOR_BLACK COLOR_RED)
 			     (lset= equal? 
-				    (list *color-black* *color-red*)
+				    (list COLOR_BLACK COLOR_RED)
 				    (pair-content 1)))))
+
+
+(endwin)
+
+(curses-test-end test "r001_color.out")

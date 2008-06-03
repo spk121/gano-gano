@@ -1,11 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r027_refresh.test --- test suite for curses's refresh
 
-(define-module (test r027_refresh)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to refresh the windows
 (with-test-prefix "refresh"
@@ -13,22 +17,26 @@
 		  (pass-if "refresh"
 			   (begin
 			     (and
-			      (eqv? (clear) *ok*)
-			      (eqv? (refresh) *ok*)
-			      (eqv? (addstr "a") *ok*)
-			      (eqv? (refresh) *ok*)
-			      (eqv? (addstr "b") *ok*)
-			      (eqv? (wrefresh (stdscr)) *ok*)
-			      (eqv? (addstr "c") *ok*)
-			      (eqv? (wnoutrefresh (stdscr)) *ok*)
-			      (eqv? (doupdate) *ok*)
+			      (eqv? (clear) OK)
+			      (eqv? (refresh) OK)
+			      (eqv? (addstr "a") OK)
+			      (eqv? (refresh) OK)
+			      (eqv? (addstr "b") OK)
+			      (eqv? (wrefresh (stdscr)) OK)
+			      (eqv? (addstr "c") OK)
+			      (eqv? (wnoutrefresh (stdscr)) OK)
+			      (eqv? (doupdate) OK)
 			      (eqv? (begin (display "d")
 					   (wredrawln (stdscr) 0 3))
-				    *ok*)
-			      (eqv? (refresh) *ok*)
+				    OK)
+			      (eqv? (refresh) OK)
 			      (eqv? (begin (display "e")
 					   (redrawwin (stdscr)))
-				    *ok*)
-			      (eqv? (refresh) *ok*)))))
+				    OK)
+			      (eqv? (refresh) OK)))))
 				      
+
+(endwin)
+
+(curses-test-end test "r027_refresh.out")		  
 

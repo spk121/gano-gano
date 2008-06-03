@@ -1,11 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r028_scr_dump.test --- test suite for curses's screen dump
 
-(define-module (test r028_scr_dump)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to dump windows to files
 
@@ -18,7 +22,7 @@
 ; 			     (clear)
 ; 			     (mvaddstr 0 0 "xxx")
 ; 			     (refresh)
-; 			     (eqv? *ok* (scr-dump "dump.txt"))))
+; 			     (eqv? OK (scr-dump "dump.txt"))))
 
 ; 		  (pass-if "scr-init"
 ; 			   (begin
@@ -28,3 +32,9 @@
 ; 			     (doupdate)
 ; 			     (let ((x1 (mvinnstr 0 0 3)))
 ; 			       (string=? "xxx" x1)))))
+
+
+(endwin)
+
+(curses-test-end test "r028_scr_dump.out")		  
+

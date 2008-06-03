@@ -1,11 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r026_pad.test --- test suite for curses's pad functions
 
-(define-module (test r026_pad)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to make big windows
 (define win (newpad 10 10))
@@ -46,3 +50,7 @@
 (delwin win2)
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r026_pad.out")		  

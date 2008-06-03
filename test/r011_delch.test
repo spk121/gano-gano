@@ -1,10 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r011_delch.test --- test suite for curses's character deletion
 
-(define-module (test r011_delch)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
 
+
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to delete characters
 (with-test-prefix "delch"
@@ -66,3 +71,7 @@
 
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r011_delch.out")

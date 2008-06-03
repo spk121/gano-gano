@@ -28,6 +28,11 @@ const int _HAVE_CFMAKERAW = TRUE;
 const int _HAVE_CFMAKERAW = FALSE;
 #endif
 
+#ifdef HAVE_LIBNCURSESW
+const int _HAVE_LIBNCURSESW = TRUE;
+#else
+const int _HAVE_LIBNCURSESW = FALSE;
+#endif
 
 /* This function checks if NAME looks like a Unix98 pseudo-terminal
    device name, aka "/dev/pts/XXX".  Returns TRUE or FALSE. */
@@ -220,7 +225,26 @@ inner_main (void *data    __attribute__ ((unused)),
   struct termios tio;
   struct winsize win;
   int i;
-  
+
+
+  /* The command line arguments are going to be passed down to Guile,
+     but, we need to check here for --version and --help. */
+  for (i=1; i<argc; i++)
+    {
+      if (!strcmp(argv[i], "--version") || !strcmp(argv[i], "-v"))
+	{
+	  printf ("Gucushell 0.1\n");
+	  printf ("Copyright (c) 2008 Michael L. Gran\n");
+	  printf ("This may be freely distributed\n");
+	  printf ("For details, see the file COPYING, included in the distribution\n");
+	  return;
+	}
+      if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h"))
+	{
+	  scm_shell (argc, argv);
+	}
+    }
+    
 
   /* Create a pseudo-terminal */
   if (openpty (&master, &slave, name, &tio, &win) >= 0)
@@ -259,7 +283,7 @@ inner_main (void *data    __attribute__ ((unused)),
 	  refresh ();
 	  
 	  /* Call the curses libraries */
-	  if (HAVE_LIBNCURSESW)
+	  if (_HAVE_LIBNCURSESW)
 	    {
 	      printf ("Loading (gucu curses)\n");
 	      printf ("Loading (gucu curses-wide)\n");

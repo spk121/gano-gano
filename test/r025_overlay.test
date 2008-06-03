@@ -1,11 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r025_overlay.test --- test suite for curses's overlay
 
-(define-module (test r025_overlay)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to overlay one window onto another
 
@@ -70,3 +74,7 @@
 
 		  )
 
+
+(endwin)
+
+(curses-test-end test "r025_overlay.out")		  

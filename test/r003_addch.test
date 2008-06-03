@@ -1,13 +1,18 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r003_addch.test --- test suite for curses's addch functions
 
-(define-module (test r003_addch)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
 
+
+(define test (curses-test-start))
+
+(initscr)
 
 (define x_normal (char->integer #\x))
-(define x_bold (logior x_normal *a-bold*))
+(define x_bold (logior x_normal A_BOLD))
 
 (with-test-prefix "addch"
 		  
@@ -65,3 +70,8 @@
 			      
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r003_addch.out")
+

@@ -13,10 +13,11 @@ BEGIN {
     # the non-pointer form
     where = match($1, /([_a-zA-Z0-9]*) ([_a-zA-Z0-9]*)/, arr);
 
+
   return_type = arr[1];
   c_function_name = arr[2];
   n_args = NF-3;
-
+  
   if(n_args == 1 && $(2) ~ "void")
     void_flag = 1;
   else
@@ -31,7 +32,8 @@ BEGIN {
     }
     printf "SCM arg%d", n_args;
   }
-  printf ") API;\n"
+  printf ") API";
+  printf ";\n"
 }
 END {
 }

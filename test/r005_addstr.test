@@ -1,11 +1,14 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r005_addstr.test --- test suite for curses's addstr
 
-(define-module (test r005_addstr)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
 
+(define test (curses-test-start))
+
+(initscr)
 
 (with-test-prefix "addstr"
 		  
@@ -84,3 +87,7 @@
 			      
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r005_addstr.out")

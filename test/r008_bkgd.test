@@ -1,9 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r008_bkgd.test --- test suite for curses's background functions
 
-(define-module (test r008_bkgd)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
+
+
+(define test (curses-test-start))
+
+(initscr)
 
 (define period (char->integer #\.))
 (define plus (char->integer #\+))
@@ -18,35 +24,35 @@
 		  (pass-if "bkgd"
 			   (begin
 			     (mvaddstr 0 0 "This is a string")
-			     (bkgd (logior *a-bold* period))
+			     (bkgd (logior A_BOLD period))
 			     (mvaddstr 1 0 "This is a new string")
 			     (refresh)
 			     (let ((x1 (mvinch 0 4)) ;Loc of space between "This" and "is"
 				   (x2 (mvinch 1 4)))
 			       (begin
-				 (bkgd (logior *a-normal* space)) ; clear bkgd
+				 (bkgd (logior A_NORMAL space)) ; clear bkgd
 				 (clear)
 				 (refresh)
 				 (and
-				  (equal? (logior *a-bold* period) x1)
-				  (equal? (logior *a-bold* period) x2))))))
+				  (equal? (logior A_BOLD period) x1)
+				  (equal? (logior A_BOLD period) x2))))))
 		  
 		  (pass-if "bkgdset"
 			   (begin
 			     (standend)
 			     (mvaddstr 0 0 "This is a string")
-			     (bkgdset (logior *a-dim* (color-pair 1) plus))
+			     (bkgdset (logior A_DIM (color-pair 1) plus))
 			     (mvaddstr 1 0 "This is another string")
 			     (refresh)
 			     (let ((x1 (mvinch 0 4))
 				   (x2 (mvinch 1 4)))
 			       (begin
-				 (bkgd (logior *a-normal* space)) ; clear bkgd
+				 (bkgd (logior A_NORMAL space)) ; clear bkgd
 				 (clear)
 				 (refresh)
 				 (and
-				  (equal? (logior *a-normal* space) x1)
-				  (equal? (logior *a-dim* (color-pair 1) plus) x2)))))))
+				  (equal? (logior A_NORMAL space) x1)
+				  (equal? (logior A_DIM (color-pair 1) plus) x2)))))))
 		  
 (define win (newwin 5 10 5 5))
 
@@ -55,33 +61,36 @@
 		  (pass-if "wbkgd"
 			   (begin
 			     (mvwaddstr win 0 0 "This is a string")
-			     (wbkgd win (logior *a-bold* period))
+			     (wbkgd win (logior A_BOLD period))
 			     (mvwaddstr win 1 0 "This is a new string")
 			     (wrefresh win)
 			     (let ((x1 (mvwinch win 0 4))
 				   (x2 (mvwinch win 1 4)))
 			       (begin
-				 (wbkgd win (logior *a-normal* space)) ; clear bkgd
+				 (wbkgd win (logior A_NORMAL space)) ; clear bkgd
 				 (wclear win)
 				 (wrefresh win)
 				 (and
-				  (equal? (logior *a-bold* period) x1)
-				  (equal? (logior *a-bold* period) x2))))))
+				  (equal? (logior A_BOLD period) x1)
+				  (equal? (logior A_BOLD period) x2))))))
 		  
 		  (pass-if "bkgdget / wbkgdset"
 			   (begin
 			     (wstandend win)
 			     (mvwaddstr win 0 0 "This is a string")
-			     (wbkgdset win (logior *a-dim* (color-pair 1) plus))
+			     (wbkgdset win (logior A_DIM (color-pair 1) plus))
 			     (mvwaddstr win 1 0 "This is another string")
 			     (wrefresh win)
 			     (let ((bk (getbkgd win)))
 			       (begin
-				 (wbkgd win (logior *a-normal* space)) ; clear bkgd
+				 (wbkgd win (logior A_NORMAL space)) ; clear bkgd
 				 (wclear win)
 				 (wrefresh win)
-				 (equal? bk (logior *a-dim* (color-pair 1) plus)))))))
+				 (equal? bk (logior A_DIM (color-pair 1) plus)))))))
 (delwin win)
 (refresh)
 
+(endwin)
+
+(curses-test-end test "r008_bkgd.out")
 		  

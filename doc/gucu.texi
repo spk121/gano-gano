@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.12 2008/03/30 16:56:01 spike_gran Exp $
+@c $Id: gucu.texi,v 1.13 2008/06/03 11:36:27 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -265,6 +265,9 @@ The wide curses library: @code{(gucu curses-wide)}
 * Inserting a complex character before the cursor::  
 * Inserting a unrendered wide string into a window::  
 * Getting a string of unrendered wide characters from a window::  
+
+The curses form library: @code{(gucu form)}
+
 
 @end detailmenu
 @end menu
@@ -631,11 +634,11 @@ this glyph.
 Some examples of rendered, complex characters would be as follows:
 @example
 ;; The letter 'x'
-(*a-normal* 0 (char->integer #\x))
+(A_NORMAL 0 (char->integer #\x))
 ;; Bold U+041B Cyrillic Capital Letter El
-(*a-bold* 0 #x041B)
+(A_BOLD 0 #x041B)
 ;; 'o' with combining macron above and grave accent below
-(*a-normal* 0 (char->integer #\o) #x0304 #x0316))
+(A_NORMAL 0 (char->integer #\o) #x0304 #x0316))
 @end example
 
 @findex add-wch 
@@ -652,11 +655,11 @@ An example of a rendered, complex string is as follows:
 @example
 ;; The word so@~nar, 
 ;; so@~nar --> U+0073 U+006F U+00F1 U+0061 U+0072
-((*a-bold* 0 #x0073)
- (*a-bold* 0 #x006F)
- (*a-bold* 0 #x00F1)
- (*a-bold* 0 #x0061)
- (*a-bold* 0 #x0072))
+((A_BOLD 0 #x0073)
+ (A_BOLD 0 #x006F)
+ (A_BOLD 0 #x00F1)
+ (A_BOLD 0 #x0061)
+ (A_BOLD 0 #x0072))
 @end example
 
 @end table
@@ -925,7 +928,7 @@ possible example would be a  timeout at a password prompt.
 @code{halfdelay} enables half-delay mode, which is similar to
 @code{cbreak} mode in that characters types are immediately available
 to the program.  However, after a period of time if there is now
-input, it return @code{*err*}.
+input, it return @code{ERR}.
 
 @node An example,  , Initialization Functions, Initialization
 @subsection An example
@@ -950,7 +953,7 @@ Let's write a program that will clarify the usage of these functions.
       
       (begin
         (addstr "The pressed key is ")
-        (addch (logior *a-bold* ch))))    ; Print the char in bold
+        (addch (logior A_BOLD ch))))    ; Print the char in bold
   (refresh)                             ; Print it on the real screen
   (getch)                               ; Wait for user input
   (endwin))                             ; End curses mode
@@ -958,7 +961,7 @@ Let's write a program that will clarify the usage of these functions.
 
 Hopefully this program is easy to follow.  But I used functions that
 aren't explained yet.  The procedure @code{getch} is used to get a
-character from the user.  The @code{(logior *a-bold* ch)} adds the bold
+character from the user.  The @code{(logior A_BOLD ch)} adds the bold
 attribute to the character, and @code{addch} prints the character on
 the screen.
 
@@ -1050,7 +1053,7 @@ options:
 You can explicitly construct a rendered character by @code{logior}'ing
 a single character with the desired attribute.
 @example
-(logior *a-bold* *a-underline* (char->integer ch))
+(logior A_BOLD A_UNDERLINE (char->integer ch))
 @end example
 
 @item
@@ -1107,7 +1110,7 @@ To add a rendered, complex character to the screen, use @code{add-wch}
 and friends.
 @example
 ;; Bold U+041B Cyrillic Capital Letter El
-(add-wch (list *a-bold* 0 #x041B))
+(add-wch (list A_BOLD 0 #x041B))
 @end example
 
 This procedure comes in four variations, @code{add-wch},
@@ -1271,9 +1274,9 @@ Attributes, when set prudently, can present information in an easy,
 understandable manner.  
 
 The following program takes a scheme file as input and prints the file
-with comments in bold.  It does so by turning on the @code{*a-bold*}
+with comments in bold.  It does so by turning on the @code{A_BOLD}
 attribute using @code{attron} when a semicolon is detected, and then
-turning of the @code{*a-bold*} attribute using @code{attroff} when a
+turning of the @code{A_BOLD} attribute using @code{attroff} when a
 newline is detected.  Have a look.
 
 @example
@@ -1318,9 +1321,9 @@ newline is detected.  Have a look.
           ;; and the end of a line
           (cond 
            ((eqv? ch #\;) 
-            (attron *a-bold*))
+            (attron A_BOLD))
            ((eqv? ch #\nl)
-            (attroff *a-bold*)))
+            (attroff A_BOLD)))
           (addch (char->integer ch))
           (refresh)
           (loop (read-char fport)))
@@ -1362,27 +1365,27 @@ attributes and switch them on or off respectively.  The following
 video attributes can be passed to these functions.
 
 @table @code
-@item *a-normal*
+@item A_NORMAL
 Normal display (no highlight)
-@item *a-standout*
+@item A_STANDOUT
 Best highlighting mode of the terminal
-@item *a-underline* 
+@item A_UNDERLINE 
 Underlining
-@item *a-reverse*
+@item A_REVERSE
 Reverse video
-@item *a-blink*
+@item A_BLINK
 Blinking
-@item *a-dim*
+@item A_DIM
 Half-bright
-@item *a-bold*
+@item A_BOLD
 Extra bright or bold
-@item *a-protect*
+@item A_PROTECT
 Protected mode
-@item *a-invis*
+@item A_INVIS
 Invisible or blank mode
-@item *a-altcharset*
+@item A_ALTCHARSET
 Alternate character set
-@item *a-chartext*
+@item A_CHARTEXT
 Bit-mask to extract a character
 @item (color-pair n)
 A procedure that returns the bit mask for a color-pair
@@ -1394,7 +1397,7 @@ We can @code{logior} any number of attributes to get a combined
 effect.  If you wanted reverse video with blinking characters, you can
 use
 @example
-(attron (logior *a-reverse* *a-blink*))
+(attron (logior A_REVERSE A_BLINK))
 @end example
 
 @node @code{attron} vs @code{attrset}, @code{attr-get}, The details, Attributes
@@ -1411,7 +1414,7 @@ carelessly, you may lose track of what attributes the window has and
 garble the display.  This is especially true while managing menus with
 colors and highlighting.  So decide on a consistent policy and stick
 to it.  You can always use @code{standend} which is equivalent to
-@code{(attrset *a-normal*)} which turns off all attributes and brings
+@code{(attrset A_NORMAL)} which turns off all attributes and brings
 you back to normal mode.
 
 @node @code{attr-get}, @code{wattr} functions, @code{attron} vs @code{attrset}, Attributes
@@ -1449,7 +1452,7 @@ The following example changes the attributes of characters from
 the current position to the end of the line to reverse video.
 
 @example
-(chgat -1 *a-reverse* 0 #f)
+(chgat -1 A_REVERSE 0 #f)
 @end example
 
 There are other functions in the same family.  @code{mvchgat} moves
@@ -1469,14 +1472,14 @@ cyan.
 (start-color)
 
 ;; Label cyan on black as color-pair #1
-(init-pair 1 *color-cyan* *color-black*)
+(init-pair 1 COLOR_CYAN COLOR_BLACK)
 
 (addstr "Blink Don't Blink")
 
 (mvchgat 0                   ; start y
          0                   ; start x
          5                   ; num of chars 
-         *a-blink*           ; attributes
+         A_BLINK           ; attributes
          1                   ; use color pair #1
          #f)                 ; unused
 
@@ -1578,25 +1581,25 @@ explore these functions in more detail in this example.
 	     (my-win (create-newwin height width starty startx))
 	     (ch (getch)))
     (cond
-     ((eqv? ch *key-left*)
+     ((eqv? ch KEY_LEFT)
       (loop starty
 	    (- startx 1)
 	    (move-win my-win height width starty (- startx 1))
 	    (getch)))
      
-     ((eqv? ch *key-right*)
+     ((eqv? ch KEY_RIGHT)
       (loop starty
 	    (+ startx 1)
 	    (move-win my-win height width starty (+ startx 1))
 	    (getch)))
      
-     ((eqv? ch *key-up*)
+     ((eqv? ch KEY_UP)
       (loop (- starty 1)
 	    startx
 	    (move-win my-win height width (- starty 1) startx)
 	    (getch)))
      
-     ((eqv? ch *key-down*)
+     ((eqv? ch KEY_DOWN)
       (loop (+ starty 1)
 	    startx
 	    (move-win my-win height width (+ starty 1) startx)
@@ -1733,7 +1736,7 @@ colors.  Let's get into the thick of things with a small program.
 (if (has-colors)
     (begin
       (start-color)
-      (init-pair 1 *color-red* *color-white*)
+      (init-pair 1 COLOR_RED COLOR_WHITE)
       (attron (color-pair 1))
       (addstr "Voila!! In color...")
       (refresh)
@@ -1755,7 +1758,7 @@ terminal does not support color.
 Curses initializes all the color support for the terminal when
 @code{start-color} is called.  Usually, a color terminal will have at
 least eight colors available that can be accessed by constants like
-@code{*color-black*}, etc.  Now to actually start using colors, you
+@code{COLOR_BLACK}, etc.  Now to actually start using colors, you
 have to define pairs.  Colors are always used in pairs.  That means
 you have to use the function @code{init-pair} to define the foreground
 and background for the pair number you give.  After that, that pair
@@ -1766,21 +1769,21 @@ The following colors are defined.  You can use these as parameters for
 the various color functions.
 @enumerate
 @item
-*color-black*
+COLOR_BLACK
 @item
-*color-red*
+COLOR_RED
 @item
-*color-green*
+COLOR_GREEN
 @item
-*color-yellow*
+COLOR_YELLOW
 @item
-*color-blue*
+COLOR_BLUE
 @item
-*color-magenta*
+COLOR_MAGENTA
 @item
-*color-cyan*
+COLOR_CYAN
 @item
-*color-white*
+COLOR_WHITE
 @end enumerate
 
 @node Changing color definitions,  , The basics of color, Colors
@@ -1794,11 +1797,11 @@ to a darker red, you could use this function
 @example
 ;; Param 1: color name
 ;; Param 2, 3, 4; RGB content, min=0 max=1000
-(init-color *color-red* 300 0 0)
+(init-color COLOR_RED 300 0 0)
 @end example
 
 If your terminal cannot change the color definitions, the function
-return @code{*err*}.  The function @code{can-change-color} can be used
+return @code{ERR}.  The function @code{can-change-color} can be used
 to find out whether thet terminal has the capability of changing color
 content or not.  The RGB content is scaled from 0 to 1000.  Initially,
 red is likely defined with content 680 (r), 0 (g), 0 (b).
@@ -1833,7 +1836,7 @@ keys, arrow keys and so on.
 @code{getch} returns an integer corresponding to the key pressed.  If
 it is a normal character, the integer value will be equivalent to the
 character.  Otherwise it returns a number which can be matched with
-the @code{*key-} constants.  For example, if the user presses
+the @code{KEY_} constants.  For example, if the user presses
 @key{F1}, the integer returned is 265.  The procedure @code{(key-f 1)}
 returns 265.  
 
@@ -1845,13 +1848,13 @@ For example if you call @code{getch} like this
 @code{getch} will wait for the user to press a key, (unless you
 specified a timeout), and when the user presses a key, the
 corresponding integer is returned.  Then you can check the value
-returned with the @code{*key-*} constants of the result of the
+returned with the @code{KEY_} constants of the result of the
 function key procedure @code{key-f}.
 
 The following code piece will do that job
 @example
 (let ((ch (getch)))
-    (if (eqv? ch *key-left*)
+    (if (eqv? ch KEY_LEFT)
         (addstr "Left arrow is pressed")))
 @end example
 
@@ -1882,9 +1885,9 @@ by up and down arrows.
       (cond 
        ((eqv? highlight i)
         (begin
-          (wattron win *a-reverse*)
+          (wattron win A_REVERSE)
           (mvwaddstr win y x (list-ref choices i))
-          (wattroff win *a-reverse*)))
+          (wattroff win A_REVERSE)))
        (else
         (mvwaddstr win y x (list-ref choices i))))
 
@@ -1905,7 +1908,7 @@ by up and down arrows.
       
       (cond 
 
-       ((eqv? ch *key-up*)
+       ((eqv? ch KEY_UP)
         ((lambda (h)
            (print-menu menu-win h choices)
            (loop h (wgetch menu-win)))
@@ -1913,7 +1916,7 @@ by up and down arrows.
              (- n-choices 1)
              (- highlight 1))))
        
-       ((eqv? ch *key-down*)
+       ((eqv? ch KEY_DOWN)
         ((lambda (h)
            (print-menu menu-win h choices)
            (loop h (wgetch menu-win)))
@@ -1923,7 +1926,7 @@ by up and down arrows.
        
        ;; If enter or return is pressed, return the current selected
        ;; menu item
-       ((or (eqv? ch (char->integer #\NL)) (eqv? ch *key-enter*))
+       ((or (eqv? ch (char->integer #\NL)) (eqv? ch KEY_ENTER))
         highlight)
        
        (else
@@ -1982,37 +1985,37 @@ keyboard and mouse.
 Before you do anything else, the events you want to receive have to be
 enabled with @code{mousemask}.  You pass it a bit mask of events you
 would like to listen.  By default, all the events are turned off.  The
-bit mask @code{*all-mouse-events*} can be used to get all the events.
+bit mask @code{ALL_MOUSE_EVENTS} can be used to get all the events.
 
 For current technology, the following events are of use.
 @multitable {*XXXXXXXXXXXXXXXXXXXXXX*} {xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx}
 @headitem Name              @tab Description
 
-@item @code{*button1-pressed*}
+@item @code{BUTTON1_PRESSED}
 @tab mouse button 1 down
-@item @code{*button1-released*}
+@item @code{BUTTON1_RELEASED}
 @tab mouse button 1 up
-@item @code{*button1-clicked*}
+@item @code{BUTTON1_CLICKED}
 @tab mouse button 1 clicked
-@item @code{*button1-double-clicked*}
+@item @code{BUTTON1_DOUBLE_CLICKED}
 @tab mouse button 1 double clicked
-@item @code{*button2-pressed*}
+@item @code{BUTTON2_PRESSED}
 @tab mouse button 2 down
-@item @code{*button2-released*}
+@item @code{BUTTON2_RELEASED}
 @tab mouse button 2 up
-@item @code{*button2-clicked*}
+@item @code{BUTTON2_CLICKED}
 @tab mouse button 2 clicked
-@item @code{*button2-double-clicked*}
+@item @code{BUTTON2_DOUBLE_CLICKED}
 @tab mouse button 2 double clicked
-@item @code{*button-shift*}
+@item @code{BUTTON_SHIFT}
 @tab shift was down during button state change
-@item @code{*button-ctrl*}
+@item @code{BUTTON_CTRL}
 @tab control was down during button state change
-@item @code{*button-alt*}
+@item @code{BUTTON_ALT}
 @tab alt was down during button state change
-@item @code{*all-mouse-events*}
+@item @code{ALL_MOUSE_EVENTS}
 @tab report all button state changes
-@item @code{*report-mouse-position*}
+@item @code{REPORT_MOUSE_POSITION}
 @tab report mouse movement
 @end multitable
 
@@ -2024,8 +2027,8 @@ There are some important things to note.
 Mouse buttons 1, 2, and 3 may be right, center, and left respectively, instead of
 right, left, and center.
 @item
-The @code{*button-shift*}, @code{*button-alt*}, and
-@code{*button-ctrl*} codes will probably not work, as they will
+The @code{BUTTON_SHIFT}, @code{BUTTON_ALT}, and
+@code{BUTTON_CTRL} codes will probably not work, as they will
 probably be intercepted by the window manager.
 @item
 The mouse driver will not send both a click/release pair and a pressed
@@ -2037,7 +2040,7 @@ message.
 @subsection Getting the events
 
 Once a class of mouse events have been enabled, @code{getch} and
-friends return @code{*key-mouse*} every time some mouse event
+friends return @code{KEY_MOUSE} every time some mouse event
 happens.  Then, the mouse event can be retrieved with @code{getmouse}.
 
 @code{getmouse} returns a list of five elements: id, x, y, z, and
@@ -2048,16 +2051,16 @@ I've used some of the srfi-1 list functions in this example.)
 
 @example
 (set! c (getch))
-(if (eqv? c *key-mouse*)
+(if (eqv? c KEY_MOUSE)
     (let* ((m (getmouse))
            (mouse-x (second m))
            (mouse-y (third m))
            (mouse-flag (fifth m)))
        (cond
-        ((logtest *button1-pressed* mouse-flag)
+        ((logtest BUTTON1_PRESSED mouse-flag)
          ; do button1-pressed response here
         )
-        ((logtest *button1-released* mouse-flag)
+        ((logtest BUTTON1_RELEASED mouse-flag)
          ; do button1-released response here
         ))))
 @end example
@@ -2072,6 +2075,808 @@ The @code{mouseinterval} function sets the maximum time (in
 thousandths of a second) that can elapse between press and release
 events in order for them to be recognized as a click. The default is
 one-fifth of a second.
+
+@section Forms Library
+
+Well, if you have seen those forms on web pages that take input from
+users and do various kinds of things, you might be wondering how one
+would create such form in ta text mode display.  It's quite difficult
+to write those nifty forms in plain ncurses.  The forms library tries
+to privide a basic froamework to build and maintain forms with ease.
+It has lots of features that manage validation, dynamic expression of
+fields, and so on.  Let's see it in full flow.
+
+A form is a collection of fields. Each field can be either a label
+(static text) or a data-entry location.  The forms library also
+provices functions to divide forms into multiple pages.  
+
+@subsection The Basics
+
+Forms are created in much the same way as menus.  First, the fields
+related to the form are created with @code{new-field}.  You can set
+options for the fields, so that they can be displayed with some fancy
+attributes, validated before the field looses focus, etc.  Then the
+fields are attached to the form.  After this, the form can be posted
+to display and is ready to receive inputs.  Along similar lines to
+@code{menu-driver}, the form is manipulated with @code{form-driver}.
+We can send requests to @code{form-driver} to move focus to a certain
+field, move the cursor to the end of the field, and so on.  After the
+user enters the values in the fields and validation is done, the form
+can be unposted and the memory allocated can be freed.
+
+The general flow of control of a form program looks like this
+
+@enumerate
+@item
+Initialize curses
+@item
+Create fields using @code{new-field}.  You can specify the height and
+width of the field, and its position on the form.
+@item
+Create the forms with @code{new-form} by specifying the fields to be
+attached.
+@item
+Post the form with @code{form-post} and refresh the screen.
+@item
+Process the user requests with a loop and do necessary updates to the
+form with @code{form-driver}.
+@item
+Unpost the menu with @code{form-unpost}
+@item
+If desired, explicity free the memory allocated to menu with
+@code{free-form}.
+@item
+If desired, explicity free the memory allocated to menu item with
+@code{free-field}.
+@item
+End curses.
+@end enumerate
+
+The forms library is similar to the menu library.  The following
+examples will explore various aspects of form processing.  Let's stat
+the journey with a simple example first.
+
+@subsection A Form Example
+
+To use form library functions, you have to include @code{(gucu
+form)}.
+
+@example
+#!/usr/local/bin/guile
+!#
+
+(use-modules (srfi srfi-1)
+	     (gucu curses)
+	     (gucu form))
+
+;; Initialize curses
+(initscr)
+(cbreak)
+(noecho)
+(keypad (stdscr) #t)
+
+;; Initialize the fields
+(define field (list
+	       (new-field 1 10 4 18 0 0)
+	       (new-field 1 10 6 18 0 0)))
+
+;; Set field options
+;; Print a line for the options
+(set-field-back (first field) A_UNDERLINE) 
+;; Don't go to the next field when this field is filled up
+(field-opts-off (first field) O_AUTOSKIP)
+(set-field-back (second field) A_UNDERLINE)
+(field-opts-off (second field) O_AUTOSKIP)
+
+;; Create the new form and post it
+(define my-form (new-form field))
+(post-form my-form)
+(refresh)
+
+(mvaddstr 4 10 "Value 1:")
+(mvaddstr 6 10 "Value 2:")
+(refresh)
+
+;; Loop through to get user requests
+(let loop ((ch (getch)))
+  (if (not (eqv? ch (key-f 1)))
+      (cond
+       ((eqv? ch KEY_DOWN)
+	(begin
+	  ;; Go to the end of the next field
+	  (form-driver my-form REQ_NEXT_FIELD)
+	  (form-driver my-form REQ_END_LINE)
+	  (loop (getch))))
+       ((eqv? ch KEY_UP)
+	(begin
+	  ;; Go to the end of the previous field
+	  (form-driver my-form REQ_PREV_FIELD)
+	  (form-driver my-form REQ_END_LINE)
+	  (loop (getch))))
+       (else
+	(begin
+	  ;; Print any normal character
+	  (form-driver my-form ch)
+	  (loop (getch)))))))
+
+;; Unpost the form 
+(unpost-form my-form)
+
+(endwin)
+
+@end example
+
+The above example is pretty straightformward.  It creates two fields
+with @code{new-field}.  The procedure @code{new-field} takes height,
+width startx, starty, the number of offscreen rows, and number of
+additional working buffers.  The fifth argument number of offscreen
+rows specified how much of the field to be shown.  If it is zero, the
+entire field is always displayed; otherwise, the form will be
+scrollable when the user accesses undisplayed part of the field.  The
+forms library allocates one buffer per field to store the data which
+the user enters.  Using the last parameter to @code{new-field} we can
+specify it to allocate some additional buffers.  These can be used for
+any purpose you like.
+
+After creating the fields, the background attribute of both of them is
+set to an underscore with @code{set-field-back}.  The @code{AUTOSKIP}
+option is turned off using @code{field-opts-off}.  If this option is
+turned of, focus will move to the next field in the form once the
+active field is filled up completely.
+
+After attaching the fields to the form, it is posted.  Here on, user
+inputs are processed in the loop, by making corresponding request to
+@code{form-driver}.  The details of all the request to
+@code{form-driver} are explained later.
+
+@subsection Playing with fields
+
+Each form field is associated with lots of attributes.  They can be
+manipulated to get the required effect.
+
+@subsubsection Fetching Size and Location of Field
+
+The parameters we have given at the time of creation of a field can be
+retrieved with @code{field-info}.
+
+@example
+(field-info field)
+@end example
+
+The procedure @code{field-info} takes a field and returns a list:
+height, width, top, left, offscreen, and number of buffers.
+
+The location of the field can be moved to a different position with
+@code{move-field}. 
+
+@example
+(move-field field top left)
+@end example
+
+
+The justification to be done for the field can be fixed using the
+function @code{set-field-just}
+
+@example
+(set-field-just field justification)
+@end example
+
+The justification mode value is the either @code{NO_JUSTIFICATION},
+@code{JUSTIFY_RIGHT}, @code{JUSTIFY_LEFT}, or @code{JUSTIFY_CENTER}.
+
+The procedure @code{field-just} returns the justification mode.
+
+
+@subsection Field Display Attributes
+
+As you have seen, in the above example, display attribues for the
+fields can be set with @code{set-field-fore} and
+@code{set-field-back}.  The3se Functions set foreground and background
+attributges of the fields.  You can also specify a pad character that
+will be filled in the unfilled portion of the field.  The pad
+character is set with a call to @code{set-field-pad}.  Default pad
+value is space.  The functions @code{field-fore} , @code{field-back},
+and @code{field-pad} can be used to query the present foreground
+background attributes and pad character for the field. 
+
+Though the functions seem quite simple, using colors with
+@code{set-field-fore} may be frustrating in the beginning.  Let me
+first explain about foreground and background attributes of a field.
+The foreground attribute is associated with the character.  That means
+a character in the field is printed with the attribute you have set
+with @code{set-field-fore}.  Background attribute is the attribute
+used to fill background of field, whether any character is there or
+not.  So what about colors?  Since colors are always defined in pairs,
+what is the right way to display colored fields?  Here's an example
+clarifying color attributes.
+
+@example
+#!/usr/local/bin/guile
+!#
+
+(use-modules (srfi srfi-1)
+	     (gucu curses)
+	     (gucu form))
+
+;; Initialize curses
+(initscr)
+(start-color)
+(cbreak)
+(noecho)
+(keypad (stdscr) #t)
+
+;; Initialize the color pairs
+(init-pair 1 COLOR_WHITE COLOR_BLUE)
+(init-pair 2 COLOR_WHITE COLOR_BLUE)
+
+;; Initialize the fields
+(define field (list
+	       (new-field 1 10 4 18 0 0)
+	       (new-field 1 10 6 18 0 0)))
+
+;; Set field options
+(set-field-fore (first field) (color-pair 1))
+(set-field-back (first field) (color-pair 2)) 
+(field-opts-off (first field) O_AUTOSKIP)
+
+(set-field-back (second field) A_UNDERLINE)
+(field-opts-off (second field) O_AUTOSKIP)
+
+;; Create the new form and post it
+(define my-form (new-form field))
+(post-form my-form)
+(refresh)
+
+(mvaddstr 4 10 "Value 1:")
+(mvaddstr 6 10 "Value 2:")
+(refresh)
+
+;; Loop through to get user requests
+(let loop ((ch (getch)))
+  (if (not (eqv? ch (key-f 1)))
+      (cond
+       ((eqv? ch KEY_DOWN)
+	(begin
+	  ;; Go to the end of the next field
+	  (form-driver my-form REQ_NEXT_FIELD)
+	  (form-driver my-form REQ_END_LINE)
+	  (loop (getch))))
+       ((eqv? ch KEY_UP)
+	(begin
+	  ;; Go to the end of the previous field
+	  (form-driver my-form REQ_PREV_FIELD)
+	  (form-driver my-form REQ_END_LINE)
+	  (loop (getch))))
+       (else
+	(begin
+	  ;; Print any normal character
+	  (form-driver my-form ch)
+	  (loop (getch)))))))
+
+;; Unpost the form 
+(unpost-form my-form)
+
+(endwin)
+@end example
+
+Play with the color pairs and try to understand the foreground and
+background attributes.  Color pair 1 is used for the character that
+have been typed into the form, and color pair 2 is used for the empty
+spaces in the form.  
+
+@subsection Field Option Bits
+
+There is also a large collection of field option bits you can set to
+control various aspects of forms processing.  You can manipulate them
+with the procedures @code{set-field-opts}, @code{field-opts-on},
+@code{field-opts-off}, and @code{field-opts}.
+
+The function @code{set-field-opts} can be used to directly set
+attributes of a field or you can chose to switch a few attributes on
+and off with @code{field-opts-on} and @code{field-opts-off}.  You can
+query the attributes of a field with @code{field-opts}.  The following
+is a list of available options.  By default, all options are on.
+
+@table @code
+
+@item O_VISIBLE
+
+Controls whether the field is visible on the screen.  Can be used
+during form processing to hide or pop up fields depending on the value
+of parent fields.
+
+@item O_ACTIVE
+
+Controls whether the field is active during forms processing
+(i.e. visited by form navigation keys).  Can be used to make labels or
+derived fields with buffer values alterable by the forms application,
+not the user.
+
+@item O_PUBLIC
+
+Controls whether data is displayed during field entry.  If this option
+is turned off on a field, the library will accept and edit data in
+that field, but it will not be displayed and the visible field cursor
+will not move.  You can turn off the @code{O_PUBLIC} bit to define
+password fields.
+
+@item O_EDIT
+
+Controls whether the field's data can be modified.  When this option
+is off, all editing requests except @code{REQ_PREV_CHOICE} and
+@code{REQ_NEXT_CHOICE} will fail.  Such read-only fields may be useful
+for help messages.
+
+@item O_WRAP
+
+Controls word-wrapping in multiline fields.  Normally, when any
+character of a (blak-separated) word reaches the end of the current
+line, the entire word is wrapped to the next line (assuming there is
+one).  When this option is off, the word will be split across the line
+break.
+
+@item O_BLANK
+
+Controls field blaking.  When this option is on, entering a character
+at the first field position erases the entire field (except for the
+just-entered character).
+
+@item O_AUTOSKIP
+
+Controls automatic skip to next field when this one fills.  Normally,
+when the forms user tries to type more data into a field than will
+fit, the editing location jumps to the next field.  When this option
+is off, the user's cursor will hang at the end of the field.  This
+option is ignored in dynamic fields that have not reached their size
+limit.
+
+@item O_NULLOK
+
+Controls whether validation is applied to blank fields.  Normally, it
+is not; the user can leave a field blank without invoking the usual
+validation check on exit.  If this option is off on a field, exit from
+it will invoke a validation check.
+
+@item O_PASSOK
+
+Controls whether validation occurs on every exit, or only after the
+field is modified.  Normally the latter is true.  Setting
+@code{O_PASSOK} may be useful if your field's validation function may
+change during forms processing.
+
+@item O_STATIC
+
+Controls whether the field is fixed to its initial dimensions.  If you
+turn this off, the field becomes dynamic and will stretch to fit
+entered data.
+
+@end table
+
+A field's options cannot be changed while the field is currently
+selected.  However, options may be changed on posted fields that are
+not current.
+
+The option values are bit-masks and can be composed with @code{logior}
+in the obvious way.  You have seen the usage of weitching off
+@code{O_AUTOSKIP} option.  The following example clarified usage of
+some more options.  One field is a constant, uneditable field, that
+you cannot move to by using the arrow keys.  The other field is a
+password-like field where the characters are hidden from view.
+
+@example
+#!/usr/local/bin/guile
+!#
+
+(use-modules (srfi srfi-1)
+	     (gucu curses)
+	     (gucu form))
+
+;; Constants
+(define STARTX 15)
+(define STARTY 4)
+(define WIDTH 25)
+(define N_FIELDS 2)
+
+;; Initialize curses
+(initscr)
+(cbreak)
+(noecho)
+(keypad (stdscr) #t)
+
+;; Initialize the fields
+(define field (map-in-order 
+	       (lambda (y)
+		 (new-field 1 
+			    WIDTH 
+			    (+ (* y 2) STARTY)
+			    STARTX
+			    0 
+			    0))
+	       (iota N_FIELDS)))
+
+;; Set field options
+(set-field-back (first field) A_UNDERLINE) 
+;; Don't go to the next field when this field is filled up
+
+;; This field is a static label
+(field-opts-off (first field) O_ACTIVE)
+
+;; This field is like a password field
+(field-opts-off (second field) O_PUBLIC)
+(field-opts-off (second field) O_AUTOSKIP)
+
+;; Create the new form and post it
+(define my-form (new-form field))
+(post-form my-form)
+(refresh)
+
+(set-field-just (first field) JUSTIFY_CENTER)
+(set-field-buffer (first field) 0 "This is a static field")
+
+(mvaddstr STARTY (- STARTX 10) "Field 1:")
+(mvaddstr (+ STARTY 2) (- STARTX 10) "Field 2:")
+(refresh)
+
+;; Loop through to get user requests
+(let loop ((ch (getch)))
+  (if (not (eqv? ch (key-f 1)))
+      (cond
+       ((eqv? ch KEY_DOWN)
+	(begin
+	  ;; Go to the end of the next field
+	  (form-driver my-form REQ_NEXT_FIELD)
+	  (form-driver my-form REQ_END_LINE)
+	  (loop (getch))))
+       ((eqv? ch KEY_UP)
+	(begin
+	  ;; Go to the end of the previous field
+	  (form-driver my-form REQ_PREV_FIELD)
+	  (form-driver my-form REQ_END_LINE)
+	  (loop (getch))))
+       (else
+	(begin
+	  ;; Print any normal character
+	  (form-driver my-form ch)
+	  (loop (getch)))))))
+
+;; Unpost the form 
+(unpost-form my-form)
+
+(endwin)
+@end example
+
+
+@subsection Field Status
+
+The field status specifies whether the field has been edited.  It is
+initially @code{#f} and when the user enters something and the data
+buffer gets modified, it becomes @code{#t}.  So a field's status can
+be queried to find out if it has been modified or not.
+
+The two procedures that work with field status are
+@code{set-field-status} and @code{field-status}.  The procedure
+@code{field-status} returns the current state, and
+@code{set-field-status} can be used to set the state.
+
+@subsection Variable-Sized Fields
+
+If you want a dynamically changin field with variable width, this is
+the feature tyou want to put to full use.  This will allow the user to
+enter more data than the original size of the field and let the field
+grow.  According to the field orientation it will scroll horizontally
+or vertically to incorporate the new data.
+
+To make a field dynamically growable, the option @code{O_STATIC}
+should be turned off.  This can be done with
+
+@example
+(field-opts-off field O_STATIC)
+@end example
+
+It is usually not advisable to allow a field tro grow infinitely.. You
+can set a maximum limit to the growth of the field with
+@code{set-max-field}.
+
+The field info for a dynamically growable field can be retrieved with
+the procedure @code{dynamic-fieldinfo}.
+
+Recall the library routine @code{new-field}; a new field created with
+height set to one will be definined to a one line field.  A new field
+created with height greater than one will be defined to be a
+nulti-line field.
+
+A one line field with @code{O_STATIC} turned off (dynamically
+growable) will contain a single fixed row, but, the number of columns
+can increase if the user enters more data than the initial field will
+hole.  The number of columns displayed will remain fixed and the
+additional data will scroll horizontally.
+
+A multiline field with @code{O_STATIC} turned off (dynamically
+growable) will contain a fixed number of columsn, but, the nubmer of
+rows can increase if the user enters more data than the initial field
+will hold.  The number of rows displayed will remain fixed and the
+additional data will scroll vertically.
+
+@subsection Form Windows
+
+The form windows concept is pretty much similar to menu windows.
+Every form is associated with a main window and a subwindow.  The form
+main window displays any title or border associated or whatever the
+user wishes.  The subwindow contains all the fields and displays them
+according to their position.  This gives the flexibility of
+manipulating fancy form  displays easily.
+
+Since this pretty similary to menu windows, I am providing a very
+similar example.
+
+@example
+
+#!/usr/local/bin/guile
+!#
+
+(use-modules (srfi srfi-1)
+	     (gucu curses)
+	     (gucu form))
+
+;; Helper procedure to center a text
+(define (print-in-middle win starty startx width str color)
+  (let ((length (string-length str)))
+
+    (wattron win color)
+    (mvwaddstr win 
+	       starty 
+	       (+ startx (/ (- width length) 2))
+	       str)
+    (wattroff win color)
+    (refresh)))
+    
+
+;; Initialize curses
+(initscr)
+(start-color)
+(cbreak)
+(noecho)
+(keypad (stdscr) #t)
+
+;;Initialize a few color pairs
+(init-pair 1 COLOR_RED COLOR_BLACK)
+
+(define field (list
+	       (new-field 1 10 6 1 0 0)
+	       (new-field 1 10 8 1 0 0)))
+
+;; Set field options
+(set-field-back (first field) A_UNDERLINE)
+(field-opts-off (first field) O_AUTOSKIP)
+
+(set-field-back (second field) A_UNDERLINE)
+(field-opts-off (second field) O_AUTOSKIP)
+
+;; Create a new form
+(define my-form (new-form field))
+
+;; Calculate the area associated with the form
+(define xy (scale-form my-form))
+(define rows (car xy))
+(define cols (cadr xy))
+
+;; Create the window to be associated with the form
+(define my-form-win (newwin (+ 4 rows)
+			    (+ 4 cols)
+			    4
+			    4))
+(keypad my-form-win #t)
+
+;; Set main window and sub window
+(set-form-win my-form my-form-win)
+(set-form-sub my-form (derwin my-form-win rows cols 2 2))
+
+;; Print a border around the main window and print a title
+(box my-form-win 0 0)
+(print-in-middle my-form-win 1 0 (+ cols 4) "My Form" (color-pair 1))
+
+(post-form my-form)
+(wrefresh my-form-win)
+
+(mvaddstr (- (lines) 2) 0 "Use UP, DOWN arrow keys to switch between fields")
+(refresh)
+
+;; Loop through to get user requests
+(let loop ((ch (wgetch my-form-win)))
+  (if (not (eqv? ch (key-f 1)))
+      (cond
+       ((eqv? ch KEY_DOWN)
+	(begin
+	  ;; Go to the end of the next field
+	  (form-driver my-form REQ_NEXT_FIELD)
+	  (form-driver my-form REQ_END_LINE)
+	  (loop (wgetch my-form-win))))
+       ((eqv? ch KEY_UP)
+	(begin
+	  ;; Go to the end of the previous field
+	  (form-driver my-form REQ_PREV_FIELD)
+	  (form-driver my-form REQ_END_LINE)
+	  (loop (wgetch my-form-win))))
+       (else
+	(begin
+	  ;; Print any normal character
+	  (form-driver my-form ch)
+	  (loop (wgetch my-form-win)))))))
+
+;; Unpost the form 
+(unpost-form my-form)
+
+(endwin)
+@end example
+
+@subsection Field Validation
+
+By default, a field will accept any data input by the user.  It is
+possible to attach validation to the field.  Then any attempt by the
+user to leave the field while it contains data that doesn't match the
+validation type will fail.. Some validation types also have a
+character-validity check for each type a character is entered in the
+field.
+
+Validation can be attached by using the @code{set-field-type}
+procedure and queried with the @code{field-type} procedure.
+
+The form driver validates te data in a field only when data is entered
+by the end-user.  Validation does not occur when the application
+program changes the field value with @code{set-field-buffer}.
+
+The validation types are as follows.
+
+@table @code
+
+@item TYPE_ALPHA
+
+This field type accepts alphabetic data; no blanks, no digits, no
+special characters.  It takes a width argument that sets a minimum
+width of the data.  The user has to enter at least that number of
+characters be fore he can leave the field.  Typically you'll want to
+set this to the field width.  If it's greater than the field width,
+the validation check will always fail.  A minimum width of zero makes
+field completion optional.
+
+@example
+(set-field-type field TYPE_ALPHA width)
+@end example
+
+@item TYPE_ALNUM
+
+This field type accepts alphabetic data and digits.  No blanks, no
+special characters.  It also has a width argument.
+
+@example
+(set-field-type field TYPE_ALPHA width)
+@end example
+
+@item TYPE_ENUM
+
+This type allows you to restrict a field's values to be among a
+specified set of string values (for example, the two-letter postal
+codes for US states).  It takes as input a list of strings.  It can be
+set up as either case sensitive or case insensitive.  When the user
+exits, the validation procedure tries to complete the data in the
+buffer to a valid entry.  If a complete choice string has been
+entered, it is, of course, valid.  But it is also possible to enter a
+prefix of a valid string and have it completed for you.
+
+By default, if you enter such a prefix and it matches more than on
+value in the string list, the prefix will be copmleted to the first
+matching value.  If the check-unique option is choses, the prefix
+match must be unique to be valid.
+
+@example
+(set-field-type field TYPE_ENUM valuelist checkcase checkunique)
+@end example
+
+@item TYPE_INTEGER
+
+Valid characters consist of an optional leading minus and digits.  A
+range check is performed on exit.  If the range maximum is less than
+or equal to the minimum, the range is ignored.
+
+@example
+(set-field-type field TYPE_INTEGER zero-padding min max)
+@end example
+
+If the value passes its range check, it is padded with as many leading
+zero digits as necessary to meet the padding requirement.
+
+@item TYPE_NUMERIC
+
+This accepts a decimal number.
+
+@example
+(set-field-type field TYPE_NUMERIC digits-of-precision min max)
+@end example
+
+Valid characters consist of a leading minus and digits, possibly
+including a deciman point.  The range check is performed on exit.  
+
+If the value passes its range check, it is padded with as many
+trailing zero digits as necessary to meet the padding argument.
+
+@item TYPE_REGEXP
+
+This field type accepts a regular expression, and thus can be used to
+perform other types of range checks.
+
+@end table
+
+@subsection The Form Driver: The Work Horse of the System
+
+The @code{form-driver} procedure plays a very important role in the
+forms system.  All types of requests to forms should be funneled
+through @code{form-driver}.
+
+As you have seen some of the examples above, you have to be in a loop
+looking for user input and then decide whether it is a field data or a
+form request.  The form requests are then passes to @code{form-driver}
+to do the work.
+
+The requests roughly can be divided into the following categories.
+Different request and their usage is explained below.
+
+@subsubsection Page Navigation Requests
+
+These requests cause page-level moves through the form, triggering
+display of a new form screen.  A form can be made of multiple pages.
+If you have a big form with lots of fields and logical sections, then
+yhou can divide the form into pages.  The function @code{set-new-page}
+sets a new page at the field specified.
+
+Also, the following reqests, when passed to the form driver, all you
+to move to different pages.
+@itemize @bullet
+@item REQ_NEXT_PAGE
+Move to the next form page.
+@item REQ_PREV_PAGE
+Move to the previous form page.
+@item REQ_FIRST_PAGE
+Move to the first form page.
+@item REQ_LAST_PAGE
+Move to the last form page.
+@end itemize
+
+These are cyclic.  The moving to the next page after the last page put
+you at the top.
+
+@subsection Inter-Field Navication Requests
+@itemize
+@item REQ_NEXT_FIELD
+Move to the next field
+@item REQ_PREV_FIELD
+Move to the previous field
+@item REQ_FIRST_FIELD
+Move to the first field.
+@item REQ_LAST_FIELD
+Move to the last field.
+@item REQ_SNEXT_FIELD
+Move to the sorted next field.
+@item REQ_SPREV_FIELD
+Move to the sorted previous field.
+@item REQ_SFIRST_FIELD
+Move to sorted first field.
+@item REQ_SLAST_FIELD
+Move to sorted last field.
+@item REQ_LEFT_FIELD
+Move left to field.
+@item REQ_RIGHT_FIELD
+Move right to field.
+@item REQ_UP_FIELD
+Move up one field.
+@item REQ_DOWN_FIELD
+Move down one field.
+@end itemize
+
+These requests treat fields as cyclic, moving off the end of the page
+will return you to the top.
+
+
+
 
 @node Curses Reference, Hacking the module, Curses Tutorial, Top
 @chapter Curses Reference
@@ -2090,6 +2895,7 @@ The GuCu package provides the following modules:
 @menu
 * The basic curses library::    
 * The wide curses library::     
+* The curses form library::
 @end menu
 
 @node The basic curses library, The wide curses library, Curses Reference, Curses Reference
@@ -2105,7 +2911,7 @@ programming interface}.
 
 As a consequence, the library may seem unusual to the scheme
 programmer.  For example, boolean types are often represented as the
-integers @code{*ok*} and @code{*err*}, instead of @code{#t} and
+integers @code{OK} and @code{ERR}, instead of @code{#t} and
 @code{#f}.
 
 @menu
@@ -2259,8 +3065,8 @@ support such display enhancements.  Line drawing characters may be
 specified to be output. On input, curses is also able to translate
 arrow and function keys that transmit escape sequences into single
 values.  The video attributes, line drawing characters, and input
-values use names, such as @code{*a-reverse*}, @code{(acs-hline)},
-and @code{*key-left*}.
+values use names, such as @code{A_REVERSE}, @code{(acs-hline)},
+and @code{KEY_LEFT}.
 
 If the environment variables @env{LINES} and @env{COLUMNS} are set, or
 if the program is executing in a window environment, line and column
@@ -2397,8 +3203,8 @@ visual mode.
 
 @findex endwin
 
-@code{endwin} returns the integer @code{*err*} if the current terminal
-has not yet been initialized and @code{*ok*} upon successful completion.
+@code{endwin} returns the integer @code{ERR} if the current terminal
+has not yet been initialized and @code{OK} upon successful completion.
 @end deffn
 
 @deffn Procedure isendwin
@@ -2478,7 +3284,7 @@ character.
 Since @var{ch} is a rendered character, the rendition will be applied
 to the character when it is put on the screen.
 
-These functions return @code{*ok*} on success and @code{*err*} otherwise.
+These functions return @code{OK} on success and @code{ERR} otherwise.
 @end deffn
 
 @deffn Procedure echochar ch
@@ -2494,7 +3300,7 @@ call to @code{addch} followed by a call to @code{refresh}, or a call
 to @code{waddch} followed by a call to @code{wrefresh}.  The knowledge
 that only a single character is being output allows for efficiency.
 
-These functions return @code{*ok*} on success and @code{*err*} otherwise.
+These functions return @code{OK} on success and @code{ERR} otherwise.
 @end deffn
 
 @deffn Procecure tabsize
@@ -2656,7 +3462,7 @@ then the entire string will be added, up to the maximum number of
 characters that will fit on the line, or until a terminating null is
 reached.
 
-All routines return the integer @code{*err*} upon failure and @code{*ok*}
+All routines return the integer @code{ERR} upon failure and @code{OK}
 on success.
 
 @end deffn
@@ -2687,8 +3493,8 @@ not expand other control characters to ^-escapes, and they truncate
 the string if it crosses the right margin, rather than wrapping it
 around to the new line.
 
-All routines return the integer @code{*err*} if the window has already
-been deleted and @code{*ok*} on success.
+All routines return the integer @code{ERR} if the window has already
+been deleted and @code{OK} on success.
 
 @end deffn
 
@@ -2729,8 +3535,8 @@ window to @var{attrs}.  The routine @code{attroff} turns off the named
 attributes without turning any other attributes on or off.  The
 routine @code{attron} turns on the named attributes without affecting
 any others.  The routine @code{standout} is the same as @code{(attron
-*a-standout*)}.  The routine @code{standend} is the same as
-@code{(attrset *a-normal*)} or @code{(attrset 0)}, that is, it turns off
+A_STANDOUT)}.  The routine @code{standend} is the same as
+@code{(attrset A_NORMAL)} or @code{(attrset 0)}, that is, it turns off
 all attributes.
 
 @code{attr-set} is the same as @code{attrset}.  @code{attr-on} is the
@@ -2785,10 +3591,10 @@ reserved for the future (leave it @code{#t}).
 
 @end deffn
 
-@xref{tab:a} for the attributes can be passed to the routines
+The attributes can be passed to the routines
 @code{attron}, @code{attroff}, and @code{attrset}, or @code{logior}'d
 with the characters passed to @code{addch}.  For the color part of the
-rendition, use @code{color-pair}.
+rendition, use @code{color-pair}.  @xref{tab:a}.
 
 @deffn Procedure color-pair n
 
@@ -2806,37 +3612,37 @@ Returns the pair number number associated with attribute @var{attrs}.
 @multitable {A_ALTCHARSET} {Best highlighting mode of the terminal.}
 @headitem Name @tab Description
 
-@item  *a-normal*
+@item  A_NORMAL
 @tab Normal display (no highlight)
 
-@item  *a-standout*
+@item  A_STANDOUT
 @tab Best highlighting mode of the terminal.
 
-@item  *a-underline*
+@item  A_UNDERLINE
 @tab Underlining
 
-@item  *a-reverse*
+@item  A_REVERSE
 @tab Reverse video
 
-@item  *a-blink*
+@item  A_BLINK
 @tab Blinking
 
-@item  *a-dim*
+@item  A_DIM
 @tab Half bright
 
-@item  *a-bold*
+@item  A_BOLD
 @tab Extra bright or bold
 
-@item  *a-protect*
+@item  A_PROTECT
 @tab Protected mode
 
-@item  *a-invis*
+@item  A_INVIS
 @tab Invisible or blank mode
 
-@item  *a-altcharset*
+@item  A_ALTCHARSET
 @tab Alternate character set
 
-@item  *a-chartext*
+@item  A_CHARTEXT
 @tab Bit-mask to extract a character
 
 @end multitable
@@ -2857,8 +3663,8 @@ sounds the alert.  If neither alert is possible, nothing happens.
 Nearly all terminals have an audible alert (bell or beep), but only
 some can flash the screen.
 
-These routines return @code{*ok*} if they succeed in beeping or
-flashing, @code{*err*} otherwise.
+These routines return @code{OK} if they succeed in beeping or
+flashing, @code{ERR} otherwise.
 
 @end deffn
 
@@ -2898,7 +3704,7 @@ character on the screen is changed to the new background rendition.
 Wherever the former background character appears, it is changed to the
 new background character.
 
-The integer @code{*ok*} is returned.
+The integer @code{OK} is returned.
 @end deffn
 
 @deffn Procedure getbkgd win
@@ -2952,7 +3758,7 @@ is at most @var{n} characters long, or as many as fit into the window.
 The @code{mvhline} and @code{mvwhline} functions move the cursor before
 drawing the line.
 
-These functions return @code{*ok*}.
+These functions return @code{OK}.
 
 @end deffn
 
@@ -2971,7 +3777,7 @@ window.
 The @code{mvvline} and @code{mvwvline} functions move the cursor
 before drawing the line.
 
-These functions return @code{*ok*}.
+These functions return @code{OK}.
 
 @end deffn
 
@@ -2989,8 +3795,8 @@ background rendition (as set by @code{wbkgdset}) merged into them.
 The @code{erase} and @code{werase} routines copy blanks to every
 position in the window, clearing the screen.
 
-These functions return @code{*err*} if the window does not exist.
-Otherwise they return @code{*ok*}.
+These functions return @code{ERR} if the window does not exist.
+Otherwise they return @code{OK}.
 @end deffn
 
 @deffn Procedure clear
@@ -3016,8 +3822,8 @@ cursor to the end of screen. That is, they erase all lines below the
 cursor in the window.  Also, the current line to the right of the
 cursor, inclusive, is erased.
 
-These functions return @code{*err*} if the window does not exist.
-Otherwise they return @code{*ok*}.
+These functions return @code{ERR} if the window does not exist.
+Otherwise they return @code{OK}.
 @end deffn
 
 @deffn Procedure clrtoeol
@@ -3026,8 +3832,8 @@ Otherwise they return @code{*ok*}.
 The @code{clrtoeol} and @code{wclrtoeol} routines erase the current line to the right
 of the cursor, inclusive, to the end of the current line.
 
-These functions return @code{*err*} if the window does not exist.
-Otherwise they return @code{*ok*}.
+These functions return @code{ERR} if the window does not exist.
+Otherwise they return @code{OK}.
 @end deffn
 
 @node Color manipulation routines, Deleting the character under the cursor, Clearing windows and parts of window, The basic curses library
@@ -3083,14 +3889,14 @@ Returns the maximum number of color-pairs the terminal can support.
 @end deffn
 
 
-@defvr Constant *color-black*
-@defvrx Constant *color-red*
-@defvrx Constant *color-green*
-@defvrx Constant *color-yellow*
-@defvrx Constant *color-blue*
-@defvrx Constant *color-magenta*
-@defvrx Constant *color-cyan*
-@defvrx Constant *color-white*
+@defvr Constant COLOR_BLACK
+@defvrx Constant COLOR_RED
+@defvrx Constant COLOR_GREEN
+@defvrx Constant COLOR_YELLOW
+@defvrx Constant COLOR_BLUE
+@defvrx Constant COLOR_MAGENTA
+@defvrx Constant COLOR_CYAN
+@defvrx Constant COLOR_WHITE
 
 @findex init-color
 These variables contain the color number of the eight default colors,
@@ -3141,7 +3947,7 @@ number @code{-1} can be used as @var{fore-color} or
 foreground or background color for this screen, which is usually white
 on black.
 
-Returns @code{*ok*} on success and @code{*err*} on failure.
+Returns @code{OK} on success and @code{ERR} on failure.
 @end deffn
 
 
@@ -3197,8 +4003,8 @@ to the right of the cursor on the same line are moved to the left one
 position and the last character on the line is filled with a blank.
 The cursor position does not change (after moving to y, x, if specified).  (This does not imply use of the hardware delete character feature.)
 
-All routines return the integer @code{*err*} upon failure and an
-@code{*ok*} upon successful completion.
+All routines return the integer @code{ERR} upon failure and an
+@code{OK} upon successful completion.
 
 @end deffn
 
@@ -3213,7 +4019,7 @@ The @code{deleteln} and @code{wdeleteln} routines delete the line under the curs
 in the window; all lines below the current line are moved up one line.
 The bottom line of the window is cleared.  The cursor position does
 not change.
-Returns @code{*ok*} on success or @code{*err*} on failure.
+Returns @code{OK} on success or @code{ERR} on failure.
 
 @end deffn
 
@@ -3226,7 +4032,7 @@ line.  The n bottom lines are lost.  For negative @var{n}, delete n
 lines (starting with the one under the cursor), and move the remaining
 lines up.  The bottom n lines are cleared.  The current cursor
 position remains the same.
-Returns @code{*ok*} on success or @code{*err*} on failure.
+Returns @code{OK} on success or @code{ERR} on failure.
 
 @end deffn
 
@@ -3235,7 +4041,7 @@ Returns @code{*ok*} on success or @code{*err*} on failure.
 
 The @code{insertln} and @code{winsertln} routines insert a blank line above the
 current line and the bottom line is lost. 
-Returns @code{*ok*} on success or @code{*err*} on failure.
+Returns @code{OK} on success or @code{ERR} on failure.
 
 @end deffn
 
@@ -3254,7 +4060,7 @@ Returns @code{*ok*} on success or @code{*err*} on failure.
 The @code{getch}, @code{wgetch}, @code{mvgetch} and @code{mvwgetch},
 routines read a character from the terminal associated with the given
 window.  In no-delay mode, if no input is waiting, the value
-@code{*err*} is returned.  In delay mode, the program waits until the
+@code{ERR} is returned.  In delay mode, the program waits until the
 system passes text through to the program.  Depending on the setting
 of cbreak, this is after one character (@code{cbreak} mode), or after
 the first newline (@code{nocbreak} mode).  In @code{half-delay} mode,
@@ -3270,15 +4076,15 @@ echoed into the designated window according to the following rules: If
 the character is the current erase character, left arrow, or
 backspace, the cursor is moved one space to the left and that screen
 position is erased as if @code{delch} had been called.  If the
-character value is any other @code{*key-} define, the user is alerted with a
+character value is any other @code{KEY_} define, the user is alerted with a
 @code{beep} call.  Otherwise the character is simply output to the
 screen.
 
 @findex keypad
 
 If @code{keypad} is @code{#t}, and a function key is pressed, the token for that
-function key is returned instead of the raw characters. @xref{tab:key}
-and the procedure @code{key-f} for the list of possible function keys.
+function key is returned instead of the raw characters. There is a
+list of possible function keys.  @xref{tab:key}.
 
 When a character that could be the beginning of a function key is
 received (which, on modern terminals, means an escape character),
@@ -3304,8 +4110,8 @@ The ungetch routine places @var{ch} back onto the input queue to be returned
 by the next call to @code{wgetch}.  There is just one input queue for all
 windows.
 
-It returns @code{*err*} if there is no more space in the buffer, or
-@code{*ok*} otherwise.
+It returns @code{ERR} if there is no more space in the buffer, or
+@code{OK} otherwise.
 
 @end deffn
 
@@ -3318,13 +4124,13 @@ The following function keys, might be returned by @code{getch} if
 Note that almost all of these function keys do not exist on modern
 keyboards.  The standard PC keyboard cannot be depended upon to have
 more than @code{(key-f 1)} through @code{(key-f 12)},
-@code{*key-ppage*} (Page Up), @code{*key-npage*}
-(Page Down), @code{*key-home*}, @code{*key-end*}, @code{*key-ic*}
-(Insert), @code{*key-dc*} (Delete), @code{*key-backspace*},
-@code{*key-dc*} (Delete), @code{*key-up*}, @code{*key-down*}, @code{*key-left*}, and
-@code{*key-right*}.
+@code{KEY_PPAGE} (Page Up), @code{KEY_NPAGE}
+(Page Down), @code{KEY_HOME}, @code{KEY_END}, @code{KEY_IC}
+(Insert), @code{KEY_DC} (Delete), @code{KEY_BACKSPACE},
+@code{KEY_DC} (Delete), @code{KEY_UP}, @code{KEY_DOWN}, @code{KEY_LEFT}, and
+@code{KEY_RIGHT}.
 
-Also, a common terminal is more likely to return @kbd{C-M} than @code{*key-enter*}
+Also, a common terminal is more likely to return @kbd{C-M} than @code{KEY_ENTER}
 when the @key{RET} key is pressed.
 
 @deffn Procedure key-f n
@@ -3332,107 +4138,107 @@ This procedure returns the keycode for function key @var{n}.
 @end deffn
 
 @float Table,tab:key
-@multitable {@code{*key-backspace*} xx} {Home down or bottom (lower left) xxxx}
+@multitable {@code{KEY_BACKSPACE} xx} {Home down or bottom (lower left) xxxx}
 @headitem name @tab description
-@item @code{*key-break*} @tab Break key
-@item @code{*key-down*} @tab Arrow down
-@item @code{*key-up*} @tab Arrow up
-@item @code{*key-left*} @tab Arrow left
-@item @code{*key-right*} @tab Arrow right
-@item @code{*key-home*} @tab Home key
-@item @code{*key-backspace*} @tab Backspace
-@item @code{*key-f0*} @tab Function key zero
-@item @code{*key-dl*} @tab Delete line
-@item @code{*key-il*} @tab Insert line
-@item @code{*key-dc*} @tab Delete character
-@item @code{*key-ic*} @tab Insert char or enter insert mode
-@item @code{*key-eic*} @tab Exit insert char mode
-@item @code{*key-clear*} @tab Clear screen
-@item @code{*key-eos*} @tab Clear to end of screen
-@item @code{*key-eol*} @tab Clear to end of line
-@item @code{*key-sf*} @tab Scroll 1 line forward
-@item @code{*key-sr*} @tab Scroll 1 line backward (reverse)
-@item @code{*key-npage*} @tab Next page
-@item @code{*key-ppage*} @tab Previous page
-@item @code{*key-stab*} @tab Set tab
-@item @code{*key-ctab*} @tab Clear tab
-@item @code{*key-catab*} @tab Clear all tabs
-@item @code{*key-enter*} @tab Enter or send
-@item @code{*key-sreset*} @tab Soft (partial) reset
-@item @code{*key-reset*} @tab Reset or hard reset
-@item @code{*key-print*} @tab Print or copy
-@item @code{*key-ll*} @tab Home down or bottom (lower left)
-@item @code{*key-a1*} @tab Upper left of keypad
-@item @code{*key-a3*} @tab Upper right of keypad
-@item @code{*key-b2*} @tab Center of keypad
-@item @code{*key-c1*} @tab Lower left of keypad
-@item @code{*key-c3*} @tab Lower right of keypad
-@item @code{*key-btab*} @tab Back tab key
-@item @code{*key-beg*} @tab Beg(inning) key
-@item @code{*key-cancel*} @tab Cancel key
-@item @code{*key-close*} @tab Close key
-@item @code{*key-command*} @tab Cmd (command) key
-@item @code{*key-copy*} @tab Copy key
-@item @code{*key-create*} @tab Create key
-@item @code{*key-end*} @tab End key
-@item @code{*key-exit*} @tab Exit key
-@item @code{*key-find*} @tab Find key
-@item @code{*key-help*} @tab Help key
-@item @code{*key-mark*} @tab Mark key
-@item @code{*key-message*} @tab Message key
+@item @code{KEY_BREAK} @tab Break key
+@item @code{KEY_DOWN} @tab Arrow down
+@item @code{KEY_UP} @tab Arrow up
+@item @code{KEY_LEFT} @tab Arrow left
+@item @code{KEY_RIGHT} @tab Arrow right
+@item @code{KEY_HOME} @tab Home key
+@item @code{KEY_BACKSPACE} @tab Backspace
+@item @code{KEY_F0} @tab Function key zero
+@item @code{KEY_DL} @tab Delete line
+@item @code{KEY_IL} @tab Insert line
+@item @code{KEY_DC} @tab Delete character
+@item @code{KEY_IC} @tab Insert char or enter insert mode
+@item @code{KEY_EIC} @tab Exit insert char mode
+@item @code{KEY_CLEAR} @tab Clear screen
+@item @code{KEY_EOS} @tab Clear to end of screen
+@item @code{KEY_EOL} @tab Clear to end of line
+@item @code{KEY_SF} @tab Scroll 1 line forward
+@item @code{KEY_SR} @tab Scroll 1 line backward (reverse)
+@item @code{KEY_NPAGE} @tab Next page
+@item @code{KEY_PPAGE} @tab Previous page
+@item @code{KEY_STAB} @tab Set tab
+@item @code{KEY_CTAB} @tab Clear tab
+@item @code{KEY_CATAB} @tab Clear all tabs
+@item @code{KEY_ENTER} @tab Enter or send
+@item @code{KEY_SRESET} @tab Soft (partial) reset
+@item @code{KEY_RESET} @tab Reset or hard reset
+@item @code{KEY_PRINT} @tab Print or copy
+@item @code{KEY_LL} @tab Home down or bottom (lower left)
+@item @code{KEY_A1} @tab Upper left of keypad
+@item @code{KEY_A3} @tab Upper right of keypad
+@item @code{KEY_B2} @tab Center of keypad
+@item @code{KEY_C1} @tab Lower left of keypad
+@item @code{KEY_C3} @tab Lower right of keypad
+@item @code{KEY_BTAB} @tab Back tab key
+@item @code{KEY_BEG} @tab Beg(inning) key
+@item @code{KEY_CANCEL} @tab Cancel key
+@item @code{KEY_CLOSE} @tab Close key
+@item @code{KEY_COMMAND} @tab Cmd (command) key
+@item @code{KEY_COPY} @tab Copy key
+@item @code{KEY_CREATE} @tab Create key
+@item @code{KEY_END} @tab End key
+@item @code{KEY_EXIT} @tab Exit key
+@item @code{KEY_FIND} @tab Find key
+@item @code{KEY_HELP} @tab Help key
+@item @code{KEY_MARK} @tab Mark key
+@item @code{KEY_MESSAGE} @tab Message key
 @end multitable
 @caption{the keypad constants, part 1}
 @end float
 
 
 @float Table,tab:key2
-@multitable {@code{*key-backspace*} xx} {Home down or bottom (lower left) xxxx}
+@multitable {@code{KEY_BACKSPACE} xx} {Home down or bottom (lower left) xxxx}
 @headitem name @tab description
-@item @code{*key-mouse*} @tab Mouse event read
-@item @code{*key-move*} @tab Move key
-@item @code{*key-next*} @tab Next object key
-@item @code{*key-open*} @tab Open key
-@item @code{*key-options*} @tab Options key
-@item @code{*key-previous*} @tab Previous object key
-@item @code{*key-redo*} @tab Redo key
-@item @code{*key-reference*} @tab Ref(erence) key
-@item @code{*key-refresh*} @tab Refresh key
-@item @code{*key-replace*} @tab Replace key
-@item @code{*key-resize*} @tab Screen resized
-@item @code{*key-restart*} @tab Restart key
-@item @code{*key-resume*} @tab Resume key
-@item @code{*key-save*} @tab Save key
-@item @code{*key-sbeg*} @tab Shifted beginning key
-@item @code{*key-scancel*} @tab Shifted cancel key
-@item @code{*key-scommand*} @tab Shifted command key
-@item @code{*key-scopy*} @tab Shifted copy key
-@item @code{*key-screate*} @tab Shifted create key
-@item @code{*key-sdc*} @tab Shifted delete char key
-@item @code{*key-sdl*} @tab Shifted delete line key
-@item @code{*key-select*} @tab Select key
-@item @code{*key-send*} @tab Shifted end key
-@item @code{*key-seol*} @tab Shifted clear line key
-@item @code{*key-sexit*} @tab Shifted exit key
-@item @code{*key-sfind*} @tab Shifted find key
-@item @code{*key-shelp*} @tab Shifted help key
-@item @code{*key-shome*} @tab Shifted home key
-@item @code{*key-sic*} @tab Shifted input key
-@item @code{*key-sleft*} @tab Shifted left arrow key
-@item @code{*key-smessage*} @tab Shifted message key
-@item @code{*key-smove*} @tab Shifted move key
-@item @code{*key-snext*} @tab Shifted next key
-@item @code{*key-soptions*} @tab Shifted options key
-@item @code{*key-sprevious*} @tab Shifted prev key
-@item @code{*key-sprint*} @tab Shifted print key
-@item @code{*key-sredo*} @tab Shifted redo key
-@item @code{*key-sreplace*} @tab Shifted replace key
-@item @code{*key-sright*} @tab Shifted right arrow
-@item @code{*key-srsume*} @tab Shifted resume key
-@item @code{*key-ssave*} @tab Shifted save key
-@item @code{*key-ssuspend*} @tab Shifted suspend key
-@item @code{*key-sundo*} @tab Shifted undo key
-@item @code{*key-suspend*} @tab Suspend key
-@item @code{*key-undo*} @tab Undo key
+@item @code{KEY_MOUSE} @tab Mouse event read
+@item @code{KEY_MOVE} @tab Move key
+@item @code{KEY_NEXT} @tab Next object key
+@item @code{KEY_OPEN} @tab Open key
+@item @code{KEY_OPTIONS} @tab Options key
+@item @code{KEY_PREVIOUS} @tab Previous object key
+@item @code{KEY_REDO} @tab Redo key
+@item @code{KEY_REFERENCE} @tab Ref(erence) key
+@item @code{KEY_REFRESH} @tab Refresh key
+@item @code{KEY_REPLACE} @tab Replace key
+@item @code{KEY_RESIZE} @tab Screen resized
+@item @code{KEY_RESTART} @tab Restart key
+@item @code{KEY_RESUME} @tab Resume key
+@item @code{KEY_SAVE} @tab Save key
+@item @code{KEY_SBEG} @tab Shifted beginning key
+@item @code{KEY_SCANCEL} @tab Shifted cancel key
+@item @code{KEY_SCOMMAND} @tab Shifted command key
+@item @code{KEY_SCOPY} @tab Shifted copy key
+@item @code{KEY_SCREATE} @tab Shifted create key
+@item @code{KEY_SDC} @tab Shifted delete char key
+@item @code{KEY_SDL} @tab Shifted delete line key
+@item @code{KEY_SELECT} @tab Select key
+@item @code{KEY_SEND} @tab Shifted end key
+@item @code{KEY_SEOL} @tab Shifted clear line key
+@item @code{KEY_SEXIT} @tab Shifted exit key
+@item @code{KEY_SFIND} @tab Shifted find key
+@item @code{KEY_SHELP} @tab Shifted help key
+@item @code{KEY_SHOME} @tab Shifted home key
+@item @code{KEY_SIC} @tab Shifted input key
+@item @code{KEY_SLEFT} @tab Shifted left arrow key
+@item @code{KEY_SMESSAGE} @tab Shifted message key
+@item @code{KEY_SMOVE} @tab Shifted move key
+@item @code{KEY_SNEXT} @tab Shifted next key
+@item @code{KEY_SOPTIONS} @tab Shifted options key
+@item @code{KEY_SPREVIOUS} @tab Shifted prev key
+@item @code{KEY_SPRINT} @tab Shifted print key
+@item @code{KEY_SREDO} @tab Shifted redo key
+@item @code{KEY_SREPLACE} @tab Shifted replace key
+@item @code{KEY_SRIGHT} @tab Shifted right arrow
+@item @code{KEY_SRESUME} @tab Shifted resume key
+@item @code{KEY_SSAVE} @tab Shifted save key
+@item @code{KEY_SSUSPEND} @tab Shifted suspend key
+@item @code{KEY_SUNDO} @tab Shifted undo key
+@item @code{KEY_SUSPEND} @tab Suspend key
+@item @code{KEY_UNDO} @tab Undo key
 @end multitable
 @caption{the keypad constants, part 2}
 @end float
@@ -3444,9 +4250,10 @@ This procedure returns the keycode for function key @var{n}.
 The @code{has-key} routine takes a key value @var{ch} from the above
 list, and returns @code{#t} or @code{#f} according to whether the
 current terminal type recognizes a key with that value.  Note that a
-few values do not correspond to a real key, e.g., @code{*key-resize*}
-and @code{*key-mouse*}.  See @code{resizeterm} for more details about
-@code{*key-resize*}.  @xref{Mouse handling} for a discussion of @code{*key-mouse*}.
+few values do not correspond to a real key, e.g., @code{KEY_RESIZE}
+and @code{KEY_MOUSE}.  See @code{resizeterm} for more details about
+@code{KEY_RESIZE}.  For a discussion of @code{KEY_MOUSE} see
+@ref{Mouse handling}.
 @end deffn
 
 
@@ -3455,12 +4262,12 @@ is discouraged, as it will cause a delay of up to one second while the
 keypad code looks for a following function-key sequence.
 
 Note that some keys may be the same as commonly used control keys,
-e.g., *key-enter* versus @kbd{C-M}, *key-backspace* versus @kbd{C-H}.
+e.g., KEY_ENTER versus @kbd{C-M}, KEY_BACKSPACE versus @kbd{C-H}.
 Some curses implementations may differ according to whether they treat
 these control keys specially (and ignore the terminfo), or use the
 terminfo definitions.  Ncurses uses the terminfo definition.  If it
-says that *key-enter* is @kbd{C-M}, @code{getch} will return
-@code{*key-enter*} when you press @kbd{C-M}.
+says that KEY_ENTER is @kbd{C-M}, @code{getch} will return
+@code{KEY_ENTER} when you press @kbd{C-M}.
 
 When using @code{getch}, @code{wgetch}, @code{mvgetch}, or
 @code{mvwgetch}, nocbreak mode (@code{nocbreak}) and echo mode
@@ -3472,10 +4279,10 @@ Historically, the set of keypad macros was largely defined by the
 extremely function-key-rich keyboard of the AT&T 7300, aka 3B1, aka
 Safari 4.  Modern personal computers usually have only a small subset
 of these.  IBM PC-style consoles typically support little more than
-@code{*key-up*}, @code{*key-down*}, @code{*key-left*},
-@code{*key-right*}, @code{*key-home*}, @code{*key-end*},
-@code{*key-npage*}, @code{*key-ppage*}, and function keys 1 through
-12.  The ins key is usually mapped to @code{*key-ic*}
+@code{KEY_UP}, @code{KEY_DOWN}, @code{KEY_LEFT},
+@code{KEY_RIGHT}, @code{KEY_HOME}, @code{KEY_END},
+@code{KEY_NPAGE}, @code{KEY_PPAGE}, and function keys 1 through
+12.  The ins key is usually mapped to @code{KEY_IC}
 
 @node Receiving strings from the keyboard, Cursor location and window coordinates, Getting characters from the keyboard, The basic curses library
 @subsection Receiving strings from the keyboard
@@ -3499,7 +4306,7 @@ causes a beep.  Function keys also cause a beep and are ignored. The
 @code{getnstr} function reads from the @code{stdscr} default window.
 
 The user's erase and kill characters are interpreted. If keypad mode
-is on for the window, @code{*key-left*} and @code{*key-backspace*} are
+is on for the window, @code{KEY_LEFT} and @code{KEY_BACKSPACE} are
 both considered equivalent to the user's kill character.
 
 Characters input are echoed only if @code{echo} is currently on.  In
@@ -3507,7 +4314,7 @@ that case, backspace is echoed as deletion of the previous character
 (typically a left motion).
 
 FIXME (MAKE THE CODE DO THIS) If a SIGWINCH interrupts the function,
-it will do something clever with the *key-resize*.
+it will do something clever with the KEY_RESIZE.
 @end deffn
 
 @node Cursor location and window coordinates, Getting a rendered character from the window, Receiving strings from the keyboard, The basic curses library
@@ -3547,15 +4354,15 @@ with its rendition.
 @deffnx Procedure mvinch y x
 @deffnx Procedure mvwinch win y x
 
-@findex *a-chartext*
-@findex *a-attributes*
-@findex *a-color*
+@findex A_CHARTEXT
+@findex A_ATTRIBUTES
+@findex A_COLOR
 
 These routines return the rendered 8-bit character at the current
 position in the named window.  If any attributes are set for that
 position, their values are @code{logior}'ed into the value returned.
-The constants @code{*a-chartext*}, @code{*a-attributes*}, and
-@code{*a-color*} can be used with @code{logand} to extract the
+The constants @code{A_CHARTEXT}, @code{A_ATTRIBUTES}, and
+@code{A_COLOR} can be used with @code{logand} to extract the
 character, attributes, or color of the rendered character.
 @end deffn
 
@@ -3608,7 +4415,7 @@ the tty driver is always disabled, but initially @code{getch} is in
 echo mode, so characters typed are echoed.  Authors of most
 interactive programs prefer to do their own echoing in a controlled
 area of the screen, or not to echo at all, so they disable echoing by
-calling noecho.  @xref{Getting characters from the keyboard} for a
+calling noecho.  See @ref{Getting characters from the keyboard} for a
 discussion of how these routines interact with @code{echo} and
 @code{noecho}.
 
@@ -3623,7 +4430,7 @@ discussion of how these routines interact with @code{echo} and
 The @code{halfdelay} routine is used for half-delay mode, which is similar to
 @code{cbreak} mode in that characters typed by the user are immediately
 available to the program.  However, after blocking for @var{tenths} tenths
-of seconds, @code{*err*} is returned if nothing has been typed.  The value of
+of seconds, @code{ERR} is returned if nothing has been typed.  The value of
 tenths must be a number between 1 and 255.  Use @code{nocbreak} to leave
 half-delay mode.
 
@@ -3648,7 +4455,7 @@ tty driver settings.  The window @var{win} argument is ignored.
 The keypad option enables the keypad of the user's terminal.  If en-
 abled (@var{bf} is @code{#t}, the user can press a function key (such
 as an arrow key) and @code{wgetch} returns a single value representing
-the function key, as in @code{*key-left*}. If disabled (@var{bf} is
+the function key, as in @code{KEY_LEFT}. If disabled (@var{bf} is
 @code{#f}, curses does not treat function keys specially and the
 program has to interpret the escape sequences itself.  If the keypad
 in the terminal can be turned on (made to transmit) and off (made to
@@ -3677,7 +4484,7 @@ when @code{(meta win #f)} is called.
 @deffn Procedure nodelay win bf
 @findex getch
 The @code{nodelay} option causes @code{getch} to be a non-blocking
-call.  If no input is ready, getch returns @code{*err*}.  If disabled
+call.  If no input is ready, getch returns @code{ERR}.  If disabled
 (@var{bf} is @code{#f}), @code{getch} waits until a key is pressed.
 
 @end deffn
@@ -3726,9 +4533,9 @@ The @code{timeout} and @code{wtimeout} routines set blocking or
 non-blocking read for a given window.  If @var{delay} is negative,
 blocking read is used (i.e., waits indefinitely for input).  If
 @var{delay} is zero, then non-blocking read is used (i.e., read
-returns @code{*err*} if no input is waiting).  If @var{delay} is
+returns @code{ERR} if no input is waiting).  If @var{delay} is
 positive, then read blocks for delay milliseconds, and returns
-@code{*err*} if there is still no input. Hence, these routines provide
+@code{ERR} if there is still no input. Hence, these routines provide
 the same functionality as @code{nodelay}, plus the additional
 capability of being able to block for only @var{delay} milliseconds
 (where @var{delay} is positive).
@@ -3765,8 +4572,8 @@ one space to the right, with the possibility of the rightmost
 character on the line being lost.  The insertion operation does not
 change the cursor position.
 
-All routines that return an integer return @code{*err*} upon failure and
-@code{*ok*} upon successful completion .
+All routines that return an integer return @code{ERR} upon failure and
+@code{OK} upon successful completion .
 
 @end deffn
 
@@ -3794,8 +4601,8 @@ most n characters.  If @var{n}<=0, then the entire string is inserted.
 
 Special characters are handled as in @code{addch}.
 
-All routines that return an integer return @code{*err*} upon failure and
-@code{*ok*}upon successful completion.
+All routines that return an integer return @code{ERR} upon failure and
+@code{OK}upon successful completion.
 
 @end deffn
 
@@ -3837,7 +4644,7 @@ curses) state for use by the @code{reset-prog-mode} and
 @code{initscr}.  There is one such save area for each screen context
 allocated by @code{newterm}.
 
-@code{*ok*} is always returned.
+@code{OK} is always returned.
 
 @end deffn
 
@@ -3871,7 +4678,7 @@ the last call to @code{savetty}.
 The @code{curs-set} routine sets the cursor state is set to invisible,
 normal, or very visible for @var{visibility} equal to 0, 1, or 2
 respectively.  If the terminal supports the visibility requested, the
-previous cursor state is returned; otherwise, @code{*err*} is
+previous cursor state is returned; otherwise, @code{ERR} is
 returned. FIXME: test this.
 
 @end deffn
@@ -3880,7 +4687,7 @@ returned. FIXME: test this.
 @subsection Mouse handling
 
 These functions provide an interface to mouse events.
-Mouse events are represented by @code{*key-mouse*} pseudo-key values in the
+Mouse events are represented by @code{KEY_MOUSE} pseudo-key values in the
 @code{wgetch} input stream.
 
 To make mouse events visible, use the @code{mousemask} function.  
@@ -3896,7 +4703,7 @@ As a side effect, setting a zero mousemask may turn off the mouse
 pointer; setting a nonzero mask may turn it on.  Whether this happens
 is device-dependent.
 
-@xref{tab:mouse} for the mouse event types mask that may be defined.
+See @ref{tab:mouse} for the mouse event types mask that may be defined.
 @end deffn
 
 
@@ -3904,51 +4711,51 @@ is device-dependent.
 @multitable {BUTTONX_DOUBLE_CLICKED} {control was down during button state change XX}
 @headitem name @tab description
 
-@item @code{*button1-pressed*} @tab mouse button 1 down
-@item @code{*button1-released*} @tab mouse button 1 up
-@item @code{*button1-clicked*} @tab mouse button 1 clicked
-@item @code{*button1-double-clicked*} @tab mouse button 1 double clicked
-@item @code{*button1-triple-clicked*} @tab mouse button 1 triple
+@item @code{BUTTON1_PRESSED} @tab mouse button 1 down
+@item @code{BUTTON1_RELEASED} @tab mouse button 1 up
+@item @code{BUTTON1_CLICKED} @tab mouse button 1 clicked
+@item @code{BUTTON1_DOUBLE_CLICKED} @tab mouse button 1 double clicked
+@item @code{BUTTON1_TRIPLE_CLICKED} @tab mouse button 1 triple
 clicked
 @item
-@item @code{*button2-pressed*} @tab mouse button 2 down
-@item @code{*button2-released*} @tab mouse button 2 up
-@item @code{*button2-clicked*} @tab mouse button 2 clicked
-@item @code{*button2-double-clicked*} @tab mouse button 2 double clicked
-@item @code{*button2-triple-clicked*} @tab mouse button 2 triple clicked
+@item @code{BUTTON2_PRESSED} @tab mouse button 2 down
+@item @code{BUTTON2_RELEASED} @tab mouse button 2 up
+@item @code{BUTTON2_CLICKED} @tab mouse button 2 clicked
+@item @code{BUTTON2_DOUBLE_CLICKED} @tab mouse button 2 double clicked
+@item @code{BUTTON2_TRIPLE_CLICKED} @tab mouse button 2 triple clicked
 @item
-@item @code{*button3-pressed*} @tab mouse button 3 down
-@item @code{*button3-released*} @tab mouse button 3 up
-@item @code{*button3-clicked*} @tab mouse button 3 clicked
-@item @code{*button3-double-clicked*} @tab mouse button 3 double clicked
-@item @code{*button3-triple-clicked*} @tab mouse button 3 triple clicked
+@item @code{BUTTON3_PRESSED} @tab mouse button 3 down
+@item @code{BUTTON3_RELEASED} @tab mouse button 3 up
+@item @code{BUTTON3_CLICKED} @tab mouse button 3 clicked
+@item @code{BUTTON3_DOUBLE_CLICKED} @tab mouse button 3 double clicked
+@item @code{BUTTON3_TRIPLE_CLICKED} @tab mouse button 3 triple clicked
 @item
-@item @code{*button4-pressed*} @tab mouse button 4 down
-@item @code{*button4-released*} @tab mouse button 4 up
-@item @code{*button4-clicked*} @tab mouse button 4 clicked
-@item @code{*button4-double-clicked*} @tab mouse button 4 double clicked
-@item @code{*button4-triple-clicked*} @tab mouse button 4 triple clicked
+@item @code{BUTTON4_PRESSED} @tab mouse button 4 down
+@item @code{BUTTON4_RELEASED} @tab mouse button 4 up
+@item @code{BUTTON4_CLICKED} @tab mouse button 4 clicked
+@item @code{BUTTON4_DOUBLE_CLICKED} @tab mouse button 4 double clicked
+@item @code{BUTTON4_TRIPLE_CLICKED} @tab mouse button 4 triple clicked
 @item
-@item @code{*button5-pressed*} @tab mouse button 5 down
-@item @code{*button5-released*} @tab mouse button 5 up
-@item @code{*button5-clicked*} @tab mouse button 5 clicked
-@item @code{*button5-double-clicked*} @tab mouse button 5 double clicked
-@item @code{*button5-triple-clicked*} @tab mouse button 5 triple clicked
+@item @code{BUTTON5_PRESSED} @tab mouse button 5 down
+@item @code{BUTTON5_RELEASED} @tab mouse button 5 up
+@item @code{BUTTON5_CLICKED} @tab mouse button 5 clicked
+@item @code{BUTTON5_DOUBLE_CLICKED} @tab mouse button 5 double clicked
+@item @code{BUTTON5_TRIPLE_CLICKED} @tab mouse button 5 triple clicked
 @item 
-@item @code{*button-shift*} @tab shift was down during button state
+@item @code{BUTTON_SHIFT} @tab shift was down during button state
 change
-@item @code{*button-ctrl*} @tab control was down during button state
+@item @code{BUTTON_CTRL} @tab control was down during button state
 change
-@item @code{*button-alt*} @tab alt was down during button state change
-@item @code{*all-mouse-events*} @tab report all button state changes
-@item @code{*report-mouse-position*} @tab report mouse movement
+@item @code{BUTTON_ALT} @tab alt was down during button state change
+@item @code{ALL_MOUSE_EVENTS} @tab report all button state changes
+@item @code{REPORT_MOUSE_POSITION} @tab report mouse movement
 @end multitable
 @caption{Mouse mask constants}
 @end float
 
 Once a class of mouse events have been made visible in a window,
 calling the @code{wgetch} function on that window may return
-@code{*key-mouse*} as an indicator that a mouse event has been queued.
+@code{KEY_MOUSE} as an indicator that a mouse event has been queued.
 To read the event data and pop the event off the queue, call
 @code{getmouse}.
 
@@ -3971,7 +4778,7 @@ event type.
 @deffn Procedure ungetmouse mouse-event
 
 The @code{ungetmouse} function behaves analogously to @code{ungetch}.
-It pushes a @code{*key-mouse*} event onto the input queue, and
+It pushes a @code{KEY_MOUSE} event onto the input queue, and
 associates with that event the given state data and screen-relative
 character-cell coordinates in the @var{mouse-event} list, where
 @var{mouse-event} is a list of five elements as described above.
@@ -4035,7 +4842,7 @@ column @var{x}.  This routine does not move the physical cursor of the termi-
 nal until @code{refresh} is called.  The position specified is relative to the
 upper left-hand corner of the window, which is @code{(0 0)}.
 
-These routines return @code{*err*} upon failure and @code{*ok*} on
+These routines return @code{ERR} upon failure and @code{OK} on
 successful completion.
 
 @end deffn
@@ -4061,7 +4868,7 @@ for a more pleasing visual effect.  If the @var{win} argument to
 @code{wrefresh} with any window causes the screen to be cleared and
 repainted from scratch.
 
-Returns @code{*ok*}.
+Returns @code{OK}.
 
 @end deffn
 
@@ -4077,7 +4884,7 @@ be visually annoying when used in applications where it isn't really
 needed.  If insert/delete line cannot be used, curses redraws the
 changed portions of all lines.
 
-Returns @code{*ok*}.
+Returns @code{OK}.
 @end deffn
 
 @deffn Procedure idcok win bf
@@ -4088,7 +4895,7 @@ terminals so equipped.  Use of character insert/delete is enabled by
 default.  Calling @code{idcok} with @code{#t} as second argument
 re-enables use of character insertion and deletion.
 
-Returns @code{*ok*}.
+Returns @code{OK}.
 @end deffn
 
 
@@ -4105,7 +4912,7 @@ the window image, such as the ones caused by @code{waddch},
 @code{wrefresh}.  However, it may degrade performance considerably,
 due to repeated calls to @code{wrefresh}. It is disabled by default.
 
-Returns @code{*ok*}.
+Returns @code{OK}.
 @end deffn
 
 @deffn Procedure leavok win bf
@@ -4137,7 +4944,7 @@ that in the VT100.  If @code{idlok} is enabled and the terminal has either a
 scrolling region or insert/delete line capability, they will probably
 be used by the output routines.)
 
-Returns @code{*ok*} on success and @code{*err*} on failure.
+Returns @code{OK} on success and @code{ERR} on failure.
 @end deffn
 
 
@@ -4153,7 +4960,7 @@ is left on the bottom line.  If enabled, (@var{bf} is @code{#t}), the window is
 scrolled up one line (Note that to get the physical scrolling effect
 on the terminal, it is also necessary to call @code{idlok}).
 
-Returns @code{*ok*}.
+Returns @code{OK}.
 @end deffn
 
 @deffn Procedure nl
@@ -4185,7 +4992,7 @@ required to be the same size; only text where the two windows overlap
 is copied.  The difference is that overlay is non-destructive (blanks
 are not copied) whereas overwrite is destructive.
 
-Returns @code{*ok*} on success or @code{*err*} on failure.  @code{*err*}
+Returns @code{OK} on success or @code{ERR} on failure.  @code{ERR}
 could indicate that the windows are freed.
 
 @end deffn
@@ -4204,7 +5011,7 @@ window, (@var{dminrow}, @var{dmincol}) and (@var{dmaxrow},
 window, (@var{sminrow}, @var{smincol}).  If the argument @var{overlay}
 is @code{#t}, then copying is non-destructive, as in overlay.
 
-Returns @code{*ok*} on success or @code{*err*} on failure.  @code{*err*}
+Returns @code{OK} on success or @code{ERR} on failure.  @code{ERR}
 could indicate that the windows are freed or if some part of the
 window would be placed offscreen.
 @end deffn
@@ -4270,7 +5077,7 @@ rectangles must be entirely contained within their respective
 structures.  Negative values of @var{pminrow}, @var{pmincol},
 @var{sminrow}, or @var{smincol} are treated as if they were zero.
 
-Returns @code{*err*} upon failure and @code{*ok*} upon successful
+Returns @code{ERR} upon failure and @code{OK} upon successful
 @end deffn
 
 
@@ -4293,7 +5100,7 @@ their equivalents.  In the case of @code{pechochar}, the last location
 of the pad on the screen is reused for the arguments to
 @code{prefresh}.
 
-Returns @code{*err*} upon failure and @code{*ok*} upon successful
+Returns @code{ERR} upon failure and @code{OK} upon successful
 completion.
 @end deffn
 
@@ -4430,7 +5237,7 @@ inheritance function.
 To read (write) a window from (to) a file, use the getwin and putwin
 routines [see FIXME.
 
-All routines return the integer @code{*err*} upon failure and @code{*ok*}
+All routines return the integer @code{ERR} upon failure and @code{OK}
 upon success.
 
 @node Scroll a window, Function key labels, Reading and writing a curses screen to a file, The basic curses library
@@ -4458,7 +5265,7 @@ changed.
 For these functions to work, scrolling must be enabled via
 @code{scrollok}.
 
-These routines return @code{*err*} upon failure, and @code{*ok*} upon
+These routines return @code{ERR} upon failure, and @code{OK} upon
 successful completion.
 
 @end deffn
@@ -4492,7 +5299,7 @@ PC-like 4-4-4 mode. If @code{fmt} is set to 3, it is again the PC like
 4-4-4 mode, but in addition an index line is generated, helping the
 user to identify the key numbers easily.
 
-It return @code{*ok*} if @var{fmt} is a valid value, or @code{*err*} otherwise.
+It return @code{OK} if @var{fmt} is a valid value, or @code{ERR} otherwise.
 
 @end deffn
 
@@ -4504,11 +5311,11 @@ is either 0, 1, or 2, indicating whether the label is to be
 left-justified, centered, or right-justified, respectively, within
 the label.
 
-The procedure returns @code{*err*} if the terminal or the softkeys
+The procedure returns @code{ERR} if the terminal or the softkeys
 were not initialized, or the @var{labnum} parameter is outside the
 range of label counts, or if the format parameter is outside the range
 0..2, or if memory for the labels cannot be allocated. Otherwise it
-return @code{*ok*}
+return @code{OK}
 @end deffn
 
 @deffn Procedure slk-refresh
@@ -4551,7 +5358,7 @@ The @code{slk-attron}, @code{slk-attrset}, @code{slk-attroff} and
 @code{slk-attr} routines correspond to @code{attron}, @code{attrset},
 @code{attroff} and @code{attr-get}.  They have an effect only if soft
 labels are simulated on the bottom line of the screen.  The default
-highlight for soft keys is @code{*a-standout*}.
+highlight for soft keys is @code{A_STANDOUT}.
 
 The @code{slk-color} routine corresponds to @code{color-set}. It has
 an effect only if soft labels are simulated on the bottom line of the
@@ -4613,7 +5420,7 @@ verbose description of the current terminal.
 @deffnx Procedure term-attrs
 
 The @code{termattrs} function return a @code{logior} of all video attributes
-supported by the terminal using @code{*a-xxx*} constants.  The @code{term-attrs}
+supported by the terminal using @code{A_XXX} constants.  The @code{term-attrs}
 function is identical.
 
 @end deffn
@@ -4669,7 +5476,7 @@ starting at line @var{y}, look as if they have (@var{changed}=1) or have not
 The @code{is-linetouched} and @code{is-wintouched} routines return
 @code{#t} if the specified line/window was modified since the last
 call to @code{wrefresh}; otherwise they return @code{#f}. In addition,
-@code{is-linetouched} returns @code{*err*} if line is not valid for the given
+@code{is-linetouched} returns @code{ERR} if line is not valid for the given
 window. FIXME: the code doesn't do this.
 
 @end deffn
@@ -4858,10 +5665,10 @@ of the window.
 
 @end deffn 
 
-Routines that return an integer return the integer @code{*err*} upon failure
-and @code{*ok*} upon successful completion.
+Routines that return an integer return the integer @code{ERR} upon failure
+and @code{OK} upon successful completion.
 
-@node The wide curses library,  , The basic curses library, Curses Reference
+@node The wide curses library, The curses form library, The basic curses library, Curses Reference
 @section The wide curses library: @code{(gucu curses-wide)}
 
 These are the functions in the @code{(gucu curses-wide)} module.
@@ -4925,8 +5732,8 @@ If the character part of @var{wch} is a tab, newline, backspace or
 other control character, the window is updated and the cursor moves as
 if @code{addch} were called.
 
-All routines return the integer @code{*err*} upon failure and
-@code{*ok*} on success.
+All routines return the integer @code{ERR} upon failure and
+@code{OK} on success.
 
 @end deffn
 
@@ -4942,8 +5749,8 @@ consideration and, for non-control characters, a considerable
 performance gain might be seen by using the @code{echo} functions
 instead of their equivalents.
 
-All routines return the integer @code{*err*} upon failure and
-@code{*ok*} on success.
+All routines return the integer @code{ERR} upon failure and
+@code{OK} on success.
 
 @end deffn
 
@@ -4970,7 +5777,7 @@ last argument write at most n characters.  If @var{n} is -1, then the
 entire string will be added, up to the maximum number of characters
 that will fit on the line, or until a terminating null is reached.
 
-All routines return the integer @code{*err*} upon failure and @code{*ok*}
+All routines return the integer @code{ERR} upon failure and @code{OK}
 on success.
 
 @end deffn
@@ -5003,8 +5810,8 @@ If a complex character cannot completely fit at the end of the current
 line, the remaining columns are filled with the background character
 and rendition.
 
-All routines return the integer @code{*err*} upon failure and
-@code{*ok*} on success.
+All routines return the integer @code{ERR} upon failure and
+@code{OK} on success.
 
 @end deffn
 
@@ -5045,7 +5852,7 @@ background rendition.
 Wherever the former background character appears, it is changed to the
 new background character.
 
-These return @code{*ok*} on success or @code{*err*} on failure. 
+These return @code{OK} on success or @code{ERR} on failure. 
 @end deffn
 
 @deffn Procedure getbkgrnd
@@ -5069,7 +5876,7 @@ side, @var{ts} - top side, @var{bs} - bottom side, @var{tl} - top
 left-hand corner, @var{tr} - top right-hand corner, @var{bl} - bottom
 left-hand corner, and @var{br} - bottom right-hand corner.
 
-These return @code{*ok*} on success or @code{*err*} on failure. 
+These return @code{OK} on success or @code{ERR} on failure. 
 @end deffn 
 
 @deffn Procedure box-set win vert horiz
@@ -5079,8 +5886,8 @@ call.
 (wborder-set win 
              vert vert 
              horiz horiz 
-             *wacs-ulcorner* *wacs-urcorner* 
-             *wacs-llcorner* *wacs-lrcorner*)
+             WACS_ULCORNER WACS_URCORNER 
+             WACS_LLCORNER WACS_LRCORNER)
 @end lisp
 @end deffn
 
@@ -5102,7 +5909,7 @@ the window.  The current cursor position is not changed.
 
 Note that only single-width characters are supported.
 
-These return @code{*ok*} on success or @code{*err*} on failure. 
+These return @code{OK} on success or @code{ERR} on failure. 
 @end deffn
 
 @node Getting characters from the keyboard (wide), Getting wide strings from the keyboard, Borders and lines (wide), The wide curses library
@@ -5116,10 +5923,10 @@ These return @code{*ok*} on success or @code{*err*} on failure.
 The @code{get-wch}, @code{wget-wch}, @code{mvget-wch}, and
 @code{mvwget-wch} functions read a character from the terminal
 associated with the current or specified window.  It returns a list of
-two elements.  The first element is @code{*ok*} and the second is the
+two elements.  The first element is @code{OK} and the second is the
 codepoint of the character pressed.  In no-delay mode, if
 no input is waiting, a list of two elements is returned where the first
-element is @code{*err*} and the second element is zero.  In
+element is @code{ERR} and the second element is zero.  In
 @code{delay} mode, the program waits until the system passes text
 through to the program.  Depending on the setting of @code{cbreak},
 this is after one character (cbreak mode), or after the first newline
@@ -5136,8 +5943,8 @@ another character is read.
 
 If @code{keypad} is enabled, these functions respond to the pressing
 of a function key by returning a list of two elements where the first
-element it @code{*key-code-yes*} and the second is the corresponding
-@code{*key-} constant. @xref{Getting characters from the keyboard} for
+element it @code{KEY_CODE_YES} and the second is the corresponding
+@code{KEY_} constant. See @ref{Getting characters from the keyboard} for
 the list of key codes.  If a character (such as @key{ESC}) that could
 be the beginning of a function key is received, curses sets a timer.
 If the remainder of the sequence does arrive within the designated
@@ -5154,7 +5961,7 @@ character is returned on the next call to @code{get-wch}.  If a
 program calls @code{unget-wch} too many times without a call to
 @code{get-wch}, the procedure may fail.
 
-This returns @code{*ok*} on success or @code{*err*} on failure.
+This returns @code{OK} on success or @code{ERR} on failure.
 @end deffn
 
 @node Getting wide strings from the keyboard, Getting a rendered complex character, Getting characters from the keyboard (wide), The wide curses library
@@ -5165,14 +5972,14 @@ This returns @code{*ok*} on success or @code{*err*} on failure.
 @deffnx Procedure mvgetn-wstr y x n
 @deffnx Procedure mvwgetn-wstr win y x n
 
-@vindex *weof*
+@vindex WEOF
 
 The procedure @code{getn-wstr} returns a list of unrendered, wide
 characters from the keyboard of the specified terminal is as though a
 series of calls to @code{get-wch} were made, until a @key{NL}, other
 end-of-line, or end-of-file condition is processed.  An end-of-file
 condition will be represented in the returned string by the constant
-@code{*weof*}.  The
+@code{WEOF}.  The
 @key{NL} and end-of-line conditions are represented by the @code{NL}
 value.  The returned list will be constrained to have no more than
 @var{n} wide characters.
@@ -5216,8 +6023,8 @@ starting at the current cursor position in the named window.
 Attributes (rendition) are stored with the characters.  The array has
 at most @var{n} complex characters.
 
-Upon successful completion, these functions return @code{*ok*}.
-Otherwise, they return @code{*err*}.
+Upon successful completion, these functions return @code{OK}.
+Otherwise, they return @code{ERR}.
 @end deffn
 
 @node Inserting a complex character before the cursor, Inserting a unrendered wide string into a window, Getting a rendered complex string, The wide curses library
@@ -5234,8 +6041,8 @@ cursor are moved one space to the right, with the possibility of the
 rightmost character on the line being lost.  The insertion operation
 does not change the cursor position.
 
-All routines that return an integer return @code{*err*} upon failure and
-@code{*ok*} upon successful completion .
+All routines that return an integer return @code{ERR} upon failure and
+@code{OK} upon successful completion .
 
 @end deffn
 
@@ -5269,8 +6076,8 @@ control character, it is drawn in the ^X notation.  Calling
 neces- sary) does not return the control character, but instead
 returns a character in the ^-representation of the control character.
 
-All routines that return an integer return @code{*err*} upon failure and
-@code{*ok*}upon successful completion.  These routines will fail if
+All routines that return an integer return @code{ERR} upon failure and
+@code{OK}upon successful completion.  These routines will fail if
 the first character in @var{wstr} is not a spacing character.
 
 @end deffn
@@ -5290,6 +6097,104 @@ characters will be returned.
 
 If the size @var{n} is not large enough to store a complete character,
 an error will be thrown.
+
+@end deffn
+
+@node The curses form library,  , The wide curses library, Curses Reference
+@section The curses form library: @code{(gucu form)}
+
+These are the functions in the @code{(gucu form)} module.
+
+@menu
+* Forms Overview::              
+@end menu
+
+@node Forms Overview,  , The curses form library, The curses form library
+@subsection Forms Overview
+
+The form library provides terminal-independent facilities for
+composing form screens on character-cell terminals.  The library
+includes: field routines, which create and modify form fields; and
+form routines, which group fields into forms, display forms on the
+screen, and handle interaction with the user.
+
+@subsection Form procedures
+
+@deffn Procedure data-ahead form
+@deffnx Procedure data-behind form
+These procedures test if there is ahead or behind the current screen 
+of the given form @var{form}.  They return @code{#t} or @code{#f}.
+@end deffn
+
+@subsection Color and attribute control for form fields
+
+@deffn Procedure set-field-fore field attr
+@deffnx Procedure set-field-back field attr
+
+The procedure @code{set-field-fore} sets the attributes of the contents
+of a field, and @code{set-field-back} set the attributes of the unused 
+portion of a field.
+
+They return the constants @code{E_OK} on success, @code{E_BAD_ARGUMENT},
+or @code{E_SYSTEM_ERROR}.
+
+@end deffn
+
+@deffn Procedure field_fore field
+@deffnx Procecure field_back field
+
+The procedure @code{field_fore} returns the attributes of the contents
+of a field, and @code{field-back} returns the attributes of the unused
+portion of a field.
+
+@end deffn
+
+@deffn Procedure set-field-pad field pad
+
+The procedure @code{set-field-pad} sets the character used as blank in
+the field to the codepoint @code{pad}. 
+
+They return the constants @code{E_OK} on success, @code{E_BAD_ARGUMENT},
+or @code{E_SYSTEM_ERROR}.
+
+@end deffn
+
+@deffn Procedure field-pad field
+
+The procedure @code{field-pad} returns the codepoint used as the blank
+in @code{field}.
+
+@end deffn
+
+@subsection Making or breaking connections between forms and fields
+
+@deffn Procedure set-form-fields form fields
+
+This procedure takes a @var{fields}, which is a scheme list of field
+types, and assigns them to @var{form}.  
+
+It returns an integer that will have the value @code{E_OK} on success,
+@code{E_BAD_ARGUMENT}, @code{E_CONNECTED} if the fields are already
+connected to the form, @code{E_POSTED} if the form is already posted,
+or @code{E_SYSTEM_ERROR} if a system error occurred.
+
+@end deffn
+
+@deffn Procedure field-count form
+
+Returns the number of fields in @code{form}.
+
+@end deffn
+
+@deffn Procedure move-field field row col
+
+This moves the screen position of field to @var{row}, @var{col}.
+The field must not be connected to a form.
+
+It returns an integer that will have the value @code{E_OK} on success,
+@code{E_BAD_ARGUMENT}, @code{E_CONNECTED} if the fields are already
+connected to the form, @code{E_POSTED} if the form is already posted,
+or @code{E_SYSTEM_ERROR} if a system error occurred.
 
 @end deffn
 

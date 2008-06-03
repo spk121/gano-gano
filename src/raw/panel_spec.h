@@ -1,5 +1,5 @@
-#ifndef MENU_SPEC_H
-#define MENU_SPEC_H
+#ifndef PANEL_SPEC_H
+#define PANEL_SPEC_H
 
 #include <libguile.h>
 

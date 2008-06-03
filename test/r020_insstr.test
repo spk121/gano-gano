@@ -1,10 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r020_insstr.test --- test suite for curse's insert string functions
 
-(define-module (test r020_insstr)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to change input options
 (with-test-prefix "insstr"
@@ -62,3 +67,8 @@
 			       (and
 				(equal? x1 (char->integer #\z))
 				(equal? x2 (char->integer #\x)))))))
+
+
+(endwin)
+
+(curses-test-end test "r020_insstr.out")		  

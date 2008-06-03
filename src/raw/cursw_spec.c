@@ -101,11 +101,13 @@ gucu_innwstr (SCM n)
   else
     abort ();
 
+  free (c_str);
+
   return s_str;
 }
 
 SCM
-gucu_inwstr ()
+gucu_inwstr (void)
 {
   wchar_t *c_str;
   SCM s_str;
@@ -189,12 +191,11 @@ gucu_mvgetn_wstr (SCM y, SCM x, SCM n)
   if (ret == OK)
     {
       s_str = _scm_from_wint_string (c_str);
+      free (c_str); 
     }
   else
     abort ();
 
-  free (c_str); 
-  
   return (s_str);
 }
 
@@ -315,6 +316,8 @@ gucu_mvinnwstr (SCM y, SCM x, SCM n)
   else
     abort ();
 
+  free (c_str);
+
   return s_str;
 }
 
@@ -337,6 +340,8 @@ gucu_mvinwstr (SCM y, SCM x)
     }
   else
     abort ();
+
+  free (c_str);
 
   return s_str;
 }
@@ -363,6 +368,8 @@ gucu_mvwinwstr (SCM win, SCM y, SCM x)
     }
   else
     abort ();
+
+  free (c_str);
 
   return s_str;
 }
@@ -437,6 +444,8 @@ gucu_mvwinnwstr (SCM win, SCM y, SCM x, SCM n)
     }
   else
     abort ();
+
+  free (c_str);
 
   return s_str;
 }
@@ -519,6 +528,8 @@ gucu_winnwstr (SCM win, SCM n)
   else
     abort ();
 
+  free (c_str);
+
   return s_str;
 }
 
@@ -540,6 +551,8 @@ gucu_winwstr (SCM win)
     }
   else
     abort ();
+
+  free (c_str);
 
   return s_str;
 }

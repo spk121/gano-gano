@@ -1,10 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r031_touch.test --- test suite for curses's touch functions
 
-(define-module (test r031_touch)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to get term attributes
 (with-test-prefix "touch"
@@ -56,3 +61,7 @@
 
 
 		  )
+
+(endwin)
+
+(curses-test-end test "r031_touch.out")		  

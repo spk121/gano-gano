@@ -1,11 +1,16 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r035_addstr.test --- test suite for curses's addwstr
 
-(define-module (test r035_addwstr)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses-wide)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
+
+(define test (curses-test-start))
+
+(initscr)
+
 
 (define (string->wstring str)	
   (map char->integer (string->list str)))
@@ -104,3 +109,7 @@
 			      
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r035_addwstr.out")		  

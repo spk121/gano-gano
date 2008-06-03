@@ -1,10 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
-;;;; r011_deleteln.test --- test suite for curses's line deletion functions
+;;;; r012_deleteln.test --- test suite for curses's line deletion functions
 
-(define-module (test r011_deleteln)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
 
+
+(define test (curses-test-start))
+
+(initscr)
 
 (with-test-prefix "deleteln"
 		  
@@ -132,3 +137,7 @@
 			       (and
 				(equal? x1 (char->integer #\a))
 				(equal? x2 (char->integer #\b)))))))
+
+(endwin)
+
+(curses-test-end test "r012_deleteln.out")

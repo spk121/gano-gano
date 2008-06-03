@@ -10,6 +10,7 @@ int _scm_is_menu (SCM x);
 MENU *_scm_to_menu (SCM x);
 SCM _scm_from_menu (MENU *x);
 
+SCM gucu_is_menu_p (SCM x) API;
 void gucu_menu_init_type (void);
 
 #endif

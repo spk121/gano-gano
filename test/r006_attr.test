@@ -1,11 +1,16 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r006_attr.test --- test suite for curses's attr
 
-(define-module (test r006_attr)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
 
+
+(define test (curses-test-start))
+
+(initscr)
+(start-color)
 
 (with-test-prefix "attr"
 		  
@@ -17,129 +22,129 @@
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? 0 (logand *a-attributes* x2)))))
+			       (equal? 0 (logand A_ATTRIBUTES x2)))))
 		  ;; add them one by one
-		  (pass-if "attron *a-blink*"
+		  (pass-if "attron A_BLINK"
 			   (begin
-			     (attron *a-blink*)
+			     (attron A_BLINK)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? *a-blink* (logand *a-attributes* x2)))))
+			       (equal? A_BLINK (logand A_ATTRIBUTES x2)))))
 
-		  (pass-if "attron *a-bold*"
+		  (pass-if "attron A_BOLD"
 			   (begin
-			     (attron *a-bold*)
+			     (attron A_BOLD)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? (logior *a-blink*
-					       *a-bold*)
-				       (logand *a-attributes* x2)))))
+			       (equal? (logior A_BLINK
+					       A_BOLD)
+				       (logand A_ATTRIBUTES x2)))))
 
-		  (pass-if "attron *a-dim*"
+		  (pass-if "attron A_DIM"
 			   (begin
-			     (attron *a-dim*)
+			     (attron A_DIM)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? (logior *a-blink*
-					       *a-bold*
-					       *a-dim*)
-				       (logand *a-attributes* x2)))))
+			       (equal? (logior A_BLINK
+					       A_BOLD
+					       A_DIM)
+				       (logand A_ATTRIBUTES x2)))))
 
-		  (pass-if "attron *a-invis*"
+		  (pass-if "attron A_INVIS"
 			   (begin
-			     (attron *a-invis*)
+			     (attron A_INVIS)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? (logior *a-blink*
-					       *a-bold*
-					       *a-dim*
-					       *a-invis*)
-				       (logand *a-attributes* x2)))))
+			       (equal? (logior A_BLINK
+					       A_BOLD
+					       A_DIM
+					       A_INVIS)
+				       (logand A_ATTRIBUTES x2)))))
 
-		  (pass-if "attron *a-protect*"
+		  (pass-if "attron A_PROTECT"
 			   (begin
-			     (attron *a-protect*)
+			     (attron A_PROTECT)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? (logior *a-blink*
-					       *a-bold*
-					       *a-dim*
-					       *a-invis*
-					       *a-protect*)
-				       (logand *a-attributes* x2)))))
+			       (equal? (logior A_BLINK
+					       A_BOLD
+					       A_DIM
+					       A_INVIS
+					       A_PROTECT)
+				       (logand A_ATTRIBUTES x2)))))
 		  
-		  (pass-if "attron *a-reverse*"
+		  (pass-if "attron A_REVERSE"
 			   (begin
-			     (attron *a-reverse*)
+			     (attron A_REVERSE)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? (logior *a-blink*
-					       *a-bold*
-					       *a-dim*
-					       *a-invis*
-					       *a-protect*
-					       *a-reverse*)
-				       (logand *a-attributes* x2)))))
+			       (equal? (logior A_BLINK
+					       A_BOLD
+					       A_DIM
+					       A_INVIS
+					       A_PROTECT
+					       A_REVERSE)
+				       (logand A_ATTRIBUTES x2)))))
 		  
-		  (pass-if "attron *a-standout*"
+		  (pass-if "attron A_STANDOUT"
 			   (begin
-			     (attron *a-standout*)
+			     (attron A_STANDOUT)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? (logior *a-blink*
-					       *a-bold*
-					       *a-dim*
-					       *a-invis*
-					       *a-protect*
-					       *a-reverse*
-					       *a-standout*)
-				       (logand *a-attributes* x2)))))
+			       (equal? (logior A_BLINK
+					       A_BOLD
+					       A_DIM
+					       A_INVIS
+					       A_PROTECT
+					       A_REVERSE
+					       A_STANDOUT)
+				       (logand A_ATTRIBUTES x2)))))
 		  
-		  (pass-if "attron *a-underline*"
+		  (pass-if "attron A_UNDERLINE"
 			   (begin
-			     (attron *a-underline*)
+			     (attron A_UNDERLINE)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? (logior *a-blink*
-					       *a-bold*
-					       *a-dim*
-					       *a-invis*
-					       *a-protect*
-					       *a-reverse*
-					       *a-standout*
-					       *a-underline*)
-				       (logand *a-attributes* x2)))))
+			       (equal? (logior A_BLINK
+					       A_BOLD
+					       A_DIM
+					       A_INVIS
+					       A_PROTECT
+					       A_REVERSE
+					       A_STANDOUT
+					       A_UNDERLINE)
+				       (logand A_ATTRIBUTES x2)))))
 		  ;; take one away
-		  (pass-if "attroff *a-underline*"
+		  (pass-if "attroff A_UNDERLINE"
 			   (begin
-			     (attroff *a-underline*)
+			     (attroff A_UNDERLINE)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? (logior *a-blink*
-					       *a-bold*
-					       *a-dim*
-					       *a-invis*
-					       *a-protect*
-					       *a-reverse*
-					       *a-standout*)
-				       (logand *a-attributes* x2)))))
-		  ;; set the attribute to be blink* alone
-		  (pass-if "attrset *a-blink*"
+			       (equal? (logior A_BLINK
+					       A_BOLD
+					       A_DIM
+					       A_INVIS
+					       A_PROTECT
+					       A_REVERSE
+					       A_STANDOUT)
+				       (logand A_ATTRIBUTES x2)))))
+		  ;; set the attribute to be blink alone
+		  (pass-if "attrset A_BLINK"
 			   (begin
-			     (attrset *a-blink*)
+			     (attrset A_BLINK)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? *a-blink* (logand *a-attributes* x2)))))
+			       (equal? A_BLINK (logand A_ATTRIBUTES x2)))))
 
 		  ;; set it to STANDOUT alone
 		  (pass-if "standout"
@@ -149,17 +154,17 @@
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? *a-standout* (logand *a-attributes* x2)))))
+			       (equal? A_STANDOUT (logand A_ATTRIBUTES x2)))))
 
-		  ;; reset via *a-normal*
-		  (pass-if "attrset *a-normal*"
+		  ;; reset via A_NORMAL
+		  (pass-if "attrset A_NORMAL"
 			   (begin
 			     (clear)
-			     (attrset *a-normal*)
+			     (attrset A_NORMAL)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? 0 (logand *a-attributes* x2)))))
+			       (equal? 0 (logand A_ATTRIBUTES x2)))))
 
 		  ;; add color via color-set
 		  (pass-if "color-set 1"
@@ -169,7 +174,7 @@
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? (color-pair 1) (logand *a-color* x2)))))
+			       (equal? (color-pair 1) (logand A_COLOR x2)))))
 
 
 		  (pass-if "standend #2"
@@ -179,67 +184,67 @@
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? 0 (logand *a-attributes* x2)))))
+			       (equal? 0 (logand A_ATTRIBUTES x2)))))
 		  
-		  (pass-if "attr-on *a-bold*"
+		  (pass-if "attr-on A_BOLD"
 			   (begin
 			     (clear)
-			     (attr-on *a-bold* #f)
+			     (attr-on A_BOLD #f)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? *a-bold* (logand *a-attributes* x2)))))
+			       (equal? A_BOLD (logand A_ATTRIBUTES x2)))))
 
-		  (pass-if "attr-off *a-bold*"
+		  (pass-if "attr-off A_BOLD"
 			   (begin
 			     (clear)
-			     (attr-off *a-bold* #f)
+			     (attr-off A_BOLD #f)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (mvinch 0 0)))
-			       (equal? 0 (logand *a-attributes* x2)))))
+			       (equal? 0 (logand A_ATTRIBUTES x2)))))
 
-		  (pass-if "attr-set and attr-get *a-underline* color-pair1"
+		  (pass-if "attr-set and attr-get A_UNDERLINE color-pair1"
 			   (begin
 			     (clear)
-			     (attr-set *a-underline* 1 #f)
+			     (attr-set A_UNDERLINE 1)
 			     (mvaddstr 0 0 "x")
 			     (refresh)
 			     (let ((x2 (attr-get)))
 			       (and
-				(equal? (car x2) (logior *a-underline* (color-pair 1)))
-				;; FIXME: should it be this? (equal? (car x2) *a-underline*)
+				(equal? (car x2) (logior A_UNDERLINE (color-pair 1)))
+				;; FIXME: should it be this? (equal? (car x2) A_UNDERLINE)
 				(equal? (cadr x2) 1)))))
 
 		  (pass-if "chgat"
 			   (begin
 			     (clear)
-			     (attrset *a-normal*)
+			     (attrset A_NORMAL)
 			     (mvaddstr 0 0 "xx")
 			     (refresh)
 			     (move 0 0)
-			     (chgat 2 *a-bold* 1 #f)
+			     (chgat 2 A_BOLD 1 #f)
 			     (refresh)
 			     (let ((x1 (mvinch 0 0))
 				   (x2 (mvinch 0 1)))
 			       (and
-				(equal? (logior *a-bold* (color-pair 1)) (logand *a-attributes* x1))
-				(equal? (logior *a-bold* (color-pair 1)) (logand *a-attributes* x2))))))
+				(equal? (logior A_BOLD (color-pair 1)) (logand A_ATTRIBUTES x1))
+				(equal? (logior A_BOLD (color-pair 1)) (logand A_ATTRIBUTES x2))))))
 
 
 		  (pass-if "mvchgat"
 			   (begin
 			     (clear)
-			     (attrset *a-normal*)
+			     (attrset A_NORMAL)
 			     (mvaddstr 0 0 "xx")
 			     (refresh)
-			     (mvchgat 0 0 2 *a-bold* 1 #f)
+			     (mvchgat 0 0 2 A_BOLD 1 #f)
 			     (refresh)
 			     (let ((x1 (mvinch 0 0))
 				   (x2 (mvinch 0 1)))
 			       (and
-				(equal? (logior *a-bold* (color-pair 1)) (logand *a-attributes* x1))
-				(equal? (logior *a-bold* (color-pair 1)) (logand *a-attributes* x2))))))
+				(equal? (logior A_BOLD (color-pair 1)) (logand A_ATTRIBUTES x1))
+				(equal? (logior A_BOLD (color-pair 1)) (logand A_ATTRIBUTES x2))))))
 
 
 
@@ -259,34 +264,34 @@
 			     (mvwaddstr win 0 0 "x")
 			     (wrefresh win)
 			     (let ((x2 (mvwinch win 0 0)))
-			       (equal? 0 (logand *a-attributes* x2)))))
+			       (equal? 0 (logand A_ATTRIBUTES x2)))))
 		  ;; add one
-		  (pass-if "wattron *a-blink*"
+		  (pass-if "wattron A_BLINK"
 			   (begin
-			     (wattron win *a-blink*)
+			     (wattron win A_BLINK)
 			     (mvwaddstr win 0 0 "x")
 			     (wrefresh win)
 			     (let ((x2 (mvwinch win 0 0)))
-			       (equal? *a-blink* (logand *a-attributes* x2)))))
+			       (equal? A_BLINK (logand A_ATTRIBUTES x2)))))
 
 		  ;; take one away
-		  (pass-if "wattroff *a-blink*"
+		  (pass-if "wattroff A_BLINK"
 			   (begin
-			     (wattroff win *a-blink*)
+			     (wattroff win A_BLINK)
 			     (mvwaddstr win 0 0 "x")
 			     (wrefresh win)
 			     (let ((x2 (mvwinch win 0 0)))
-			       (equal? *a-normal* 
-				       (logand *a-attributes* x2)))))
+			       (equal? A_NORMAL 
+				       (logand A_ATTRIBUTES x2)))))
 
-		  ;; set the attribute to be blink* alone
-		  (pass-if "wattrset *a-blink*"
+		  ;; set the attribute to be blink alone
+		  (pass-if "wattrset A_BLINK"
 			   (begin
-			     (wattrset win *a-blink*)
+			     (wattrset win A_BLINK)
 			     (mvwaddstr win 0 0 "x")
 			     (wrefresh win)
 			     (let ((x2 (mvwinch win 0 0)))
-			       (equal? *a-blink* (logand *a-attributes* x2)))))
+			       (equal? A_BLINK (logand A_ATTRIBUTES x2)))))
 
 		  ;; set it to STANDOUT alone
 		  (pass-if "wstandout"
@@ -296,17 +301,17 @@
 			     (mvwaddstr win 0 0 "x")
 			     (wrefresh win)
 			     (let ((x2 (mvwinch win 0 0)))
-			       (equal? *a-standout* (logand *a-attributes* x2)))))
+			       (equal? A_STANDOUT (logand A_ATTRIBUTES x2)))))
 
-		  ;; reset via *a-normal*
-		  (pass-if "wattrset *a-normal*"
+		  ;; reset via A_NORMAL
+		  (pass-if "wattrset A_NORMAL"
 			   (begin
 			     (wclear win)
-			     (wattrset win *a-normal*)
+			     (wattrset win A_NORMAL)
 			     (mvwaddstr win 0 0 "x")
 			     (wrefresh win )
 			     (let ((x2 (mvwinch win 0 0)))
-			       (equal? 0 (logand *a-attributes* x2)))))
+			       (equal? 0 (logand A_ATTRIBUTES x2)))))
 
 		  ;; add color via color-set
 		  (pass-if "color-set 1"
@@ -316,7 +321,7 @@
 			     (mvwaddstr win 0 0 "x")
 			     (wrefresh win)
 			     (let ((x2 (mvwinch win 0 0)))
-			       (equal? (color-pair 1) (logand *a-color* x2)))))
+			       (equal? (color-pair 1) (logand A_COLOR x2)))))
 
 
 		  (pass-if "wstandend #2"
@@ -326,67 +331,67 @@
 			     (mvwaddstr win 0 0 "x")
 			     (wrefresh win)
 			     (let ((x2 (mvwinch win 0 0)))
-			       (equal? 0 (logand *a-attributes* x2)))))
+			       (equal? 0 (logand A_ATTRIBUTES x2)))))
 		  
-		  (pass-if "wattr-on *a-bold*"
+		  (pass-if "wattr-on A_BOLD"
 			   (begin
 			     (wclear win)
-			     (wattr-on win *a-bold* #f)
+			     (wattr-on win A_BOLD #f)
 			     (mvwaddstr win 0 0 "x")
 			     (wrefresh win)
 			     (let ((x2 (mvwinch win 0 0)))
-			       (equal? *a-bold* (logand *a-attributes* x2)))))
+			       (equal? A_BOLD (logand A_ATTRIBUTES x2)))))
 
-		  (pass-if "wattr-off *a-bold*"
+		  (pass-if "wattr-off A_BOLD"
 			   (begin
 			     (wclear win)
-			     (wattr-off win *a-bold* #f)
+			     (wattr-off win A_BOLD #f)
 			     (mvwaddstr win 0 0 "x")
 			     (wrefresh win)
 			     (let ((x2 (mvwinch win 0 0)))
-			       (equal? 0 (logand *a-attributes* x2)))))
+			       (equal? 0 (logand A_ATTRIBUTES x2)))))
 
-		  (pass-if "attr-set and attr-get *a-underline* color-pair1"
+		  (pass-if "attr-set and attr-get A_UNDERLINE color-pair1"
 			   (begin
 			     (wclear win)
-			     (wattr-set win *a-underline* 1 #f)
+			     (wattr-set win A_UNDERLINE 1)
 			     (mvwaddstr win 0 0 "x")
 			     (wrefresh win)
 			     (let ((x2 (wattr-get win)))
 			       (and
-				(equal? (car x2) (logior *a-underline* (color-pair 1)))
-				;; FIXME: should it be this? (equal? (car x2) *a-underline*)
+				(equal? (car x2) (logior A_UNDERLINE (color-pair 1)))
+				;; FIXME: should it be this? (equal? (car x2) A_UNDERLINE)
 				(equal? (cadr x2) 1)))))
 
 		  (pass-if "wchgat"
 			   (begin
 			     (wclear win)
-			     (wattrset win *a-normal*)
+			     (wattrset win A_NORMAL)
 			     (mvwaddstr win 0 0 "xx")
 			     (wrefresh win)
 			     (wmove win 0 0)
-			     (wchgat win 2 *a-bold* 1 #f)
+			     (wchgat win 2 A_BOLD 1 #f)
 			     (wrefresh win)
 			     (let ((x1 (mvwinch win 0 0))
 				   (x2 (mvwinch win 0 1)))
 			       (and
-				(equal? (logior *a-bold* (color-pair 1)) (logand *a-attributes* x1))
-				(equal? (logior *a-bold* (color-pair 1)) (logand *a-attributes* x2))))))
+				(equal? (logior A_BOLD (color-pair 1)) (logand A_ATTRIBUTES x1))
+				(equal? (logior A_BOLD (color-pair 1)) (logand A_ATTRIBUTES x2))))))
 
 
 		  (pass-if "mvwchgat"
 			   (begin
 			     (wclear win)
-			     (wattrset win *a-normal*)
+			     (wattrset win A_NORMAL)
 			     (mvwaddstr win 0 0 "xx")
 			     (wrefresh win)
-			     (mvwchgat win 0 0 2 *a-bold* 1 #f)
+			     (mvwchgat win 0 0 2 A_BOLD 1 #f)
 			     (wrefresh win)
 			     (let ((x1 (mvwinch win 0 0))
 				   (x2 (mvwinch win 0 1)))
 			       (and
-				(equal? (logior *a-bold* (color-pair 1)) (logand *a-attributes* x1))
-				(equal? (logior *a-bold* (color-pair 1)) (logand *a-attributes* x2))))))
+				(equal? (logior A_BOLD (color-pair 1)) (logand A_ATTRIBUTES x1))
+				(equal? (logior A_BOLD (color-pair 1)) (logand A_ATTRIBUTES x2))))))
 
 
 		  )
@@ -395,3 +400,7 @@
 
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r006_attr.out")

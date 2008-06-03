@@ -1,11 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r023_move.test --- test suite for curses's move functions
 
-(define-module (test r023_move)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to move the cursor
 (with-test-prefix "move"
@@ -26,3 +30,7 @@
 			   (wrefresh win)
 			   (lset= eqv? '(1 1) (getyx win))))
 
+
+(endwin)
+
+(curses-test-end test "r023_move.out")		  

@@ -1,10 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r002_characters.test --- test suite for curses's character constants
 
-(define-module (test r002_characters)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses))
+
+
+(define test (curses-test-start))
+
+(initscr)
 
 (with-test-prefix "ASCII"
 		  (pass-if "a"
@@ -28,7 +33,7 @@
 	     (let ((x2 (mvinch 0 0)))
 	       (and
 		(equal? x x2)
-		(equal? (logand x2 *a-altcharset*) *a-altcharset*))))))
+		(equal? (logand x2 A_ALTCHARSET) A_ALTCHARSET))))))
 
 (with-test-prefix "ACS"
 		  (map acs-test-pair
@@ -57,3 +62,7 @@
 			 ("acs-lantern" . ,(acs-lantern))
 			 ("acs-block" . ,(acs-block))
 			 )))
+
+(endwin)
+
+(curses-test-end test "r002_characters.out")

@@ -2,7 +2,7 @@
 
 # panel_wrap.sh -- generate scheme wrapper functions for wide curses
 
-# $Id: panel_wrap.sh,v 1.1 2008/03/30 16:57:15 spike_gran Exp $
+# $Id: panel_wrap.sh,v 1.2 2008/06/03 11:36:45 spike_gran Exp $
 
 # Put together a mostly complete wrapset from the files panel_func.txt
 # and panel_const.txt. 

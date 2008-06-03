@@ -38,4 +38,6 @@ cchar_t *_scm_to_cstring (SCM x);
 SCM _scm_from_cstring (cchar_t *x);
 int _scm_is_cstring (SCM x);
 
+
+
 #endif /* not TYPEW_H */

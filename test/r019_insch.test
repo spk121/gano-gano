@@ -1,9 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r019_insch.test --- test suite for curse's insert character functions
 
-(define-module (test r019_insch)
-  #:use-module (test lib)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
+
+(define test (curses-test-start))
+
+(initscr)
 
 
 ;; Should be able to change input options
@@ -62,3 +68,7 @@
 			       (and
 				(equal? x1 (char->integer #\z))
 				(equal? x2 (char->integer #\x)))))))
+
+(endwin)
+
+(curses-test-end test "r019_insch.out")		  

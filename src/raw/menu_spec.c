@@ -17,7 +17,7 @@ gucu_new_menu (SCM labels)
 
   char *label, *descr;
 
-  for (int i=0; i < len; i++)
+  for (size_t i=0; i < len; i++)
     {
       SCM entry = scm_list_ref (labels, scm_from_int (i));
       if (scm_is_pair (entry))

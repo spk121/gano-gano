@@ -1,12 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r039_getstr.test --- test suite for curses's get_wstr
 
-(define-module (test r039_get_wstr)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses-wide)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 (define win (newwin 5 10 5 5))
 (define letter-h (char->integer #\h))
@@ -16,7 +19,7 @@
 (define wstring-hip (map char->integer (string->list "hip")))
 (define wstring-hi (map char->integer (string->list "hi")))
 (standend)
-(attron (logior (color-pair 0) *a-normal*))
+(attron (logior (color-pair 0) A_NORMAL))
 
 ;; Should be able to get strings from the keyboard
 
@@ -80,3 +83,5 @@
 				 (lset= equal? s1 wstring-hi))))))
 
 
+(endwin)
+(curses-test-end test "r039_get_wstr.out")

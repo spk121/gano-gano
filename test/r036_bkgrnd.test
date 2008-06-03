@@ -1,11 +1,15 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r036_bkgrnd.test --- test suite for curses's background functions
 
-(define-module (test r036_bkgrnd)
-  #:use-module (test lib)
-  #:use-module (gucu curses-wide)
-  #:use-module (gucu curses)
-  #:use-module (srfi srfi-1))
+(use-modules (test lib)
+	     (test lib2)
+	     (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
+
+(define test (curses-test-start))
+
+(initscr)
 
 (define period (char->integer #\.))
 (define plus (char->integer #\+))
@@ -20,41 +24,41 @@
 		  (pass-if "bkgrnd"
 			   (begin
 			     (mvaddstr 0 0 "This is a string")
-			     (bkgrnd (list *a-bold* 0 period))
+			     (bkgrnd (list A_BOLD 0 period))
 			     (mvaddstr 1 0 "This is a new string")
 			     (refresh)
 			     ;; (sleep 2)
 			     (let ((x1 (mvin-wch 0 4)) ;Loc of space between "This" and "is"
 				   (x2 (mvin-wch 1 4)))
 			       (begin
-				 (bkgrnd (list *a-normal* 0 space)) ; clear bkgd
+				 (bkgrnd (list A_NORMAL 0 space)) ; clear bkgd
 				 (clear)
 				 (refresh)
 				 (and
-				  (lset= eqv? (list *a-bold* 0 period) x1)
-				  (lset= eqv? (list *a-bold* 0 period) x2))))))
+				  (lset= eqv? (list A_BOLD 0 period) x1)
+				  (lset= eqv? (list A_BOLD 0 period) x2))))))
 		  
 		  (pass-if "bkgdset"
 			   (begin
 			     (standend)
 			     (mvaddstr 0 0 "This is a string")
-			     (bkgrndset (list *a-dim* 1 plus))
+			     (bkgrndset (list A_DIM 1 plus))
 			     (mvaddstr 1 0 "This is another string")
 			     (refresh)
 			     ;; (sleep 2)
 			     (let ((x1 (mvin-wch 0 4))
 				   (x2 (mvin-wch 1 4)))
 			       (begin
-				 (bkgrnd (list *a-normal* 0 space)) ; clear bkgd
+				 (bkgrnd (list A_NORMAL 0 space)) ; clear bkgd
 				 (clear)
 				 (addstr (format #f "~a~%" x1))
 				 (addstr (format #f "~a~%" x2))
 				 (refresh)
 				 ;; (sleep 2)
 				 (and
-				  (lset= equal? (list *a-normal* 0 space) x1)
+				  (lset= equal? (list A_NORMAL 0 space) x1)
 				  (lset= equal? 
-					 (list *a-dim* 1 plus) 
+					 (list A_DIM 1 plus) 
 					 x2)))))))
 		  
 ; (define win (newwin 5 10 5 5))
@@ -64,33 +68,35 @@
 ; 		  (pass-if "wbkgd"
 ; 			   (begin
 ; 			     (mvwaddstr win 0 0 "This is a string")
-; 			     (wbkgd win (logior *a-bold* period))
+; 			     (wbkgd win (logior A_BOLD period))
 ; 			     (mvwaddstr win 1 0 "This is a new string")
 ; 			     (wrefresh win)
 ; 			     (let ((x1 (mvwinch win 0 4))
 ; 				   (x2 (mvwinch win 1 4)))
 ; 			       (begin
-; 				 (wbkgd win (logior *a-normal* space)) ; clear bkgd
+; 				 (wbkgd win (logior A_NORMAL space)) ; clear bkgd
 ; 				 (wclear win)
 ; 				 (wrefresh win)
 ; 				 (and
-; 				  (equal? (logior *a-bold* period) x1)
-; 				  (equal? (logior *a-bold* period) x2))))))
+; 				  (equal? (logior A_BOLD period) x1)
+; 				  (equal? (logior A_BOLD period) x2))))))
 		  
 ; 		  (pass-if "bkgdget / wbkgdset"
 ; 			   (begin
 ; 			     (wstandend win)
 ; 			     (mvwaddstr win 0 0 "This is a string")
-; 			     (wbkgdset win (logior *a-dim* (color-pair 1) plus))
+; 			     (wbkgdset win (logior A_DIM (color-pair 1) plus))
 ; 			     (mvwaddstr win 1 0 "This is another string")
 ; 			     (wrefresh win)
 ; 			     (let ((bk (getbkgd win)))
 ; 			       (begin
-; 				 (wbkgd win (logior *a-normal* space)) ; clear bkgd
+; 				 (wbkgd win (logior A_NORMAL space)) ; clear bkgd
 ; 				 (wclear win)
 ; 				 (wrefresh win)
-; 				 (equal? bk (logior *a-dim* (color-pair 1) plus)))))))
+; 				 (equal? bk (logior A_DIM (color-pair 1) plus)))))))
 ;(delwin win)
 (refresh)
 
-		  
+(endwin)
+
+(curses-test-end test "r036_bkgrnd.out")		  

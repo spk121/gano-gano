@@ -1,12 +1,16 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r030-termattrs.test --- test suite for curses's term attrs
 
-(define-module (test r030-termattrs)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (ice-9 format)
-  #:use-module (gucu curses))
+(use-modules (test lib)
+	     (test lib2)
+	     ;; (gucu curses-wide)
+	     (gucu curses)
+	     (ice-9 format)
+	     (srfi srfi-1))
 
+(define test (curses-test-start))
+
+(initscr)
 
 ;; Should be able to get term attributes
 (with-test-prefix "termattrs"
@@ -78,28 +82,28 @@
 			     (refresh)
 			     (let ((ta (termattrs))
 				   (ta2 (logior 
-					 *a-altcharset*
-					 *a-blink*
-					 *a-bold*
-					 ; *a-dim*
-					 *a-color*
-					 *a-invis*
-					 ; *a-protect*
-					 *a-reverse*
-					 *a-standout*
-					 *a-underline*))) 
+					 A_ALTCHARSET
+					 A_BLINK
+					 A_BOLD
+					 ; A_DIM
+					 A_COLOR
+					 A_INVIS
+					 ; A_PROTECT
+					 A_REVERSE
+					 A_STANDOUT
+					 A_UNDERLINE))) 
 			       
 			       (mvaddstr 0 0 (format #f "      ~32,'0b~%" ta))
-			       (addstr (format #f "PRTCT ~32,'0b~%" *a-protect*))
-			       (addstr (format #f "INVIS ~32,'0b~%" *a-invis*))
-			       (addstr (format #f "  ALT ~32,'0b~%" *a-altcharset*))
-			       (addstr (format #f " BOLD ~32,'0b~%" *a-bold*))
-			       (addstr (format #f "  DIM ~32,'0b~%" *a-dim*))
-			       (addstr (format #f "BLINK ~32,'0b~%" *a-blink*))
-			       (addstr (format #f "RVRSE ~32,'0b~%" *a-reverse*))
-			       (addstr (format #f "UNDRL ~32,'0b~%" *a-underline*))
-			       (addstr (format #f "STNDT ~32,'0b~%" *a-standout*))
-			       (addstr (format #f "COLOR ~32,'0b~%" *a-color*))
+			       (addstr (format #f "PRTCT ~32,'0b~%" A_PROTECT))
+			       (addstr (format #f "INVIS ~32,'0b~%" A_INVIS))
+			       (addstr (format #f "  ALT ~32,'0b~%" A_ALTCHARSET))
+			       (addstr (format #f " BOLD ~32,'0b~%" A_BOLD))
+			       (addstr (format #f "  DIM ~32,'0b~%" A_DIM))
+			       (addstr (format #f "BLINK ~32,'0b~%" A_BLINK))
+			       (addstr (format #f "RVRSE ~32,'0b~%" A_REVERSE))
+			       (addstr (format #f "UNDRL ~32,'0b~%" A_UNDERLINE))
+			       (addstr (format #f "STNDT ~32,'0b~%" A_STANDOUT))
+			       (addstr (format #f "COLOR ~32,'0b~%" A_COLOR))
 			       (addstr (format #f "      ~32,'0b~%" ta2))
 			       (refresh)
 			       (sleep 1)
@@ -107,3 +111,8 @@
 			     *unspecified*))
 
 		  )
+
+
+(endwin)
+
+(curses-test-end test "r030_termattrs.out")		  

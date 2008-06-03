@@ -1,21 +1,26 @@
 ;;;; -*- Mode: scheme; -*-
 ;;;; r034_add_wchstr.test --- test suite for curses's add_wchstr functions
 
-(define-module (test r034_add_wchstr)
-  #:use-module (test lib)
-  #:use-module (srfi srfi-1)
-  #:use-module (gucu curses)
-  #:use-module (gucu curses-wide))
+(use-modules (test lib)
+	     (test lib2)
+	     (gucu curses-wide)
+	     (gucu curses)
+	     (srfi srfi-1))
+
+(define test (curses-test-start))
+
+(initscr)
+
 
 (define (string->cstring str attrib)
   (map (lambda (x)
 	 (list attrib 0 (char->integer x)))
        (string->list str)))
 
-(define hello (string->cstring "hello" *a-normal*))
-(define he (string->cstring "he" *a-normal*))
-(define hello-bold (string->cstring "hello" *a-bold*))
-(define he-bold (string->cstring "he" *a-bold*))
+(define hello (string->cstring "hello" A_NORMAL))
+(define he (string->cstring "he" A_NORMAL))
+(define hello-bold (string->cstring "hello" A_BOLD))
+(define he-bold (string->cstring "he" A_BOLD))
 
 (with-test-prefix "add-wchstr"
 		  
@@ -93,3 +98,7 @@
 
 (delwin win)
 (refresh)
+
+(endwin)
+
+(curses-test-end test "r034_add_wchstr.out")		  
