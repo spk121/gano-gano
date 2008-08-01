@@ -7,10 +7,6 @@
 #include "term.h"
 #define _GNU_SOURCE
 #define cstring_t cchar_t
-// 1: int addch
-// 2: const chtype
-// 3: 
-// 4: 
 SCM
 gucu_addch (SCM arg1)
 {
@@ -24,11 +20,6 @@ gucu_addch (SCM arg1)
 	return s_ret;
 }
 
-// 1: int addchnstr
-// 2: const chtype *
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_addchnstr (SCM arg1, SCM arg2)
 {
@@ -46,10 +37,6 @@ gucu_addchnstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int addchstr
-// 2: const chtype *
-// 3: 
-// 4: 
 SCM
 gucu_addchstr (SCM arg1)
 {
@@ -65,11 +52,6 @@ gucu_addchstr (SCM arg1)
 	return s_ret;
 }
 
-// 1: int addnstr
-// 2: const char *
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_addnstr (SCM arg1, SCM arg2)
 {
@@ -87,10 +69,6 @@ gucu_addnstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int addstr
-// 2: const char *
-// 3: 
-// 4: 
 SCM
 gucu_addstr (SCM arg1)
 {
@@ -106,10 +84,6 @@ gucu_addstr (SCM arg1)
 	return s_ret;
 }
 
-// 1: int attroff
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_attroff (SCM arg1)
 {
@@ -123,10 +97,6 @@ gucu_attroff (SCM arg1)
 	return s_ret;
 }
 
-// 1: int attron
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_attron (SCM arg1)
 {
@@ -140,10 +110,6 @@ gucu_attron (SCM arg1)
 	return s_ret;
 }
 
-// 1: int attrset
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_attrset (SCM arg1)
 {
@@ -157,11 +123,6 @@ gucu_attrset (SCM arg1)
 	return s_ret;
 }
 
-// 1: int attr_off
-// 2: attr_t
-// 3:  void *
-// 4: 
-// 5: 
 SCM
 gucu_attr_off (SCM arg1, SCM arg2)
 {
@@ -177,11 +138,6 @@ gucu_attr_off (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int attr_on
-// 2: attr_t
-// 3:  void *
-// 4: 
-// 5: 
 SCM
 gucu_attr_on (SCM arg1, SCM arg2)
 {
@@ -197,10 +153,6 @@ gucu_attr_on (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int baudrate
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_baudrate ()
 {
@@ -210,10 +162,6 @@ gucu_baudrate ()
 	return s_ret;
 }
 
-// 1: int beep
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_beep ()
 {
@@ -223,10 +171,6 @@ gucu_beep ()
 	return s_ret;
 }
 
-// 1: int bkgd
-// 2: chtype
-// 3: 
-// 4: 
 SCM
 gucu_bkgd (SCM arg1)
 {
@@ -240,10 +184,6 @@ gucu_bkgd (SCM arg1)
 	return s_ret;
 }
 
-// 1: void bkgdset
-// 2: chtype
-// 3: 
-// 4: 
 SCM
 gucu_bkgdset (SCM arg1)
 {
@@ -257,17 +197,6 @@ gucu_bkgdset (SCM arg1)
 	return s_ret;
 }
 
-// 1: int border
-// 2: chtype
-// 3:  chtype
-// 4:  chtype
-// 5:  chtype
-// 6:  chtype
-// 7:  chtype
-// 8:  chtype
-// 9:  chtype
-// 10: 
-// 11: 
 SCM
 gucu_border (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7, SCM arg8)
 {
@@ -295,12 +224,6 @@ gucu_border (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg
 	return s_ret;
 }
 
-// 1: int box
-// 2: WINDOW *
-// 3:  chtype
-// 4:  chtype
-// 5: 
-// 6: 
 SCM
 gucu_box (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -318,10 +241,6 @@ gucu_box (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: bool can_change_color
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_can_change_color ()
 {
@@ -331,10 +250,6 @@ gucu_can_change_color ()
 	return s_ret;
 }
 
-// 1: int cbreak
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_cbreak ()
 {
@@ -344,13 +259,6 @@ gucu_cbreak ()
 	return s_ret;
 }
 
-// 1: int chgat
-// 2: int
-// 3:  attr_t
-// 4:  short
-// 5:  const void *
-// 6: 
-// 7: 
 SCM
 gucu_chgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -370,11 +278,6 @@ gucu_chgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int clearok
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_clearok (SCM arg1, SCM arg2)
 {
@@ -390,10 +293,6 @@ gucu_clearok (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int clear
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_clear ()
 {
@@ -403,10 +302,6 @@ gucu_clear ()
 	return s_ret;
 }
 
-// 1: int clrtobot
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_clrtobot ()
 {
@@ -416,10 +311,6 @@ gucu_clrtobot ()
 	return s_ret;
 }
 
-// 1: int clrtoeol
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_clrtoeol ()
 {
@@ -429,10 +320,6 @@ gucu_clrtoeol ()
 	return s_ret;
 }
 
-// 1: int COLOR_PAIR
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_COLOR_PAIR (SCM arg1)
 {
@@ -446,11 +333,6 @@ gucu_COLOR_PAIR (SCM arg1)
 	return s_ret;
 }
 
-// 1: int color_set
-// 2: short
-// 3: void *
-// 4: 
-// 5: 
 SCM
 gucu_color_set (SCM arg1, SCM arg2)
 {
@@ -466,18 +348,6 @@ gucu_color_set (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int copywin
-// 2: const WINDOW *
-// 3:  WINDOW *
-// 4:  int
-// 5:  int
-// 6:  int
-// 7:  int
-// 8:  int
-// 9:  int
-// 10:  int
-// 11: 
-// 12: 
 SCM
 gucu_copywin (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7, SCM arg8, SCM arg9)
 {
@@ -507,10 +377,6 @@ gucu_copywin (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM ar
 	return s_ret;
 }
 
-// 1: int curs_set
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_curs_set (SCM arg1)
 {
@@ -524,10 +390,6 @@ gucu_curs_set (SCM arg1)
 	return s_ret;
 }
 
-// 1: int def_prog_mode
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_def_prog_mode ()
 {
@@ -537,10 +399,6 @@ gucu_def_prog_mode ()
 	return s_ret;
 }
 
-// 1: int def_shell_mode
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_def_shell_mode ()
 {
@@ -550,10 +408,6 @@ gucu_def_shell_mode ()
 	return s_ret;
 }
 
-// 1: int delay_output
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_delay_output (SCM arg1)
 {
@@ -567,10 +421,6 @@ gucu_delay_output (SCM arg1)
 	return s_ret;
 }
 
-// 1: int delch
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_delch ()
 {
@@ -580,10 +430,6 @@ gucu_delch ()
 	return s_ret;
 }
 
-// 1: int deleteln
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_deleteln ()
 {
@@ -593,10 +439,6 @@ gucu_deleteln ()
 	return s_ret;
 }
 
-// 1: void delscreen
-// 2: SCREEN *
-// 3: 
-// 4: 
 SCM
 gucu_delscreen (SCM arg1)
 {
@@ -610,14 +452,6 @@ gucu_delscreen (SCM arg1)
 	return s_ret;
 }
 
-// 1: WINDOW *derwin
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  int
-// 6:  int
-// 7: 
-// 8: 
 SCM
 gucu_derwin (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -639,10 +473,6 @@ gucu_derwin (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
-// 1: int doupdate
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_doupdate ()
 {
@@ -652,10 +482,6 @@ gucu_doupdate ()
 	return s_ret;
 }
 
-// 1: WINDOW *dupwin
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_dupwin (SCM arg1)
 {
@@ -669,10 +495,6 @@ gucu_dupwin (SCM arg1)
 	return s_ret;
 }
 
-// 1: int echo
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_echo ()
 {
@@ -682,10 +504,6 @@ gucu_echo ()
 	return s_ret;
 }
 
-// 1: int echochar
-// 2: const chtype
-// 3: 
-// 4: 
 SCM
 gucu_echochar (SCM arg1)
 {
@@ -699,10 +517,6 @@ gucu_echochar (SCM arg1)
 	return s_ret;
 }
 
-// 1: int endwin
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_endwin ()
 {
@@ -712,10 +526,6 @@ gucu_endwin ()
 	return s_ret;
 }
 
-// 1: char erasechar
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_erasechar ()
 {
@@ -725,10 +535,6 @@ gucu_erasechar ()
 	return s_ret;
 }
 
-// 1: int erase
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_erase ()
 {
@@ -738,10 +544,6 @@ gucu_erase ()
 	return s_ret;
 }
 
-// 1: void filter
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_filter ()
 {
@@ -751,10 +553,6 @@ gucu_filter ()
 	return s_ret;
 }
 
-// 1: int flash
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_flash ()
 {
@@ -764,10 +562,6 @@ gucu_flash ()
 	return s_ret;
 }
 
-// 1: int flushinp
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_flushinp ()
 {
@@ -777,10 +571,6 @@ gucu_flushinp ()
 	return s_ret;
 }
 
-// 1: chtype getbkgd
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_getbkgd (SCM arg1)
 {
@@ -794,10 +584,6 @@ gucu_getbkgd (SCM arg1)
 	return s_ret;
 }
 
-// 1: int getch
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_getch ()
 {
@@ -807,10 +593,6 @@ gucu_getch ()
 	return s_ret;
 }
 
-// 1: WINDOW *getwin
-// 2: FILE *
-// 3: 
-// 4: 
 SCM
 gucu_getwin (SCM arg1)
 {
@@ -824,10 +606,6 @@ gucu_getwin (SCM arg1)
 	return s_ret;
 }
 
-// 1: int halfdelay
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_halfdelay (SCM arg1)
 {
@@ -841,10 +619,6 @@ gucu_halfdelay (SCM arg1)
 	return s_ret;
 }
 
-// 1: bool has_colors
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_has_colors ()
 {
@@ -854,10 +628,6 @@ gucu_has_colors ()
 	return s_ret;
 }
 
-// 1: bool has_ic
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_has_ic ()
 {
@@ -867,10 +637,6 @@ gucu_has_ic ()
 	return s_ret;
 }
 
-// 1: bool has_il
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_has_il ()
 {
@@ -880,11 +646,6 @@ gucu_has_il ()
 	return s_ret;
 }
 
-// 1: int hline
-// 2: chtype
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_hline (SCM arg1, SCM arg2)
 {
@@ -900,11 +661,6 @@ gucu_hline (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: void idcok
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_idcok (SCM arg1, SCM arg2)
 {
@@ -920,11 +676,6 @@ gucu_idcok (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int idlok
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_idlok (SCM arg1, SCM arg2)
 {
@@ -940,11 +691,6 @@ gucu_idlok (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: void immedok
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_immedok (SCM arg1, SCM arg2)
 {
@@ -960,10 +706,6 @@ gucu_immedok (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: chtype inch
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_inch ()
 {
@@ -973,10 +715,6 @@ gucu_inch ()
 	return s_ret;
 }
 
-// 1: WINDOW *initscr
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_initscr ()
 {
@@ -986,13 +724,6 @@ gucu_initscr ()
 	return s_ret;
 }
 
-// 1: int init_color
-// 2: short
-// 3:  short
-// 4:  short
-// 5:  short
-// 6: 
-// 7: 
 SCM
 gucu_init_color (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -1012,12 +743,6 @@ gucu_init_color (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int init_pair
-// 2: short
-// 3:  short
-// 4:  short
-// 5: 
-// 6: 
 SCM
 gucu_init_pair (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -1035,10 +760,6 @@ gucu_init_pair (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int insch
-// 2: chtype
-// 3: 
-// 4: 
 SCM
 gucu_insch (SCM arg1)
 {
@@ -1052,10 +773,6 @@ gucu_insch (SCM arg1)
 	return s_ret;
 }
 
-// 1: int insdelln
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_insdelln (SCM arg1)
 {
@@ -1069,10 +786,6 @@ gucu_insdelln (SCM arg1)
 	return s_ret;
 }
 
-// 1: int insertln
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_insertln ()
 {
@@ -1082,11 +795,6 @@ gucu_insertln ()
 	return s_ret;
 }
 
-// 1: int insnstr
-// 2: const char *
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_insnstr (SCM arg1, SCM arg2)
 {
@@ -1104,10 +812,6 @@ gucu_insnstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int insstr
-// 2: const char *
-// 3: 
-// 4: 
 SCM
 gucu_insstr (SCM arg1)
 {
@@ -1123,11 +827,6 @@ gucu_insstr (SCM arg1)
 	return s_ret;
 }
 
-// 1: int intrflush
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_intrflush (SCM arg1, SCM arg2)
 {
@@ -1143,10 +842,6 @@ gucu_intrflush (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: bool isendwin
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_isendwin ()
 {
@@ -1156,11 +851,6 @@ gucu_isendwin ()
 	return s_ret;
 }
 
-// 1: bool is_linetouched
-// 2: WINDOW *
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_is_linetouched (SCM arg1, SCM arg2)
 {
@@ -1176,10 +866,6 @@ gucu_is_linetouched (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: bool is_wintouched
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_is_wintouched (SCM arg1)
 {
@@ -1193,10 +879,6 @@ gucu_is_wintouched (SCM arg1)
 	return s_ret;
 }
 
-// 1: int KEY_F
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_KEY_F (SCM arg1)
 {
@@ -1210,10 +892,6 @@ gucu_KEY_F (SCM arg1)
 	return s_ret;
 }
 
-// 1: char *keyname
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_keyname (SCM arg1)
 {
@@ -1227,11 +905,6 @@ gucu_keyname (SCM arg1)
 	return s_ret;
 }
 
-// 1: int keypad
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_keypad (SCM arg1, SCM arg2)
 {
@@ -1247,10 +920,6 @@ gucu_keypad (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: char killchar
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_killchar ()
 {
@@ -1260,11 +929,6 @@ gucu_killchar ()
 	return s_ret;
 }
 
-// 1: int leaveok
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_leaveok (SCM arg1, SCM arg2)
 {
@@ -1280,10 +944,6 @@ gucu_leaveok (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: char *longname
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_longname ()
 {
@@ -1293,11 +953,6 @@ gucu_longname ()
 	return s_ret;
 }
 
-// 1: int meta
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_meta (SCM arg1, SCM arg2)
 {
@@ -1313,10 +968,6 @@ gucu_meta (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int mouseinterval
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_mouseinterval (SCM arg1)
 {
@@ -1330,11 +981,6 @@ gucu_mouseinterval (SCM arg1)
 	return s_ret;
 }
 
-// 1: int move
-// 2: int
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_move (SCM arg1, SCM arg2)
 {
@@ -1350,12 +996,6 @@ gucu_move (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int mvaddch
-// 2: int
-// 3:  int
-// 4:  const chtype
-// 5: 
-// 6: 
 SCM
 gucu_mvaddch (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -1373,13 +1013,6 @@ gucu_mvaddch (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int mvaddchnstr
-// 2: int
-// 3:  int
-// 4:  const chtype *
-// 5:  int
-// 6: 
-// 7: 
 SCM
 gucu_mvaddchnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -1401,12 +1034,6 @@ gucu_mvaddchnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int mvaddchstr
-// 2: int
-// 3:  int
-// 4:  const chtype *
-// 5: 
-// 6: 
 SCM
 gucu_mvaddchstr (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -1426,13 +1053,6 @@ gucu_mvaddchstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int mvaddnstr
-// 2: int
-// 3:  int
-// 4:  const char *
-// 5:  int
-// 6: 
-// 7: 
 SCM
 gucu_mvaddnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -1454,12 +1074,6 @@ gucu_mvaddnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int mvaddstr
-// 2: int
-// 3:  int
-// 4:  const char *
-// 5: 
-// 6: 
 SCM
 gucu_mvaddstr (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -1479,15 +1093,6 @@ gucu_mvaddstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int mvchgat
-// 2: int
-// 3:  int
-// 4:  int
-// 5:  attr_t
-// 6:  short
-// 7:  const void *
-// 8: 
-// 9: 
 SCM
 gucu_mvchgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6)
 {
@@ -1511,13 +1116,6 @@ gucu_mvchgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6)
 	return s_ret;
 }
 
-// 1: int mvcur
-// 2: int
-// 3:  int
-// 4:  int
-// 5:  int
-// 6: 
-// 7: 
 SCM
 gucu_mvcur (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -1537,11 +1135,6 @@ gucu_mvcur (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int mvdelch
-// 2: int
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_mvdelch (SCM arg1, SCM arg2)
 {
@@ -1557,12 +1150,6 @@ gucu_mvdelch (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int mvderwin
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_mvderwin (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -1580,11 +1167,6 @@ gucu_mvderwin (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int mvgetch
-// 2: int
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_mvgetch (SCM arg1, SCM arg2)
 {
@@ -1600,13 +1182,6 @@ gucu_mvgetch (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int mvhline
-// 2: int
-// 3:  int
-// 4:  chtype
-// 5:  int
-// 6: 
-// 7: 
 SCM
 gucu_mvhline (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -1626,11 +1201,6 @@ gucu_mvhline (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: chtype mvinch
-// 2: int
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_mvinch (SCM arg1, SCM arg2)
 {
@@ -1646,12 +1216,6 @@ gucu_mvinch (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int mvinsch
-// 2: int
-// 3:  int
-// 4:  chtype
-// 5: 
-// 6: 
 SCM
 gucu_mvinsch (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -1669,13 +1233,6 @@ gucu_mvinsch (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int mvinsnstr
-// 2: int
-// 3:  int
-// 4:  const char *
-// 5:  int
-// 6: 
-// 7: 
 SCM
 gucu_mvinsnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -1697,12 +1254,6 @@ gucu_mvinsnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int mvinsstr
-// 2: int
-// 3:  int
-// 4:  const char *
-// 5: 
-// 6: 
 SCM
 gucu_mvinsstr (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -1722,13 +1273,6 @@ gucu_mvinsstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int mvvline
-// 2: int
-// 3:  int
-// 4:  chtype
-// 5:  int
-// 6: 
-// 7: 
 SCM
 gucu_mvvline (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -1748,13 +1292,6 @@ gucu_mvvline (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int mvwaddch
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  const chtype
-// 6: 
-// 7: 
 SCM
 gucu_mvwaddch (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -1774,14 +1311,6 @@ gucu_mvwaddch (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int mvwaddchnstr
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  const chtype *
-// 6:  int
-// 7: 
-// 8: 
 SCM
 gucu_mvwaddchnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -1805,13 +1334,6 @@ gucu_mvwaddchnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
-// 1: int mvwaddchstr
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  const chtype *
-// 6: 
-// 7: 
 SCM
 gucu_mvwaddchstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -1833,14 +1355,6 @@ gucu_mvwaddchstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int mvwaddnstr
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  const char *
-// 6:  int
-// 7: 
-// 8: 
 SCM
 gucu_mvwaddnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -1864,13 +1378,6 @@ gucu_mvwaddnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
-// 1: int mvwaddstr
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  const char *
-// 6: 
-// 7: 
 SCM
 gucu_mvwaddstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -1892,16 +1399,6 @@ gucu_mvwaddstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int mvwchgat
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  int
-// 6:  attr_t
-// 7:  short
-// 8:  const void *
-// 9: 
-// 10: 
 SCM
 gucu_mvwchgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7)
 {
@@ -1927,12 +1424,6 @@ gucu_mvwchgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM a
 	return s_ret;
 }
 
-// 1: int mvwdelch
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_mvwdelch (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -1950,12 +1441,6 @@ gucu_mvwdelch (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int mvwgetch
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_mvwgetch (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -1973,14 +1458,6 @@ gucu_mvwgetch (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int mvwhline
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  chtype
-// 6:  int
-// 7: 
-// 8: 
 SCM
 gucu_mvwhline (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -2002,12 +1479,6 @@ gucu_mvwhline (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
-// 1: int mvwin
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_mvwin (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -2025,12 +1496,6 @@ gucu_mvwin (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: chtype mvwinch
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_mvwinch (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -2048,13 +1513,6 @@ gucu_mvwinch (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int mvwinsch
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  chtype
-// 6: 
-// 7: 
 SCM
 gucu_mvwinsch (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -2074,14 +1532,6 @@ gucu_mvwinsch (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int mvwinsnstr
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  const char *
-// 6:  int
-// 7: 
-// 8: 
 SCM
 gucu_mvwinsnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -2105,13 +1555,6 @@ gucu_mvwinsnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
-// 1: int mvwinsstr
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  const char *
-// 6: 
-// 7: 
 SCM
 gucu_mvwinsstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -2133,14 +1576,6 @@ gucu_mvwinsstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int mvwvline
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  chtype
-// 6:  int
-// 7: 
-// 8: 
 SCM
 gucu_mvwvline (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -2162,10 +1597,6 @@ gucu_mvwvline (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
-// 1: int napms
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_napms (SCM arg1)
 {
@@ -2179,11 +1610,6 @@ gucu_napms (SCM arg1)
 	return s_ret;
 }
 
-// 1: WINDOW *newpad
-// 2: int
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_newpad (SCM arg1, SCM arg2)
 {
@@ -2199,13 +1625,6 @@ gucu_newpad (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: WINDOW *newwin
-// 2: int
-// 3:  int
-// 4:  int
-// 5:  int
-// 6: 
-// 7: 
 SCM
 gucu_newwin (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -2225,10 +1644,6 @@ gucu_newwin (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int nl
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_nl ()
 {
@@ -2238,10 +1653,6 @@ gucu_nl ()
 	return s_ret;
 }
 
-// 1: int nocbreak
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_nocbreak ()
 {
@@ -2251,11 +1662,6 @@ gucu_nocbreak ()
 	return s_ret;
 }
 
-// 1: int nodelay
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_nodelay (SCM arg1, SCM arg2)
 {
@@ -2271,10 +1677,6 @@ gucu_nodelay (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int noecho
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_noecho ()
 {
@@ -2284,10 +1686,6 @@ gucu_noecho ()
 	return s_ret;
 }
 
-// 1: int nonl
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_nonl ()
 {
@@ -2297,10 +1695,6 @@ gucu_nonl ()
 	return s_ret;
 }
 
-// 1: void noqiflush
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_noqiflush ()
 {
@@ -2310,10 +1704,6 @@ gucu_noqiflush ()
 	return s_ret;
 }
 
-// 1: int noraw
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_noraw ()
 {
@@ -2323,11 +1713,6 @@ gucu_noraw ()
 	return s_ret;
 }
 
-// 1: int notimeout
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_notimeout (SCM arg1, SCM arg2)
 {
@@ -2343,11 +1728,6 @@ gucu_notimeout (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int overlay
-// 2: const WINDOW *
-// 3:  WINDOW *
-// 4: 
-// 5: 
 SCM
 gucu_overlay (SCM arg1, SCM arg2)
 {
@@ -2363,11 +1743,6 @@ gucu_overlay (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int overwrite
-// 2: const WINDOW *
-// 3:  WINDOW *
-// 4: 
-// 5: 
 SCM
 gucu_overwrite (SCM arg1, SCM arg2)
 {
@@ -2383,10 +1758,6 @@ gucu_overwrite (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int PAIR_NUMBER
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_PAIR_NUMBER (SCM arg1)
 {
@@ -2400,11 +1771,6 @@ gucu_PAIR_NUMBER (SCM arg1)
 	return s_ret;
 }
 
-// 1: int pechochar
-// 2: WINDOW *
-// 3:  chtype
-// 4: 
-// 5: 
 SCM
 gucu_pechochar (SCM arg1, SCM arg2)
 {
@@ -2420,16 +1786,6 @@ gucu_pechochar (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int pnoutrefresh
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  int
-// 6:  int
-// 7:  int
-// 8:  int
-// 9: 
-// 10: 
 SCM
 gucu_pnoutrefresh (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7)
 {
@@ -2455,16 +1811,6 @@ gucu_pnoutrefresh (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, S
 	return s_ret;
 }
 
-// 1: int prefresh
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  int
-// 6:  int
-// 7:  int
-// 8:  int
-// 9: 
-// 10: 
 SCM
 gucu_prefresh (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7)
 {
@@ -2490,10 +1836,6 @@ gucu_prefresh (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM a
 	return s_ret;
 }
 
-// 1: int putp
-// 2: const char *
-// 3: 
-// 4: 
 SCM
 gucu_putp (SCM arg1)
 {
@@ -2509,11 +1851,6 @@ gucu_putp (SCM arg1)
 	return s_ret;
 }
 
-// 1: int putwin
-// 2: WINDOW *
-// 3:  FILE *
-// 4: 
-// 5: 
 SCM
 gucu_putwin (SCM arg1, SCM arg2)
 {
@@ -2529,10 +1866,6 @@ gucu_putwin (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: void qiflush
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_qiflush ()
 {
@@ -2542,10 +1875,6 @@ gucu_qiflush ()
 	return s_ret;
 }
 
-// 1: int raw
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_raw ()
 {
@@ -2555,10 +1884,6 @@ gucu_raw ()
 	return s_ret;
 }
 
-// 1: int redrawwin
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_redrawwin (SCM arg1)
 {
@@ -2572,10 +1897,6 @@ gucu_redrawwin (SCM arg1)
 	return s_ret;
 }
 
-// 1: int refresh
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_refresh ()
 {
@@ -2585,10 +1906,6 @@ gucu_refresh ()
 	return s_ret;
 }
 
-// 1: int reset_prog_mode
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_reset_prog_mode ()
 {
@@ -2598,10 +1915,6 @@ gucu_reset_prog_mode ()
 	return s_ret;
 }
 
-// 1: int reset_shell_mode
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_reset_shell_mode ()
 {
@@ -2611,10 +1924,6 @@ gucu_reset_shell_mode ()
 	return s_ret;
 }
 
-// 1: int resetty
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_resetty ()
 {
@@ -2624,10 +1933,6 @@ gucu_resetty ()
 	return s_ret;
 }
 
-// 1: int savetty
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_savetty ()
 {
@@ -2637,10 +1942,6 @@ gucu_savetty ()
 	return s_ret;
 }
 
-// 1: int scr_dump
-// 2: const char *
-// 3: 
-// 4: 
 SCM
 gucu_scr_dump (SCM arg1)
 {
@@ -2656,10 +1957,6 @@ gucu_scr_dump (SCM arg1)
 	return s_ret;
 }
 
-// 1: int scr_init
-// 2: const char *
-// 3: 
-// 4: 
 SCM
 gucu_scr_init (SCM arg1)
 {
@@ -2675,10 +1972,6 @@ gucu_scr_init (SCM arg1)
 	return s_ret;
 }
 
-// 1: int scrl
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_scrl (SCM arg1)
 {
@@ -2692,10 +1985,6 @@ gucu_scrl (SCM arg1)
 	return s_ret;
 }
 
-// 1: int scroll
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_scroll (SCM arg1)
 {
@@ -2709,11 +1998,6 @@ gucu_scroll (SCM arg1)
 	return s_ret;
 }
 
-// 1: int scrollok
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_scrollok (SCM arg1, SCM arg2)
 {
@@ -2729,10 +2013,6 @@ gucu_scrollok (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int scr_restore
-// 2: const char *
-// 3: 
-// 4: 
 SCM
 gucu_scr_restore (SCM arg1)
 {
@@ -2748,10 +2028,6 @@ gucu_scr_restore (SCM arg1)
 	return s_ret;
 }
 
-// 1: int scr_set
-// 2: const char *
-// 3: 
-// 4: 
 SCM
 gucu_scr_set (SCM arg1)
 {
@@ -2767,11 +2043,6 @@ gucu_scr_set (SCM arg1)
 	return s_ret;
 }
 
-// 1: int setscrreg
-// 2: int
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_setscrreg (SCM arg1, SCM arg2)
 {
@@ -2787,10 +2058,6 @@ gucu_setscrreg (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: SCREEN *set_term
-// 2: SCREEN *
-// 3: 
-// 4: 
 SCM
 gucu_set_term (SCM arg1)
 {
@@ -2804,11 +2071,6 @@ gucu_set_term (SCM arg1)
 	return s_ret;
 }
 
-// 1: int slk_attr_off
-// 2: const attr_t
-// 3:  void *
-// 4: 
-// 5: 
 SCM
 gucu_slk_attr_off (SCM arg1, SCM arg2)
 {
@@ -2824,10 +2086,6 @@ gucu_slk_attr_off (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int slk_attroff
-// 2: const chtype
-// 3: 
-// 4: 
 SCM
 gucu_slk_attroff (SCM arg1)
 {
@@ -2841,11 +2099,6 @@ gucu_slk_attroff (SCM arg1)
 	return s_ret;
 }
 
-// 1: int slk_attr_on
-// 2: const attr_t
-// 3:  void *
-// 4: 
-// 5: 
 SCM
 gucu_slk_attr_on (SCM arg1, SCM arg2)
 {
@@ -2861,10 +2114,6 @@ gucu_slk_attr_on (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int slk_attron
-// 2: const chtype
-// 3: 
-// 4: 
 SCM
 gucu_slk_attron (SCM arg1)
 {
@@ -2878,12 +2127,6 @@ gucu_slk_attron (SCM arg1)
 	return s_ret;
 }
 
-// 1: int slk_attr_set
-// 2: const attr_t
-// 3:  short
-// 4:  void *
-// 5: 
-// 6: 
 SCM
 gucu_slk_attr_set (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -2901,10 +2144,6 @@ gucu_slk_attr_set (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int slk_attrset
-// 2: const chtype
-// 3: 
-// 4: 
 SCM
 gucu_slk_attrset (SCM arg1)
 {
@@ -2918,10 +2157,6 @@ gucu_slk_attrset (SCM arg1)
 	return s_ret;
 }
 
-// 1: int slk_clear
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_slk_clear ()
 {
@@ -2931,10 +2166,6 @@ gucu_slk_clear ()
 	return s_ret;
 }
 
-// 1: int slk_color
-// 2: short
-// 3: 
-// 4: 
 SCM
 gucu_slk_color (SCM arg1)
 {
@@ -2948,10 +2179,6 @@ gucu_slk_color (SCM arg1)
 	return s_ret;
 }
 
-// 1: int slk_init
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_slk_init (SCM arg1)
 {
@@ -2965,10 +2192,6 @@ gucu_slk_init (SCM arg1)
 	return s_ret;
 }
 
-// 1: char *slk_label
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_slk_label (SCM arg1)
 {
@@ -2982,10 +2205,6 @@ gucu_slk_label (SCM arg1)
 	return s_ret;
 }
 
-// 1: int slk_noutrefresh
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_slk_noutrefresh ()
 {
@@ -2995,10 +2214,6 @@ gucu_slk_noutrefresh ()
 	return s_ret;
 }
 
-// 1: int slk_refresh
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_slk_refresh ()
 {
@@ -3008,10 +2223,6 @@ gucu_slk_refresh ()
 	return s_ret;
 }
 
-// 1: int slk_restore
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_slk_restore ()
 {
@@ -3021,12 +2232,6 @@ gucu_slk_restore ()
 	return s_ret;
 }
 
-// 1: int slk_set
-// 2: int
-// 3:  const char *
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_slk_set (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -3046,10 +2251,6 @@ gucu_slk_set (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int slk_touch
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_slk_touch ()
 {
@@ -3059,10 +2260,6 @@ gucu_slk_touch ()
 	return s_ret;
 }
 
-// 1: int standend
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_standend ()
 {
@@ -3072,10 +2269,6 @@ gucu_standend ()
 	return s_ret;
 }
 
-// 1: int standout
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_standout ()
 {
@@ -3085,10 +2278,6 @@ gucu_standout ()
 	return s_ret;
 }
 
-// 1: int start_color
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_start_color ()
 {
@@ -3098,14 +2287,6 @@ gucu_start_color ()
 	return s_ret;
 }
 
-// 1: WINDOW *subpad
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  int
-// 6:  int
-// 7: 
-// 8: 
 SCM
 gucu_subpad (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -3127,14 +2308,6 @@ gucu_subpad (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
-// 1: WINDOW *subwin
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  int
-// 6:  int
-// 7: 
-// 8: 
 SCM
 gucu_subwin (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -3156,11 +2329,6 @@ gucu_subwin (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
-// 1: int syncok
-// 2: WINDOW *
-// 3:  bool
-// 4: 
-// 5: 
 SCM
 gucu_syncok (SCM arg1, SCM arg2)
 {
@@ -3176,10 +2344,6 @@ gucu_syncok (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: chtype termattrs
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_termattrs ()
 {
@@ -3189,10 +2353,6 @@ gucu_termattrs ()
 	return s_ret;
 }
 
-// 1: char *termname
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_termname ()
 {
@@ -3202,11 +2362,6 @@ gucu_termname ()
 	return s_ret;
 }
 
-// 1: int tgetent
-// 2: void *
-// 3:  const char *
-// 4: 
-// 5: 
 SCM
 gucu_tgetent (SCM arg1, SCM arg2)
 {
@@ -3224,10 +2379,6 @@ gucu_tgetent (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int tigetflag
-// 2: char *
-// 3: 
-// 4: 
 SCM
 gucu_tigetflag (SCM arg1)
 {
@@ -3241,10 +2392,6 @@ gucu_tigetflag (SCM arg1)
 	return s_ret;
 }
 
-// 1: int tigetnum
-// 2: char *
-// 3: 
-// 4: 
 SCM
 gucu_tigetnum (SCM arg1)
 {
@@ -3258,10 +2405,6 @@ gucu_tigetnum (SCM arg1)
 	return s_ret;
 }
 
-// 1: char *tigetstr
-// 2: char *
-// 3: 
-// 4: 
 SCM
 gucu_tigetstr (SCM arg1)
 {
@@ -3275,10 +2418,6 @@ gucu_tigetstr (SCM arg1)
 	return s_ret;
 }
 
-// 1: void timeout
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_timeout (SCM arg1)
 {
@@ -3292,12 +2431,6 @@ gucu_timeout (SCM arg1)
 	return s_ret;
 }
 
-// 1: int touchline
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_touchline (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -3315,10 +2448,6 @@ gucu_touchline (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int touchwin
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_touchwin (SCM arg1)
 {
@@ -3332,10 +2461,6 @@ gucu_touchwin (SCM arg1)
 	return s_ret;
 }
 
-// 1: int typeahead
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_typeahead (SCM arg1)
 {
@@ -3349,10 +2474,6 @@ gucu_typeahead (SCM arg1)
 	return s_ret;
 }
 
-// 1: int ungetch
-// 2: int
-// 3: 
-// 4: 
 SCM
 gucu_ungetch (SCM arg1)
 {
@@ -3366,10 +2487,6 @@ gucu_ungetch (SCM arg1)
 	return s_ret;
 }
 
-// 1: int untouchwin
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_untouchwin (SCM arg1)
 {
@@ -3383,10 +2500,6 @@ gucu_untouchwin (SCM arg1)
 	return s_ret;
 }
 
-// 1: int use_default_colors
-// 2: void
-// 3: 
-// 4: 
 SCM
 gucu_use_default_colors ()
 {
@@ -3396,10 +2509,6 @@ gucu_use_default_colors ()
 	return s_ret;
 }
 
-// 1: void use_env
-// 2: bool
-// 3: 
-// 4: 
 SCM
 gucu_use_env (SCM arg1)
 {
@@ -3413,10 +2522,6 @@ gucu_use_env (SCM arg1)
 	return s_ret;
 }
 
-// 1: int vidattr
-// 2: chtype
-// 3: 
-// 4: 
 SCM
 gucu_vidattr (SCM arg1)
 {
@@ -3430,11 +2535,6 @@ gucu_vidattr (SCM arg1)
 	return s_ret;
 }
 
-// 1: int vline
-// 2: chtype
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_vline (SCM arg1, SCM arg2)
 {
@@ -3450,11 +2550,6 @@ gucu_vline (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int waddch
-// 2: WINDOW *
-// 3:  const chtype
-// 4: 
-// 5: 
 SCM
 gucu_waddch (SCM arg1, SCM arg2)
 {
@@ -3470,12 +2565,6 @@ gucu_waddch (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int waddchnstr
-// 2: WINDOW *
-// 3:  const chtype *
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_waddchnstr (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -3495,11 +2584,6 @@ gucu_waddchnstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int waddchstr
-// 2: WINDOW *
-// 3:  const chtype *
-// 4: 
-// 5: 
 SCM
 gucu_waddchstr (SCM arg1, SCM arg2)
 {
@@ -3517,12 +2601,6 @@ gucu_waddchstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int waddnstr
-// 2: WINDOW *
-// 3:  const char *
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_waddnstr (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -3542,11 +2620,6 @@ gucu_waddnstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int waddstr
-// 2: WINDOW *
-// 3:  const char *
-// 4: 
-// 5: 
 SCM
 gucu_waddstr (SCM arg1, SCM arg2)
 {
@@ -3564,11 +2637,6 @@ gucu_waddstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int wattroff
-// 2: WINDOW *
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_wattroff (SCM arg1, SCM arg2)
 {
@@ -3584,11 +2652,6 @@ gucu_wattroff (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int wattron
-// 2: WINDOW *
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_wattron (SCM arg1, SCM arg2)
 {
@@ -3604,11 +2667,6 @@ gucu_wattron (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int wattrset
-// 2: WINDOW *
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_wattrset (SCM arg1, SCM arg2)
 {
@@ -3624,12 +2682,6 @@ gucu_wattrset (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int wattr_off
-// 2: WINDOW *
-// 3:  attr_t
-// 4:  void *
-// 5: 
-// 6: 
 SCM
 gucu_wattr_off (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -3647,12 +2699,6 @@ gucu_wattr_off (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int wattr_on
-// 2: WINDOW *
-// 3:  attr_t
-// 4:  void *
-// 5: 
-// 6: 
 SCM
 gucu_wattr_on (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -3670,11 +2716,6 @@ gucu_wattr_on (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int wbkgd
-// 2: WINDOW *
-// 3:  chtype
-// 4: 
-// 5: 
 SCM
 gucu_wbkgd (SCM arg1, SCM arg2)
 {
@@ -3690,11 +2731,6 @@ gucu_wbkgd (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: void wbkgdset
-// 2: WINDOW *
-// 3:  chtype
-// 4: 
-// 5: 
 SCM
 gucu_wbkgdset (SCM arg1, SCM arg2)
 {
@@ -3710,18 +2746,6 @@ gucu_wbkgdset (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int wborder
-// 2: WINDOW *
-// 3:  chtype
-// 4:  chtype
-// 5:  chtype
-// 6:  chtype
-// 7:  chtype
-// 8:  chtype
-// 9:  chtype
-// 10:  chtype
-// 11: 
-// 12: 
 SCM
 gucu_wborder (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7, SCM arg8, SCM arg9)
 {
@@ -3751,14 +2775,6 @@ gucu_wborder (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM ar
 	return s_ret;
 }
 
-// 1: int wchgat
-// 2: WINDOW *
-// 3:  int
-// 4:  attr_t
-// 5:  short
-// 6:  const void *
-// 7: 
-// 8: 
 SCM
 gucu_wchgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 {
@@ -3780,10 +2796,6 @@ gucu_wchgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
-// 1: int wclear
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wclear (SCM arg1)
 {
@@ -3797,10 +2809,6 @@ gucu_wclear (SCM arg1)
 	return s_ret;
 }
 
-// 1: int wclrtobot
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wclrtobot (SCM arg1)
 {
@@ -3814,10 +2822,6 @@ gucu_wclrtobot (SCM arg1)
 	return s_ret;
 }
 
-// 1: int wclrtoeol
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wclrtoeol (SCM arg1)
 {
@@ -3831,10 +2835,6 @@ gucu_wclrtoeol (SCM arg1)
 	return s_ret;
 }
 
-// 1: void wcursyncup
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wcursyncup (SCM arg1)
 {
@@ -3848,12 +2848,6 @@ gucu_wcursyncup (SCM arg1)
 	return s_ret;
 }
 
-// 1: int wcolor_set
-// 2: WINDOW *
-// 3:  short
-// 4:  void *
-// 5: 
-// 6: 
 SCM
 gucu_wcolor_set (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -3871,10 +2865,6 @@ gucu_wcolor_set (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int wdelch
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wdelch (SCM arg1)
 {
@@ -3888,10 +2878,6 @@ gucu_wdelch (SCM arg1)
 	return s_ret;
 }
 
-// 1: int wdeleteln
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wdeleteln (SCM arg1)
 {
@@ -3905,11 +2891,6 @@ gucu_wdeleteln (SCM arg1)
 	return s_ret;
 }
 
-// 1: int wechochar
-// 2: WINDOW *
-// 3:  const chtype
-// 4: 
-// 5: 
 SCM
 gucu_wechochar (SCM arg1, SCM arg2)
 {
@@ -3925,12 +2906,6 @@ gucu_wechochar (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: bool wenclose
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_wenclose (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -3948,10 +2923,6 @@ gucu_wenclose (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int werase
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_werase (SCM arg1)
 {
@@ -3965,10 +2936,6 @@ gucu_werase (SCM arg1)
 	return s_ret;
 }
 
-// 1: int wgetch
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wgetch (SCM arg1)
 {
@@ -3982,12 +2949,6 @@ gucu_wgetch (SCM arg1)
 	return s_ret;
 }
 
-// 1: int whline
-// 2: WINDOW *
-// 3:  chtype
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_whline (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -4005,10 +2966,6 @@ gucu_whline (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: chtype winch
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_winch (SCM arg1)
 {
@@ -4022,11 +2979,6 @@ gucu_winch (SCM arg1)
 	return s_ret;
 }
 
-// 1: int winsch
-// 2: WINDOW *
-// 3:  chtype
-// 4: 
-// 5: 
 SCM
 gucu_winsch (SCM arg1, SCM arg2)
 {
@@ -4042,11 +2994,6 @@ gucu_winsch (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int winsdelln
-// 2: WINDOW *
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_winsdelln (SCM arg1, SCM arg2)
 {
@@ -4062,10 +3009,6 @@ gucu_winsdelln (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int winsertln
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_winsertln (SCM arg1)
 {
@@ -4079,12 +3022,6 @@ gucu_winsertln (SCM arg1)
 	return s_ret;
 }
 
-// 1: int winsnstr
-// 2: WINDOW *
-// 3:  const char *
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_winsnstr (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -4104,11 +3041,6 @@ gucu_winsnstr (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int winsstr
-// 2: WINDOW *
-// 3:  const char *
-// 4: 
-// 5: 
 SCM
 gucu_winsstr (SCM arg1, SCM arg2)
 {
@@ -4126,12 +3058,6 @@ gucu_winsstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int wmove
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_wmove (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -4149,10 +3075,6 @@ gucu_wmove (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int wnoutrefresh
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wnoutrefresh (SCM arg1)
 {
@@ -4166,12 +3088,6 @@ gucu_wnoutrefresh (SCM arg1)
 	return s_ret;
 }
 
-// 1: int wredrawln
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_wredrawln (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -4189,10 +3105,6 @@ gucu_wredrawln (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int wrefresh
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wrefresh (SCM arg1)
 {
@@ -4206,11 +3118,6 @@ gucu_wrefresh (SCM arg1)
 	return s_ret;
 }
 
-// 1: int wscrl
-// 2: WINDOW *
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_wscrl (SCM arg1, SCM arg2)
 {
@@ -4226,12 +3133,6 @@ gucu_wscrl (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int wsetscrreg
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_wsetscrreg (SCM arg1, SCM arg2, SCM arg3)
 {
@@ -4249,10 +3150,6 @@ gucu_wsetscrreg (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
-// 1: int wstandend
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wstandend (SCM arg1)
 {
@@ -4266,10 +3163,6 @@ gucu_wstandend (SCM arg1)
 	return s_ret;
 }
 
-// 1: int wstandout
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wstandout (SCM arg1)
 {
@@ -4283,10 +3176,6 @@ gucu_wstandout (SCM arg1)
 	return s_ret;
 }
 
-// 1: void wsyncup
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wsyncup (SCM arg1)
 {
@@ -4300,10 +3189,6 @@ gucu_wsyncup (SCM arg1)
 	return s_ret;
 }
 
-// 1: void wsyncdown
-// 2: WINDOW *
-// 3: 
-// 4: 
 SCM
 gucu_wsyncdown (SCM arg1)
 {
@@ -4317,11 +3202,6 @@ gucu_wsyncdown (SCM arg1)
 	return s_ret;
 }
 
-// 1: void wtimeout
-// 2: WINDOW *
-// 3:  int
-// 4: 
-// 5: 
 SCM
 gucu_wtimeout (SCM arg1, SCM arg2)
 {
@@ -4337,13 +3217,6 @@ gucu_wtimeout (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int wtouchln
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  int
-// 6: 
-// 7: 
 SCM
 gucu_wtouchln (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
@@ -4363,12 +3236,6 @@ gucu_wtouchln (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int wvline
-// 2: WINDOW *
-// 3:  chtype
-// 4:  int
-// 5: 
-// 6: 
 SCM
 gucu_wvline (SCM arg1, SCM arg2, SCM arg3)
 {
