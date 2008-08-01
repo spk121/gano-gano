@@ -73,7 +73,8 @@ am__testbed_SOURCES_DIST = testbed.c ../src/raw/curs_const.c \
 	../src/raw/curs_spec.c ../src/raw/type.c \
 	../src/raw/menu_const.c ../src/raw/menu_func.c \
 	../src/raw/menu_main.c ../src/raw/menu_spec.c \
-	../src/raw/menu_type.c ../src/raw/panel_func.c \
+	../src/raw/menu_type.c ../src/raw/eti_const.c \
+	../src/raw/eti_main.c ../src/raw/panel_func.c \
 	../src/raw/panel_main.c ../src/raw/panel_spec.c \
 	../src/raw/panel_type.c ../src/raw/form_const.c \
 	../src/raw/form_func.c ../src/raw/form_main.c \
@@ -92,6 +93,7 @@ am_testbed_OBJECTS = testbed-testbed.$(OBJEXT) \
 	testbed-type.$(OBJEXT) testbed-menu_const.$(OBJEXT) \
 	testbed-menu_func.$(OBJEXT) testbed-menu_main.$(OBJEXT) \
 	testbed-menu_spec.$(OBJEXT) testbed-menu_type.$(OBJEXT) \
+	testbed-eti_const.$(OBJEXT) testbed-eti_main.$(OBJEXT) \
 	testbed-panel_func.$(OBJEXT) testbed-panel_main.$(OBJEXT) \
 	testbed-panel_spec.$(OBJEXT) testbed-panel_type.$(OBJEXT) \
 	testbed-form_const.$(OBJEXT) testbed-form_func.$(OBJEXT) \
@@ -249,11 +251,13 @@ testbed_SOURCES = testbed.c ../src/raw/curs_const.c \
 	../src/raw/curs_spec.c ../src/raw/type.c \
 	../src/raw/menu_const.c ../src/raw/menu_func.c \
 	../src/raw/menu_main.c ../src/raw/menu_spec.c \
-	../src/raw/menu_type.c ../src/raw/panel_func.c \
+	../src/raw/menu_type.c ../src/raw/eti_const.c \
+	../src/raw/eti_main.c ../src/raw/panel_func.c \
 	../src/raw/panel_main.c ../src/raw/panel_spec.c \
 	../src/raw/panel_type.c ../src/raw/form_const.c \
 	../src/raw/form_func.c ../src/raw/form_main.c \
 	../src/raw/form_spec.c ../src/raw/form_type.c $(am__append_1)
+EXTRA_DIST = keypress.scm
 gucushell_LDADD = @LIBNCURSES@ -lutil
 gucushell_CPPFLAGS = -Wextra -Wall 
 gucushell_LDFLAGS = 
@@ -366,6 +370,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-cursw_func.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-cursw_main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-cursw_spec.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-eti_const.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-eti_main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-form_const.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-form_func.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-form_main.Po@am__quote@
@@ -572,6 +578,34 @@ testbed-menu_type.obj: ../src/raw/menu_type.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/menu_type.c' object='testbed-menu_type.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testbed-menu_type.obj `if test -f '../src/raw/menu_type.c'; then $(CYGPATH_W) '../src/raw/menu_type.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/menu_type.c'; fi`
+
+testbed-eti_const.o: ../src/raw/eti_const.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testbed-eti_const.o -MD -MP -MF $(DEPDIR)/testbed-eti_const.Tpo -c -o testbed-eti_const.o `test -f '../src/raw/eti_const.c' || echo '$(srcdir)/'`../src/raw/eti_const.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/testbed-eti_const.Tpo $(DEPDIR)/testbed-eti_const.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/eti_const.c' object='testbed-eti_const.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testbed-eti_const.o `test -f '../src/raw/eti_const.c' || echo '$(srcdir)/'`../src/raw/eti_const.c
+
+testbed-eti_const.obj: ../src/raw/eti_const.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testbed-eti_const.obj -MD -MP -MF $(DEPDIR)/testbed-eti_const.Tpo -c -o testbed-eti_const.obj `if test -f '../src/raw/eti_const.c'; then $(CYGPATH_W) '../src/raw/eti_const.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/eti_const.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/testbed-eti_const.Tpo $(DEPDIR)/testbed-eti_const.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/eti_const.c' object='testbed-eti_const.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testbed-eti_const.obj `if test -f '../src/raw/eti_const.c'; then $(CYGPATH_W) '../src/raw/eti_const.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/eti_const.c'; fi`
+
+testbed-eti_main.o: ../src/raw/eti_main.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testbed-eti_main.o -MD -MP -MF $(DEPDIR)/testbed-eti_main.Tpo -c -o testbed-eti_main.o `test -f '../src/raw/eti_main.c' || echo '$(srcdir)/'`../src/raw/eti_main.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/testbed-eti_main.Tpo $(DEPDIR)/testbed-eti_main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/eti_main.c' object='testbed-eti_main.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testbed-eti_main.o `test -f '../src/raw/eti_main.c' || echo '$(srcdir)/'`../src/raw/eti_main.c
+
+testbed-eti_main.obj: ../src/raw/eti_main.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testbed-eti_main.obj -MD -MP -MF $(DEPDIR)/testbed-eti_main.Tpo -c -o testbed-eti_main.obj `if test -f '../src/raw/eti_main.c'; then $(CYGPATH_W) '../src/raw/eti_main.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/eti_main.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/testbed-eti_main.Tpo $(DEPDIR)/testbed-eti_main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/eti_main.c' object='testbed-eti_main.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testbed-eti_main.obj `if test -f '../src/raw/eti_main.c'; then $(CYGPATH_W) '../src/raw/eti_main.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/eti_main.c'; fi`
 
 testbed-panel_func.o: ../src/raw/panel_func.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testbed-panel_func.o -MD -MP -MF $(DEPDIR)/testbed-panel_func.Tpo -c -o testbed-panel_func.o `test -f '../src/raw/panel_func.c' || echo '$(srcdir)/'`../src/raw/panel_func.c

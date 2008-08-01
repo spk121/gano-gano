@@ -1,5 +1,17 @@
 2008-08-01  Mike Gran  <spike_gran@users.sourceforge.net>
 
+	* test/f00*.test: Add form/menu/panel tests.
+
+	* src/raw/eti.scm.in: split shared menu/form constants into its
+	own library
+	* src/raw/eti_const.h
+	* src/raw/eti_const.c
+	* src/raw/eti_main.c
+
+	* src/raw/curs_func.c: remove debug constants
+
+	* src/raw/Makefile.am: add eti library
+
 	* m4/lt~obsolete.m4: add new m4s for autoconf/make
 	* m4/ltsugar.m4
 	* m4/ltoptions.m4

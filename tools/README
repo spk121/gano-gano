@@ -5,4 +5,8 @@ testbed -- This is a guile shell statically linked with the curses
 
 gucushell -- This starts an interactive guile session that opens an
 	xterm that will be controlled by ncurses.
+
+keypress.scm -- This script helps one investigate how the keys in a
+	terminal map to curses key codes
+
 	

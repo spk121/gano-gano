@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.6 2008/06/03 11:36:43 spike_gran Exp $
+## $Id: Makefile.am,v 1.7 2008/08/01 16:04:53 spike_gran Exp $
 
 ########### TESTBED ############
 # The program testbed is a statically linked guile interpreter to use
@@ -28,6 +28,8 @@ testbed_SOURCES = \
 	../src/raw/menu_main.c \
 	../src/raw/menu_spec.c \
 	../src/raw/menu_type.c \
+	../src/raw/eti_const.c \
+	../src/raw/eti_main.c \
 	../src/raw/panel_func.c \
 	../src/raw/panel_main.c \
 	../src/raw/panel_spec.c \
@@ -54,6 +56,7 @@ endif
 # ncurses commands will execute in an xterm.
 
 bin_PROGRAMS = gucushell
+EXTRA_DIST = keypress.scm
 
 gucushell_LDADD = @LIBNCURSES@ -lutil
 gucushell_CPPFLAGS = -Wextra -Wall 
