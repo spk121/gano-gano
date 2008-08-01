@@ -26,7 +26,7 @@ BEGIN {
   n_args = NF-3;
 
   for(i=1;i<=NF;i++) {
-    print "// " i ": " $i;
+#    print "// " i ": " $i;
   }
 
   if(return_type ~ "void")
@@ -112,6 +112,10 @@ BEGIN {
       break;
     case "int":
       test_func = "scm_is_integer";
+      break;
+    case "ITEM *":
+    case "const ITEM *":
+      test_func = "_scm_is_item";
       break;
     case "MENU *":
     case "const MENU *":
@@ -212,6 +216,10 @@ BEGIN {
     case "FORM *":
     case "const FORM *":
       assign_func = "_scm_to_form";
+      break;
+    case "ITEM *":
+    case "const ITEM *":
+      assign_func = "_scm_to_item";
       break;
     case "MENU *":
     case "const MENU *":
@@ -327,6 +335,10 @@ BEGIN {
     break;
   case "int":
     assign_func = "scm_from_int";
+    break;
+  case "ITEM *":
+  case "const ITEM *":
+    assign_func = "_scm_from_item";
     break;
   case "MENU *":
   case "const MENU *":

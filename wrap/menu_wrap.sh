@@ -2,7 +2,7 @@
 
 # menu_wrap.sh -- generate scheme wrapper functions for wide curses
 
-# $Id: menu_wrap.sh,v 1.2 2008/06/03 11:36:45 spike_gran Exp $
+# $Id: menu_wrap.sh,v 1.3 2008/08/01 16:09:48 spike_gran Exp $
 
 # Put together a mostly complete wrapset from the files menu_func.txt
 # and menu_const.txt. 
@@ -106,12 +106,18 @@ void gucu_menu_init_constant (void) API;
 echo "
 ;; -*- Mode: scheme; -*-
 (define-module (XXpackageXX menu)
+        #:use-module (XXpackageXX eti)
 	#:export ( " > menu.scm.in
 
 awk --file="func_scm.awk" < menu_func.txt >> menu.scm.in
 awk --file="const_scm.awk" < menu_const.txt >> menu.scm.in
 awk --file="special_scm.awk" < menu_spec.txt >> menu.scm.in
-echo "))" >> menu.scm.in
-
 echo "
-(load-extension \"XXlibnameXX\" \"gucu_menu_init\")" >> menu.scm.in
+        )
+        #:re-export (
+" >> menu.scm.in
+awk --file="const_scm.awk" < eti_const.txt >> menu.scm.in
+echo "
+        ))
+(load-extension \"XXlibnameXX\" \"gucu_menu_init\")
+" >> menu.scm.in

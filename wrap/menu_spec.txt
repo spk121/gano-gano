@@ -1,6 +1,10 @@
+new-item
+item?
 new-menu
-free-menu
-scale-menu
-item-index
+menu?
+menu-format
+set-menu-items
+menu-items
 menu-spacing
+scale-menu
 menu-itemlen

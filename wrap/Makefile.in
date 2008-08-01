@@ -171,7 +171,8 @@ EXTRA_DIST = \
 	cursw_func.txt cursw_const.txt cursw_spec.txt cursw_wrap.sh \
 	menu_func.txt  menu_const.txt  menu_spec.txt  menu_wrap.sh  \
 	panel_func.txt panel_const.txt panel_spec.txt panel_wrap.sh \
-	form_func.txt  form_const.txt  form_spec.txt  form_wrap.sh 
+	form_func.txt  form_const.txt  form_spec.txt  form_wrap.sh \
+	               eti_const.txt                  eti_wrap.sh
 
 CLEANFILES = \
 	curs_const.c  curs_const.h  curs_func.c  curs_func.h  \
@@ -179,8 +180,9 @@ CLEANFILES = \
 	menu_const.c  menu_const.h  menu_func.c  menu_func.h  \
 	panel_const.c panel_const.h panel_func.c panel_func.h \
 	form_const.c  form_const.h  form_func.c  form_func.h \
+	eti_const.c   eti_const.h \
 	curses-raw.scm.in curses-wide-raw.scm.in \
-	menu.scm.in panel.scm.in form.scm.in
+	menu.scm.in panel.scm.in form.scm.in eti.scm.in
 
 all: all-am
 

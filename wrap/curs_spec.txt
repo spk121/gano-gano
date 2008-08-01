@@ -75,3 +75,4 @@
 	    stdscr
 	    curscr
 	    window?
+	    open-curses-port
