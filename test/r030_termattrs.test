@@ -25,7 +25,7 @@
 
 		  ;; Not sure what the correct answer for
 		  ;; erasechar should be.  Gnu/Linux xterm gives
-		  ;; #\del.  Cygwin gives *err*.
+		  ;; #\del.  Cygwin gives ERR.
 		  (pass-if "erasechar"
 			   (begin
 			     (clear)
@@ -34,13 +34,17 @@
 			     (let ((c (erasechar)))
 			       (eqv? c (char->integer #\del)))
 			     *unspecified*))
-
+		  
+		  ;; Not sure what the correct answer for killchar
+		  ;; should be.  Gnu/Linux xterm give #\nak. Cygwin
+		  ;; gives ERR
 		  (pass-if "killchar"
 			   (begin
 			     (clear)
 			     (refresh)
 			     (let ((c (killchar)))
-			       (eqv? c (char->integer #\nak)))))
+			       (eqv? c (char->integer #\nak)))
+			     *unspecified*))
 
 		  (pass-if "has-ic"
 			   (begin

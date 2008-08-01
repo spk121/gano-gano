@@ -1,0 +1,34 @@
+;;;; -*- Mode: scheme; -*-
+
+;;;; m008_menu_cursor.test --- pos-menu-cursor
+
+(use-modules (test lib)
+	     (test lib2)
+	     (srfi srfi-1)
+	     (gucu curses)
+	     (gucu menu))
+
+(define test (curses-test-start))
+
+(initscr)
+
+;; Should be able to make a menu
+(with-test-prefix "menu-cursor"
+
+		  (pass-if "(default)"
+			   (let* ((item1 (new-item "item1" "description1"))
+				  (menu (new-menu (list item1))))
+			     (post-menu menu)
+			     (mvaddstr 10 0 "blammo!")
+			     (pos-menu-cursor menu)
+			     (refresh)
+			     (sleep 3)
+			     (let* ((yx (getyx (stdscr)))
+				    (y (first yx))
+				    (x (second yx)))
+			       (unpost-menu menu)
+			       (refresh)
+			       (equal? y 0)))))
+(endwin)
+
+(curses-test-end test "m008_menu_cursor.out")

@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.7 2008/06/03 11:36:33 spike_gran Exp $
+## $Id: Makefile.am,v 1.8 2008/08/01 16:00:55 spike_gran Exp $
 
 all-local:
 	-ln -s ../src/raw @PACKAGE@
@@ -7,9 +7,9 @@ all-local:
 
 TESTS_ENVIRONMENT = LIBGUILE_GUCU_CURSES_MAJOR=@LIBGUILE_GUCU_CURSES_MAJOR@
 TESTS_ENVIRONMENT += ../libtool -dlopen ../src/raw/libguile-gucu-curses-v-0.la --mode=execute \
-	guile -L $(top_srcdir) -s 
+	guile -L $(top_srcdir) -L . -s 
 
-TESTS = r000_test.test \
+NARROWTESTS = r000_test.test \
 	r000_initscr.test \
 	r001_color.test \
 	r002_characters.test \
@@ -43,10 +43,29 @@ TESTS = r000_test.test \
 	r030_termattrs.test \
 	r031_touch.test \
 	r032_util.test \
-	f001_new_form.test
+	p001_panel.test \
+	f001_new_form.test \
+	f002_data.test \
+	f003_field_attributes.test \
+	f004_form_field.test \
+	f005_form_page.test \
+	f006_form_field_just.test \
+	f007_form_field_opts.test \
+	f008_form_field_buffer.test \
+	m001_new_menu.test \
+	m002_mitem_current.test \
+	m003_mitem_name.test \
+	m004_mitem_opts.test \
+	m005_mitem_value.test \
+	m006_mitem_visible.test \
+	m007_menu_attributes.test \
+	m008_menu_cursor.test \
+	m009_menu_format.test \
+	m010_menu_mark.test \
+	m011_menu_options.test
 
-if WIDE
-TESTS += \
+
+WIDETESTS = \
 	r033_add_wch.test \
 	r034_add_wchstr.test \
 	r035_addwstr.test \
@@ -54,12 +73,17 @@ TESTS += \
 	r037_border_set.test \
 	r038_get_wch.test \
 	r039_get_wstr.test 
+
+TESTS = $(NARROWTESTS)
+if WIDE
+TESTS += $(WIDETESTS)
 endif
 
 
 CLEANFILES = curses.log *.out
 
-EXTRA_DIST = $(TESTS) \
+EXTRA_DIST = $(NARROWTESTS) \
+	$(WIDETESTS) \
 	dotest-curses \
 	lib.scm \
 	lib2.scm 
