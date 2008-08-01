@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.11 2008/06/03 11:36:28 spike_gran Exp $
+## $Id: Makefile.am,v 1.12 2008/08/01 15:31:43 spike_gran Exp $
 
 # COMPILE_FLAGS = -Wall -W -Wunused-parameter -Wstrict-prototypes \
 # 	-Wmissing-prototypes -Wpointer-arith \
@@ -39,7 +39,10 @@ libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES = \
 	form_func.c form_func.h \
 	form_type.c form_type.h \
 	form_spec.c form_spec.h \
-	form_main.c
+	form_main.c \
+	eti_const.c eti_const.h \
+	eti_main.c
+
 
 
 # -lguile added to LIBS by autoconf in the AC_CHECK_LIB test
@@ -63,19 +66,19 @@ endif
 
 guile_sitedir = ${datadir}/guile/site
 pkgguile_sitedir = $(guile_sitedir)/$(PACKAGE)
-pkgguile_site_DATA = curses.scm curses-alt.scm menu.scm panel.scm form.scm
-ETAGS_ARGS = curses.scm curses-alt.scm menu.scm panel.scm form.scm
+pkgguile_site_DATA = curses.scm curses-alt.scm menu.scm panel.scm form.scm eti.scm
+ETAGS_ARGS = curses.scm curses-alt.scm menu.scm panel.scm form.scm eti.scm
 
 
 # Note that the "wide" .scm.in file needs to appear in EXTRA_DIST.  It
 # is part of the distribution regardless of whether it is used.
 EXTRA_DIST = \
 	curses.scm.in curses-wide.scm.in \
-	menu.scm.in panel.scm.in form.scm.in \
+	menu.scm.in panel.scm.in form.scm.in eti.scm.in \
 	curses-alt.scm curses-wide-alt.scm
 
-BUILT_SOURCES = curses.scm menu.scm panel.scm form.scm
-CLEANFILES = curses.scm menu.scm panel.scm form.scm
+BUILT_SOURCES = curses.scm menu.scm panel.scm form.scm eti.scm
+CLEANFILES = curses.scm menu.scm panel.scm form.scm eti.scm
 
 curses.scm: curses.scm.in
 	cat $< | \
@@ -93,6 +96,11 @@ panel.scm: panel.scm.in
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 form.scm: form.scm.in
+	cat $< | \
+	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXpackageXX|$(PACKAGE)|' > $@
+
+eti.scm: eti.scm.in
 	cat $< | \
 	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
