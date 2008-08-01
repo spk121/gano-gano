@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.13 2008/06/03 11:36:27 spike_gran Exp $
+@c $Id: gucu.texi,v 1.14 2008/08/01 15:17:02 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -22,7 +22,7 @@ screens.
 
 Copyright @copyright{} 1998-2007 Free Software Foundation, Inc. @*             
 Copyright @copyright{} 2001-2005 Pradeep Padala @*
-Copyright @copyright{} 2007 Michael L. Gran
+Copyright @copyright{} 2007,2008 Michael L. Gran
 
 @quotation
                                                                          
@@ -108,6 +108,7 @@ Types and encodings
 Curses Tutorial
 
 * Hello World!!!::              
+* Interactive sessions and @code{gucushell}::  
 * The Gory Details::            
 * Initialization::              
 * A word about windows::        
@@ -118,28 +119,18 @@ Curses Tutorial
 * Colors::                      
 * Interfacing with the keyboard::  
 * Interfacing with the mouse::  
+* Panels Library::              
+* Menu Library::                
+* Forms Library::               
 
 Hello World!!!
 
 * Using the Guile Curses module::  
 
-Using the Guile Curses module
-
-* About @code{initscr}::        
-* The mysterious @code{refresh}::  
-* About @code{endwin}::         
-
 Initialization
 
 * Initialization Functions::    
 * An example::                  
-
-Initialization Functions
-
-* @code{raw} and @code{cbreak}::  
-* @code{echo} and @code{noecho}::  
-* keypad::                      
-* halfdelay::                   
 
 Output functions
 
@@ -148,11 +139,6 @@ Output functions
 * A simple @code{addstr} example::  
 * A word of caution::           
 * Adding wide strings (tutorial)::  
-
-The @code{addch} class of functions
-
-* mvaddch::                     
-* Complex characters and @code{add-wch}::  
 
 @code{addstr} class of functions
 
@@ -197,10 +183,40 @@ Interfacing with the mouse
 * Getting the events::          
 * Miscellaneous functions::     
 
+Panels Library
+
+* Panels Basics::               
+* Compiling With the Panels Library::  
+* Moving and Resizing Panels::  
+
+Menu Library
+
+* Menu Basics::                 
+* Menu Driver::                 
+* Menu Windows::                
+* Scrolling Menus::             
+
+Forms Library
+
+* The Basics (Forms)::          
+* A Form Example::              
+* Making it useful::            
+* Playing with fields::         
+* Field Display Attributes::    
+* Field Option Bits::           
+* Field Status::                
+* Variable-Sized Fields::       
+* Form Windows::                
+* Field Validation::            
+* The Form Driver::             
+
 Curses Reference
 
 * The basic curses library::    
 * The wide curses library::     
+* The curses panel library::    
+* The curses menu library::     
+* The curses form library::     
 
 The basic curses library: @code{(gucu curses)}
 
@@ -240,16 +256,8 @@ The basic curses library: @code{(gucu curses)}
 * Miscellaneous utilities::     
 * Window creation::             
 
-Overview
-
-* Routine and Argument Names::  
-
 Routine and Argument Names
 
-
-Adding characters 
-
-* Line Graphics::               
 
 The wide curses library: @code{(gucu curses-wide)}
 
@@ -266,8 +274,43 @@ The wide curses library: @code{(gucu curses-wide)}
 * Inserting a unrendered wide string into a window::  
 * Getting a string of unrendered wide characters from a window::  
 
+The curses menu library: @code{(gucu menu)}
+
+* Menus Overview::              
+* Menu Item Procedures::        
+* Menu Procedures::             
+* Menu creation ::              
+* Menu options::                
+
+Menu Procedures
+
+* Menu Colors and Attributes::  
+* Positioning a menu cursor::   
+* The menu driver::             
+* Menu sizes::                  
+* Menu mark strings::           
+
+Menu options
+
+* Menu pattern buffer::         
+* Writing or erasing menus from window::  
+* Control spacing between menu items::  
+* Associate menus with window::  
+
 The curses form library: @code{(gucu form)}
 
+* Forms Overview::              
+* Form procedures::             
+* Making or breaking connections between forms and fields::  
+* Color and attribute control for form fields::  
+* Data type validation for fields::  
+* Creating forms::              
+* Form pagination functions::   
+* Setting and getting form options::  
+* Setting the page number and field::  
+* Writing or erasing forms from associated subwindows::  
+* Printable form request names::  
+* Form windows::                
 
 @end detailmenu
 @end menu
@@ -710,6 +753,46 @@ that save window information to a file, load window information from a
 file, or interact with ports, such as @code{newterm},
 @code{typeahead}, and @code{putwin}.
 
+@item The @code{#<panel>} type
+
+@tindex #<panel>
+@findex new-panel
+
+The @code{#<panel>} type is an opaque type that represents a window's
+place in a stack of windows.  It is created with @code{new-panel}.  It
+is used in functions that deal with overlapping windows
+
+@item The @code{#<item>} type
+
+@tindex #<item>
+@findex new-item
+
+The @code{#<item>} type is an opaque type that represents one menu
+item in a menu.  It is created with @code{new-item}.  It is part of
+the menu library.
+
+@item The @code{#<menu>} type
+
+@tindex #<menu>
+@findex new-menu
+
+The @code{#<menu>} type is an opaque type that represents a menu.
+It is created with @code{new-menu} from a list of @code{#<item>}
+types.
+
+@item The @code{#<field>} type
+
+@tindex #<field>
+
+The @code{#<field>} type is an opaque type that represents one text
+box or entry on a form.
+
+@item The @code{#<form>} type
+
+@tindex #<form>
+
+This represents a form, created using @code{new-form} from a list of
+elements of type @code{#<field>}.
 
 
 @end table
@@ -719,6 +802,7 @@ file, or interact with ports, such as @code{newterm},
 
 @menu
 * Hello World!!!::              
+* Interactive sessions and @code{gucushell}::  
 * The Gory Details::            
 * Initialization::              
 * A word about windows::        
@@ -729,9 +813,12 @@ file, or interact with ports, such as @code{newterm},
 * Colors::                      
 * Interfacing with the keyboard::  
 * Interfacing with the mouse::  
+* Panels Library::              
+* Menu Library::                
+* Forms Library::               
 @end menu
 
-@node Hello World!!!, The Gory Details, Curses Tutorial, Curses Tutorial
+@node Hello World!!!, Interactive sessions and @code{gucushell}, Curses Tutorial, Curses Tutorial
 @section Hello World!!!
 
 Welcome to the world of curses.  Before we plunge into the library and
@@ -772,13 +859,7 @@ the user to press any key, and then exits.  This program shows how to
 initialize curses and do screen manipulation and end curses mode.
 Let's dissect it line by line.
 
-@menu
-* About @code{initscr}::        
-* The mysterious @code{refresh}::  
-* About @code{endwin}::         
-@end menu
 
-@node About @code{initscr}, The mysterious @code{refresh}, Using the Guile Curses module, Using the Guile Curses module
 @subsubsection About @code{initscr}
 
 @findex initscr
@@ -795,7 +876,6 @@ structures.
 After this is done, we can do a variety of initializations to
 customize our curses settings
 
-@node The mysterious @code{refresh}, About @code{endwin}, About @code{initscr}, Using the Guile Curses module
 @subsubsection The mysterious @code{refresh}
 
 The next line @code{addstr} prints the string ``Hello World!!!'' on to
@@ -821,7 +901,6 @@ too.  But, it is sometimes frustrating to beginners.  A common mistake
 committed by beginners is to forget to call @code{refresh} after they
 did some update through @code{addstr}.
 
-@node About @code{endwin},  , The mysterious @code{refresh}, Using the Guile Curses module
 @subsubsection About @code{endwin}
 
 And finally, don't forget to end the curses mode.  Otherwise your
@@ -830,6 +909,7 @@ terminal might behave strangely after the program quits.
 data structures and puts the terminal in normal mode.  This function
 must be called after you are done with curses mode.
 
+@node  Interactive sessions and @code{gucushell}, The Gory Details, Hello World!!!, Curses Tutorial
 @section Interactive sessions and @code{gucushell}
 
 If you would like to try out these functions interactively by typing
@@ -854,7 +934,7 @@ interactive session.
 When exiting an interactive session, by @kbd{C-D} for example,
 @code{gucushell} automatically calls @code{(endwin)}.
 
-@node The Gory Details, Initialization, Hello World!!!, Curses Tutorial
+@node The Gory Details, Initialization, Interactive sessions and @code{gucushell}, Curses Tutorial
 @section The Gory Details
 
 Now that we've seen how to write a simple curses program, let's get
@@ -881,14 +961,6 @@ are normally called immediately after @code{initscr}.
 @node Initialization Functions, An example, Initialization, Initialization
 @subsection Initialization Functions
 
-@menu
-* @code{raw} and @code{cbreak}::  
-* @code{echo} and @code{noecho}::  
-* keypad::                      
-* halfdelay::                   
-@end menu
-
-@node @code{raw} and @code{cbreak}, @code{echo} and @code{noecho}, Initialization Functions, Initialization Functions
 @subsubsection @code{raw} and @code{cbreak}
 
 Normally the terminal driver buffers the characters a user types until
@@ -903,14 +975,12 @@ directly passed to the program without generating a signal.  In the
 other character by the terminal driver, allowing Ctrl-C and Ctrl-Z to
 quit and suspend the program.
 
-@node @code{echo} and @code{noecho}, keypad, @code{raw} and @code{cbreak}, Initialization Functions
 @subsubsection @code{echo} and @code{noecho}
 
 These functions control the echoing of characters typed by the user to
 the terminal.  @code{noecho} switches off echoing. With echoing off,
 when a user presses a character, it is not displayed on the screen.
 
-@node keypad, halfdelay, @code{echo} and @code{noecho}, Initialization Functions
 @subsubsection keypad
 
 This function enables the reading of function keys like @key{F1},
@@ -919,7 +989,6 @@ this, as arrow keys are a major part of any user interface.  Do
 @code{(keypad (stdscr) #t)} to enable this feature for the regular
 screen @code{stdscr}. 
 
-@node halfdelay,  , keypad, Initialization Functions
 @subsubsection halfdelay
 
 This function is useful when you want to ask the user for input, and
@@ -1067,12 +1136,6 @@ Additionally, curses provides some special characters for
 character-based graphics.  You can draw tables, horizonal or vertical
 lines.  Try looking for the procedures beginning with @code{acs-}.
 
-@menu
-* mvaddch::                     
-* Complex characters and @code{add-wch}::  
-@end menu
-
-@node mvaddch, Complex characters and @code{add-wch}, The @code{addch} class of functions, The @code{addch} class of functions
 @subsubsection mvaddch, waddch, and mvwaddch
 
 @code{mvaddch} is used to move the cursor to a given point, and then
@@ -1093,7 +1156,6 @@ character into the window @code{stdscr}.
 In a similar fashion, @code{mvwaddch} is used to add a character into
 the given window at the given coordinates.
 
-@node Complex characters and @code{add-wch},  , mvaddch, The @code{addch} class of functions
 @subsubsection Complex characters and @code{add-wch}
 
 For every function that operates on narrow characters, there is a
@@ -1229,7 +1291,8 @@ function is @code{noecho}.  As the name suggests, when this function
 is set (used), the characters that are keyed in by the user will not
 show up on the screen.  The two functions @code{cbreak} and
 @code{noecho} are typical examples of key management.
-For details @xref{@code{echo} and @code{noecho}}.
+
+
 @node @code{getnstr} class of functions, An example of @code{getnstr} and @code{getch}, @code{getch} class of functions, Input functions
 @subsection @code{getnstr} class of functions
 
@@ -1966,7 +2029,7 @@ by up and down arrows.
 (main)
 @end example
 
-@node Interfacing with the mouse,  , Interfacing with the keyboard, Curses Tutorial
+@node Interfacing with the mouse, Panels Library, Interfacing with the keyboard, Curses Tutorial
 @section Interfacing with the mouse
 
 Now that you have seen how to get keys, let's do the same thing from
@@ -2076,6 +2139,363 @@ thousandths of a second) that can elapse between press and release
 events in order for them to be recognized as a click. The default is
 one-fifth of a second.
 
+@node Panels Library, Menu Library, Interfacing with the mouse, Curses Tutorial
+@section Panels Library
+
+Curses was originally build around the idea of having tiled text
+windows, where they did not overlap.  The API is not set up to do the
+bookkeeping for overlapping windows.
+
+Now that you are proficient in curses, you wanted to do some thing
+big. You created a lot of overlapping windows to give a professional
+windows-type look. Unfortunately, it soon becomes difficult to manage
+these. The multiple refreshes, updates plunge you into a
+nightmare. The overlapping windows create blotches, whenever you
+forget to refresh the windows in the proper order.
+
+Don't despair. There's an elegant solution provided in panels
+library.
+
+When your interface design is such that windows may dive deeper into
+the visibility stack or pop to the top at runtime, the resulting
+book-keeping can be tedious and difficult to get right. Hence the
+panels library.
+
+If you have lot of overlapping windows, then panels library is the way
+to go.  It obviates the need of doing series of @code{wnoutrefresh},
+@code{doupdate} and relieves the burden of doing it correctly (bottom
+up). The library maintains information about the order of windows,
+their overlapping and update the screen properly. So why wait? Let's
+take a close peek into panels.
+
+@menu
+* Panels Basics::               
+* Compiling With the Panels Library::  
+* Moving and Resizing Panels::  
+@end menu
+
+@node Panels Basics, Compiling With the Panels Library, Panels Library, Panels Library
+@subsection Panels Basics
+
+The @code{#<panel>} object is a window that is implicitly treated as
+part of a deck including all other panel objects. The deck is treated
+as a stack with the top panel being completely visible and the other
+panels may or may not be obscured according to their positions. So the
+basic idea is to create a stack of overlapping panels and use panels
+library to display them correctly. There is a function similar to
+@code{refresh} which, when called , displays panels in the correct
+order. Functions are provided to hide or show panels, move panels,
+change its size etc.. The overlapping problem is managed by the panels
+library during all the calls to these functions.
+
+The general flow of a panel program goes like this:
+
+@enumerate
+@item
+Create the windows (with @code{newwin}) to be attached to the panels.
+   
+@item
+Create panels with the chosen visibility order. Stack them up
+according to the desired visibility. The function @code{new-panel} is
+used to create panels.
+
+@item
+Call @code{update-panels} to write the panels to the virtual screen in
+correct visibility order. Do a @code{doupdate} to show it on the
+screen.
+   
+@item
+Mainpulate the panels with @code{show-panel}, @code{hide-panel},
+@code{move-panel} etc.  Make use of helper functions like
+@code{panel-hidden} and @code{panel-window}. 
+   
+@item
+When you are done with the panel use @code{del-panel} to delete the
+panel.
+   
+@end enumerate
+
+Let's make the concepts clear, with some programs. The following is a simple
+program which creates 3 overlapping panels and shows them on the screen.
+
+@node Compiling With the Panels Library, Moving and Resizing Panels, Panels Basics, Panels Library
+@subsection Compiling With the Panels Library
+
+To use panels library functions, you have to use the module
+@code{(gucu panel)}.
+
+@example
+@include panel_example1.scm
+@end example
+
+
+As you can see, above program follows a simple flow as explained. The
+windows are created with @code{newwin} and then they are attached to
+panels with @code{new-panel}. As we attach one panel after another,
+the stack of panels gets updated.  To put them on screen
+@code{update-panels} and @code{doupdate} are called.
+
+@node Moving and Resizing Panels,  , Compiling With the Panels Library, Panels Library
+@subsection Moving and Resizing Panels
+
+The procedure @code{move-panel} can be used to move a panel to the
+desired location. It does not change the position of the panel in the
+stack. Make sure that you use @code{move-panel} instead @code{mvwin}
+on the window associated with the panel.
+
+Resizing a panel is slightly complex. There is no straight forward
+function just to resize the window associated with a panel. A solution
+to resize a panel is to create a new window with the desired sizes,
+change the window associated with the panel using
+@code{replace-panel}. Don't forget to delete the old window. The
+window associated with a panel can be found by using the function
+@code{panel-window}.
+
+
+@node Menu Library, Forms Library, Panels Library, Curses Tutorial
+@section Menu Library
+
+The menus library provides a nice extension to basic curses, through
+which you can create menus. It provides a set of functions to create
+menus. But they have to be customized to give a nicer look, with
+colors etc. Let's get into the details.
+
+A menu is a screen display that assists the user to choose some subset
+of a given set of items. To put it simple, a menu is a collection of
+items from which one or more items can be chosen. Some readers might
+not be aware of multiple item selection capability. Menu library
+provides functionality to write menus from which the user can chose
+more than one item as the preferred choice. This is dealt with in a
+later section. Now it is time for some rudiments.
+
+@menu
+* Menu Basics::                 
+* Menu Driver::                 
+* Menu Windows::                
+* Scrolling Menus::             
+@end menu
+
+@node Menu Basics, Menu Driver, Menu Library, Menu Library
+@subsection Menu basics
+
+To create menus, you first create items, and then post the menu to the
+display. After that, all the processing of user responses is done in
+an elegant function @code{menu-driver} which is the work horse of any
+menu program.
+
+The general flow of control of a menu program looks like this.
+
+@enumerate
+@item
+Initialize curses
+
+@item   
+Create items using @code{new-item}. You can specify a name and description
+for the items.
+
+@item
+Create the menu with @code{new-menu} by specifying the items to be
+attached with.
+
+@item 
+Post the menu with @code{menu-post} and refresh the screen.
+
+@item
+Process the user requests with a loop and do necessary updates to menu
+with @code{menu-driver}.
+
+@item   
+Unpost the menu with @code{menu-unpost}.
+   
+@item   
+End curses
+
+@end enumerate
+
+Let's see a program which prints a simple menu and updates the current
+selection with up, down arrows.
+
+To use menu library functions, you have to use the module @code{(gucu
+menu)}.
+
+@example
+@include menu_example1.scm
+@end example
+
+This program demonstrates the basic concepts involved in creating a
+menu using menus library. First we create the items using
+@code{new-item} and then attach them to the menu with @code{new-menu}
+function. After posting the menu and refreshing the screen, the main
+processing loop starts. It reads user input and takes corresponding
+action. The function menu_driver() is the main work horse of the menu
+system. The second parameter to this function tells what's to be done
+with the menu. According to the parameter, @code{menu-driver} does the
+corresponding task. The value can be either a menu navigational
+request, an ascii character, or a @code{KEY_MOUSE} special key
+associated with a mouse event.
+
+The menu_driver accepts following navigational requests.
+@table @code
+@item REQ_LEFT_ITEM         
+Move left to an item.                                  
+@item REQ_RIGHT_ITEM 
+Move right to an item.                                   
+@item REQ_UP_ITEM 
+Move up to an item.                                      
+@item REQ_DOWN_ITEM 
+Move down to an item.                                    
+@item REQ_SCR_ULINE 
+Scroll up a line.                                        
+@item REQ_SCR_DLINE 
+Scroll down a line.                                   
+@item REQ_SCR_DPAGE 
+Scroll down a page.                                   
+@item REQ_SCR_UPAGE 
+Scroll up a page.                                      
+@item REQ_FIRST_ITEM 
+Move to the first item.                                   
+@item REQ_LAST_ITEM 
+Move to the last item.                                 
+@item REQ_NEXT_ITEM 
+Move to the next item.                                 
+@item REQ_PREV_ITEM 
+Move to the previous item.                             
+@item REQ_TOGGLE_ITEM 
+Select/deselect an item.                                 
+@item REQ_CLEAR_PATTERN 
+Clear the menu pattern buffer.                         
+@item REQ_BACK_PATTERN 
+Delete the previous character from the pattern buffer. 
+@item REQ_NEXT_MATCH 
+Move to the next item matching the pattern match.         
+@item REQ_PREV_MATCH 
+Move to the previous item matching the pattern match.     
+@end table
+
+Don't get overwhelmed by the number of options. We will see them
+slowly one after another. The options of interest in this example are
+@code{REQ_UP_ITEM} and @code{REQ_DOWN_ITEM}. These two options when
+passed to menu_driver, menu driver updates the current item to one
+item up or down respectively.
+
+@node Menu Driver, Menu Windows, Menu Basics, Menu Library
+@subsection Menu Driver: The work horse of the menu system
+
+As you have seen in the above example, @code{menu-driver} plays an
+important role in updating the menu. It is very important to
+understand various options it takes and what they do. As explained
+above, the second parameter to @code{menu-driver} can be either a
+navigational request, a printable character or a @code{KEY_MOUSE}
+key. Let's dissect the different navigational requests.
+
+@table @code
+@item REQ_LEFT_ITEM and REQ_RIGHT_ITEM
+   
+A Menu can be displayed with multiple columns for more than one item.
+This can be done by using the @code{menu-format} function. When a
+multicolumnar menu is displayed these requests cause the menu driver
+to move the current selection to left or right.
+
+@item REQ_UP_ITEM and REQ_DOWN_ITEM
+
+These two options you have seen in the above example. These options
+when given, makes the @code{menu-driver} to move the current selection
+to an item up or down.
+
+@item REQ_SCR_* options
+   
+The four options @code{REQ_SCR_ULINE}, @code{REQ_SCR_DLINE},
+@code{REQ_SCR_DPAGE}, @code{REQ_SCR_UPAGE} are related to
+scrolling. If all the items in the menu cannot be displayed in the
+menu sub window, then the menu is scrollable.  These requests can be
+given to the @code{menu-driver} to do the scrolling either one line
+up, down or one page down or up respectively.
+
+@item REQ_FIRST_ITEM, REQ_LAST_ITEM, REQ_NEXT_ITEM and REQ_PREV_ITEM
+   
+Easy enough.
+
+@item REQ_TOGGLE_ITEM
+   
+This request when given, toggles the present selection. This option is
+to be used only in a multivalued menu. So to use this request the
+option @code{O_ONEVALUE} must be off. This option can be made off or
+on with @code{set_menu_opts}.
+
+@item Pattern Requests
+   
+Every menu has an associated pattern buffer, which is used to find the
+nearest match to the ascii characters entered by the user. Whenever
+ascii characters are given to menu_driver, it puts in to the pattern
+buffer. It also tries to find the nearest match to the pattern in the
+items list and moves current selection to that item. The request
+@code{REQ_CLEAR_PATTERN} clears the pattern buffer. The request
+@code{REQ_BACK_PATTERN} deletes the previous character in the pattern
+buffer. In case the pattern matches more than one item then the
+matched items can be cycled through @code{REQ_NEXT_MATCH} and
+@code{REQ_PREV_MATCH} which move the current selection to the next and
+previous matches respectively.
+
+@item Mouse Requests
+   
+In case of @code{KEY_MOUSE} requests, according to the mouse position
+an action is taken accordingly. The action to be taken is explained in
+the man page as, If the second argument is the @code{KEY_MOUSE}
+special key, the associated mouse event is translated into one of the
+above pre-defined requests.  Currently only clicks in the user window
+(e.g. inside the menu display area or the decoration window) are
+handled. If you click above the display region of the menu, a
+@code{REQ_SCR_ULINE} is generated, if you doubleclick a
+@code{REQ_SCR_UPAGE} is generated and if you tripleclick a
+@code{REQ_FIRST_ITEM} is generated.  If you click below the display
+region of the menu, a REQ_SCR_DLINE is generated, if you doubleclick a
+@code{REQ_SCR_DPAGE} is generated and if you tripleclick a
+@code{REQ_LAST_ITEM} is generated. If you click at an item inside the
+display area of the menu, the menu cursor is positioned to that item.
+
+@end table
+   
+Each of the above requests will be explained in the following lines with
+several examples whenever appropriate.
+
+@node Menu Windows, Scrolling Menus, Menu Driver, Menu Library
+@subsection Menu Windows
+
+Every menu created is associated with a window and a sub window. The
+menu window displays any title or border associated with the menu. The
+menu sub window displays the menu items currently available for
+selection. But we didn't specify any window or sub window in the
+simple example. When a window is not specified, @code{stdscr} is taken
+as the main window, and then menu system calculates the sub window
+size required for the display of items. Then items are displayed in
+the calculated sub window. So let's play with these windows and
+display a menu with a border and a title.
+
+
+@example
+@include menu_example2.scm
+@end example
+
+This example creates a menu with a title, border, a fancy line
+separating title and the items. As you can see, in order to attach a
+window to a menu the function @code{set-menu-win} has to be used. Then
+we attach the sub window also. This displays the items in the sub
+window. You can also set the mark string which gets displayed to the
+left of the selected item with @code{set-menu-mark}.
+-----------------------------------------------------------------------------
+
+@node Scrolling Menus,  , Menu Windows, Menu Library
+@subsection Scrolling Menus
+
+If the sub window given for a window is not big enough to show all the
+items, then the menu will be scrollable. When you are on the last item
+in the present list, if you send @code{REQ_DOWN_ITEM}, it gets
+translated into @code{REQ_SCR_DLINE} and the menu scrolls by one
+item. You can manually give @code{REQ_SCR_} operations to do
+scrolling. Let's see how it can be done.
+
+
+@node Forms Library,  , Menu Library, Curses Tutorial
 @section Forms Library
 
 Well, if you have seen those forms on web pages that take input from
@@ -2090,6 +2510,21 @@ A form is a collection of fields. Each field can be either a label
 (static text) or a data-entry location.  The forms library also
 provices functions to divide forms into multiple pages.  
 
+@menu
+* The Basics (Forms)::          
+* A Form Example::              
+* Making it useful::            
+* Playing with fields::         
+* Field Display Attributes::    
+* Field Option Bits::           
+* Field Status::                
+* Variable-Sized Fields::       
+* Form Windows::                
+* Field Validation::            
+* The Form Driver::             
+@end menu
+
+@node  The Basics (Forms), A Form Example, Forms Library, Forms Library
 @subsection The Basics
 
 Forms are created in much the same way as menus.  First, the fields
@@ -2136,6 +2571,7 @@ The forms library is similar to the menu library.  The following
 examples will explore various aspects of form processing.  Let's stat
 the journey with a simple example first.
 
+@node A Form Example, Making it useful, The Basics (Forms), Forms Library
 @subsection A Form Example
 
 To use form library functions, you have to include @code{(gucu
@@ -2229,6 +2665,68 @@ inputs are processed in the loop, by making corresponding request to
 @code{form-driver}.  The details of all the request to
 @code{form-driver} are explained later.
 
+@node  Making it useful, Playing with fields, A Form Example, Forms Library
+@subsection Making it useful
+
+The previous example does create a form and allow one to move between
+the fields, but, it doesn't perform the useful function of allowing
+the program to fetch the contents of those fields.  Also, the basic
+editing features like @key{BS} and @key{DELETE} are not connected.
+
+To make it useful, it needs a couple of important 
+changes.  First, it passes more of the important editing commands like
+@key{BS} and @key{DELETE} to the form driver for processing.  Second,
+it fetches the final content of the fields as one would normally do in
+a form application. 
+
+A more complete editing loop might look like this
+@example
+;; Loop through to get user requests
+(let loop ((ch (getch)))
+  (if (not (eqv? ch (key-f 1)))
+      (begin
+	(cond
+	 ((eqv? ch KEY_DOWN)
+	  (begin
+	    ;; Go to the end of the next field
+	    (form-driver my-form REQ_NEXT_FIELD)
+	    (form-driver my-form REQ_END_LINE)))
+	 ((eqv? ch KEY_UP)
+	  (begin
+	    ;; Go to the end of the previous field
+	    (form-driver my-form REQ_PREV_FIELD)
+	    (form-driver my-form REQ_END_LINE)))
+	 ((eqv? ch KEY_LEFT)
+	  (form-driver my-form REQ_PREV_CHAR))
+	 ((eqv? ch KEY_RIGHT)
+	  (form-driver my-form REQ_NEXT_CHAR))
+	 ((eqv? ch KEY_DC)
+	  (form-driver my-form REQ_DEL_CHAR))
+	 ((eqv? ch KEY_BACKSPACE)
+	  (form-driver my-form REQ_DEL_PREV))
+	 (else
+	  (form-driver my-form ch)))
+	(loop (getch)))))
+@end example
+
+And, gathering the contents of the form can be accomplished like this:
+
+@example
+;; Move the cursor to ensure that the last characters typed by the
+;; user get committed to the field buffer.
+(form-driver my-form REQ_LAST_FIELD)
+;; Unpost the form
+(unpost-form my-form)
+
+;; Store the contents of the field
+(let ((result1 (field-buffer (first field) 0))
+      (result2 (field-buffer (second field) 0)))
+  (endwin)
+  (display (string-append "You typed " result1 " and " result2))
+  (newline))
+@end example
+
+@node Playing with fields, Field Display Attributes, Making it useful, Forms Library
 @subsection Playing with fields
 
 Each form field is associated with lots of attributes.  They can be
@@ -2247,7 +2745,8 @@ The procedure @code{field-info} takes a field and returns a list:
 height, width, top, left, offscreen, and number of buffers.
 
 The location of the field can be moved to a different position with
-@code{move-field}. 
+@code{move-field}, but, only if this field hasn't become part of a
+form.  (This function is thus mostly useless.)
 
 @example
 (move-field field top left)
@@ -2266,12 +2765,12 @@ The justification mode value is the either @code{NO_JUSTIFICATION},
 
 The procedure @code{field-just} returns the justification mode.
 
-
+@node Field Display Attributes, Field Option Bits, Playing with fields, Forms Library
 @subsection Field Display Attributes
 
 As you have seen, in the above example, display attribues for the
 fields can be set with @code{set-field-fore} and
-@code{set-field-back}.  The3se Functions set foreground and background
+@code{set-field-back}.  These functions set foreground and background
 attributges of the fields.  You can also specify a pad character that
 will be filled in the unfilled portion of the field.  The pad
 character is set with a call to @code{set-field-pad}.  Default pad
@@ -2364,6 +2863,7 @@ background attributes.  Color pair 1 is used for the character that
 have been typed into the form, and color pair 2 is used for the empty
 spaces in the form.  
 
+@node  Field Option Bits, Field Status, Field Display Attributes, Forms Library
 @subsection Field Option Bits
 
 There is also a large collection of field option bits you can set to
@@ -2545,7 +3045,7 @@ password-like field where the characters are hidden from view.
 (endwin)
 @end example
 
-
+@node  Field Status, Variable-Sized Fields, Field Option Bits, Forms Library
 @subsection Field Status
 
 The field status specifies whether the field has been edited.  It is
@@ -2558,6 +3058,7 @@ The two procedures that work with field status are
 @code{field-status} returns the current state, and
 @code{set-field-status} can be used to set the state.
 
+@node  Variable-Sized Fields, Form Windows, Field Status, Forms Library
 @subsection Variable-Sized Fields
 
 If you want a dynamically changin field with variable width, this is
@@ -2578,7 +3079,7 @@ can set a maximum limit to the growth of the field with
 @code{set-max-field}.
 
 The field info for a dynamically growable field can be retrieved with
-the procedure @code{dynamic-fieldinfo}.
+the procedure @code{dynamic-field-info}.
 
 Recall the library routine @code{new-field}; a new field created with
 height set to one will be definined to a one line field.  A new field
@@ -2597,6 +3098,7 @@ rows can increase if the user enters more data than the initial field
 will hold.  The number of rows displayed will remain fixed and the
 additional data will scroll vertically.
 
+@node  Form Windows, Field Validation, Variable-Sized Fields, Forms Library
 @subsection Form Windows
 
 The form windows concept is pretty much similar to menu windows.
@@ -2709,6 +3211,7 @@ similar example.
 (endwin)
 @end example
 
+@node  Field Validation, The Form Driver, Form Windows, Forms Library
 @subsection Field Validation
 
 By default, a field will accept any data input by the user.  It is
@@ -2806,6 +3309,7 @@ perform other types of range checks.
 
 @end table
 
+@node  The Form Driver,  , Field Validation, Forms Library
 @subsection The Form Driver: The Work Horse of the System
 
 The @code{form-driver} procedure plays a very important role in the
@@ -2844,7 +3348,7 @@ Move to the last form page.
 These are cyclic.  The moving to the next page after the last page put
 you at the top.
 
-@subsection Inter-Field Navication Requests
+@subsubsection Inter-Field Navication Requests
 @itemize
 @item REQ_NEXT_FIELD
 Move to the next field
@@ -2877,7 +3381,6 @@ will return you to the top.
 
 
 
-
 @node Curses Reference, Hacking the module, Curses Tutorial, Top
 @chapter Curses Reference
 
@@ -2889,13 +3392,18 @@ The GuCu package provides the following modules:
 @code{(gucu curses-wide)}: Input/output with wide strings.
 @item
 @code{(gucu curses-alt)}: A reworking of the commonly used functions 
-@code{(gucu curses)} with a more scheme-like interface.  This is undocumented.
+@code{(gucu curses)} with a more scheme-like interface.  This is
+undocumented.
+@item
+@code{(gucu form)}: A library for creating text-based form screens.
 @end enumerate
 
 @menu
 * The basic curses library::    
 * The wide curses library::     
-* The curses form library::
+* The curses panel library::    
+* The curses menu library::     
+* The curses form library::     
 @end menu
 
 @node The basic curses library, The wide curses library, Curses Reference, Curses Reference
@@ -3095,11 +3603,7 @@ The GuCu routines also define the @code{#<window>} getter procedure
 clearing and redrawing a screen containing garbage.  The @code{(curscr)}
 can be used in only a few routines.
 
-@menu
-* Routine and Argument Names::  
-@end menu
 
-@node Routine and Argument Names,  , Overview, Overview
 @subsubsection Routine and Argument Names
 
 Many curses routines have two or more versions.  The routines prefixed
@@ -3314,11 +3818,6 @@ Its return value is @code{UNSPECIFIED}.
 @end deffn
 
 
-@menu
-* Line Graphics::               
-@end menu
-
-@node Line Graphics,  , Adding characters, Adding characters
 @subsubsection  Line Graphics
 
 The line-graphics procedures may be used to add line drawing
@@ -5668,7 +6167,7 @@ of the window.
 Routines that return an integer return the integer @code{ERR} upon failure
 and @code{OK} upon successful completion.
 
-@node The wide curses library, The curses form library, The basic curses library, Curses Reference
+@node The wide curses library, The curses panel library, The basic curses library, Curses Reference
 @section The wide curses library: @code{(gucu curses-wide)}
 
 These are the functions in the @code{(gucu curses-wide)} module.
@@ -6100,16 +6599,615 @@ an error will be thrown.
 
 @end deffn
 
-@node The curses form library,  , The wide curses library, Curses Reference
+@node The curses panel library, The curses menu library, The wide curses library, Curses Reference
+@section The curses panel library: @code{(gucu panel)}
+
+These are the functions in the @code{(gucu panel)} module.
+
+Panels are curses windows with the added feature of depth.  Panel
+functions allow the use of stacked windows and ensure the proper
+portions of each window and the curses @code{stdscr} window are hidden
+or displayed when panels are added, moved, modified or removed.  The
+set of currently visible panels is the stack of pa els.  The
+@code{stdscr} window is beneath all panels, and is not considered part
+of the stack.
+
+A window is associated with every panel. The panel routines enable you
+to create, move, hide, and show panels, as well as position a panel
+at any desired location in the stack.
+
+Panel routines are a functional layer added to curses, make only
+high-level curses calls, and work anywhere terminfo curses does.
+
+@deffn new-panel win
+This procedure allocates a PANEL structure, associates it with @var{win},
+places the panel on the top of the stack (causes it to be displayed
+above any other panel) and returns the new panel.
+@end deffn
+
+@deffn Procedure update-panels
+This procedure refreshes the virtual screen to reflect the relations
+between the panels in the stack, but does not call @code{doupdate} to
+refresh the physical screen.  Use this function and not
+@code{wrefresh} or @code{wnoutrefresh}.  @code{update-panels} may be
+called more than once before a call to @code{doupdate}, but
+@code{doupdate} is the procedure responsible for updating the physical
+screen.
+@end deffn
+
+
+@deffn Procedure del-panel pan
+This procedure removes the given panel from the stack and invalidates
+@var{pan}
+@end deffn
+
+@deffn Procedure hide-panel pan
+This procedure removes the given panel from the panel stack and thus
+hides it from view. The panel @var{pan} is not lost, merely removed
+from the stack.
+@end deffn
+
+@deffn Procedure panel-hidden pan
+This procedure returns a number greater than zero if the panel is in
+the panel stack, zero if it is not.  If the panel is a null pointer,
+return @code{ERR}.
+@end deffn
+
+@deffn Procedure show-panel pan
+This procedure makes a hidden panel visible by placing it on top of
+the panels in the panel stack.
+@end deffn
+
+@deffn Procedure top-panel pan
+This procedure puts the given visible panel on top of all panels in
+the stack. 
+@end deffn
+
+@deffn Procedure bottom-panel pan
+This procedure puts the panel at the bottom of all panels.
+@end deffn
+
+@deffn Procedure move-panel pan starty startx
+This procedure moves the given panel window so that its upper-left
+corner is at @var{starty}, @var{startx}.  It does not change the
+position of the panel in the stack.  Be sure to use this function, not
+@code{mvwin}, to move a panel window.
+@end deffn
+
+@deffn Procedure replace-panel pan window
+This procedure replaces the current window of panel with window
+(useful, for example if you want to resize a panel; It does not change
+the position of the panel in the stack.
+@end deffn
+
+
+@deffn Procedure panel-window panel
+Returns the window of a given panel
+@end deffn
+
+@node The curses menu library, The curses form library, The curses panel library, Curses Reference
+@section The curses menu library: @code{(gucu menu)}
+
+These are the functions in the @code{(gucu menu)} module.
+
+@menu
+* Menus Overview::              
+* Menu Item Procedures::        
+* Menu Procedures::             
+* Menu creation ::              
+* Menu options::                
+@end menu
+
+@node Menus Overview, Menu Item Procedures, The curses menu library, The curses menu library
+@subsection Menus Overview
+
+Menu items are individual menu entries.  Each menu item has a name --
+which is the short, usually single word, description of the item --
+and a
+description, which is a longer description of the menu item.
+Depending on the format of the menu, the description may or many not
+be visible.  Each menu item also holds a set of options about the
+visibility and selectability of the item.
+
+A menu is a collection of menu items along with options on how it
+operates and is presented.
+
+@node Menu Item Procedures, Menu Procedures, Menus Overview, The curses menu library
+@subsection Menu Item Procedures
+
+@deffn Procedure new-item name description
+Returns a new allocated menu item of type with a given @var{NAME} and
+@var{DESCRIPTION}.  It can throw an error if the strings are too large
+or if a memory allocation error occurs.
+@end deffn
+
+@deffn Procedure set-current-item menu item
+Given a @var{MENU} and an @var{ITEM} that has been attached to that
+menu, this procedure sets @var{ITEM} to be the current item.  It
+returns an integer that will be one of @code{E_OK},
+@code{E_BAD_ARGUMENT}, @code{E_NOT_CONNECTED} if not menu items are
+attached to this menu, or @code{E_SYSTEM_ERROR}.
+@end deffn
+
+@deffn Procedure current-item menu
+Returns the current item for @var{MENU}.
+@end deffn
+
+@deffn Procedure set-top-row menu row
+This procedure sets @var{menu}'s top row to be @var{row}.  @var{row}
+is an integer where zero indicates that the first row is the top row.
+
+This procedure will only have an effect when there are more rows in
+the menu than are displayed on the screen.  If all the menu items can
+be displayed, this procedure will have no effect and return
+@code{E_BAD_ARGUMENT}.
+
+The number of rows and columns that a menu displays is set by
+@code{set-menu-format}.
+
+It will return one of @code{E_OK}, @code{E_BAD_ARGUMENT},
+@code{E_NOT_CONNECTED} if no menu items are attached to this menu, or
+@code{E_SYSTEM_ERROR}.
+@end deffn
+
+@deffn Procedure top-row menu
+Returns the number of the top menu row being displayed, or @code{ERR}
+on failure.
+@end deffn
+
+@deffn Procedure item-index item
+This procedure returns the zero-origin index of this item in its
+containing menu's item list or @code{ERR} on failure.
+@end deffn 
+
+@deffn Procedure item-name item
+Returns, as a string, the name of the menu item @var{item}.
+@end deffn
+
+@deffn Procedure item-description item
+Returns, as a string, the description of the menu item @var{item}.
+@end deffn
+
+@deffn Procedure set-item-opts item opts
+@deffnx Procedure item-opts-on item opts
+@deffnx Procedure item-opts-off item opts
+These functions set or query the bit mask for @var{item}.  There is
+only one option bit mask, @code{O_SELECTABLE}.  When this is on, the
+item may be selected during menu processing.  It defaults to on.
+
+The procedure @code{set-item-opts} sets the bit mask of @var{item} to
+@var{opts}.  
+
+The procedure @code{menu-opts-on} turns the bits of @var{opts} on in @var{item}.
+The procedure @code{menu-opts-off} turns off the bits on @var{opts} in
+@var{item}.
+
+These routines will return @code{E_OK} on success or
+@code{E_SYSTEM_ERROR} on failure.
+@end deffn
+
+@deffn Procedure item-opts item
+This procedure returns the options bit mask of @var{item}.
+@end deffn
+
+@deffn Procedure set-item-value item value
+@deffnx Procedure item-value item
+If the menu option @code{O_ONEVALUE} is turned off, the menu can have
+more than one item selected simultaneously.  In this case, the
+procedure @code{item-value} can be used to query @var{item} to see if
+it is selected.  It returns @code{#t} or @code{#f}.
+
+An item can be selected with the procedure @code{set-item-value},
+which takes a menu item and a boolean @var{value}.  It returns
+@code{E_OK}, @code{E_SYSTEM_ERROR}, or @code{E_REQUEST_DENIED}.
+@end deffn
+
+@deffn Procedure item-visible item
+Returns @code{#t} if @var{item} is mapped onto the screen.  If a menu
+has more menu items than can be displayed at once, only some of the
+menu items will be mapped onto the screen.
+@end deffn
+
+@node Menu Procedures, Menu creation , Menu Item Procedures, The curses menu library
+@subsection Menu Procedures
+
+@menu
+* Menu Colors and Attributes::  
+* Positioning a menu cursor::   
+* The menu driver::             
+* Menu sizes::                  
+* Menu mark strings::           
+@end menu
+
+@node Menu Colors and Attributes, Positioning a menu cursor, Menu Procedures, Menu Procedures
+@subsubsection Menu Colors and Attributes
+
+@deffn Procedure set-menu-fore menu attr
+@deffnx Procedure set-menu-back menu attr
+@deffnx Procedure set-menu-grey menu attr
+The procedure @code{set-menu-fore} sets the colors and attributes
+of selected menu items.  The default is @code{A_STANDOUT}.
+
+The procedure @code{set-menu-back} sets the colors and attributes of
+selectable but not currently selected menu items.  Its default is
+@code{A_NORMAL}.
+
+The procedure @code{set-menu-grey} sets the colors and attributes of
+unselectable menu items for menus that allow multiple selections.  Its
+default is @code{A_UNDERLINE}.
+@end deffn
+
+@deffn Procedure menu-fore menu
+@deffnx Procedure menu-back menu
+@deffnx Procedure menu-grey menu
+These procedures return the colors and attributes of selected,
+selectable, and unselectable menu items respectively.
+@end deffn
+
+@node Positioning a menu cursor, The menu driver, Menu Colors and Attributes, Menu Procedures
+@subsubsection Positioning a menu's cursor
+
+@deffn Procedure pos-menu-cursor menu
+This procedure repositions the cursor the position associated with the
+menu's current selected item.  This is useful if other (non-menu)
+routines have been called and have moved the cursor away from the
+menu.
+@end deffn
+
+@node The menu driver, Menu sizes, Positioning a menu cursor, Menu Procedures
+@subsubsection The menu driver
+
+@deffn Procedure menu-driver menu c
+Once a menu has been posted (displayed), you should funnel input events
+to it through menu-driver.  This routine has three major input cases:
+
+@itemize @bullet
+@item
+The input is a form navigation request.  Navigation request codes are
+constants defined in the table below, which are distinct from the key
+and character codes returned by @code{wgetch}.
+@item
+The input is a printable character.  Printable characters (which must
+be positive, less than 256) are checked according to the program's
+locale settings.
+@item
+The input is the KEY_MOUSE special key associated with an mouse event.
+@end itemize
+
+The menu driver request are as follows.
+
+@table @code
+@item REQ_LEFT_ITEM
+Move left to an item.
+@item REQ_RIGHT_ITEM
+Move right to an item.
+@item REQ_UP_ITEM
+Move up to an item.
+@item REQ_DOWN_ITEM
+Move down to an item.
+@item REQ_SCR_ULINE
+Scroll up a line.
+@item REQ_SCR_DLINE
+Scroll down a line.
+@item REQ_SCR_DPAGE
+Scroll down a page.
+@item REQ_SCR_UPAGE
+Scroll up a page.
+@item REQ_FIRST_ITEM
+Move to the first item.
+@item REQ_LAST_ITEM
+Move to the last item.
+@item REQ_NEXT_ITEM
+Move to the next item.
+@item REQ_PREV_ITEM
+Move to the previous item.
+@item REQ_TOGGLE_ITEM
+Select/deselect an item.
+@item REQ_CLEAR_PATTERN
+Clear the menu pattern buffer.
+@item REQ_BACK_PATTERN
+Delete the previous character from the pattern buffer.
+@item REQ_NEXT_MATCH
+Move to the next item matching the pattern match.
+@item REQ_PREV_MATCH
+Move to the previous item matching the pattern match.
+@end table
+
+If the second argument @var{c} is a printable character, the code
+appends it to the pattern buffer and attempts to move to the next item
+matching the new pattern.  If there is no such match, menu-driver
+returns @code{E_NO_MATCH} and deletes the appended character from the
+buffer.
+
+If the second argument @var{c} is one of the above pre-defined requests, the
+corresponding action is performed.
+
+If the second argument is the @code{KEY_MOUSE} special key, the
+associated mouse event is translated into one of the above pre-defined
+requests.  Currently only clicks in the user window (e.g. inside the
+menu display area or the decoration window) are handled.
+
+If you click above the display region of the menu:
+
+@itemize @bullet
+@item
+a REQ_SCR_ULINE is generated for a single click,
+@item
+a REQ_SCR_UPAGE is generated for a double-click and
+@item
+a REQ_FIRST_ITEM is generated for a triple-click.
+@end itemize
+
+If you click below the display region of the menu:
+
+@itemize @bullet
+@item
+a REQ_SCR_DLINE is generated for a single click,
+@item
+a REQ_SCR_DPAGE is generated for a double-click and
+@item
+a REQ_LAST_ITEM is generated for a triple-click.
+@end itemize
+
+If you click at an item inside the display area of the menu:
+@itemize @bullet
+@item 
+the menu cursor is positioned to that item.
+@item
+If you double-click an item a @code{REQ_TOGGLE_ITEM} is generated and
+@code{E_UNKNOWN_COMMAND} is returned.  This return value makes sense,
+because a double click usually means that an item-specific action
+should be returned.  It is exactly the purpose of this return value to
+signal that an application specific command should be executed.
+@item
+If a translation into a request was done, menu_driver returns the
+result of this request.
+@end itemize
+
+If you clicked outside the user window or the mouse event could not be
+translated into a menu request an E_REQUEST_DENIED is returned.
+
+The procedure @code{menu-driver} returns one of the following error codes:
+
+@table @code
+@item E_OK 
+The routine succeeded.
+@item E_SYSTEM_ERROR 
+System error occurred (see errno).
+@item E_BAD_ARGUMENT
+Routine detected an incorrect or out-of-range argument.
+@item E_BAD_STATE
+Routine was called from an initialization or termination function.
+@item E_NOT_POSTED
+The menu has not been posted.
+@item E_UNKNOWN_COMMAND
+The menu driver code saw an unknown request code.
+@item E_NO_MATCH
+Character failed to match.
+@item E_REQUEST_DENIED
+The menu driver could not process the request.
+@end table
+
+@end deffn
+
+@node Menu sizes, Menu mark strings, The menu driver, Menu Procedures
+@subsubsection Menu sizes
+@deffn Procedure set-menu-format menu rows cols
+The procedure @code{set-menu-format} sets the maximum display size of
+the given menu.  If this size is too small to display all menu items,
+the menu will be made scrollable. If this size is larger than the
+menus subwindow and the subwindow is too small to display all menu
+items, @code{post-menu} will fail.
+
+The default format is 16 rows, 1 column. A zero row or column argument
+is interpreted as a request not to change the
+current value.
+
+This procedure returns @code{E_OK}, @code{E_SYSTEM_ERROR},
+@code{E_BAD_ARGUMENT} if the routine detected an incorrect or
+out-of-range argument, or @code{E_POSTED} if the menu is already posted.
+@end deffn
+
+@deffn Procedure menu-format
+This procedure returns a two-element list containing the display size
+of the menu in rows and columns
+@end deffn
+
+@node Menu mark strings,  , Menu sizes, Menu Procedures
+@subsubsection Menu mark strings
+@deffn Procedure set-menu-mark menu str
+In order to make menu selections visible on older terminals without
+highlighting or color capability, the menu library marks selected
+items in a menu with a prefix string.
+
+The function @code{set-menu-mark} sets the mark string for the given
+menu.  Calling @code{set-menu-mark} with a null menu item will abolish
+the mark string.  Note that changing the length of the mark string for
+a menu while the menu is posted is likely to produce unhelpful
+behavior.
+
+The default string is ``-'' (a dash). 
+@end deffn
+
+@deffn Procedure menu-mark menu
+Returns, as a string, the prefix string used by the menu library to
+designate the selected item.
+@end deffn
+ 
+@node Menu creation , Menu options, Menu Procedures, The curses menu library
+@subsection Menu creation 
+
+@deffn Procdure new-menu items
+Given a list of items, where each item was created by the procedure
+@code{new-item}, the procedure @code{new-menu} returns a menu.
+
+If the menu cannot be created, an error is thrown.
+@end deffn
+
+@node Menu options,  , Menu creation , The curses menu library
+@subsection Menu options
+@deffn Procedure set-menu-options menu options
+@deffnx Procedure menu-options-on menu options
+@deffnx Procedure menu-options-off menu options
+The function @code{set-menu-opts} sets all the given menu's option bits (menu
+option bits may be logically-OR'ed together).
+
+The function @code{menu-opts-on} turns on the given option bits, and
+leaves others alone.
+
+The function @code{menu-opts-off} turns off the given option bits, and
+leaves others alone.
+
+The following options are defined (all are on by default):
+@table @code
+@item O_ONEVALUE
+Only one item can be selected for this menu.
+@item O_SHOWDESC
+Display the item descriptions when the menu is posted.
+@item O_ROWMAJOR
+Display the menu in row-major order.
+@item O_IGNORECASE
+Ignore the case when pattern-matching.
+@item O_SHOWMATCH
+Move the cursor to within the item name while
+pattern-matching.
+@item O_NONCYCLIC
+Don't wrap around next-item and previous-item, requests to
+the other end of the menu.
+@end table
+
+The procedure will return @code{E_OK}, @code{E_SYSTEM_ERROR}, or
+@code{E_POSTED} if the menu is already posted.
+@end deffn
+
+@deffn Procedure menu-opts
+Returns the bitmask of the @var{menu}'s options.
+@end deffn
+
+@menu
+* Menu pattern buffer::         
+* Writing or erasing menus from window::  
+* Control spacing between menu items::  
+* Associate menus with window::  
+@end menu
+
+@node Menu pattern buffer, Writing or erasing menus from window, Menu options, Menu options
+@subsubsection Menu pattern buffer
+
+@deffn Procedure set-menu-pattern menu pattern
+Every  menu  has an associated pattern match buffer.  As input
+events that are printable characters come in,
+they are appended to this match buffer and tested for a match,
+as described in @code{menu-driver}.
+
+The function @code{set-menu-pattern} sets the pattern buffer for the
+given menu and tries to find the first matching item.  If it succeeds,
+that item becomes current; if not, the current item does not change.
+
+It may return the following error codes: @code{E_OK},
+@code{E_BAD_ARGUMENT}, @code{E_BAD_STATE} if the outine was called
+from an initialization or termination function, @code{E_NO_MATCH} if
+the character failed to match, or @code{E_SYSTEM_ERROR}.
+@end deffn
+
+@deffn Procedure menu-pattern menu
+The procedure menu-pattern returns the pattern buffer of the given
+menu.
+@end deffn
+
+@node Writing or erasing menus from window, Control spacing between menu items, Menu pattern buffer, Menu options
+@subsubsection Writing or erasing menus from window
+@deffn Procedure post-menu menu
+@deffnx Procedure unpost-menu menu
+
+The procedure @code{post-menu} displays a menu to its associated
+subwindow.  To trigger physical display of the subwindow, use refresh
+or some equivalent curses routine (the implicit doupdate triggered by
+an curses input request will do). @code{post-menu} resets the
+selection status of all items.
+
+The procedure @code{unpost-menu} erases menu from its associated
+subwindow.
+
+These routines return one of the following: @code{E_OK},
+@code{E_SYSTEM_ERROR}, @code{E_BAD_ARGUMENT}, @code{E_POSTED} if the
+menu has already been posted, @code{E_BAD_STATE} if the routine was
+called from an initialization or termination function,
+@code{E_NO_ROOM} if the menu is too large for its window, or
+@code{E_NOT_POSTED} if the menu has not been posted.
+@end deffn
+
+@node Control spacing between menu items, Associate menus with window, Writing or erasing menus from window, Menu options
+@subsubsection Control spacing between menu items
+@deffn Procedure set-menu-spacing menu description rows cols
+@deffnx Procedure menu-spacing menu
+
+The procedure @code{set-menu-spacing} sets the spacing informations
+for the menu.  The parameter @var{description} controls the number of
+spaces between an item name and an item description. It must not be
+larger than @code{TABSIZE}.  The menu system puts in the middle of
+this spacing area the pad character. The remaining parts are filled
+with spaces.  The parameter @var{rows} controls the number of rows
+that are used for an item. It must not be larger than 3. The menu
+system inserts the blank lines between item rows, these lines will
+contain the pad character in the appropriate positions.  The parameter
+@var{cols} controls the number of blanks between columns of items. It
+must not be larger than @code{TABSIZE}.  A value of 0 for all the
+spacing values resets them to the default, which is 1 for all of them.
+
+@code{set-menu-spacing} will return @code{E_OK}, @code{E_POSTED} if
+the menu is posted, or @code{E_BAD_ARGUMENT} if one of the spacing
+values is out of range.
+
+The procedure @code{menu-spacing} returns the spacing info for the
+menu as a list of three elements: description, row, and column spacing
+@end deffn
+
+@node Associate menus with window,  , Control spacing between menu items, Menu options
+@subsubsection Associate menus with window
+@deffn Procedure set-menu-win menu win
+@deffnx Procedure set-menu-sub menu subwin
+@deffnx Procedure menu-win menu
+@deffnx Procedure menu-sub menu
+@deffnx Procedure scale-menu menu
+Every menu has an associated pair of curses windows.  The menu window
+displays any title and border associated with the window; the menu
+subwindow displays the items of the menu that are currently available
+for selection.
+
+The first four functions get and set those windows.  It is not
+necessary to set either window; by default, the driver code uses
+@code{stdscr} for both.
+
+The procedure @code{scale-menu}returns the minimum size required for
+the subwindow of @var{menu}.
+
+@code{set-menu-win} and @code{set-menu-sub} will return one of the
+following, @code{E_OK}, @code{E_SYSTEM_ERROR}, @code{E_BAD_ARGUMENT},
+or @code{E_POSTED} if the menu has already been posted.
+@end deffn
+
+@node The curses form library,  , The curses menu library, Curses Reference
 @section The curses form library: @code{(gucu form)}
 
 These are the functions in the @code{(gucu form)} module.
 
 @menu
 * Forms Overview::              
+* Form procedures::             
+* Making or breaking connections between forms and fields::  
+* Color and attribute control for form fields::  
+* Data type validation for fields::  
+* Creating forms::              
+* Form pagination functions::   
+* Setting and getting form options::  
+* Setting the page number and field::  
+* Writing or erasing forms from associated subwindows::  
+* Printable form request names::  
+* Form windows::                
 @end menu
 
-@node Forms Overview,  , The curses form library, The curses form library
+@node Forms Overview, Form procedures, The curses form library, The curses form library
 @subsection Forms Overview
 
 The form library provides terminal-independent facilities for
@@ -6118,54 +7216,248 @@ includes: field routines, which create and modify form fields; and
 form routines, which group fields into forms, display forms on the
 screen, and handle interaction with the user.
 
-@subsection Form procedures
+
+
+@subsection Positioning a form window cursor
+
+@deffn Procedure pos-form-cursor form
+
+The function  @code{pos-form-cursor}  restores	the  cursor  to	 the  position
+required for the forms driver to continue processing requests.  This is
+useful after curses routines have been called to do screen-painting  in
+response to a form operation.
+
+It returns @code{E_OK} if the routine succeeded, @code{E_BAD_ARGUMENT}
+if the routine detected an incorrect or out-of-range argument,
+@code{E_NOT_POSTED} if the form has not been posted, or
+@code{E_SYSTEM_ERROR} if a system error occurred.
+@end deffn
+
+@node  Form procedures, Making or breaking connections between forms and fields, Forms Overview, The curses form library
+@subsection Form data
 
 @deffn Procedure data-ahead form
 @deffnx Procedure data-behind form
 These procedures test if there is ahead or behind the current screen 
 of the given form @var{form}.  They return @code{#t} or @code{#f}.
+
+This could be because a text entry has been declared to have variable
+size (not O_STATIC) and not all text from the entry is being displayed.
 @end deffn
 
-@subsection Color and attribute control for form fields
 
-@deffn Procedure set-field-fore field attr
-@deffnx Procedure set-field-back field attr
+@subsection Command-processing loop of the form system
 
-The procedure @code{set-field-fore} sets the attributes of the contents
-of a field, and @code{set-field-back} set the attributes of the unused 
-portion of a field.
+@deffn Procedure form-driver form c
 
-They return the constants @code{E_OK} on success, @code{E_BAD_ARGUMENT},
-or @code{E_SYSTEM_ERROR}.
+Once a form has been posted (displayed), you should funnel input
+events to it through @code{form-driver}.  This routine has three major input
+cases:
+
+@itemize @bullet
+@item
+The input is a form navigation request.  Navigation request codes are
+constants defined below, which are distinct from the key and character
+codes returned by @code{wgetch}.
+@item
+The input is a printable character.  Printable characters (which must
+be positive, less than 256) are checked according to the program's
+locale settings.
+@item
+The input is the KEY_MOUSE special key associated with an mouse event.
+@end itemize
+
+The form driver requests are as follows:
+@multitable {XXXXXXXXXXXXXXX} {xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx}
+@headitem Name              @tab Description
+
+@item @code{REQ_NEXT_PAGE}
+@tab  Move to the next page.
+@item @code{REQ_PREV_PAGE}
+@tab  Move to the previous page.
+@item @code{REQ_FIRST_PAGE}
+@tab  Move to the first page.
+@item @code{REQ_LAST_PAGE}
+@tab  Move to the last field.
+@item @code{REQ_NEXT_FIELD}
+@tab  Move to the next field.
+@item @code{REQ_PREV_FIELD}
+@tab  Move to the previous field.
+@item @code{REQ_FIRST_FIELD}
+@tab  Move to the first field.
+@item @code{REQ_LAST_FIELD}
+@tab  Move to the last field.
+@item @code{REQ_SNEXT_FIELD}
+@tab  Move to the sorted next field.
+@item @code{REQ_SPREV_FIELD}
+@tab  Move to the sorted previous field.
+@item @code{REQ_SFIRST_FIELD}
+@tab  Move to the sorted first field.
+@item @code{REQ_SLAST_FIELD}
+@tab  Move to the sorted last field.
+@item @code{REQ_LEFT_FIELD}
+@tab  Move left to a field.
+@item @code{REQ_RIGHT_FIELD}
+@tab  Move right to a field.
+@item @code{REQ_UP_FIELD}
+@tab  Move up to a field.
+@item @code{REQ_DOWN_FIELD}
+@tab  Move down to a field.
+@item @code{REQ_NEXT_CHAR}
+@tab  Move to the next char.
+@item @code{REQ_PREV_CHAR}
+@tab  Move to the previous char.
+@item @code{REQ_NEXT_LINE}
+@tab  Move to the next line.
+@item @code{REQ_PREV_LINE}
+@tab  Move to the previous line.
+@item @code{REQ_NEXT_WORD}
+@tab  Move to the next word.
+@item @code{REQ_PREV_WORD}
+@tab Move to the previous word.
+@item @code{REQ_BEG_FIELD}
+@tab  Move to the beginning of the field.
+@item @code{REQ_END_FIELD}
+@tab  Move to the end of the field.
+@item @code{REQ_BEG_LINE}
+@tab  Move to the beginning of the line.
+@item @code{REQ_END_LINE}
+@tab  Move to the end of the line.
+@item @code{REQ_LEFT_CHAR}
+@tab  Move left in the field.
+@item @code{REQ_RIGHT_CHAR}
+@tab  Move right in the field.
+@item @code{REQ_UP_CHAR}
+@tab  Move up in the field.
+@item @code{REQ_DOWN_CHAR}
+@tab  Move down in the field.
+@item @code{REQ_NEW_LINE}
+@tab  Insert or overlay a new line.
+@item @code{REQ_INS_CHAR}
+@tab  Insert a blank at the cursor.
+@item @code{REQ_INS_LINE}
+@tab  Insert a blank line at the cursor.
+@item @code{REQ_DEL_CHAR}
+@tab  Delete character at the cursor.
+@item @code{REQ_DEL_PREV}
+@tab  Delete character before the cursor.
+@item @code{REQ_DEL_LINE}
+@tab  Delete line at the cursor.
+@item @code{REQ_DEL_WORD}
+@tab  Delete blank-delimited word at the cursor.
+@item @code{REQ_CLR_EOL}
+@tab  Clear to end of line from cursor.
+@item @code{REQ_CLR_EOF}
+@tab  Clear to end of field from cursor.
+@item @code{REQ_CLR_FIELD}
+@tab  Clear the entire field.
+@item @code{REQ_OVL_MODE}
+@tab  Enter overlay mode.
+@item @code{REQ_INS_MODE}
+@tab  Enter insert mode.
+@item @code{REQ_SCR_FLINE}
+@tab  Scroll the field forward a line.
+@item @code{REQ_SCR_BLINE}
+@tab  Scroll the field backward a line.
+@item @code{REQ_SCR_FPAGE}
+@tab  Scroll the field forward a page.
+@item @code{REQ_SCR_BPAGE}
+@tab  Scroll the field backward a page.
+@item @code{REQ_SCR_FHPAGE}
+@tab  Scroll the field forward half a page.
+@item @code{REQ_SCR_BHPAGE}
+@tab  Scroll the field backward half a page.
+@item @code{REQ_SCR_FCHAR}
+@tab  Scroll the field forward a character.
+@item @code{REQ_SCR_BCHAR}
+@tab  Scroll the field backward a character.
+@item @code{REQ_SCR_HFLINE}
+@tab  Horizontal scroll the field forward a line.
+@item @code{REQ_SCR_HBLINE}
+@tab  Horizontal scroll the field backward a line.
+@item @code{REQ_SCR_HFHALF}
+@tab  Horizontal scroll the field forward half a line.
+@item @code{REQ_SCR_HBHALF}
+@tab  Horizontal scroll the field backward half a line.
+@item @code{ REQ_VALIDATION}
+@tab  Validate field.
+@item @code{REQ_NEXT_CHOICE}
+@tab  Display next field choice.
+@item @code{REQ_PREV_CHOICE}
+@tab  Display previous field choice.
+@end multitable
+
+If the second argument is a printable character, the driver places it
+in the current position in the current field.  If it is one of the
+forms requests listed above, that request is executed.
+
+
+If the second argument is the @code{KEY_MOUSE} special key, the associated
+mouse event is translated into one of the above pre-defined requests.
+Currently only clicks in the user window (e.g. inside the form display
+area or the decoration window) are handled.
+
+If you click above the display region of the form:
+@itemize @bullet
+@item 
+a REQ_PREV_FIELD is generated for a single click,
+@item 
+a REQ_PREV_PAGE is generated for a double-click and
+@item
+a REQ_FIRST_FIELD is generated for a triple-click.
+@end itemize
+
+If you click below the display region of the form:
+@itemize @bullet
+@item
+a REQ_NEXT_FIELD is generated for a single click,
+@item
+a REQ_NEXT_PAGE is generated for a double-click and
+@item
+a REQ_LAST_FIELD is generated for a triple-click.
+@end itemize
+
+If you click at an field inside the display area of the form:
+@itemize @bullet
+@item
+the form cursor is positioned to that field.
+@item
+If you double-click a field, the form cursor is positioned to that
+field and @code{E_UNKNOWN_COMMAND} is returned.  This return value makes
+sense, because a double click usually means that an field-specific
+action should be returned.  It is exactly the purpose of this return
+value to signal that an application specific command should be
+executed.
+@item
+If a translation into a request was done, form_driver returns
+the result of this request.
+@end itemize
+
+If you clicked outside the user window or the mouse event could not  be
+translated into a form request an @code{E_REQUEST_DENIED} is returned.
+
+
+If the second argument is neither printable nor one of the above
+predefined form requests, the driver assumes it is an
+application-specific command and returns @code{E_UNKNOWN_COMMAND}.
+Application-defined commands should be defined relative to
+@code{MAX_COMMAND}, the maximum value of these pre-defined requests.
+
+@code{form-driver} returns one of the following error codes:
+@code{E_OK} if the routine succeeded, @code{E_BAD_ARGUMENT} if the
+routine detected an incorrect or out-of-range argument,
+@code{E_BAD_STATE} if the routine was called from an initialization or
+termination function, @code{E_NOT_POSTED} if the form has not been
+posted, @code{E_INVALID_FIELD} if the contents of field is invalid,
+@code{E_REQUEST_DENIED} if the form driver could not process the
+request, @code{E_SYSTEM_ERROR} if a system error occurred, and
+@code{E_UNKNOWN_COMMAND} if the form driver code saw an unknown
+request code.
 
 @end deffn
 
-@deffn Procedure field_fore field
-@deffnx Procecure field_back field
 
-The procedure @code{field_fore} returns the attributes of the contents
-of a field, and @code{field-back} returns the attributes of the unused
-portion of a field.
-
-@end deffn
-
-@deffn Procedure set-field-pad field pad
-
-The procedure @code{set-field-pad} sets the character used as blank in
-the field to the codepoint @code{pad}. 
-
-They return the constants @code{E_OK} on success, @code{E_BAD_ARGUMENT},
-or @code{E_SYSTEM_ERROR}.
-
-@end deffn
-
-@deffn Procedure field-pad field
-
-The procedure @code{field-pad} returns the codepoint used as the blank
-in @code{field}.
-
-@end deffn
-
+@node  Making or breaking connections between forms and fields, Color and attribute control for form fields, Form procedures, The curses form library
 @subsection Making or breaking connections between forms and fields
 
 @deffn Procedure set-form-fields form fields
@@ -6196,6 +7488,369 @@ It returns an integer that will have the value @code{E_OK} on success,
 connected to the form, @code{E_POSTED} if the form is already posted,
 or @code{E_SYSTEM_ERROR} if a system error occurred.
 
+@end deffn
+
+
+
+@node  Color and attribute control for form fields, Data type validation for fields, Making or breaking connections between forms and fields, The curses form library
+@subsection Color and attribute control for form fields
+
+@deffn Procedure set-field-fore field attr
+@deffnx Procedure set-field-back field attr
+
+The procedure @code{set-field-fore} sets the attributes of the contents
+of a field, and @code{set-field-back} set the attributes of the unused 
+portion of a field.
+
+They return the constants @code{E_OK} on success, @code{E_BAD_ARGUMENT},
+or @code{E_SYSTEM_ERROR}.
+
+@end deffn
+
+@deffn Procedure field-fore field
+@deffnx Procecure field-back field
+
+The procedure @code{field-fore} returns the attributes of the contents
+of a field, and @code{field-back} returns the attributes of the unused
+portion of a field.
+
+@end deffn
+
+@deffn Procedure set-field-pad field pad
+
+The procedure @code{set-field-pad} sets the character used as blank in
+the field to the codepoint @code{pad}. 
+
+They return the constants @code{E_OK} on success, @code{E_BAD_ARGUMENT},
+or @code{E_SYSTEM_ERROR}.
+
+@end deffn
+
+@deffn Procedure field-pad field
+
+The procedure @code{field-pad} returns the codepoint used as the blank
+in @code{field}.
+
+@end deffn
+
+
+@subsection Field buffer control
+
+There are functions to set and get the text in a field, as well as to
+check if that field has been modified.
+
+@deffn Procedure set-field-buffer field buf value
+The function @code{set-field-buffer} sets the numbered buffer of the
+given field to contain a given string.  Buffer 0 is the displayed
+value of the field; other numbered buffers may be allocated by
+applications through the @var{nbuf} argument of @code{new-field}
+but are not manipulated by the forms library.
+@end deffn
+
+@deffn Procedure field-buffer field buffer
+Returns a string that is the contents of the @var{field}.
+@var{buffer} zero is the visible buffer on the screen.  A field may
+have other buffers if so allocated when the field was created using
+@code{new-field}.
+@end deffn
+
+@deffn Procedure field-status field
+The returns the field status of @var{field}.  The field status is set
+to a non-zero value whenever the field changes.
+@end deffn
+
+@deffn Procedure set-field-status field status
+Sets the field status of @var{field} to @var{status}, a boolean.
+@end deffn
+
+@deffn Procdure set-max-field field max
+This procedure sets the maximum size for a dynamic field.  An argument
+of zero turns off any maximum size threshold for that field.
+@end deffn
+
+@subsection Retrieving field characteristics
+
+@deffn Procedure field-info field
+The procedure returns a six-element list of information about the
+field.  The elements of the list are: height, width, row of upper-left
+corner, column of upper-left corner, number of off-screen rows, and
+number of working buffers.  This information was stored when the field
+was created, and rows and columns may not be accurate.
+@end deffn
+
+@deffn Procedure dynamic-field-info field
+This procedure returns of the actual size of the field and its maximum
+size as a list.  The elements of the list are: rows, column, and max
+size.
+@end deffn
+
+@subsection Retrieving field characteristics
+
+@deffn Procedure set-field-just field justification
+This procedure sets the justification attribute of a field to one of
+@code{NO_JUSTIFICATION}, @code{JUSTIFY_RIGHT}, @code{JUSTIFY_LEFT}, or
+@code{JUSTIFY_CENTER}.
+@end deffn
+
+@deffn Procedure field-just field
+This procedure returns the justification attribute of @var{field}.  It
+is one of @code{NO_JUSTIFICATION}, @code{JUSTIFY_RIGHT},
+@code{JUSTIFY_LEFT}, or @code{JUSTIFY_CENTER}.
+@end deffn
+
+@subsection Creating and destroying form fields
+
+@deffn Procedure new-field height width toprow leftcol offscreen nbuffers
+The function @code{new-field} allocates a new field and initializes it
+from the parameters given: height, width, row of upper-left corner,
+column of upper-left corner, number off-screen rows, and number of
+additional working buffers.
+@end deffn
+
+@deffn Procedure dup-field field toprow leftcol
+The function dup-field duplicates a field at a new location.  Most
+attributes (including current contents, size, validation type, buffer
+count, growth threshold, justification, foreground, background, pad
+character, options, and user pointer) are copied.  Field status and
+the field page bit are not copied.
+@end deffn
+
+@deffn Procedure link-field field toprow leftcol
+This is like @code{dup-field} except that the new field shares buffers
+with its parent.  Attribute data is separate.
+@end deffn
+
+@deffn Procedure free-field field
+This explicitly releases the buffer in field, instead of waiting for
+the garbage collector to take care of it.
+@end deffn
+
+@subsection Setting and getting field options
+@deffn Procedure set-field-opts field opts
+@deffnx Procedure field-opts-on field opts
+@deffnx Procedure field-opts-off field opts
+@deffnx Procddure field-opts field
+The function @code{set-field-opts} sets all the given field's option
+bits (field option bits may be logically-OR'ed together).
+
+The function @code{field-opts-on} turns on the given option bits, and
+leaves others alone.
+
+The function @code{field-opts-off} turns off the given option bits, and leaves
+others alone.
+
+The function @code{field-opts} returns the field's current option
+bits.
+@end deffn
+
+The following options are defined.  All are on by default
+
+@table @code
+@item O_VISIBLE
+The field is displayed.  If this option is off, display of the field
+is suppressed.
+@item O_ACTIVE
+The field is visited during processing. If this option is off, the
+field will not be reachable by navigation keys. Please notice that an
+invisible field appears to be inactive also.
+@item O_PUBLIC
+The field contents are displayed as data is entered.
+@item O_EDIT
+The field can be edited.
+@item O_WRAP
+Words that do not fit on a line are wrapped to the next line.  Words
+are blank-separated.
+@item O_BLANK
+The field is cleared whenever a character is entered at the first
+position.
+@item O_AUTOSKIP
+Skip to the next field when this one fills.
+@item O_NULLOK
+Allow a blank field.
+@item O_STATIC
+Field buffers are fixed to field's original size.  Turn this option
+off to create a dynamic field.
+@item O_PASSOK
+Validate field only if modified by user.
+@end table
+
+@node Data type validation for fields, Creating forms, Color and attribute control for form fields, The curses form library
+@subsection Data type validation for fields
+These functions set a field to be able to contain only a certain type
+of input.  The user will not be avle to move off the field if it
+contains invalid input.
+
+@deffn Procedure set-field-type field type ...
+@deffnx Procedure field-type field
+The procedure @code{set-field-type} declares a data type for a given
+form field.  The procedure @code{field-type} returns the declared data
+type.  The input @var{type} is a symbol that is one of the following
+list.  This is the type checked by validation functions.  The
+predefined types are as follows:
+
+@table @code
+@item TYPE_ALNUM
+Alphanumeric data. Requires a third int argument, a minimum field
+width.
+@item TYPE_ALPHA
+Character data.  Requires a third int argument, a minimum field width.
+@item TYPE_ENUM
+Accept one of a specified set of strings.  Requires a third argument
+pointing to a list of strings; a fourth integer flag argument to
+enable case-sensitivity; and a fifth inte flag argument specifying
+whether a partial match must be a unique one (if this flag is off, a
+prefix matches the first of any set of more than one list elements
+with that prefix). Please notice that the string list is not copied,
+only a reference to it is stored in the field. So you should avoid
+using a list that lives in automatic variables on the stack.
+@item TYPE_INTEGER
+Integer data.  Requires a third int argument controlling the
+precision, a fourth long argument constraining minimum value, and a
+fifth long constraining maximum value.  If the maximum value is less
+than or equal to the minimum value, the range is simply ignored. 
+@item TYPE_NUMERIC
+Numeric data (may have a decimal-point part). Requires a third int
+argument controlling the precision, a fourth double argument con-
+straining minimum value, and a fifth double constraining maximum
+value. If your system supports locales, the decimal point charac- ter
+to be used must be the one specified by your locale. If the maximum
+value is less than or equal to the minimum value, the range is simply
+ignored.
+@item TYPE_REGEXP
+Regular expression data.  Requires a regular expression (char *) third
+argument; the data is valid if the regular expression matches it.
+Regular expressions are in the format of regcomp and regexec.  Please
+notice that the regular expression must match the whole field. If you
+have for example an eight character wide field, a regular expression
+"^[0-9]*$" always means that you have to fill all eight positions with
+digits.  If you want to allow fewer digits, you may use for example
+"^[0-9]* *$" which is good for trailing spaces (up to an empty field),
+or "^ *[0-9]* *$" which is good for leading and trailing spaces around
+the digits.
+@item TYPE_IPV4
+An Internet Protocol Version 4 address. This requires no additional
+argument. It is checked whether or not the buffer has the form
+a.b.c.d, where a,b,c and d are numbers between 0 and 255.  Trailing
+blanks in the buffer are ignored. The address itself is not
+validated. Please note that this is an ncurses extension. This field
+type may not be available in other curses implementations.
+@end table
+
+@end deffn
+
+@node Creating forms, Form pagination functions, Data type validation for fields, The curses form library
+@subsection Creating forms
+
+@deffn Procedure new-form fields
+Creates a new form given a list that contains fields.  The fields are
+created using @code{new-field}.
+@end deffn
+
+@node Form pagination functions, Setting and getting form options, Creating forms, The curses form library
+@subsection Form pagination functions
+
+@deffn Procedure set-new-page field new-page-flag
+This procedure sets or resets a flag marking the given field as
+beginning a new page on its form.
+@end deffn
+
+@deffn Procedure new-page field
+Returns a flag indicating if the given field is the start of a new
+page on its form.
+@end deffn
+
+@node Setting and getting form options, Setting the page number and field, Form pagination functions, The curses form library
+@subsection Setting and getting form options
+
+@deffn Procedure set-form-opts form opts
+@deffnx Procedure form-opts-on form opts
+@deffnx Procedure form-opts-off form opts
+The function @code{set-form-opts} sets all the given form's option bits (form
+option bits may be logically-OR'ed together).
+
+The function @code{form-opts-on} turns on the given option bits, and leaves
+others alone.
+
+The function @code{form-opts-off} turns off the given option bits, and	leaves
+others alone.
+@end deffn
+
+@deffn Procedure form-opts form
+This returns the current option bits for the form.
+@end deffn
+
+The following options are defined, and all are on by default.
+
+@table @code
+@item  O_NL_OVERLOAD
+Overload the @code{REQ_NEW_LINE} forms driver request so that calling it at
+the end of a field goes to the next field.
+@item O_BS_OVERLOAD
+Overload the @code{REQ_DEL_PREV} forms driver request so that calling  it
+at the beginning of a field goes to the previous field.
+@end table
+
+@node Setting the page number and field, Writing or erasing forms from associated subwindows, Setting and getting form options, The curses form library
+@subsection Setting the page number and field
+
+@deffn Procedure set-current-field form field
+This procedure sets the current field on the form.
+@end deffn
+
+@deffn Procedure field-index form
+This returns the index into the field array that is current for the
+form.
+@end deffn
+
+@deffn Procedure set-form-page form n
+Sets the page of the form to @var{n}.
+@end deffn
+
+@deffn Procedure form-page form
+Returns the current form's displayed page number.
+@end deffn
+
+@node Writing or erasing forms from associated subwindows, Printable form request names, Setting the page number and field, The curses form library
+@subsection Writing or erasing forms from associated subwindows
+
+@deffn Procedure post-form form
+This procedure displays a form to its associated subwindow.  To
+trigger physical display of the subwindow, use @code{refresh} or some
+equivalent routine.
+@end deffn
+
+@deffn Procedure unpost-form form
+This erases the form from its associated subwindow.
+@end deffn
+
+@node Printable form request names, Form windows, Writing or erasing forms from associated subwindows, The curses form library
+@subsection Printable form request names
+
+@deffn Procedure form-request-name request
+@deffnx Procedure form-request-by-name name
+These procedures convert a string containing the printable name of a
+form request to its integer value and vice versa.
+@end deffn
+
+@node Form windows,  , Printable form request names, The curses form library
+@subsection Form windows
+
+@deffn Procedure set-form-win form win
+@deffnx Procedure form-win form
+@deffnx Procedure set-form-sub form sub
+@deffnx Procedure form-sub form
+@deffnx Procedure scale-form form
+Every form has an associated pair of curses windows.  The form window
+displays any title and border associated with the window; the form
+sub-window displays the items of the form that are currently
+available for selection.
+
+The first four functions get and set those windows.  It is not
+necessary to set either window; by default, the driver code uses
+@code{stdscr} for both.
+
+The function scale-form returns the a list of two elements: minimum
+size required for the subwindow of form.
 @end deffn
 
 @node Hacking the module, Index, Curses Reference, Top
