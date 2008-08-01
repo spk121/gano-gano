@@ -1,8 +1,19 @@
 The NEWS file for Guile Curses
-$Id: NEWS,v 1.4 2007/10/22 06:32:01 spike_gran Exp $
+$Id: NEWS,v 1.5 2008/08/01 14:59:17 spike_gran Exp $
+
+Release 0.2
+- Panel, menu, and form libraries wrapped
+- Rough draft but complete documentation
+
+Release 0.1
+- Changed constanst from *xxx* style to XXX style
+- Cygwin support
+- Initial attempt at wrapping panel, menu library.
+- Gucushell tool added
 
 Release 0.0
 - Initial alpha release
+
 
 
 
