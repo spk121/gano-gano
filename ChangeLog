@@ -1,5 +1,22 @@
 2008-08-01  Mike Gran  <spike_gran@users.sourceforge.net>
 
+	* doc/Makefile.am: add menu/panel examples
+
+	* doc/gucu.texi: update for form, menu, and panel libraries
+
+	* doc/panel_example1.scm: add panel example
+
+	* doc/menu_example2.scm: add menu example
+
+	* doc/menu_example1.scm: add menu example
+
+	* build_aux/compile: should include this file from automake for
+	broken systems
+
+	* build_aux/config.sub: update to latest
+
+	* build_aux/config.guess: update to 01/23/08
+
 	* configure.ac: bump for 0.2
 
 	* configure: bump for 0.2
