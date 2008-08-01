@@ -1,6 +1,7 @@
 
 ;; -*- Mode: scheme; -*-
 (define-module (XXpackageXX form)
+        #:use-module (XXpackageXX eti)
 	#:export ( 
 		data-ahead
 		data-behind
@@ -44,15 +45,6 @@
 		set-max-field
 		set-new-page
 		unpost-form
-		E_OK
-		E_BAD_ARGUMENT
-		E_BAD_STATE
-		E_CURRENT
-		E_NOT_POSTED
-		E_INVALID_FIELD
-		E_REQUEST_DENIED
-		E_SYSTEM_ERROR
-		E_UNKNOWN_COMMAND
 		NO_JUSTIFICATION
 		JUSTIFY_LEFT
 		JUSTIFY_CENTER
@@ -129,10 +121,11 @@
 		MIN_FORM_COMMAND
 		MAX_FORM_COMMAND
 		dup-field
-		dynamic-fieldinfo
+		dynamic-field-info
 		field-buffer
 		field-info
 		field-type
+		form-fields
 		link-field
 		scale-form
 		set-field-type
@@ -141,6 +134,27 @@
 		new-form
 		form?
 		field?
-))
+
+        )
+        #:re-export (
+
+		E_OK
+		E_SYSTEM_ERROR
+		E_BAD_ARGUMENT
+		E_POSTED
+		E_CONNECTED
+		E_BAD_STATE
+		E_NO_ROOM
+		E_NOT_POSTED
+		E_UNKNOWN_COMMAND
+		E_NO_MATCH
+		E_NOT_SELECTABLE
+		E_NOT_CONNECTED
+		E_REQUEST_DENIED
+		E_INVALID_FIELD
+		E_CURRENT
+
+        ))
+
 
 (load-extension "XXlibnameXX" "gucu_form_init")

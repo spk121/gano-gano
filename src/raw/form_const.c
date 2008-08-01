@@ -7,15 +7,6 @@
 #include "type.h"
 #include "form_type.h"
 #define _GNU_SOURCE
-SCM gucu_E_OK;
-SCM gucu_E_BAD_ARGUMENT;
-SCM gucu_E_BAD_STATE;
-SCM gucu_E_CURRENT;
-SCM gucu_E_NOT_POSTED;
-SCM gucu_E_INVALID_FIELD;
-SCM gucu_E_REQUEST_DENIED;
-SCM gucu_E_SYSTEM_ERROR;
-SCM gucu_E_UNKNOWN_COMMAND;
 SCM gucu_NO_JUSTIFICATION;
 SCM gucu_JUSTIFY_LEFT;
 SCM gucu_JUSTIFY_CENTER;
@@ -95,15 +86,6 @@ SCM gucu_MAX_FORM_COMMAND;
 void 
 gucu_form_init_constant ()
 {
-	gucu_E_OK = scm_permanent_object (scm_c_define ("E_OK", scm_from_int (E_OK)));
-	gucu_E_BAD_ARGUMENT = scm_permanent_object (scm_c_define ("E_BAD_ARGUMENT", scm_from_int (E_BAD_ARGUMENT)));
-	gucu_E_BAD_STATE = scm_permanent_object (scm_c_define ("E_BAD_STATE", scm_from_int (E_BAD_STATE)));
-	gucu_E_CURRENT = scm_permanent_object (scm_c_define ("E_CURRENT", scm_from_int (E_CURRENT)));
-	gucu_E_NOT_POSTED = scm_permanent_object (scm_c_define ("E_NOT_POSTED", scm_from_int (E_NOT_POSTED)));
-	gucu_E_INVALID_FIELD = scm_permanent_object (scm_c_define ("E_INVALID_FIELD", scm_from_int (E_INVALID_FIELD)));
-	gucu_E_REQUEST_DENIED = scm_permanent_object (scm_c_define ("E_REQUEST_DENIED", scm_from_int (E_REQUEST_DENIED)));
-	gucu_E_SYSTEM_ERROR = scm_permanent_object (scm_c_define ("E_SYSTEM_ERROR", scm_from_int (E_SYSTEM_ERROR)));
-	gucu_E_UNKNOWN_COMMAND = scm_permanent_object (scm_c_define ("E_UNKNOWN_COMMAND", scm_from_int (E_UNKNOWN_COMMAND)));
 	gucu_NO_JUSTIFICATION = scm_permanent_object (scm_c_define ("NO_JUSTIFICATION", scm_from_int (NO_JUSTIFICATION)));
 	gucu_JUSTIFY_LEFT = scm_permanent_object (scm_c_define ("JUSTIFY_LEFT", scm_from_int (JUSTIFY_LEFT)));
 	gucu_JUSTIFY_CENTER = scm_permanent_object (scm_c_define ("JUSTIFY_CENTER", scm_from_int (JUSTIFY_CENTER)));

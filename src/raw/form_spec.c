@@ -51,9 +51,9 @@ gucu_dup_field (SCM field, SCM toprow, SCM leftcol)
       
 // Returns the rows, columns and max size of FIELD
 SCM
-gucu_dynamic_fieldinfo (SCM field)    
+gucu_dynamic_field_info (SCM field)    
 {
-  SCM_ASSERT (_scm_is_field(field), field, SCM_ARG1, "dynamic-fieldinfo");
+  SCM_ASSERT (_scm_is_field(field), field, SCM_ARG1, "dynamic-field-info");
 
   FIELD *c_field;
   int c_rows, c_cols, c_max;
@@ -65,7 +65,7 @@ gucu_dynamic_fieldinfo (SCM field)
   if (ret == E_BAD_ARGUMENT)
     {
       scm_error_scm (SCM_BOOL_F, 
-		     scm_from_locale_string ("dynamic-fieldinfo"),
+		     scm_from_locale_string ("dynamic-field-info"),
 		     scm_from_locale_string ("bad argument"),
 		     SCM_BOOL_F,
 		     SCM_BOOL_F);
@@ -73,7 +73,7 @@ gucu_dynamic_fieldinfo (SCM field)
   else if (ret == E_SYSTEM_ERROR)
     {
       scm_error_scm (SCM_BOOL_F,
-		     scm_from_locale_string ("dynamic-fieldinfo"),
+		     scm_from_locale_string ("dynamic-field-info"),
 		     scm_from_locale_string ("system error"),
 		     SCM_BOOL_F,
 		     SCM_BOOL_F);
@@ -114,7 +114,7 @@ gucu_field_buffer (SCM field, SCM buffer)
       if (errno == E_BAD_ARGUMENT)
 	{
 	  scm_error_scm (SCM_BOOL_F, 
-			 scm_from_locale_string ("dynamic-fieldinfo"),
+			 scm_from_locale_string ("field-buffer"),
 			 scm_from_locale_string ("bad argument"),
 			 SCM_BOOL_F,
 			 SCM_BOOL_F);
@@ -142,7 +142,7 @@ gucu_field_info (SCM field)
   if (ret == E_BAD_ARGUMENT)
     {
       scm_error_scm (SCM_BOOL_F, 
-		     scm_from_locale_string ("dynamic-fieldinfo"),
+		     scm_from_locale_string ("field-info"),
 		     scm_from_locale_string ("bad argument"),
 		     SCM_BOOL_F,
 		     SCM_BOOL_F);
@@ -150,7 +150,7 @@ gucu_field_info (SCM field)
   else if (ret == E_SYSTEM_ERROR)
     {
       scm_error_scm (SCM_BOOL_F,
-		     scm_from_locale_string ("dynamic-fieldinfo"),
+		     scm_from_locale_string ("field-info"),
 		     scm_from_locale_string ("system error"),
 		     SCM_BOOL_F,
 		     SCM_BOOL_F);
@@ -184,25 +184,25 @@ gucu_field_type (SCM field)
   FIELD *c_field;
   FIELDTYPE *ft;
 
-  SCM_ASSERT (_scm_is_field(field), field, SCM_ARG1, "field-info");
+  SCM_ASSERT (_scm_is_field(field), field, SCM_ARG1, "field-type");
   
   c_field = _scm_to_field (field);
   
   ft = field_type (c_field);
   if (ft == TYPE_ALNUM)
-    return scm_from_locale_symbol ("alnum");
+    return scm_from_locale_symbol ("TYPE_ALNUM");
   else if (ft == TYPE_ALPHA)
-    return scm_from_locale_symbol ("alpha");
+    return scm_from_locale_symbol ("TYPE_ALPHA");
   else if (ft == TYPE_ENUM)
-    return scm_from_locale_symbol ("enum");
+    return scm_from_locale_symbol ("TYPE_ENUM");
   else if (ft == TYPE_INTEGER)
-    return scm_from_locale_symbol ("integer");
+    return scm_from_locale_symbol ("TYPE_INTEGER");
   else if (ft == TYPE_NUMERIC)
-    return scm_from_locale_symbol ("numeric");
+    return scm_from_locale_symbol ("TYPE_NUMERIC");
   else if (ft == TYPE_REGEXP)
-    return scm_from_locale_symbol ("regexp");
+    return scm_from_locale_symbol ("TYPE_REGEXP");
   else if (ft == TYPE_IPV4)
-    return scm_from_locale_symbol ("ipv4");
+    return scm_from_locale_symbol ("TYPE_IPV4");
   else if (ft == NULL)
     return SCM_BOOL_F;
   else
@@ -408,7 +408,7 @@ void
 gucu_form_init_special ()
 {
   scm_c_define_gsubr ("dup-field", 3, 0, 0, gucu_dup_field);
-  scm_c_define_gsubr ("dynamic-fieldinfo", 1, 0, 0, gucu_dynamic_fieldinfo);
+  scm_c_define_gsubr ("dynamic-field-info", 1, 0, 0, gucu_dynamic_field_info);
   scm_c_define_gsubr ("field-buffer", 1, 1, 0, gucu_field_buffer);
   scm_c_define_gsubr ("field-info", 1, 0, 0, gucu_field_info);
   scm_c_define_gsubr ("field-type", 1, 0, 0, gucu_field_type);

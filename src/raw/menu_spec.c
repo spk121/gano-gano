@@ -1,83 +1,11 @@
 #include <curses.h>
+#include <errno.h>
 #include <libguile.h>
 #include <config.h>
 #include <menu.h>
 #include "type.h"
 #include "menu_type.h"
 #include "menu_spec.h"
-
-// Create a new menu given a list of text labels LABELS
-SCM
-gucu_new_menu (SCM labels)
-{
-  SCM_ASSERT (scm_is_true (scm_list_p (labels)), labels, SCM_ARG1, "new-menu");
-
-  size_t len = scm_to_size_t (scm_length (labels));
-  ITEM **items = (ITEM **) malloc (sizeof (ITEM *) * (len + 1));
-
-  char *label, *descr;
-
-  for (size_t i=0; i < len; i++)
-    {
-      SCM entry = scm_list_ref (labels, scm_from_int (i));
-      if (scm_is_pair (entry))
-	{
-	  label = scm_to_locale_string (scm_car (scm_list_ref (labels, 
-							       scm_from_int (i))));
-	  descr = scm_to_locale_string (scm_cdr (scm_list_ref (labels, 
-							       scm_from_int (i))));
-	  items[i] = new_item(label, descr);
-	}
-      else
-	{
-	  label = scm_to_locale_string (scm_list_ref (labels, scm_from_int (i)));
-	  items[i] = new_item(label, "");
-	}
-    }
-  items[len] = (ITEM *) 0;
-
-  MENU *result = new_menu (items);
-  // printf("%p\r\n", result);
-  if (result == NULL)
-    scm_syserror ("new-menu");
-  else
-    return _scm_from_menu (result);
-}
-
-// Free the memory association with MENU
-SCM
-gucu_free_menu (SCM menu)
-{
-  SCM_ASSERT (_scm_is_menu (menu), menu, SCM_ARG1, "free-menu");
-
-  MENU *m = _scm_to_menu (menu);
-  ITEM **ip;
-  int count;
-  
-  if (m != 0) 
-    {
-      delwin(menu_sub(m));
-      delwin(menu_win(m));
-      
-      ip = menu_items(m);
-      count = item_count(m);
-      
-      free_menu(m);
-#if 0
-      if (count > 0) 
-	{
-	  while (*ip) 
-	    {
-	      _tracef("freeing item %d:%d", ip - menu_items(m), count);
-	      free_item(*ip++);
-	    }
-	}
-#endif
-    }
-  SCM_NEWSMOB (menu, menu_tag, NULL);
-
-  return SCM_UNSPECIFIED;
-}
 
 
 // Return the minimum size of a window necessary to contain the MENU
@@ -99,16 +27,6 @@ gucu_scale_menu (SCM menu)
     return SCM_BOOL_F;
 }
 
-
-SCM
-gucu_item_index (SCM menu)
-{
-  SCM_ASSERT (_scm_is_menu (menu), menu, SCM_ARG1, "item-index");
-
-  MENU *m = _scm_to_menu (menu);
-  
-  return scm_from_int (item_index (current_item (m)));
-}
 
 /* returns a list of 3 elements: 
 1. num spaces between item name and description
@@ -149,13 +67,26 @@ gucu_menu_itemlen (SCM menu)
   return scm_from_short (m->itemlen);
 }
 
+/* */
+SCM
+gucu_menu_format (SCM menu)
+{
+  SCM_ASSERT (_scm_is_menu (menu), menu, SCM_ARG1, "menu-format");
+  int rows, cols;
+
+  MENU *m = _scm_to_menu (menu);
+
+  menu_format (m, &rows, &cols);
+
+  return scm_list_2 (scm_from_int (rows),
+		     scm_from_int (cols));
+}
+
 void
 gucu_menu_init_special ()
 {
-   scm_c_define_gsubr ("new-menu", 1, 0, 0, gucu_new_menu);
-   scm_c_define_gsubr ("free-menu", 1, 0, 0, gucu_free_menu);
    scm_c_define_gsubr ("scale-menu", 1, 0, 0, gucu_scale_menu);
-   scm_c_define_gsubr ("item-index", 1, 0, 0, gucu_item_index);
    scm_c_define_gsubr ("menu-spacing", 1, 0, 0, gucu_menu_spacing);
    scm_c_define_gsubr ("menu-itemlen", 1, 0, 0, gucu_menu_itemlen);
+   scm_c_define_gsubr ("menu-format", 1, 0, 0, gucu_menu_format);
 }

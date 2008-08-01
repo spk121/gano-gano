@@ -273,7 +273,7 @@ gc_free_form (SCM x)
 		     SCM_BOOL_F,
 		     SCM_BOOL_F);
     }
-  else if (errno == E_POSTED)
+  else if (retval == E_POSTED)
     {
       scm_error_scm (SCM_BOOL_F,
 		     scm_from_locale_string ("garbage collection of form"),

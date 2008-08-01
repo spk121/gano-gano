@@ -11,7 +11,7 @@
 #endif
 
 SCM gucu_dup_field (SCM field, SCM toprow, SCM leftcol) API;
-SCM gucu_dynamic_fieldinfo (SCM field) API;
+SCM gucu_dynamic_field_info (SCM field) API;
 SCM gucu_field_buffer (SCM field, SCM buffer) API;
 SCM gucu_field_info (SCM field) API;
 SCM gucu_field_type (SCM field) API;

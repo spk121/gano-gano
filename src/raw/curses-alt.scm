@@ -1007,7 +1007,7 @@
 
 (define (reset-shell-mode)
   (if (eqv? *ok*
-	    (reset-program-mode))
+	    (reset-shell-mode))
       #t
       #f))
 
@@ -1085,12 +1085,6 @@
    (else (idlok (stcscr) bf)))
   *undefined*) 
 
-(define (use-hardware-insert-delete-char bf #:key win)
-  (cond
-   (win (idcok win bf))
-   (else (idcok (stcscr) bf)))
-  *undefined*) 
-	
 (define (use-hardware-insert-delete-char bf #:key win)
   (cond
    (win (idcok win bf))

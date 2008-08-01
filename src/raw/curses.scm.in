@@ -464,6 +464,7 @@
 			    stdscr
 			    curscr
 			    window?
+			    open-curses-port
 ))
 
 (load-extension "XXlibnameXX" "gucu_init")
