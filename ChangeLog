@@ -1,5 +1,14 @@
 2008-08-01  Mike Gran  <spike_gran@users.sourceforge.net>
 
+	* m4/lt~obsolete.m4: add new m4s for autoconf/make
+	* m4/ltsugar.m4
+	* m4/ltoptions.m4
+	* m4/ltversion.m4
+
+	* m4/Makefile.am: kill reference to ncurses.m4 and guile.m4.
+	Relying out autoconf/automake now instead of ncursesw-config and
+	guile-config
+
 	* doc/Makefile.am: add menu/panel examples
 
 	* doc/gucu.texi: update for form, menu, and panel libraries
