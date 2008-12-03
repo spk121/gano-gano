@@ -4,6 +4,7 @@
 (use-modules (test lib)
 	     (test lib2)
 	     (srfi srfi-1)
+	     (ice-9 format)
 	     (gucu curses))
 
 
@@ -212,8 +213,7 @@
 			     (refresh)
 			     (let ((x2 (attr-get)))
 			       (and
-				(equal? (car x2) (logior A_UNDERLINE (color-pair 1)))
-				;; FIXME: should it be this? (equal? (car x2) A_UNDERLINE)
+				(equal? (car x2) A_UNDERLINE)
 				(equal? (cadr x2) 1)))))
 
 		  (pass-if "chgat"
@@ -359,8 +359,7 @@
 			     (wrefresh win)
 			     (let ((x2 (wattr-get win)))
 			       (and
-				(equal? (car x2) (logior A_UNDERLINE (color-pair 1)))
-				;; FIXME: should it be this? (equal? (car x2) A_UNDERLINE)
+				(equal? (car x2) A_UNDERLINE)
 				(equal? (cadr x2) 1)))))
 
 		  (pass-if "wchgat"
