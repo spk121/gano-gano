@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.12 2008/08/01 15:31:43 spike_gran Exp $
+## $Id: Makefile.am,v 1.13 2008/12/04 05:33:59 spike_gran Exp $
 
 # COMPILE_FLAGS = -Wall -W -Wunused-parameter -Wstrict-prototypes \
 # 	-Wmissing-prototypes -Wpointer-arith \
@@ -47,7 +47,7 @@ libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES = \
 
 # -lguile added to LIBS by autoconf in the AC_CHECK_LIB test
 libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LIBADD = \
-	@LIBNCURSES@ @LIBMENU@ @LIBPANEL@ @LIBFORM@
+	@LIBMENU@ @LIBPANEL@ @LIBFORM@ @LIBNCURSES@ 
 
 ### WIDE CURSES ###
 

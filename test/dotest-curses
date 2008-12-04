@@ -7,7 +7,7 @@
 ln -s ../src/raw ${PACKAGE}
 
 # MODIFY_ME: A specific test to debug 
-TESTS=r006_attr.test
+TESTS=f002_data.test
 
 # This should be the same as in Makefile.am
 LIBGUILE_GUCU_CURSES_MAJOR=0
@@ -21,12 +21,12 @@ echo "testlist->" ${TESTS}
 #### Uncomment one of the following ####
 
 # Run the library
-libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la \
-    --mode=execute guile -L .. -L . -s ${TESTS}
+#libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la \
+#    --mode=execute guile -L .. -L . -s ${TESTS}
 
 
 # Debug the library with GDB
-# libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la \
+libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la \
     --mode=execute gdb --tui --args guile -L .. -L . -s ${TESTS}
 
 # Grind the library

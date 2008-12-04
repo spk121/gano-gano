@@ -112,17 +112,22 @@ AS_IF(
       # then
       [AC_CHECK_LIB([$libmenuw],	
                     [new_menu],
-		    # if ncursesw is ok
+		    # if menuw is ok
 		    [AC_SUBST([LIBMENU], ["-l$libmenuw"])],
-		    # if ncursesw is not ok
-                    [AC_MSG_ERROR([The wide ncurses menu library was not found.])])],
+		    # if menuw is not ok
+                    [AC_MSG_ERROR([The wide ncurses menu library was not found.])],
+                    dnl this test requires ncurses
+                    [-l$libncursesw])],
       # else
       [AC_CHECK_LIB([$libmenu],	
                     [new_menu],
-		    # if ncursesw is ok
+		    # if menuw is ok
 		    [AC_SUBST([LIBMENU], ["-l$libmenu"])],
-		    # if ncursesw is not ok
-                    [AC_MSG_ERROR([The ncurses menu library was not found.])])])
+		    # if menuw is not ok
+                    [AC_MSG_ERROR([The ncurses menu library was not found.])],
+                    dnl this test requires libncurses
+                    [-l$libncurses])])
+
 
 LIBFORM=
 AS_IF(
@@ -131,17 +136,22 @@ AS_IF(
       # then
       [AC_CHECK_LIB([$libformw],	
                     [new_form],
-		    # if ncursesw is ok
+		    # if formw is ok
 		    [AC_SUBST([LIBFORM], ["-l$libformw"])],
-		    # if ncursesw is not ok
-                    [AC_MSG_ERROR([The wide ncurses form library was not found.])])],
+		    # if formw is not ok
+                    [AC_MSG_ERROR([The wide ncurses form library was not found.])],
+                    dnl this test requires ncurses
+                    [-l$libncursesw -ldl])],
+
       # else
       [AC_CHECK_LIB([$libform],	
                     [new_form],
 		    # if ncursesw is ok
 		    [AC_SUBST([LIBFORM], ["-l$libform"])],
 		    # if ncursesw is not ok
-                    [AC_MSG_ERROR([The ncurses form library was not found.])])])
+                    [AC_MSG_ERROR([The ncurses form library was not found.])],
+                    dnl this test requires libncurses
+                    [-l$libncurses -ldl])])
 
 LIBPANEL=
 AS_IF(
@@ -153,14 +163,18 @@ AS_IF(
 		    # if ncursesw is ok
 		    [AC_SUBST([LIBPANEL], ["-l$libpanelw"])],
 		    # if ncursesw is not ok
-                    [AC_MSG_ERROR([The wide ncurses panel library was not found.])])],
+                    [AC_MSG_ERROR([The wide ncurses panel library was not found.])],
+                    dnl this test requires libncursesw
+                    [-l$libncursesw])],
       # else
       [AC_CHECK_LIB([$libpanel],	
                     [new_panel],
 		    # if ncursesw is ok
 		    [AC_SUBST([LIBPANEL], ["-l$libpanel"])],
 		    # if ncursesw is not ok
-                    [AC_MSG_ERROR([The ncurses panel library was not found.])])])
+                    [AC_MSG_ERROR([The ncurses panel library was not found.])],
+                    dnl this test requires libncurses
+                    [-l$libncurses])])
 
 
 #
