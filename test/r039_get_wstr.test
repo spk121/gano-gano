@@ -19,7 +19,7 @@
 (define wstring-hip (map char->integer (string->list "hip")))
 (define wstring-hi (map char->integer (string->list "hi")))
 (standend)
-(attron (logior (color-pair 0) A_NORMAL))
+(attr-on (logior (color-pair 0) A_NORMAL))
 
 ;; Should be able to get strings from the keyboard
 

@@ -1476,7 +1476,6 @@ Optional Features:
   --enable-static[=PKGS]  build static libraries [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
   --enable-ndebug         use the debug version of the curses libraries
-                          (requires --disable-shared)
   --enable-acs-map-fix    Work around acs_map bug in Cygwin NCurses v
                           5.5.20061104
 
@@ -4483,13 +4482,13 @@ if test "${lt_cv_nm_interface+set}" = set; then
 else
   lt_cv_nm_interface="BSD nm"
   echo "int some_variable = 0;" > conftest.$ac_ext
-  (eval echo "\"\$as_me:4486: $ac_compile\"" >&5)
+  (eval echo "\"\$as_me:4485: $ac_compile\"" >&5)
   (eval "$ac_compile" 2>conftest.err)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:4489: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
+  (eval echo "\"\$as_me:4488: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
   (eval "$NM \"conftest.$ac_objext\"" 2>conftest.err > conftest.out)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:4492: output\"" >&5)
+  (eval echo "\"\$as_me:4491: output\"" >&5)
   cat conftest.out >&5
   if $GREP 'External.*some_variable' conftest.out > /dev/null; then
     lt_cv_nm_interface="MS dumpbin"
@@ -4535,7 +4534,7 @@ else
     lt_cv_sys_max_cmd_len=-1;
     ;;
 
-  cygwin* | mingw* | cegcc*)
+  cygwin* | mingw*)
     # On Win9x/ME, this test blows up -- it succeeds, but takes
     # about 5 minutes as the teststring grows exponentially.
     # Worse, since 9x/ME are not pre-emptively multitasking,
@@ -4736,108 +4735,6 @@ esac
 
 
 
-if test -n "$ac_tool_prefix"; then
-  # Extract the first word of "${ac_tool_prefix}objdump", so it can be a program name with args.
-set dummy ${ac_tool_prefix}objdump; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_prog_OBJDUMP+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  if test -n "$OBJDUMP"; then
-  ac_cv_prog_OBJDUMP="$OBJDUMP" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_prog_OBJDUMP="${ac_tool_prefix}objdump"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-fi
-fi
-OBJDUMP=$ac_cv_prog_OBJDUMP
-if test -n "$OBJDUMP"; then
-  { echo "$as_me:$LINENO: result: $OBJDUMP" >&5
-echo "${ECHO_T}$OBJDUMP" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-
-fi
-if test -z "$ac_cv_prog_OBJDUMP"; then
-  ac_ct_OBJDUMP=$OBJDUMP
-  # Extract the first word of "objdump", so it can be a program name with args.
-set dummy objdump; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_prog_ac_ct_OBJDUMP+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  if test -n "$ac_ct_OBJDUMP"; then
-  ac_cv_prog_ac_ct_OBJDUMP="$ac_ct_OBJDUMP" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_prog_ac_ct_OBJDUMP="objdump"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-fi
-fi
-ac_ct_OBJDUMP=$ac_cv_prog_ac_ct_OBJDUMP
-if test -n "$ac_ct_OBJDUMP"; then
-  { echo "$as_me:$LINENO: result: $ac_ct_OBJDUMP" >&5
-echo "${ECHO_T}$ac_ct_OBJDUMP" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-  if test "x$ac_ct_OBJDUMP" = x; then
-    OBJDUMP="false"
-  else
-    case $cross_compiling:$ac_tool_warned in
-yes:)
-{ echo "$as_me:$LINENO: WARNING: In the future, Autoconf will not detect cross-tools
-whose name does not start with the host triplet.  If you think this
-configuration is useful to you, please write to autoconf@gnu.org." >&5
-echo "$as_me: WARNING: In the future, Autoconf will not detect cross-tools
-whose name does not start with the host triplet.  If you think this
-configuration is useful to you, please write to autoconf@gnu.org." >&2;}
-ac_tool_warned=yes ;;
-esac
-    OBJDUMP=$ac_ct_OBJDUMP
-  fi
-else
-  OBJDUMP="$ac_cv_prog_OBJDUMP"
-fi
-
-test -z "$OBJDUMP" && OBJDUMP=objdump
-
-
-
-
-
 
 { echo "$as_me:$LINENO: checking how to recognize dependent libraries" >&5
 echo $ECHO_N "checking how to recognize dependent libraries... $ECHO_C" >&6; }
@@ -4890,12 +4787,6 @@ mingw* | pw32*)
     lt_cv_deplibs_check_method='file_magic file format pei*-i386(.*architecture: i386)?'
     lt_cv_file_magic_cmd='$OBJDUMP -f'
   fi
-  ;;
-
-cegcc)
-  # use the weaker test based on 'objdump'. See mingw*.
-  lt_cv_deplibs_check_method='file_magic file format pe-arm-.*little(.*architecture: arm)?'
-  lt_cv_file_magic_cmd='$OBJDUMP -f'
   ;;
 
 darwin* | rhapsody*)
@@ -5448,7 +5339,7 @@ case $host_os in
 aix*)
   symcode='[BCDT]'
   ;;
-cygwin* | mingw* | pw32* | cegcc*)
+cygwin* | mingw* | pw32*)
   symcode='[ABCDGISTW]'
   ;;
 hpux*)
@@ -5708,7 +5599,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 5711 "configure"' > conftest.$ac_ext
+  echo '#line 5602 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -7092,7 +6983,7 @@ fi
 enable_win32_dll=yes
 
 case $host in
-*-*-cygwin* | *-*-mingw* | *-*-pw32* | *-cegcc*)
+*-*-cygwin* | *-*-mingw* | *-*-pw32*)
   if test -n "$ac_tool_prefix"; then
   # Extract the first word of "${ac_tool_prefix}as", so it can be a program name with args.
 set dummy ${ac_tool_prefix}as; ac_word=$2
@@ -7838,6 +7729,10 @@ _lt_linker_boilerplate=`cat conftest.err`
 $RM -r conftest*
 
 
+## CAVEAT EMPTOR:
+## There is no encapsulation within the following macros, do not change
+## the running order or otherwise move them around unless you know exactly
+## what you are doing...
 if test -n "$compiler"; then
 
 lt_prog_compiler_no_builtin_flag=
@@ -7863,11 +7758,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7866: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7761: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7870: \$? = $ac_status" >&5
+   echo "$as_me:7765: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7935,7 +7830,7 @@ echo $ECHO_N "checking for $compiler option to produce PIC... $ECHO_C" >&6; }
       # PIC is the default for these OSes.
       ;;
 
-    mingw* | cygwin* | pw32* | os2* | cegcc*)
+    mingw* | cygwin* | pw32* | os2*)
       # This hack is so that the source file can tell whether it is being
       # built for inclusion in a dll (and should export symbols for example).
       # Although the cygwin gcc ignores -fPIC, still need this for old-style
@@ -7950,11 +7845,10 @@ echo $ECHO_N "checking for $compiler option to produce PIC... $ECHO_C" >&6; }
       ;;
 
     hpux*)
-      # PIC is the default for 64-bit PA HP-UX, but not for 32-bit
-      # PA HP-UX.  On IA64 HP-UX, PIC is the default but the pic flag
-      # sets the default TLS model and affects inlining.
+      # PIC is the default for IA64 HP-UX and 64-bit HP-UX, but
+      # not for PA HP-UX.
       case $host_cpu in
-      hppa*64*)
+      hppa*64*|ia64*)
 	# +Z the default
 	;;
       *)
@@ -8004,7 +7898,7 @@ echo $ECHO_N "checking for $compiler option to produce PIC... $ECHO_C" >&6; }
       fi
       ;;
 
-    mingw* | cygwin* | pw32* | os2* | cegcc*)
+    mingw* | cygwin* | pw32* | os2*)
       # This hack is so that the source file can tell whether it is being
       # built for inclusion in a dll (and should export symbols for example).
       lt_prog_compiler_pic='-DDLL_EXPORT'
@@ -8034,25 +7928,11 @@ echo $ECHO_N "checking for $compiler option to produce PIC... $ECHO_C" >&6; }
 
     linux* | k*bsd*-gnu)
       case $cc_basename in
-      # old Intel for x86_64 which still supported -KPIC.
-      ecc*)
+      icc* | ecc* | ifort*)
 	lt_prog_compiler_wl='-Wl,'
 	lt_prog_compiler_pic='-KPIC'
 	lt_prog_compiler_static='-static'
         ;;
-      # icc used to be incompatible with GCC.
-      # ICC 10 doesn't accept -KPIC any more.
-      icc* | ifort*)
-	lt_prog_compiler_wl='-Wl,'
-	lt_prog_compiler_pic='-fPIC'
-	lt_prog_compiler_static='-static'
-        ;;
-      # Lahey Fortran 8.1.
-      lf95*)
-	lt_prog_compiler_wl='-Wl,'
-	lt_prog_compiler_pic='--shared'
-	lt_prog_compiler_static='--static'
-	;;
       pgcc* | pgf77* | pgf90* | pgf95*)
         # Portland Group compilers (*not* the Pentium gcc compiler,
 	# which looks to be a dead project)
@@ -8202,11 +8082,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8205: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8085: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8209: \$? = $ac_status" >&5
+   echo "$as_me:8089: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8307,11 +8187,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8310: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8190: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8314: \$? = $ac_status" >&5
+   echo "$as_me:8194: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -8362,11 +8242,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8365: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8245: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8369: \$? = $ac_status" >&5
+   echo "$as_me:8249: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -8466,7 +8346,7 @@ echo $ECHO_N "checking whether the $compiler linker ($LD) supports shared librar
   extract_expsyms_cmds=
 
   case $host_os in
-  cygwin* | mingw* | pw32* | cegcc*)
+  cygwin* | mingw* | pw32*)
     # FIXME: the MSVC++ port hasn't been tested in a loooong time
     # When not using gcc, we currently assume that we are using
     # Microsoft Visual C++.
@@ -8553,7 +8433,7 @@ _LT_EOF
       fi
       ;;
 
-    cygwin* | mingw* | pw32* | cegcc*)
+    cygwin* | mingw* | pw32*)
       # _LT_TAGVAR(hardcode_libdir_flag_spec, ) is actually meaningless,
       # as there is no search path for DLLs.
       hardcode_libdir_flag_spec='-L$libdir'
@@ -8619,9 +8499,6 @@ _LT_EOF
 	  tmp_addflag=' -i_dynamic -nofor_main' ;;
 	ifc* | ifort*)			# Intel Fortran compiler
 	  tmp_addflag=' -nofor_main' ;;
-	lf95*)				# Lahey Fortran 8.1
-	  whole_archive_flag_spec=
-	  tmp_sharedflag='--shared' ;;
 	xl[cC]*)			# IBM XL C 8.0 on PPC (deal with xlf below)
 	  tmp_sharedflag='-qmkshrobj'
 	  tmp_addflag= ;;
@@ -8853,7 +8730,6 @@ _LT_EOF
 	fi
       fi
 
-      export_dynamic_flag_spec='${wl}-bexpall'
       # It seems that -bexpall does not export symbols beginning with
       # underscore (_), so it is better to generate a list of symbols to export.
       always_export_symbols=yes
@@ -9020,7 +8896,7 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
       export_dynamic_flag_spec=-rdynamic
       ;;
 
-    cygwin* | mingw* | pw32* | cegcc*)
+    cygwin* | mingw* | pw32*)
       # When not using gcc, we currently assume that we are using
       # Microsoft Visual C++.
       # hardcode_libdir_flag_spec is actually meaningless, as there is
@@ -9051,11 +8927,7 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
   whole_archive_flag_spec=''
   link_all_deplibs=yes
   allow_undefined_flag="$_lt_dar_allow_undefined"
-  case $cc_basename in
-     ifort*) _lt_dar_can_shared=yes ;;
-     *) _lt_dar_can_shared=$GCC ;;
-  esac
-  if test "$_lt_dar_can_shared" = "yes"; then
+  if test "$GCC" = "yes"; then
     output_verbose_link_cmd=echo
     archive_cmds="\$CC -dynamiclib \$allow_undefined_flag -o \$lib \$libobjs \$deplibs \$compiler_flags -install_name \$rpath/\$soname \$verstring $_lt_dar_single_mod${_lt_dsymutil}"
     module_cmds="\$CC \$allow_undefined_flag -o \$lib -bundle \$libobjs \$deplibs \$compiler_flags${_lt_dsymutil}"
@@ -9147,7 +9019,7 @@ if test -z "$aix_libpath"; then aix_libpath="/usr/lib:/lib"; fi
 	  archive_cmds='$CC -shared ${wl}+h ${wl}$soname -o $lib $libobjs $deplibs $compiler_flags'
 	  ;;
 	ia64*)
-	  archive_cmds='$CC -shared -fPIC ${wl}+h ${wl}$soname ${wl}+nodefaultrpath -o $lib $libobjs $deplibs $compiler_flags'
+	  archive_cmds='$CC -shared ${wl}+h ${wl}$soname ${wl}+nodefaultrpath -o $lib $libobjs $deplibs $compiler_flags'
 	  ;;
 	*)
 	  archive_cmds='$CC -shared -fPIC ${wl}+h ${wl}$soname ${wl}+b ${wl}$install_libdir -o $lib $libobjs $deplibs $compiler_flags'
@@ -9885,14 +9757,14 @@ bsdi[45]*)
   # libtool to hard-code these into programs
   ;;
 
-cygwin* | mingw* | pw32* | cegcc*)
+cygwin* | mingw* | pw32*)
   version_type=windows
   shrext_cmds=".dll"
   need_version=no
   need_lib_prefix=no
 
   case $GCC,$host_os in
-  yes,cygwin* | yes,mingw* | yes,pw32* | yes,cegcc*)
+  yes,cygwin* | yes,mingw* | yes,pw32*)
     library_names_spec='$libname.dll.a'
     # DLL is installed to $(libdir)/../bin by postinstall_cmds
     postinstall_cmds='base_file=`basename \${file}`~
@@ -9915,7 +9787,7 @@ cygwin* | mingw* | pw32* | cegcc*)
       soname_spec='`echo ${libname} | sed -e 's/^lib/cyg/'``echo ${release} | $SED -e 's/[.]/-/g'`${versuffix}${shared_ext}'
       sys_lib_search_path_spec="/usr/lib /lib/w32api /lib /usr/local/lib"
       ;;
-    mingw* | cegcc*)
+    mingw*)
       # MinGW DLLs use traditional 'lib' prefix
       soname_spec='${libname}`echo ${release} | $SED -e 's/[.]/-/g'`${versuffix}${shared_ext}'
       sys_lib_search_path_spec=`$CC -print-search-dirs | $GREP "^libraries:" | $SED -e "s/^libraries://" -e "s,=/,/,g"`
@@ -10384,7 +10256,7 @@ tpf*)
   version_type=linux
   need_lib_prefix=no
   need_version=no
-  library_names_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}$major $libname${shared_ext}'
+  library_name_spec='${libname}${release}${shared_ext}$versuffix ${libname}${release}${shared_ext}$major $libname${shared_ext}'
   shlibpath_var=LD_LIBRARY_PATH
   shlibpath_overrides_runpath=no
   hardcode_into_libs=yes
@@ -10561,7 +10433,7 @@ else
     lt_cv_dlopen_self=yes
     ;;
 
-  mingw* | pw32* | cegcc*)
+  mingw* | pw32*)
     lt_cv_dlopen="LoadLibrary"
     lt_cv_dlopen_libs=
     ;;
@@ -11118,7 +10990,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11121 "configure"
+#line 10993 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11159,6 +11031,10 @@ else
 #  endif
 #endif
 
+#ifdef __cplusplus
+extern "C" void exit (int);
+#endif
+
 void fnord() { int i=42;}
 int main ()
 {
@@ -11174,7 +11050,7 @@ int main ()
   else
     puts (dlerror ());
 
-  return status;
+    exit (status);
 }
 _LT_EOF
   if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
@@ -11214,7 +11090,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11217 "configure"
+#line 11093 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11255,6 +11131,10 @@ else
 #  endif
 #endif
 
+#ifdef __cplusplus
+extern "C" void exit (int);
+#endif
+
 void fnord() { int i=42;}
 int main ()
 {
@@ -11270,7 +11150,7 @@ int main ()
   else
     puts (dlerror ());
 
-  return status;
+    exit (status);
 }
 _LT_EOF
   if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
@@ -16646,6 +16526,47 @@ enable_dlopen_self='`$ECHO "X$enable_dlopen_self" | $Xsed -e "$delay_single_quot
 enable_dlopen_self_static='`$ECHO "X$enable_dlopen_self_static" | $Xsed -e "$delay_single_quote_subst"`'
 old_striplib='`$ECHO "X$old_striplib" | $Xsed -e "$delay_single_quote_subst"`'
 striplib='`$ECHO "X$striplib" | $Xsed -e "$delay_single_quote_subst"`'
+LD_='`$ECHO "X$LD_" | $Xsed -e "$delay_single_quote_subst"`'
+old_archive_cmds_='`$ECHO "X$old_archive_cmds_" | $Xsed -e "$delay_single_quote_subst"`'
+compiler_='`$ECHO "X$compiler_" | $Xsed -e "$delay_single_quote_subst"`'
+GCC_='`$ECHO "X$GCC_" | $Xsed -e "$delay_single_quote_subst"`'
+lt_prog_compiler_no_builtin_flag_='`$ECHO "X$lt_prog_compiler_no_builtin_flag_" | $Xsed -e "$delay_single_quote_subst"`'
+lt_prog_compiler_wl_='`$ECHO "X$lt_prog_compiler_wl_" | $Xsed -e "$delay_single_quote_subst"`'
+lt_prog_compiler_pic_='`$ECHO "X$lt_prog_compiler_pic_" | $Xsed -e "$delay_single_quote_subst"`'
+lt_prog_compiler_static_='`$ECHO "X$lt_prog_compiler_static_" | $Xsed -e "$delay_single_quote_subst"`'
+lt_cv_prog_compiler_c_o_='`$ECHO "X$lt_cv_prog_compiler_c_o_" | $Xsed -e "$delay_single_quote_subst"`'
+archive_cmds_need_lc_='`$ECHO "X$archive_cmds_need_lc_" | $Xsed -e "$delay_single_quote_subst"`'
+enable_shared_with_static_runtimes_='`$ECHO "X$enable_shared_with_static_runtimes_" | $Xsed -e "$delay_single_quote_subst"`'
+export_dynamic_flag_spec_='`$ECHO "X$export_dynamic_flag_spec_" | $Xsed -e "$delay_single_quote_subst"`'
+whole_archive_flag_spec_='`$ECHO "X$whole_archive_flag_spec_" | $Xsed -e "$delay_single_quote_subst"`'
+compiler_needs_object_='`$ECHO "X$compiler_needs_object_" | $Xsed -e "$delay_single_quote_subst"`'
+old_archive_from_new_cmds_='`$ECHO "X$old_archive_from_new_cmds_" | $Xsed -e "$delay_single_quote_subst"`'
+old_archive_from_expsyms_cmds_='`$ECHO "X$old_archive_from_expsyms_cmds_" | $Xsed -e "$delay_single_quote_subst"`'
+archive_cmds_='`$ECHO "X$archive_cmds_" | $Xsed -e "$delay_single_quote_subst"`'
+archive_expsym_cmds_='`$ECHO "X$archive_expsym_cmds_" | $Xsed -e "$delay_single_quote_subst"`'
+module_cmds_='`$ECHO "X$module_cmds_" | $Xsed -e "$delay_single_quote_subst"`'
+module_expsym_cmds_='`$ECHO "X$module_expsym_cmds_" | $Xsed -e "$delay_single_quote_subst"`'
+with_gnu_ld_='`$ECHO "X$with_gnu_ld_" | $Xsed -e "$delay_single_quote_subst"`'
+allow_undefined_flag_='`$ECHO "X$allow_undefined_flag_" | $Xsed -e "$delay_single_quote_subst"`'
+no_undefined_flag_='`$ECHO "X$no_undefined_flag_" | $Xsed -e "$delay_single_quote_subst"`'
+hardcode_libdir_flag_spec_='`$ECHO "X$hardcode_libdir_flag_spec_" | $Xsed -e "$delay_single_quote_subst"`'
+hardcode_libdir_flag_spec_ld_='`$ECHO "X$hardcode_libdir_flag_spec_ld_" | $Xsed -e "$delay_single_quote_subst"`'
+hardcode_libdir_separator_='`$ECHO "X$hardcode_libdir_separator_" | $Xsed -e "$delay_single_quote_subst"`'
+hardcode_direct_='`$ECHO "X$hardcode_direct_" | $Xsed -e "$delay_single_quote_subst"`'
+hardcode_direct_absolute_='`$ECHO "X$hardcode_direct_absolute_" | $Xsed -e "$delay_single_quote_subst"`'
+hardcode_minus_L_='`$ECHO "X$hardcode_minus_L_" | $Xsed -e "$delay_single_quote_subst"`'
+hardcode_shlibpath_var_='`$ECHO "X$hardcode_shlibpath_var_" | $Xsed -e "$delay_single_quote_subst"`'
+hardcode_automatic_='`$ECHO "X$hardcode_automatic_" | $Xsed -e "$delay_single_quote_subst"`'
+inherit_rpath_='`$ECHO "X$inherit_rpath_" | $Xsed -e "$delay_single_quote_subst"`'
+link_all_deplibs_='`$ECHO "X$link_all_deplibs_" | $Xsed -e "$delay_single_quote_subst"`'
+fix_srcfile_path_='`$ECHO "X$fix_srcfile_path_" | $Xsed -e "$delay_single_quote_subst"`'
+always_export_symbols_='`$ECHO "X$always_export_symbols_" | $Xsed -e "$delay_single_quote_subst"`'
+export_symbols_cmds_='`$ECHO "X$export_symbols_cmds_" | $Xsed -e "$delay_single_quote_subst"`'
+exclude_expsyms_='`$ECHO "X$exclude_expsyms_" | $Xsed -e "$delay_single_quote_subst"`'
+include_expsyms_='`$ECHO "X$include_expsyms_" | $Xsed -e "$delay_single_quote_subst"`'
+prelink_cmds_='`$ECHO "X$prelink_cmds_" | $Xsed -e "$delay_single_quote_subst"`'
+file_list_spec_='`$ECHO "X$file_list_spec_" | $Xsed -e "$delay_single_quote_subst"`'
+hardcode_action_='`$ECHO "X$hardcode_action_" | $Xsed -e "$delay_single_quote_subst"`'
 
 LTCC='$LTCC'
 LTCFLAGS='$LTCFLAGS'
@@ -16708,7 +16629,27 @@ library_names_spec \
 soname_spec \
 finish_eval \
 old_striplib \
-striplib; do
+striplib \
+LD_ \
+compiler_ \
+lt_prog_compiler_no_builtin_flag_ \
+lt_prog_compiler_wl_ \
+lt_prog_compiler_pic_ \
+lt_prog_compiler_static_ \
+lt_cv_prog_compiler_c_o_ \
+export_dynamic_flag_spec_ \
+whole_archive_flag_spec_ \
+compiler_needs_object_ \
+with_gnu_ld_ \
+allow_undefined_flag_ \
+no_undefined_flag_ \
+hardcode_libdir_flag_spec_ \
+hardcode_libdir_flag_spec_ld_ \
+hardcode_libdir_separator_ \
+fix_srcfile_path_ \
+exclude_expsyms_ \
+include_expsyms_ \
+file_list_spec_; do
     case \`eval \\\\\$ECHO "X\\\\\$\$var"\` in
     *[\\\\\\\`\\"\\\$]*)
       eval "lt_\$var=\\\\\\"\\\`\\\$ECHO \\"X\\\$\$var\\" | \\\$Xsed -e \\"\\\$sed_quote_subst\\"\\\`\\\\\\""
@@ -16737,7 +16678,16 @@ postinstall_cmds \
 postuninstall_cmds \
 finish_cmds \
 sys_lib_search_path_spec \
-sys_lib_dlsearch_path_spec; do
+sys_lib_dlsearch_path_spec \
+old_archive_cmds_ \
+old_archive_from_new_cmds_ \
+old_archive_from_expsyms_cmds_ \
+archive_cmds_ \
+archive_expsym_cmds_ \
+module_cmds_ \
+module_expsym_cmds_ \
+export_symbols_cmds_ \
+prelink_cmds_; do
     case \`eval \\\\\$ECHO "X\\\\\$\$var"\` in
     *[\\\\\\\`\\"\\\$]*)
       eval "lt_\$var=\\\\\\"\\\`\\\$ECHO \\"X\\\$\$var\\" | \\\$Xsed -e \\"\\\$double_quote_subst\\" -e \\"\\\$sed_quote_subst\\" -e \\"\\\$delay_variable_subst\\"\\\`\\\\\\""

@@ -11,50 +11,15 @@
   #define acs_map (_nc_acs_map())
 #endif 
 
-SCM
-gucu_attr_get (void)
-{
-  attr_t c_attrs;
-  short c_pair;
-  SCM s_list;
-  int ret;
-
-  ret = attr_get(&c_attrs, &c_pair, NULL);
-  if (ret == OK)
-    s_list = scm_list_2 (_scm_from_attr (c_attrs), scm_from_short (c_pair));
-  else
-    abort ();
-
-  return s_list;
-}
-
-SCM
-gucu_attr_set (SCM attrs, SCM pair)
-{
-  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG1, "attr-set");
-  SCM_ASSERT (scm_is_integer (pair), pair, SCM_ARG2, "attr-set");
-  
-  attr_t c_attrs = _scm_to_attr (attrs);
-  short c_pair = scm_to_short (pair);
-  
-  int ret = attr_set (c_attrs, c_pair, NULL);
-  SCM s_ret = scm_from_int (ret);
-  
-  return s_ret;
-}
-
-
-
-// FIXME: since color_content can return #f for nonsense values of COLOR,
-// this will abort.  Fix in scheme wrapper. 
+/* Return a list of three elements containing the RGB of COLOR */
 SCM
 gucu_color_content (SCM s_color)
 {
-  SCM_ASSERT (scm_is_integer (s_color), s_color, SCM_ARG1, "color-content");
-
   int ret;
   short c_red, c_green, c_blue;
   SCM s_list;
+
+  SCM_ASSERT (scm_is_integer (s_color), s_color, SCM_ARG1, "color-content");
 
   ret = color_content(scm_to_short (s_color), &c_red, &c_green, &c_blue);
   if (ret == OK)
@@ -64,7 +29,8 @@ gucu_color_content (SCM s_color)
 			   scm_from_short (c_blue));
     }
   else
-    s_list = SCM_EOL;
+    scm_misc_error ("color-content", "Out of range error not not initialized",
+		    SCM_BOOL_F);
 
   return s_list; 
 }
@@ -495,16 +461,15 @@ gucu_newterm_port (SCM typ, SCM outport, SCM inport)
 #endif
 
 
+/* Return the foreground and background color numbers of a given PAIR */
 SCM
 gucu_pair_content (SCM s_pair)
 {
-  SCM_ASSERT (scm_is_integer (s_pair), s_pair, SCM_ARG1, "pair-content");
-  //SCM_ASSERT (scm_is_true(scm_gr_p(s_pair, scm_from_int (0))), 
-  //      s_pair, SCM_ARG1, "color_content");
-
   int ret;
   short c_fore, c_back;
   SCM s_list;
+
+  SCM_ASSERT (scm_is_integer (s_pair), s_pair, SCM_ARG1, "pair-content");
 
   ret = pair_content(scm_to_short (s_pair), &c_fore, &c_back);
   if (ret == OK)
@@ -513,7 +478,8 @@ gucu_pair_content (SCM s_pair)
 			   scm_from_short (c_back));
     }
   else
-    s_list = SCM_EOL;
+    scm_misc_error ("pair-content", "Out of range or not initialized", 
+		    SCM_BOOL_F);
 
   return s_list; 
 }
@@ -548,18 +514,21 @@ gucu_ungetmouse (SCM event)
   return (scm_from_int (ret));
 }
 
+/* Get the attributes and color pair number of a window */
 SCM
 gucu_wattr_get (SCM win)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wattr-get");
-
+  WINDOW *c_win;
   attr_t c_attrs;
   short c_pair;
   SCM s_list;
   int ret;
   
-  WINDOW *c_win = _scm_to_window (win);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wattr-get");
 
+  c_win = _scm_to_window (win);
+
+  /* wattr_get appears to be a macro that always returns OK */
   ret = wattr_get(c_win, &c_attrs, &c_pair, NULL);
   if (ret == OK)
     s_list = scm_list_2 (_scm_from_attr (c_attrs), scm_from_short (c_pair));
@@ -569,24 +538,30 @@ gucu_wattr_get (SCM win)
   return s_list;
 }
 
+/* Set the attributes and color pair for a given window */
 SCM
 gucu_wattr_set (SCM win, SCM attrs, SCM pair)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wattr-set");
-  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG2, "wattr-set");
-  SCM_ASSERT (scm_is_integer (pair), pair, SCM_ARG3, "wattr-set");
+  WINDOW *c_win;
+  attr_t c_attrs;
+  short c_pair;
+  int ret;
+
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wattr-set");
+  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG2, "%wattr-set");
+  SCM_ASSERT (scm_is_integer (pair), pair, SCM_ARG3, "%wattr-set");
   
-  WINDOW *c_win = _scm_to_window (win);
-  attr_t c_attrs = _scm_to_attr (attrs);
-  short c_pair = scm_to_short (pair);
-  
-  int ret = wattr_set (c_win, c_attrs, c_pair, NULL);
-  SCM s_ret = scm_from_int (ret);
-  
-  return s_ret;
+  c_win = _scm_to_window (win);
+  c_attrs = _scm_to_attr (attrs);
+  c_pair = scm_to_short (pair);
+
+  /* wattr_set always returns OK */
+  ret = wattr_set (c_win, c_attrs, c_pair, NULL);
+  if (ret != OK)
+    abort();
+
+  return SCM_UNSPECIFIED;
 }
-
-
 
 SCM
 gucu_wgetnstr (SCM win, SCM n)
@@ -1125,8 +1100,6 @@ gucu_curscr ()
 void
 gucu_init_special ()
 {
-  scm_c_define_gsubr ("attr-get", 0, 0, 0, gucu_attr_get);
-  scm_c_define_gsubr ("attr-set", 2, 0, 0, gucu_attr_set);
   scm_c_define_gsubr ("color-content", 1, 0, 0, gucu_color_content);
   scm_c_define_gsubr ("delwin", 1, 0, 0, gucu_delwin);
   scm_c_define_gsubr ("getmouse", 0, 0, 0, gucu_getmouse);
@@ -1148,8 +1121,8 @@ gucu_init_special ()
   //scm_c_define_gsubr ("newterm-port", 3, 0, 0, gucu_newterm_port);
   scm_c_define_gsubr ("pair-content", 1, 0, 0, gucu_pair_content);
   scm_c_define_gsubr ("ungetmouse", 1, 0, 0, gucu_ungetmouse);
-  scm_c_define_gsubr ("wattr-get", 1, 0, 0, gucu_wattr_get);
-  scm_c_define_gsubr ("wattr-set", 3, 0, 0, gucu_wattr_set);
+  scm_c_define_gsubr ("%wattr-get", 1, 0, 0, gucu_wattr_get);
+  scm_c_define_gsubr ("%wattr-set", 3, 0, 0, gucu_wattr_set);
   scm_c_define_gsubr ("wgetnstr", 2, 0, 0, gucu_wgetnstr);
   scm_c_define_gsubr ("winchnstr", 2, 0, 0, gucu_winchnstr);
   scm_c_define_gsubr ("winnstr", 2, 0, 0, gucu_winnstr);

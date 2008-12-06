@@ -84,74 +84,6 @@ gucu_addstr (SCM arg1)
 	return s_ret;
 }
 
-SCM
-gucu_attroff (SCM arg1)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "attroff");
-
-	int c_arg1 = scm_to_int (arg1);
-
-	int ret = attroff (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_attron (SCM arg1)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "attron");
-
-	int c_arg1 = scm_to_int (arg1);
-
-	int ret = attron (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_attrset (SCM arg1)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "attrset");
-
-	int c_arg1 = scm_to_int (arg1);
-
-	int ret = attrset (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_attr_off (SCM arg1, SCM arg2)
-{
-	SCM_ASSERT (_scm_is_attr (arg1), arg1, SCM_ARG1, "attr-off");
-	SCM_ASSERT (_scm_is_voidstring (arg2), arg2, SCM_ARG2, "attr-off");
-
-	attr_t c_arg1 = _scm_to_attr (arg1);
-	void *c_arg2 = _scm_to_voidstring (arg2);
-
-	int ret = attr_off (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_attr_on (SCM arg1, SCM arg2)
-{
-	SCM_ASSERT (_scm_is_attr (arg1), arg1, SCM_ARG1, "attr-on");
-	SCM_ASSERT (_scm_is_voidstring (arg2), arg2, SCM_ARG2, "attr-on");
-
-	attr_t c_arg1 = _scm_to_attr (arg1);
-	void *c_arg2 = _scm_to_voidstring (arg2);
-
-	int ret = attr_on (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
 
 SCM
 gucu_baudrate ()
@@ -241,38 +173,23 @@ gucu_box (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+/* Check if the colors can be changed. */
 SCM
-gucu_can_change_color ()
+gucu_can_change_color_p ()
 {
-	bool ret = can_change_color ();
-	SCM s_ret = scm_from_bool (ret);
+  bool ret;
+  SCM s_ret;
+  
+  ret = can_change_color ();
+  s_ret = scm_from_bool (ret);
 
-	return s_ret;
+  return s_ret;
 }
 
 SCM
 gucu_cbreak ()
 {
 	int ret = cbreak ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_chgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "chgat");
-	SCM_ASSERT (_scm_is_attr (arg2), arg2, SCM_ARG2, "chgat");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "chgat");
-	SCM_ASSERT (_scm_is_voidstring (arg4), arg4, SCM_ARG4, "chgat");
-
-	int c_arg1 = scm_to_int (arg1);
-	attr_t c_arg2 = _scm_to_attr (arg2);
-	short c_arg3 = scm_to_short (arg3);
-	 void *c_arg4 = _scm_to_voidstring (arg4);
-
-	int ret = chgat (c_arg1, c_arg2, c_arg3, c_arg4);
 	SCM s_ret = scm_from_int (ret);
 
 	return s_ret;
@@ -328,21 +245,6 @@ gucu_COLOR_PAIR (SCM arg1)
 	int c_arg1 = scm_to_int (arg1);
 
 	int ret = COLOR_PAIR (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_color_set (SCM arg1, SCM arg2)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "color-set");
-	SCM_ASSERT (_scm_is_voidstring (arg2), arg2, SCM_ARG2, "color-set");
-
-	short c_arg1 = scm_to_short (arg1);
-	void *c_arg2 = _scm_to_voidstring (arg2);
-
-	int ret = color_set (c_arg1, c_arg2);
 	SCM s_ret = scm_from_int (ret);
 
 	return s_ret;
@@ -619,13 +521,17 @@ gucu_halfdelay (SCM arg1)
 	return s_ret;
 }
 
+/* Check if this screen has colors */
 SCM
-gucu_has_colors ()
+gucu_has_colors_p ()
 {
-	bool ret = has_colors ();
-	SCM s_ret = scm_from_bool (ret);
+  bool ret;
+  SCM s_ret;
 
-	return s_ret;
+  ret = has_colors ();
+  s_ret = scm_from_bool (ret);
+
+  return s_ret;
 }
 
 SCM
@@ -724,40 +630,54 @@ gucu_initscr ()
 	return s_ret;
 }
 
+/* Initialize COLOR as an RGB triple. */
 SCM
-gucu_init_color (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
+gucu_init_color (SCM color, SCM r, SCM g, SCM b)
 {
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "init-color");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "init-color");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "init-color");
-	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "init-color");
+  short c_color, c_r, c_g, c_b;
+  int ret;
+  
+  SCM_ASSERT (scm_is_integer (color), color, SCM_ARG1, "init-color");
+  SCM_ASSERT (scm_is_integer (r), r, SCM_ARG2, "init-color");
+  SCM_ASSERT (scm_is_integer (g), g, SCM_ARG3, "init-color");
+  SCM_ASSERT (scm_is_integer (b), b, SCM_ARG4, "init-color");
+  
+  c_color = scm_to_short (color);
+  c_r = scm_to_short (r);
+  c_g = scm_to_short (g);
+  c_b = scm_to_short (b);
 
-	short c_arg1 = scm_to_short (arg1);
-	short c_arg2 = scm_to_short (arg2);
-	short c_arg3 = scm_to_short (arg3);
-	short c_arg4 = scm_to_short (arg4);
-
-	int ret = init_color (c_arg1, c_arg2, c_arg3, c_arg4);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  ret = init_color (c_color, c_r, c_g, c_b);
+  if (ret == ERR)
+    scm_misc_error 
+      ("init-color", 
+       "Cannot set color: out of range or this screen lacks capability",
+       SCM_BOOL_F);
+  
+  return SCM_UNSPECIFIED;
 }
 
+/* Initalize a color pair */
 SCM
-gucu_init_pair (SCM arg1, SCM arg2, SCM arg3)
+gucu_init_pair (SCM pair, SCM fore, SCM back)
 {
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "init-pair");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "init-pair");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "init-pair");
+  int ret;
+  short c_pair, c_fore, c_back;
 
-	short c_arg1 = scm_to_short (arg1);
-	short c_arg2 = scm_to_short (arg2);
-	short c_arg3 = scm_to_short (arg3);
-
-	int ret = init_pair (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  SCM_ASSERT (scm_is_integer (pair), pair, SCM_ARG1, "init-pair");
+  SCM_ASSERT (scm_is_integer (fore), fore, SCM_ARG2, "init-pair");
+  SCM_ASSERT (scm_is_integer (back), back, SCM_ARG3, "init-pair");
+  
+  c_pair = scm_to_short (pair);
+  c_fore = scm_to_short (fore);
+  c_back = scm_to_short (back);
+  
+  ret = init_pair (c_pair, c_fore, c_back);
+  if (ret == ERR)
+    scm_misc_error ("init-pair", 
+		    "Out of range error or not initialized", 
+		    SCM_BOOL_F);
+  return SCM_UNSPECIFIED;
 }
 
 SCM
@@ -1094,29 +1014,6 @@ gucu_mvaddstr (SCM arg1, SCM arg2, SCM arg3)
 }
 
 SCM
-gucu_mvchgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "mvchgat");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvchgat");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "mvchgat");
-	SCM_ASSERT (_scm_is_attr (arg4), arg4, SCM_ARG4, "mvchgat");
-	SCM_ASSERT (scm_is_integer (arg5), arg5, SCM_ARG5, "mvchgat");
-	SCM_ASSERT (_scm_is_voidstring (arg6), arg6, SCM_ARG6, "mvchgat");
-
-	int c_arg1 = scm_to_int (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
-	attr_t c_arg4 = _scm_to_attr (arg4);
-	short c_arg5 = scm_to_short (arg5);
-	 void *c_arg6 = _scm_to_voidstring (arg6);
-
-	int ret = mvchgat (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5, c_arg6);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
 gucu_mvcur (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
 	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "mvcur");
@@ -1395,31 +1292,6 @@ gucu_mvwaddstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	SCM s_ret = scm_from_int (ret);
 
 	free (c_arg4);
-
-	return s_ret;
-}
-
-SCM
-gucu_mvwchgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "mvwchgat");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvwchgat");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "mvwchgat");
-	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "mvwchgat");
-	SCM_ASSERT (_scm_is_attr (arg5), arg5, SCM_ARG5, "mvwchgat");
-	SCM_ASSERT (scm_is_integer (arg6), arg6, SCM_ARG6, "mvwchgat");
-	SCM_ASSERT (_scm_is_voidstring (arg7), arg7, SCM_ARG7, "mvwchgat");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
-	int c_arg4 = scm_to_int (arg4);
-	attr_t c_arg5 = _scm_to_attr (arg5);
-	short c_arg6 = scm_to_short (arg6);
-	 void *c_arg7 = _scm_to_voidstring (arg7);
-
-	int ret = mvwchgat (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5, c_arg6, c_arg7);
-	SCM s_ret = scm_from_int (ret);
 
 	return s_ret;
 }
@@ -2260,31 +2132,17 @@ gucu_slk_touch ()
 	return s_ret;
 }
 
-SCM
-gucu_standend ()
-{
-	int ret = standend ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_standout ()
-{
-	int ret = standout ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
+/* Initialize the color subsystem. */
 SCM
 gucu_start_color ()
 {
-	int ret = start_color ();
-	SCM s_ret = scm_from_int (ret);
+  int ret = start_color ();
 
-	return s_ret;
+  if (ret == ERR)
+    scm_misc_error ("start-color", "The current screen is not initialized", 
+		    SCM_BOOL_F);
+  
+  return SCM_UNSPECIFIED;
 }
 
 SCM
@@ -2637,83 +2495,50 @@ gucu_waddstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+/* Turn attributes off on a given window */
 SCM
-gucu_wattroff (SCM arg1, SCM arg2)
+gucu_wattr_off (SCM win, SCM attrs)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wattroff");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "wattroff");
+  WINDOW *c_win;
+  attr_t c_attrs;
+  int ret;
+  
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wattr-off");
+  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG2, "wattr-off");
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
+  c_win = _scm_to_window (win);
+  c_attrs = _scm_to_attr (attrs);
 
-	int ret = wattroff (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  ret = wattr_off (c_win, c_attrs, (void *)0);
+  if (ret == ERR)
+    {
+      scm_misc_error ("%wattr-off", "Bad window: ~S", win);
+    }
 
-	return s_ret;
+  return SCM_UNSPECIFIED;
 }
 
+/* Turn on window attributes */
 SCM
-gucu_wattron (SCM arg1, SCM arg2)
+gucu_wattr_on (SCM win, SCM attrs)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wattron");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "wattron");
+  WINDOW *c_win;
+  attr_t c_attrs;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wattr-on");
+  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG2, "%wattr-on");
 
-	int ret = wattron (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_attrs = _scm_to_attr (attrs);
 
-	return s_ret;
-}
+  ret = wattr_on (c_win, c_attrs, (void *)0);
+  if (ret == ERR)
+    {
+      scm_misc_error ("%wattr-on", "Bad window: ~S", win);
+    }
 
-SCM
-gucu_wattrset (SCM arg1, SCM arg2)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wattrset");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "wattrset");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-
-	int ret = wattrset (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_wattr_off (SCM arg1, SCM arg2, SCM arg3)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wattr-off");
-	SCM_ASSERT (_scm_is_attr (arg2), arg2, SCM_ARG2, "wattr-off");
-	SCM_ASSERT (_scm_is_voidstring (arg3), arg3, SCM_ARG3, "wattr-off");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	attr_t c_arg2 = _scm_to_attr (arg2);
-	void *c_arg3 = _scm_to_voidstring (arg3);
-
-	int ret = wattr_off (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_wattr_on (SCM arg1, SCM arg2, SCM arg3)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wattr-on");
-	SCM_ASSERT (_scm_is_attr (arg2), arg2, SCM_ARG2, "wattr-on");
-	SCM_ASSERT (_scm_is_voidstring (arg3), arg3, SCM_ARG3, "wattr-on");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	attr_t c_arg2 = _scm_to_attr (arg2);
-	void *c_arg3 = _scm_to_voidstring (arg3);
-
-	int ret = wattr_on (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  return SCM_UNSPECIFIED;
 }
 
 SCM
@@ -2775,25 +2600,32 @@ gucu_wborder (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM ar
 	return s_ret;
 }
 
+/* Change the attributes for N characters at the current position */
 SCM
-gucu_wchgat (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
+gucu_wchgat (SCM win, SCM n, SCM attr, SCM color)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wchgat");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "wchgat");
-	SCM_ASSERT (_scm_is_attr (arg3), arg3, SCM_ARG3, "wchgat");
-	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "wchgat");
-	SCM_ASSERT (_scm_is_voidstring (arg5), arg5, SCM_ARG5, "wchgat");
+  WINDOW *c_win;
+  int c_n;
+  attr_t c_attr;
+  short c_color;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	attr_t c_arg3 = _scm_to_attr (arg3);
-	short c_arg4 = scm_to_short (arg4);
-	 void *c_arg5 = _scm_to_voidstring (arg5);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wchgat");
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG2, "%wchgat");
+  SCM_ASSERT (_scm_is_attr (attr), attr, SCM_ARG3, "%wchgat");
+  SCM_ASSERT (scm_is_integer (color), color, SCM_ARG4, "%wchgat");
 
-	int ret = wchgat (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_n = scm_to_int (n);
+  c_attr = _scm_to_attr (attr);
+  c_color = scm_to_short (color);
 
-	return s_ret;
+  ret = wchgat (c_win, c_n, c_attr, c_color, 0);
+  if (ret != OK)
+    scm_misc_error ("%wchgat", "Out of range error or not initialized",
+		    SCM_BOOL_F);
+
+  return SCM_UNSPECIFIED;
 }
 
 SCM
@@ -2848,21 +2680,26 @@ gucu_wcursyncup (SCM arg1)
 	return s_ret;
 }
 
+/* Set the color pair of a window */
 SCM
-gucu_wcolor_set (SCM arg1, SCM arg2, SCM arg3)
+gucu_wcolor_set (SCM win, SCM pair)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wcolor-set");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "wcolor-set");
-	SCM_ASSERT (_scm_is_voidstring (arg3), arg3, SCM_ARG3, "wcolor-set");
+  WINDOW *c_win;
+  short c_pair;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	short c_arg2 = scm_to_short (arg2);
-	void *c_arg3 = _scm_to_voidstring (arg3);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wcolor-set");
+  SCM_ASSERT (scm_is_integer (pair), pair, SCM_ARG2, "%wcolor-set");
 
-	int ret = wcolor_set (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_pair = scm_to_short (pair);
 
-	return s_ret;
+  ret = wcolor_set (c_win, c_pair, 0);
+  if (ret == ERR)
+    scm_misc_error ("%wcolor-set", "Out of range error or not initialized",
+		    SCM_BOOL_F);
+
+  return SCM_UNSPECIFIED;
 }
 
 SCM
@@ -3150,30 +2987,38 @@ gucu_wsetscrreg (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+/* Turns off all attributes */
 SCM
-gucu_wstandend (SCM arg1)
+gucu_wstandend (SCM win)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wstandend");
+  WINDOW *c_win;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wstandend");
+  
+  c_win = _scm_to_window (win);
 
-	int ret = wstandend (c_arg1);
-	SCM s_ret = scm_from_int (ret);
+  /* wstandend() seems to be a macro that doesn't return anything
+     meaningful. */
 
-	return s_ret;
+  wstandend (c_win);
+  
+  return SCM_UNSPECIFIED;
 }
 
+/* Turns on the A_STANDOUT attribute */
 SCM
-gucu_wstandout (SCM arg1)
+gucu_wstandout (SCM win)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wstandout");
+  WINDOW *c_win;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wstandout");
 
-	int ret = wstandout (c_arg1);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
 
-	return s_ret;
+  /* There doesn't seem to be any meaning in the return value of wstandout */
+  wstandout (c_win);
+
+  return SCM_UNSPECIFIED;
 }
 
 SCM
@@ -3262,26 +3107,20 @@ gucu_init_function ()
 	scm_c_define_gsubr ("addchstr", 1, 0, 0, gucu_addchstr);
 	scm_c_define_gsubr ("addnstr", 2, 0, 0, gucu_addnstr);
 	scm_c_define_gsubr ("addstr", 1, 0, 0, gucu_addstr);
-	scm_c_define_gsubr ("attroff", 1, 0, 0, gucu_attroff);
-	scm_c_define_gsubr ("attron", 1, 0, 0, gucu_attron);
-	scm_c_define_gsubr ("attrset", 1, 0, 0, gucu_attrset);
-	scm_c_define_gsubr ("attr-off", 2, 0, 0, gucu_attr_off);
-	scm_c_define_gsubr ("attr-on", 2, 0, 0, gucu_attr_on);
 	scm_c_define_gsubr ("baudrate", 0, 0, 0, gucu_baudrate);
 	scm_c_define_gsubr ("beep", 0, 0, 0, gucu_beep);
 	scm_c_define_gsubr ("bkgd", 1, 0, 0, gucu_bkgd);
 	scm_c_define_gsubr ("bkgdset", 1, 0, 0, gucu_bkgdset);
 	scm_c_define_gsubr ("border", 8, 0, 0, gucu_border);
 	scm_c_define_gsubr ("box", 3, 0, 0, gucu_box);
-	scm_c_define_gsubr ("can-change-color", 0, 0, 0, gucu_can_change_color);
+	scm_c_define_gsubr ("can-change-color?", 0, 0, 0, 
+			    gucu_can_change_color_p);
 	scm_c_define_gsubr ("cbreak", 0, 0, 0, gucu_cbreak);
-	scm_c_define_gsubr ("chgat", 4, 0, 0, gucu_chgat);
 	scm_c_define_gsubr ("clearok", 2, 0, 0, gucu_clearok);
 	scm_c_define_gsubr ("clear", 0, 0, 0, gucu_clear);
 	scm_c_define_gsubr ("clrtobot", 0, 0, 0, gucu_clrtobot);
 	scm_c_define_gsubr ("clrtoeol", 0, 0, 0, gucu_clrtoeol);
 	scm_c_define_gsubr ("color-pair", 1, 0, 0, gucu_COLOR_PAIR);
-	scm_c_define_gsubr ("color-set", 2, 0, 0, gucu_color_set);
 	scm_c_define_gsubr ("copywin", 9, 0, 0, gucu_copywin);
 	scm_c_define_gsubr ("curs-set", 1, 0, 0, gucu_curs_set);
 	scm_c_define_gsubr ("def-prog-mode", 0, 0, 0, gucu_def_prog_mode);
@@ -3305,7 +3144,7 @@ gucu_init_function ()
 	scm_c_define_gsubr ("getch", 0, 0, 0, gucu_getch);
 	scm_c_define_gsubr ("getwin", 1, 0, 0, gucu_getwin);
 	scm_c_define_gsubr ("halfdelay", 1, 0, 0, gucu_halfdelay);
-	scm_c_define_gsubr ("has-colors", 0, 0, 0, gucu_has_colors);
+	scm_c_define_gsubr ("has-colors?", 0, 0, 0, gucu_has_colors_p);
 	scm_c_define_gsubr ("has-ic", 0, 0, 0, gucu_has_ic);
 	scm_c_define_gsubr ("has-il", 0, 0, 0, gucu_has_il);
 	scm_c_define_gsubr ("hline", 2, 0, 0, gucu_hline);
@@ -3339,7 +3178,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("mvaddchstr", 3, 0, 0, gucu_mvaddchstr);
 	scm_c_define_gsubr ("mvaddnstr", 4, 0, 0, gucu_mvaddnstr);
 	scm_c_define_gsubr ("mvaddstr", 3, 0, 0, gucu_mvaddstr);
-	scm_c_define_gsubr ("mvchgat", 6, 0, 0, gucu_mvchgat);
 	scm_c_define_gsubr ("mvcur", 4, 0, 0, gucu_mvcur);
 	scm_c_define_gsubr ("mvdelch", 2, 0, 0, gucu_mvdelch);
 	scm_c_define_gsubr ("mvderwin", 3, 0, 0, gucu_mvderwin);
@@ -3355,7 +3193,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("mvwaddchstr", 4, 0, 0, gucu_mvwaddchstr);
 	scm_c_define_gsubr ("mvwaddnstr", 5, 0, 0, gucu_mvwaddnstr);
 	scm_c_define_gsubr ("mvwaddstr", 4, 0, 0, gucu_mvwaddstr);
-	scm_c_define_gsubr ("mvwchgat", 7, 0, 0, gucu_mvwchgat);
 	scm_c_define_gsubr ("mvwdelch", 3, 0, 0, gucu_mvwdelch);
 	scm_c_define_gsubr ("mvwgetch", 3, 0, 0, gucu_mvwgetch);
 	scm_c_define_gsubr ("mvwhline", 5, 0, 0, gucu_mvwhline);
@@ -3416,8 +3253,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("slk-restore", 0, 0, 0, gucu_slk_restore);
 	scm_c_define_gsubr ("slk-set", 3, 0, 0, gucu_slk_set);
 	scm_c_define_gsubr ("slk-touch", 0, 0, 0, gucu_slk_touch);
-	scm_c_define_gsubr ("standend", 0, 0, 0, gucu_standend);
-	scm_c_define_gsubr ("standout", 0, 0, 0, gucu_standout);
 	scm_c_define_gsubr ("start-color", 0, 0, 0, gucu_start_color);
 	scm_c_define_gsubr ("subpad", 5, 0, 0, gucu_subpad);
 	scm_c_define_gsubr ("subwin", 5, 0, 0, gucu_subwin);
@@ -3443,20 +3278,17 @@ gucu_init_function ()
 	scm_c_define_gsubr ("waddchstr", 2, 0, 0, gucu_waddchstr);
 	scm_c_define_gsubr ("waddnstr", 3, 0, 0, gucu_waddnstr);
 	scm_c_define_gsubr ("waddstr", 2, 0, 0, gucu_waddstr);
-	scm_c_define_gsubr ("wattroff", 2, 0, 0, gucu_wattroff);
-	scm_c_define_gsubr ("wattron", 2, 0, 0, gucu_wattron);
-	scm_c_define_gsubr ("wattrset", 2, 0, 0, gucu_wattrset);
-	scm_c_define_gsubr ("wattr-off", 3, 0, 0, gucu_wattr_off);
-	scm_c_define_gsubr ("wattr-on", 3, 0, 0, gucu_wattr_on);
+	scm_c_define_gsubr ("%wattr-off", 2, 0, 0, gucu_wattr_off);
+	scm_c_define_gsubr ("%wattr-on", 2, 0, 0, gucu_wattr_on);
 	scm_c_define_gsubr ("wbkgd", 2, 0, 0, gucu_wbkgd);
 	scm_c_define_gsubr ("wbkgdset", 2, 0, 0, gucu_wbkgdset);
 	scm_c_define_gsubr ("wborder", 9, 0, 0, gucu_wborder);
-	scm_c_define_gsubr ("wchgat", 5, 0, 0, gucu_wchgat);
+	scm_c_define_gsubr ("%wchgat", 4, 0, 0, gucu_wchgat);
 	scm_c_define_gsubr ("wclear", 1, 0, 0, gucu_wclear);
 	scm_c_define_gsubr ("wclrtobot", 1, 0, 0, gucu_wclrtobot);
 	scm_c_define_gsubr ("wclrtoeol", 1, 0, 0, gucu_wclrtoeol);
 	scm_c_define_gsubr ("wcursyncup", 1, 0, 0, gucu_wcursyncup);
-	scm_c_define_gsubr ("wcolor-set", 3, 0, 0, gucu_wcolor_set);
+	scm_c_define_gsubr ("%wcolor-set", 2, 0, 0, gucu_wcolor_set);
 	scm_c_define_gsubr ("wdelch", 1, 0, 0, gucu_wdelch);
 	scm_c_define_gsubr ("wdeleteln", 1, 0, 0, gucu_wdeleteln);
 	scm_c_define_gsubr ("wechochar", 2, 0, 0, gucu_wechochar);
@@ -3476,8 +3308,8 @@ gucu_init_function ()
 	scm_c_define_gsubr ("wrefresh", 1, 0, 0, gucu_wrefresh);
 	scm_c_define_gsubr ("wscrl", 2, 0, 0, gucu_wscrl);
 	scm_c_define_gsubr ("wsetscrreg", 3, 0, 0, gucu_wsetscrreg);
-	scm_c_define_gsubr ("wstandend", 1, 0, 0, gucu_wstandend);
-	scm_c_define_gsubr ("wstandout", 1, 0, 0, gucu_wstandout);
+	scm_c_define_gsubr ("%wstandend", 1, 0, 0, gucu_wstandend);
+	scm_c_define_gsubr ("%wstandout", 1, 0, 0, gucu_wstandout);
 	scm_c_define_gsubr ("wsyncup", 1, 0, 0, gucu_wsyncup);
 	scm_c_define_gsubr ("wsyncdown", 1, 0, 0, gucu_wsyncdown);
 	scm_c_define_gsubr ("wtimeout", 2, 0, 0, gucu_wtimeout);

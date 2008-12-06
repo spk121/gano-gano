@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.14 2008/08/01 15:17:02 spike_gran Exp $
+@c $Id: gucu.texi,v 1.15 2008/12/06 21:35:52 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -155,7 +155,7 @@ Input functions
 Attributes
 
 * The details::                 
-* @code{attron} vs @code{attrset}::  
+* @code{attr-on} vs @code{attr-set}::  
 * @code{attr-get}::             
 * @code{wattr} functions::      
 * @code{chgat} functions::      
@@ -1126,7 +1126,7 @@ a single character with the desired attribute.
 @end example
 
 @item
-By using functions like @code{attrset}, @code{attron}, @code{attroff},
+By using functions like @code{attr-set}, @code{attr-on}, @code{attr-off},
 you can manipulate the current attributes of the given window.  Once
 set, the characters printed in the window are associated with the
 attributes until it is turned off.
@@ -1338,8 +1338,8 @@ understandable manner.
 
 The following program takes a scheme file as input and prints the file
 with comments in bold.  It does so by turning on the @code{A_BOLD}
-attribute using @code{attron} when a semicolon is detected, and then
-turning of the @code{A_BOLD} attribute using @code{attroff} when a
+attribute using @code{attr-on} when a semicolon is detected, and then
+turning of the @code{A_BOLD} attribute using @code{attr-off} when a
 newline is detected.  Have a look.
 
 @example
@@ -1384,9 +1384,9 @@ newline is detected.  Have a look.
           ;; and the end of a line
           (cond 
            ((eqv? ch #\;) 
-            (attron A_BOLD))
+            (attr-on A_BOLD))
            ((eqv? ch #\nl)
-            (attroff A_BOLD)))
+            (attr-off A_BOLD)))
           (addch (char->integer ch))
           (refresh)
           (loop (read-char fport)))
@@ -1409,21 +1409,21 @@ file, parses it, and prints it in different colors.
 
 @menu
 * The details::                 
-* @code{attron} vs @code{attrset}::  
+* @code{attr-on} vs @code{attr-set}::  
 * @code{attr-get}::             
 * @code{wattr} functions::      
 * @code{chgat} functions::      
 @end menu
 
-@node The details, @code{attron} vs @code{attrset}, Attributes, Attributes
+@node The details, @code{attr-on} vs @code{attr-set}, Attributes, Attributes
 @subsection The details
 
 Let's get into more details of attributes.  The functions
-@code{attron}, @code{attroff}, @code{attrset}, and their sister
+@code{attr-on}, @code{attr-off}, @code{attr-set}, and their sister
 functions @code{attr-get} etc., can be used to switch attributes on
 and off, get attributes, and produce a colorful display.
 
-The functions @code{attron} and @code{attroff} take a bit-mask of
+The functions @code{attr-on} and @code{attr-off} take a bit-mask of
 attributes and switch them on or off respectively.  The following
 video attributes can be passed to these functions.
 
@@ -1460,27 +1460,27 @@ We can @code{logior} any number of attributes to get a combined
 effect.  If you wanted reverse video with blinking characters, you can
 use
 @example
-(attron (logior A_REVERSE A_BLINK))
+(attr-on (logior A_REVERSE A_BLINK))
 @end example
 
-@node @code{attron} vs @code{attrset}, @code{attr-get}, The details, Attributes
-@subsection @code{attron} vs @code{attrset}
+@node @code{attr-on} vs @code{attr-set}, @code{attr-get}, The details, Attributes
+@subsection @code{attr-on} vs @code{attr-set}
 
-Then what is the difference between @code{attron} and @code{attrset}?
-@code{attrset} sets the attributes of a window whereas @code{attron}
-just switches on the attribute given to it.  So @code{attrset} fully
+Then what is the difference between @code{attr-on} and @code{attr-set}?
+@code{attr-set} sets the attributes of a window whereas @code{attr-on}
+just switches on the attribute given to it.  So @code{attr-set} fully
 overrides whatever attributes the window previously had and sets it to
-the new attribute(s).  Similarly, @code{attroff} just switches off the
+the new attribute(s).  Similarly, @code{attr-off} just switches off the
 attributes(s) given to it as an argument.  This gives us the
 flexibility of managing attributes easily.  But, if you use them
 carelessly, you may lose track of what attributes the window has and
 garble the display.  This is especially true while managing menus with
 colors and highlighting.  So decide on a consistent policy and stick
 to it.  You can always use @code{standend} which is equivalent to
-@code{(attrset A_NORMAL)} which turns off all attributes and brings
+@code{(attr-set A_NORMAL)} which turns off all attributes and brings
 you back to normal mode.
 
-@node @code{attr-get}, @code{wattr} functions, @code{attron} vs @code{attrset}, Attributes
+@node @code{attr-get}, @code{wattr} functions, @code{attr-on} vs @code{attr-set}, Attributes
 @subsection @code{attr-get}
 
 The function @code{attr-get} gets the current attributes and color
@@ -1488,16 +1488,14 @@ pair of the window.  Though we might not use this as often as the
 above runctions, this is useful in scanning areas of a screen.  Say we
 wanted to do some complex update on the screen and we are not sure
 what attribute each character is associated with.  Then this function
-can be used with either @code{attrset} or @code{attron} to produce the
+can be used with either @code{attr-set} or @code{attr-on} to produce the
 desired effect.
 
 @node @code{wattr} functions, @code{chgat} functions, @code{attr-get}, Attributes
 @subsection @code{wattr} functions
 
-For each of the above functions, we have a corresponding function with
-'w' which operates on a particular window.  @code{attron} and friends
-operate on @code{stdscr}.  @code{wattron} and friends operates on a
-particular window.
+For each of the above functions, they can take the optional keyed
+parameter @code{#:win} to oerate on a particular window.
 
 @node @code{chgat} functions,  , @code{wattr} functions, Attributes
 @subsection @code{chgat} functions
@@ -1515,12 +1513,13 @@ The following example changes the attributes of characters from
 the current position to the end of the line to reverse video.
 
 @example
-(chgat -1 A_REVERSE 0 #f)
+(chgat -1 A_REVERSE 0)
 @end example
 
-There are other functions in the same family.  @code{mvchgat} moves
-the cursor before modifying characters.  @code{wchgat} and
-@code{mvwchgat} operate on a given window.
+There are optional key parameters that may be used with
+@code{chgat}. @code{#:y} and @code{#:x} moves the cursor before
+modifying characters.  @code{#:win} has @code{chgat} operate on a
+given window.
 
 The following example will print a string on the screen.  Then it will
 set the first 5 characters of the string to blink and change color to
@@ -1539,12 +1538,11 @@ cyan.
 
 (addstr "Blink Don't Blink")
 
-(mvchgat 0                   ; start y
-         0                   ; start x
-         5                   ; num of chars 
-         A_BLINK           ; attributes
+(chgat   5                   ; num of chars 
+         A_BLINK             ; attributes
          1                   ; use color pair #1
-         #f)                 ; unused
+         #:y 0               ; start y
+         #:x 0)              ; start x
 
 (refresh)
 (getch)
@@ -1796,11 +1794,11 @@ colors.  Let's get into the thick of things with a small program.
 (use-modules (gucu curses))
 
 (initscr)
-(if (has-colors)
+(if (has-colors?)
     (begin
       (start-color)
       (init-pair 1 COLOR_RED COLOR_WHITE)
-      (attron (color-pair 1))
+      (attr-on (color-pair 1))
       (addstr "Voila!! In color...")
       (refresh)
       (sleep 3)
@@ -1815,7 +1813,7 @@ colors.  Let's get into the thick of things with a small program.
 As you can see, to start using color, you should first call
 @code{start-color}.  After that you can use color capabilities of your
 terminal.  To find out whether a terminal has color capabilities or
-not, you can use @code{has-colors}, which returns @code{#f} if the
+not, you can use @code{has-colors?}, which returns @code{#f} if the
 terminal does not support color.
 
 Curses initializes all the color support for the terminal when
@@ -1864,7 +1862,7 @@ to a darker red, you could use this function
 @end example
 
 If your terminal cannot change the color definitions, the function
-return @code{ERR}.  The function @code{can-change-color} can be used
+return @code{ERR}.  The function @code{can-change-color?} can be used
 to find out whether thet terminal has the capability of changing color
 content or not.  The RGB content is scaled from 0 to 1000.  Initially,
 red is likely defined with content 680 (r), 0 (g), 0 (b).
@@ -1948,9 +1946,9 @@ by up and down arrows.
       (cond 
        ((eqv? highlight i)
         (begin
-          (wattron win A_REVERSE)
+          (attr-on A_REVERSE #:win win)
           (mvwaddstr win y x (list-ref choices i))
-          (wattroff win A_REVERSE)))
+          (attr-off A_REVERSE #:win win)))
        (else
         (mvwaddstr win y x (list-ref choices i))))
 
@@ -3124,12 +3122,12 @@ similar example.
 (define (print-in-middle win starty startx width str color)
   (let ((length (string-length str)))
 
-    (wattron win color)
+    (attr-on color #:win win)
     (mvwaddstr win 
 	       starty 
 	       (+ startx (/ (- width length) 2))
 	       str)
-    (wattroff win color)
+    (attr-off color #:win win)
     (refresh)))
     
 
@@ -4012,48 +4010,33 @@ operations.  To the extent possible, they are displayed as appropriate
 modifications to the graphic rendition of characters put on the 
 screen.
 
-@deffn Procedure attrset attrs
-@deffnx Procedure wattrset win attrs
-@deffnx Procedure attron attrs
-@deffnx Procedure wattron win attrs
-@deffnx Procedure attroff attrs
-@deffnx Procedure wattroff win attrs
-@deffnx Procedure standend
-@deffnx Procedure wstandend win
-@deffnx Procedure standout
-@deffnx Procedure wstandout win
-@deffnx Procedure attr-set attrs
-@deffnx Procedure wattr-set win attrs
-@deffnx Procedure attr-on attrs
-@deffnx Procedure wattr-on win attrs
-@deffnx Procedure attr-off attrs
-@deffnx Procedure wattr-off win attrs
+@deffn Procedure attr-set attrs #:key win
+@deffnx Procedure attr-on attrs #:key win
+@deffnx Procedure attr-off attrs #:key win
+@deffnx Procedure standend #:key win
+@deffnx Procedure standout #:key win
 
-The routine @code{attrset} sets the current attributes of the given
-window to @var{attrs}.  The routine @code{attroff} turns off the named
+The routine @code{attr-set} sets the current attributes of the given
+window to @var{attrs}.  The routine @code{attr-off} turns off the named
 attributes without turning any other attributes on or off.  The
-routine @code{attron} turns on the named attributes without affecting
-any others.  The routine @code{standout} is the same as @code{(attron
+routine @code{attr-on} turns on the named attributes without affecting
+any others.  The routine @code{standout} is the same as @code{(attr-on
 A_STANDOUT)}.  The routine @code{standend} is the same as
-@code{(attrset A_NORMAL)} or @code{(attrset 0)}, that is, it turns off
+@code{(attr-set A_NORMAL)} or @code{(attr-set 0)}, that is, it turns off
 all attributes.
 
-@code{attr-set} is the same as @code{attrset}.  @code{attr-on} is the
-same as @code{attron}, etc.
 @end deffn
 
-The @code{attrset} and related routines do not affect the attributes
+The @code{attr-set} and related routines do not affect the attributes
 used when erasing portions of the window. For functions which modify
 the attributes used for erasing and clearing @xref{Window background
 manipulation routines}.
 
-@deffn Procedure color-set color-pair-number opts
-@deffnx Procedure wcolor-set win color-pair-number opts
+@deffn Procedure color-set color-pair-number #:key win
 
 The routine @code{color-set} sets the current color of the given window to
 the foreground/background combination described by the
-@var{color-pair-number}.  The parameter @var{opts} is reserved for
-future use.  For now, set it to @code{#t}.
+@var{color-pair-number}.  
 
 @end deffn
 
@@ -4069,29 +4052,24 @@ bitmap containing all the attributes and the color pair value under
 
 @end deffn
 
-@deffn Procedure chgat n attr color opts
-@deffnx Procedure wchgat win n attr color opts
-@deffnx Procedure mvchgat y x n attr color opts
-@deffnx Procedure mvwchgat win y x n attr color opts
+@deffn Procedure chgat n attr color opts #:key win y x
 
 @findex init-pair
 
 The routine @code{chgat} changes the attributes of a given number of
-characters starting at the current cursor location of @code{stdscr}.
-It does not update the cursor and does not perform wrapping.  A
-character count of -1 or greater than the remaining window width means
-to change attributes all the way to the end of the current line.  The
-@code{wchgat} function generalizes this to any window; the
-@code{mvwchgat} function does a cursor move before acting. In these
-functions, the @var{color} argument is a color-pair index as in the
-first argument of @code{init-pair}. @xref{Color manipulation
-routines}.  The @var{opts} argument is not presently used, but is
-reserved for the future (leave it @code{#t}).
+characters starting at the current cursor location of @code{stdscr} or
+of @var{win} if it is given.  It does not update the cursor and does
+not perform wrapping.  A character count of -1 or greater than the
+remaining window width means to change attributes all the way to the
+end of the current line.  If @var{y} and @var{x} are given, the
+function does a cursor move before acting.  In these functions, the
+@var{color} argument is a color-pair index as in the first argument of
+@code{init-pair}. @xref{Color manipulation routines}.
 
 @end deffn
 
 The attributes can be passed to the routines
-@code{attron}, @code{attroff}, and @code{attrset}, or @code{logior}'d
+@code{attr-on}, @code{attr-off}, and @code{attr-set}, or @code{logior}'d
 with the characters passed to @code{addch}.  For the color part of the
 rendition, use @code{color-pair}.  @xref{tab:a}.
 
@@ -4353,7 +4331,7 @@ the routine @code{init-pair}.  After it has been initialized,
 
 If a terminal is capable of redefining colors, the programmer can use
 the routine @code{init-color} to change the definition of a color.
-The routines @code{has-colors} and @code{can-change-color} return
+The routines @code{has-colors?} and @code{can-change-color?} return
 @code{#t} or @code{#f}, depending on whether the terminal has color
 capabilities and whether the programmer can change the colors.  The
 routine @code{color-content} allows a programmer to extract the
@@ -4450,9 +4428,9 @@ Returns @code{OK} on success and @code{ERR} on failure.
 @end deffn
 
 
-@deffn Procedure has-colors
+@deffn Procedure has-colors?
 
-The @code{has-colors} routine returns @code{#t} if the terminal can
+The @code{has-colors?} routine returns @code{#t} if the terminal can
 manipulate colors; otherwise, it returns @code{#f}.  This routine
 facilitates writing terminal-independent programs. For example, a
 programmer can use it to decide whether to use color or some other
@@ -4460,8 +4438,8 @@ video attribute.
 
 @end deffn
 
-@deffn Procedure can-change-color
-The @code{can-change-color} routine returns @code{#t}
+@deffn Procedure can-change-color?
+The @code{can-change-color?} routine returns @code{#t}
 if the terminal supports colors and can change their definitions;
 otherwise, it returns @code{#f}.
 @end deffn
@@ -5854,8 +5832,8 @@ This routine forces all the soft labels to be output next time
 @deffnx Procedure slk-attr
 
 The @code{slk-attron}, @code{slk-attrset}, @code{slk-attroff} and
-@code{slk-attr} routines correspond to @code{attron}, @code{attrset},
-@code{attroff} and @code{attr-get}.  They have an effect only if soft
+@code{slk-attr} routines correspond to @code{attr-on}, @code{attr-set},
+@code{attr-off} and @code{attr-get}.  They have an effect only if soft
 labels are simulated on the bottom line of the screen.  The default
 highlight for soft keys is @code{A_STANDOUT}.
 

@@ -49,7 +49,7 @@ esac
 
 AC_ARG_ENABLE([ndebug],
               [AS_HELP_STRING([--enable-ndebug],
-                              [use the debug version of the curses libraries (requires --disable-shared)])],
+                              [use the debug version of the curses libraries])],
               # if option is selected
               [libncurses="ncurses_g"
 	       libform="form_g"

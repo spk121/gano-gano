@@ -76,7 +76,7 @@
 		  
 		  (pass-if "bkgdget / wbkgdset"
 			   (begin
-			     (wstandend win)
+			     (standend #:win win)
 			     (mvwaddstr win 0 0 "This is a string")
 			     (wbkgdset win (logior A_DIM (color-pair 1) plus))
 			     (mvwaddstr win 1 0 "This is another string")

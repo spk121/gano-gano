@@ -7,7 +7,7 @@
 ln -s ../src/raw ${PACKAGE}
 
 # MODIFY_ME: A specific test to debug 
-TESTS=f002_data.test
+TESTS=r001_color.test
 
 # This should be the same as in Makefile.am
 LIBGUILE_GUCU_CURSES_MAJOR=0
@@ -32,4 +32,6 @@ libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.
 # Grind the library
 #libtool -dlopen ../src/raw/libguile-gucu-curses-v-${LIBGUILE_GUCU_CURSES_MAJOR}.la \
 #    --mode=execute valgrind --leak-check=full --show-reachable=yes \
-#     guile -e main -s ${srcdir}/guile-test --log-file=curses.log ${TESTS} 2> vgrind.out
+#    --trace-children=yes \
+#     guile -L .. -L . -s ${TESTS} 2> vgrind.out
+

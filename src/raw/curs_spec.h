@@ -10,8 +10,6 @@
 #define API
 #endif
 
-SCM gucu_attr_get (void) API;
-SCM gucu_attr_set (SCM attrs, SCM pair) API;
 SCM gucu_color_content (SCM s_color) API;
 SCM gucu_delwin (SCM win) API;
 SCM gucu_getmouse (void) API;
