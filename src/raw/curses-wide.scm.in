@@ -47,6 +47,7 @@
 	    mvwins-wstr
 	    mvwinwstr
 	    mvwvline-set
+	    term-attrs
 	    unget-wch
 	    vline-set
 	    wacs-block

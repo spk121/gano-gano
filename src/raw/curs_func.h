@@ -10,6 +10,7 @@
 #define API
 #endif
 
+SCM gucu_assume_default_colors (SCM fg, SCM bg);
 SCM gucu_baudrate (void) API;
 SCM gucu_beep (void) API;
 SCM gucu_bkgd (SCM arg1) API;

@@ -486,6 +486,21 @@ gucu_mvwvline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
 	return s_ret;
 }
 
+/* Return all the video attributes supported by the terminal */
+SCM
+gucu_term_attrs ()
+{
+  attr_t ret;
+  SCM s_ret;
+
+  ret = term_attrs ();
+  s_ret = _scm_from_attr (ret);
+
+  return s_ret;
+}
+
+
+
 // 1: int unget_wch
 // 2: const wchar_t
 // 3: 
@@ -857,6 +872,7 @@ gucu_cursw_init_function ()
 	scm_c_define_gsubr ("mvwins-wch", 4, 0, 0, gucu_mvwins_wch);
 	scm_c_define_gsubr ("mvwins-wstr", 4, 0, 0, gucu_mvwins_wstr);
 	scm_c_define_gsubr ("mvwvline-set", 5, 0, 0, gucu_mvwvline_set);
+	scm_c_define_gsubr ("term-attrs", 0, 0, 0, gucu_term_attrs);
 	scm_c_define_gsubr ("unget-wch", 1, 0, 0, gucu_unget_wch);
 	scm_c_define_gsubr ("vline-set", 2, 0, 0, gucu_vline_set);
 	scm_c_define_gsubr ("%waddnwstr", 3, 0, 0, gucu_waddnwstr);

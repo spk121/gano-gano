@@ -230,7 +230,8 @@ WIDETESTS = \
 	r036_bkgrnd.test \
 	r037_border_set.test \
 	r038_get_wch.test \
-	r039_get_wstr.test 
+	r039_get_wstr.test \
+	r040_term_attrs.test
 
 TESTS = $(NARROWTESTS) $(am__append_1)
 CLEANFILES = curses.log *.out

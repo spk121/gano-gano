@@ -15,6 +15,7 @@
 
 #define MAXLEN 1000
 
+/* Return the character use for erasing */
 SCM
 gucu_erasewchar ()
 {
@@ -160,6 +161,7 @@ gucu_in_wchnstr (SCM n)
   return s_str;
 }
 
+/* Return the current line kill character */
 SCM
 gucu_killwchar ()
 {

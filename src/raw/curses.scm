@@ -3,6 +3,7 @@
 (define-module (gucu curses)
   #:use-module (ice-9 optargs)
   #:export ( 
+	    assume-default-colors
 	    addch
 	    addchstr
 	    addstr

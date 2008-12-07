@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.21 2008/12/07 08:43:54 spike_gran Exp $
+@c $Id: gucu.texi,v 1.22 2008/12/07 16:54:06 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -273,6 +273,7 @@ The wide curses library: @code{(gucu curses-wide)}
 * Inserting a complex character before the cursor::  
 * Inserting a unrendered wide string into a window::  
 * Getting a string of unrendered wide characters from a window::  
+* Terminal attributes for wide characters::  
 
 The curses menu library: @code{(gucu menu)}
 
@@ -4451,6 +4452,26 @@ number. The values are between 0 and the value returned by
 
 @end deffn
 
+@deffn Procedre use-default-colors
+
+@findex init-pair
+
+This procedure allow routines that use color numbers, like
+@code{init-pair} to use the special color number -1 to indicate the
+default color.  When -1 is used in lieu of the foreground color, it
+indicated the default foreground color.  When -1 is used as the
+background color, it indicated the default background color.  Thus, it
+has different meanings depending on the context.
+
+@end deffn
+
+@deffn Procedure assume-default-colors fg bg
+
+This procedure allow the modification of special color pair 0, which
+cannot be modified by @code{init-pair}.
+
+@end deffn
+
 @node Deleting the character under the cursor, Deleting and inserting lines, Color manipulation routines, The basic curses library
 @subsection Deleting the character under the cursor
 
@@ -5876,11 +5897,12 @@ verbose description of the current terminal.
 @end deffn
 
 @deffn Procedure termattrs
-@deffnx Procedure term-attrs
+@findex term-attrs
 
 The @code{termattrs} function return a @code{logior} of all video attributes
 supported by the terminal using @code{A_XXX} constants.  The @code{term-attrs}
-function is identical.
+function is nearly identical, except that it returns rarely used
+attributes having to do with wide characters.
 
 @end deffn
 
@@ -6148,6 +6170,7 @@ in the C-language @acronym{API, application programming interface}.
 * Inserting a complex character before the cursor::  
 * Inserting a unrendered wide string into a window::  
 * Getting a string of unrendered wide characters from a window::  
+* Terminal attributes for wide characters::  
 @end menu
 
 @node Overview (wide), Adding wide characters, The wide curses library, The wide curses library
@@ -6519,7 +6542,7 @@ the first character in @var{wstr} is not a spacing character.
 
 @end deffn
 
-@node Getting a string of unrendered wide characters from a window,  , Inserting a unrendered wide string into a window, The wide curses library
+@node Getting a string of unrendered wide characters from a window, Terminal attributes for wide characters, Inserting a unrendered wide string into a window, The wide curses library
 @subsection Getting a string of unrendered wide characters from a window
 
 @deffn Procedure innwstr n
@@ -6536,6 +6559,37 @@ If the size @var{n} is not large enough to store a complete character,
 an error will be thrown.
 
 @end deffn
+
+@node Terminal attributes for wide characters,  , Getting a string of unrendered wide characters from a window, The wide curses library
+@subsection Terminal attributes for wide characters
+
+@deffn Procedure term-attrs
+@findex termattrs
+
+The @code{term-attrs} function return a @code{logior} of all video
+attributes supported by the terminal using @code{WA_XXX} constants.
+The @code{termattrs} function is almost identical except that it
+doesn't return the attributes for the rarely usable modes
+@code{WA_HORIZONTAL}, @code{WA_LEFT}, @code{WA_LOW}, @code{WA_RIGHT},
+@code{WA_TOP} and @code{WA_VERTICAL}.
+
+@end deffn
+
+@deffn erasewchar
+
+This returns the character currently used as the erase character when
+using wide characters.  If wide strings are not or usable, this
+returns @code{#f}.
+
+@end deffn
+
+@deffn killwchar
+
+This returns the character used to erase lines of wide characters, or
+@code{#f} if no such character is defined.
+
+@end deffn
+
 
 @node The curses panel library, The curses menu library, The wide curses library, Curses Reference
 @section The curses panel library: @code{(gucu panel)}

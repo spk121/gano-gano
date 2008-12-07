@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.8 2008/08/01 16:00:55 spike_gran Exp $
+## $Id: Makefile.am,v 1.9 2008/12/07 16:54:06 spike_gran Exp $
 
 all-local:
 	-ln -s ../src/raw @PACKAGE@
@@ -72,7 +72,8 @@ WIDETESTS = \
 	r036_bkgrnd.test \
 	r037_border_set.test \
 	r038_get_wch.test \
-	r039_get_wstr.test 
+	r039_get_wstr.test \
+	r040_term_attrs.test
 
 TESTS = $(NARROWTESTS)
 if WIDE

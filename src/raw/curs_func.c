@@ -8,15 +8,31 @@
 #define _GNU_SOURCE
 #define cstring_t cchar_t
 
+/* Assign the colors to color pair zero */
+SCM
+gucu_assume_default_colors (SCM fg, SCM bg)
+{
+  int c_fg, c_bg, ret;
 
+  SCM_ASSERT (scm_is_integer(fg), fg, SCM_ARG1, "assume-default-colors");
+  SCM_ASSERT (scm_is_integer(bg), bg, SCM_ARG2, "assume-default-colors");
 
+  c_fg = scm_to_int (fg);
+  c_bg = scm_to_int (bg);
+
+  ret = assume_default_colors (c_fg, c_bg);
+
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
+}
+
+/* Return the output speed of the terminal as an integer */
 SCM
 gucu_baudrate ()
 {
-	int ret = baudrate ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  return scm_from_int (baudrate ());
 }
 
 SCM
@@ -340,13 +356,11 @@ gucu_endwin ()
 	return s_ret;
 }
 
+/* Return the current character used to erase */
 SCM
 gucu_erasechar ()
 {
-	char ret = erasechar ();
-	SCM s_ret = scm_from_char (ret);
-
-	return s_ret;
+  return scm_from_char (erasechar ());
 }
 
 SCM
@@ -446,22 +460,21 @@ gucu_has_colors_p ()
   return s_ret;
 }
 
+/* True if the terminal has insert and delete character capabilities */
 SCM
 gucu_has_ic ()
 {
-	bool ret = has_ic ();
-	SCM s_ret = scm_from_bool (ret);
-
-	return s_ret;
+  return (scm_from_bool (has_ic()));
 }
 
+/* True if the terminal and insert- and delete-line capabilities */
 SCM
 gucu_has_il ()
 {
-	bool ret = has_il ();
-	SCM s_ret = scm_from_bool (ret);
-
-	return s_ret;
+  bool ret;
+  
+  ret = has_il ();
+  return (scm_from_bool (ret));
 }
 
 SCM
@@ -752,13 +765,11 @@ gucu_keypad (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+/* Return the current line kill character */
 SCM
 gucu_killchar ()
 {
-	char ret = killchar ();
-	SCM s_ret = scm_from_char (ret);
-
-	return s_ret;
+  return scm_from_char (killchar ());
 }
 
 SCM
@@ -776,13 +787,19 @@ gucu_leaveok (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+/* Return a verbose description of the current terminal */
 SCM
 gucu_longname ()
 {
-	char * ret = longname ();
-	SCM s_ret = scm_from_locale_string (ret);
+  char *ret;
+  SCM s_ret;
+	
+  ret = longname ();
+  s_ret = scm_from_locale_string (ret);
 
-	return s_ret;
+  /* No need to free static string returned by longname */
+
+  return s_ret;
 }
 
 SCM
@@ -1910,22 +1927,32 @@ gucu_syncok (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+/* Return all the video attributes supported by the terminal */
 SCM
 gucu_termattrs ()
 {
-	chtype ret = termattrs ();
-	SCM s_ret = _scm_from_chtype (ret);
+  chtype ret;
+  SCM s_ret;
 
-	return s_ret;
+  ret = termattrs ();
+  s_ret = _scm_from_chtype (ret);
+
+  return s_ret;
 }
 
+/* Return the short name of the terminal */
 SCM
 gucu_termname ()
 {
-	char * ret = termname ();
-	SCM s_ret = scm_from_locale_string (ret);
+  char *ret;
+  SCM s_ret;
 
-	return s_ret;
+  ret = termname ();
+  s_ret = scm_from_locale_string (ret);
+
+  /* No need to free static string returned by termname() */
+
+  return s_ret;
 }
 
 SCM
@@ -2066,13 +2093,14 @@ gucu_untouchwin (SCM arg1)
 	return s_ret;
 }
 
+/* Assign the terminal default colors to the special color number -1 */
 SCM
 gucu_use_default_colors ()
 {
-	int ret = use_default_colors ();
-	SCM s_ret = scm_from_int (ret);
+  if (use_default_colors () == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -2807,6 +2835,8 @@ gucu_wvline (SCM arg1, SCM arg2, SCM arg3)
 void 
 gucu_init_function ()
 {
+  scm_c_define_gsubr ("assume-default-colors", 2, 0, 0, 
+		      gucu_assume_default_colors);
 	scm_c_define_gsubr ("baudrate", 0, 0, 0, gucu_baudrate);
 	scm_c_define_gsubr ("beep", 0, 0, 0, gucu_beep);
 	scm_c_define_gsubr ("bkgd", 1, 0, 0, gucu_bkgd);
