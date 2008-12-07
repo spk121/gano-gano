@@ -14,7 +14,7 @@
 (with-test-prefix "ASCII"
 		  (pass-if "a"
 			   (begin
-			     (mvaddch 0 0 (char->integer #\a))
+			     (addch (char->integer #\a) #:x 0 #:y 0)
 			     (refresh)
 			     (equal? (mvinch 0 0) (char->integer #\a)))))
 
@@ -27,7 +27,7 @@
   (pass-if xname
 	   (begin
 	     (clear)
-	     (mvaddch 0 0 x)
+	     (addch x #:x 0 #:y 0)
 	     (refresh)
 	     (usleep 10000)
 	     (let ((x2 (mvinch 0 0)))

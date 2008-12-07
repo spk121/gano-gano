@@ -7,18 +7,7 @@
 #include "term.h"
 #define _GNU_SOURCE
 #define cstring_t cchar_t
-SCM
-gucu_addch (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "addch");
 
-	const chtype c_arg1 = _scm_to_chtype (arg1);
-
-	int ret = addch (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
 
 SCM
 gucu_addchnstr (SCM arg1, SCM arg2)
@@ -401,19 +390,6 @@ SCM
 gucu_echo ()
 {
 	int ret = echo ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_echochar (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "echochar");
-
-	const chtype c_arg1 = _scm_to_chtype (arg1);
-
-	int ret = echochar (c_arg1);
 	SCM s_ret = scm_from_int (ret);
 
 	return s_ret;
@@ -917,23 +893,6 @@ gucu_move (SCM arg1, SCM arg2)
 }
 
 SCM
-gucu_mvaddch (SCM arg1, SCM arg2, SCM arg3)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "mvaddch");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvaddch");
-	SCM_ASSERT (_scm_is_chtype (arg3), arg3, SCM_ARG3, "mvaddch");
-
-	int c_arg1 = scm_to_int (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	const chtype c_arg3 = _scm_to_chtype (arg3);
-
-	int ret = mvaddch (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
 gucu_mvaddchnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
 	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "mvaddchnstr");
@@ -1184,25 +1143,6 @@ gucu_mvvline (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	int c_arg4 = scm_to_int (arg4);
 
 	int ret = mvvline (c_arg1, c_arg2, c_arg3, c_arg4);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_mvwaddch (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "mvwaddch");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvwaddch");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "mvwaddch");
-	SCM_ASSERT (_scm_is_chtype (arg4), arg4, SCM_ARG4, "mvwaddch");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
-	const chtype c_arg4 = _scm_to_chtype (arg4);
-
-	int ret = mvwaddch (c_arg1, c_arg2, c_arg3, c_arg4);
 	SCM s_ret = scm_from_int (ret);
 
 	return s_ret;
@@ -2408,19 +2348,26 @@ gucu_vline (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+/* Put the character ch into the window at its current position, which
+   is then advanced. */
 SCM
-gucu_waddch (SCM arg1, SCM arg2)
+gucu_waddch (SCM win, SCM ch)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "waddch");
-	SCM_ASSERT (_scm_is_chtype (arg2), arg2, SCM_ARG2, "waddch");
+  WINDOW *c_win;
+  chtype c_ch;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	const chtype c_arg2 = _scm_to_chtype (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%waddch");
+  SCM_ASSERT (_scm_is_chtype (ch), ch, SCM_ARG2, "%waddch");
 
-	int ret = waddch (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_ch = _scm_to_chtype (ch);
 
-	return s_ret;
+  ret = waddch (c_win, c_ch);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -2728,19 +2675,26 @@ gucu_wdeleteln (SCM arg1)
 	return s_ret;
 }
 
+/* Write ch to the given window without advancing the curses.  Refresh
+   that character immediately */
 SCM
-gucu_wechochar (SCM arg1, SCM arg2)
+gucu_wechochar (SCM win, SCM ch)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wechochar");
-	SCM_ASSERT (_scm_is_chtype (arg2), arg2, SCM_ARG2, "wechochar");
+  WINDOW *c_win;
+  chtype c_ch;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	const chtype c_arg2 = _scm_to_chtype (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wechochar");
+  SCM_ASSERT (_scm_is_chtype (ch), ch, SCM_ARG2, "%wechochar");
+  
+  c_win = _scm_to_window (win);
+  c_ch = _scm_to_chtype (ch);
 
-	int ret = wechochar (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  ret = wechochar (c_win, c_ch);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+  
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -3102,7 +3056,6 @@ gucu_wvline (SCM arg1, SCM arg2, SCM arg3)
 void 
 gucu_init_function ()
 {
-	scm_c_define_gsubr ("addch", 1, 0, 0, gucu_addch);
 	scm_c_define_gsubr ("addchnstr", 2, 0, 0, gucu_addchnstr);
 	scm_c_define_gsubr ("addchstr", 1, 0, 0, gucu_addchstr);
 	scm_c_define_gsubr ("addnstr", 2, 0, 0, gucu_addnstr);
@@ -3133,7 +3086,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("doupdate", 0, 0, 0, gucu_doupdate);
 	scm_c_define_gsubr ("dupwin", 1, 0, 0, gucu_dupwin);
 	scm_c_define_gsubr ("echo", 0, 0, 0, gucu_echo);
-	scm_c_define_gsubr ("echochar", 1, 0, 0, gucu_echochar);
 	scm_c_define_gsubr ("endwin", 0, 0, 0, gucu_endwin);
 	scm_c_define_gsubr ("erasechar", 0, 0, 0, gucu_erasechar);
 	scm_c_define_gsubr ("erase", 0, 0, 0, gucu_erase);
@@ -3173,7 +3125,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("meta", 2, 0, 0, gucu_meta);
 	scm_c_define_gsubr ("mouseinterval", 1, 0, 0, gucu_mouseinterval);
 	scm_c_define_gsubr ("move", 2, 0, 0, gucu_move);
-	scm_c_define_gsubr ("mvaddch", 3, 0, 0, gucu_mvaddch);
 	scm_c_define_gsubr ("mvaddchnstr", 4, 0, 0, gucu_mvaddchnstr);
 	scm_c_define_gsubr ("mvaddchstr", 3, 0, 0, gucu_mvaddchstr);
 	scm_c_define_gsubr ("mvaddnstr", 4, 0, 0, gucu_mvaddnstr);
@@ -3188,7 +3139,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("mvinsnstr", 4, 0, 0, gucu_mvinsnstr);
 	scm_c_define_gsubr ("mvinsstr", 3, 0, 0, gucu_mvinsstr);
 	scm_c_define_gsubr ("mvvline", 4, 0, 0, gucu_mvvline);
-	scm_c_define_gsubr ("mvwaddch", 4, 0, 0, gucu_mvwaddch);
 	scm_c_define_gsubr ("mvwaddchnstr", 5, 0, 0, gucu_mvwaddchnstr);
 	scm_c_define_gsubr ("mvwaddchstr", 4, 0, 0, gucu_mvwaddchstr);
 	scm_c_define_gsubr ("mvwaddnstr", 5, 0, 0, gucu_mvwaddnstr);
@@ -3273,7 +3223,7 @@ gucu_init_function ()
 	scm_c_define_gsubr ("use-env", 1, 0, 0, gucu_use_env);
 	scm_c_define_gsubr ("vidattr", 1, 0, 0, gucu_vidattr);
 	scm_c_define_gsubr ("vline", 2, 0, 0, gucu_vline);
-	scm_c_define_gsubr ("waddch", 2, 0, 0, gucu_waddch);
+	scm_c_define_gsubr ("%waddch", 2, 0, 0, gucu_waddch);
 	scm_c_define_gsubr ("waddchnstr", 3, 0, 0, gucu_waddchnstr);
 	scm_c_define_gsubr ("waddchstr", 2, 0, 0, gucu_waddchstr);
 	scm_c_define_gsubr ("waddnstr", 3, 0, 0, gucu_waddnstr);
@@ -3291,7 +3241,7 @@ gucu_init_function ()
 	scm_c_define_gsubr ("%wcolor-set", 2, 0, 0, gucu_wcolor_set);
 	scm_c_define_gsubr ("wdelch", 1, 0, 0, gucu_wdelch);
 	scm_c_define_gsubr ("wdeleteln", 1, 0, 0, gucu_wdeleteln);
-	scm_c_define_gsubr ("wechochar", 2, 0, 0, gucu_wechochar);
+	scm_c_define_gsubr ("%wechochar", 2, 0, 0, gucu_wechochar);
 	scm_c_define_gsubr ("wenclose", 3, 0, 0, gucu_wenclose);
 	scm_c_define_gsubr ("werase", 1, 0, 0, gucu_werase);
 	scm_c_define_gsubr ("wgetch", 1, 0, 0, gucu_wgetch);

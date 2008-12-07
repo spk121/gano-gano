@@ -102,11 +102,11 @@
 	   #t)
        (%wadd-wch win ch)))
 
-(define* (add-wchstr wchstr #:key (win (stdscr) x y (n -1)))
+(define* (add-wchstr wchstr #:key (win (stdscr)) x y (n -1))
   (and (if (and x y)
 	   (wmove win y x)
 	   #t)
-       (%wadd_wchnstr win wchstr n)))
+       (%wadd-wchnstr win wchstr n)))
 
 (define* (echo-wchar ch #:key (win (stdscr)))
   (%wecho-wchar win ch))

@@ -79,7 +79,6 @@
 	    meta
 	    mouseinterval
 	    move
-	    mvaddch
 	    mvaddchnstr
 	    mvaddchstr
 	    mvaddnstr
@@ -94,7 +93,6 @@
 	    mvinsnstr
 	    mvinsstr
 	    mvvline
-	    mvwaddch
 	    mvwaddchnstr
 	    mvwaddchstr
 	    mvwaddnstr
@@ -181,7 +179,6 @@
 	    use-env
 	    vidattr
 	    vline
-	    waddch
 	    waddchnstr
 	    waddchstr
 	    waddnstr
@@ -195,7 +192,6 @@
 	    wcursyncup
 	    wdelch
 	    wdeleteln
-	    wechochar
 	    wenclose
 	    werase
 	    wgetch
@@ -453,6 +449,12 @@
 	    open-curses-port
 ))
 
+(define* (addch ch #:key (win (stdscr)) y x)
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%waddch win ch)))
+
 (define* (attr-get #:key (win (stdscr)))
   (%wattr-get win))
 
@@ -468,18 +470,21 @@
 (define* (color-set pair #:key (win (stdscr)))
   (%wcolor-set win pair))
 
+(define* (echochar ch #:key (win (stdscr)))
+  (%wechochar win ch))
+
 (define* (standend #:key (win (stdscr)))
   (%wstandend win))
 
 (define* (standout #:key (win (stdscr)))
   (%wstandout win))
 
-(define* (chgat n attr color 
-		#:key (win (stdscr)) 
-		y x)
-  (if (and y x)
-      (wmove win y x))
-  (%wchgat win n attr color))
+(define* (chgat n attr color #:key (win (stdscr)) y x)
+  (and
+   (if (and y x)
+       (wmove win y x)
+       #t)
+   (%wchgat win n attr color)))
 
 		
 

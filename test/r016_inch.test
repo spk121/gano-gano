@@ -19,7 +19,7 @@
 		  (pass-if "inch"
 			   (begin
 			     (clear)
-			     (mvaddch 4 5 x-normal)
+			     (addch x-normal #:y 4 #:x 5)
 			     (move 4 5)
 			     (refresh)
 			     (let ((x1 (inch)))
@@ -28,7 +28,7 @@
 		  (pass-if "mvinch"
 			   (begin
 			     (clear)
-			     (mvaddch 1 0 x-bold)
+			     (addch x-bold #:y 1 #:x 0)
 			     (refresh)
 			     (let ((x2 (mvinch 1 0)))
 			       (equal? x-bold x2)))))
@@ -40,7 +40,7 @@
 		  (pass-if "winch"
 			   (begin
 			     (wclear win)
-			     (mvwaddch win 2 3 x-normal)
+			     (addch x-normal #:win win #:y 2 #:x 3)
 			     (wrefresh win)
 			     (wmove win 2 3)
 			     (let ((x1 (winch win)))
@@ -49,7 +49,7 @@
 		  (pass-if "mvwinch"
 			   (begin
 			     (wclear win)
-			     (mvwaddch win 1 0 x-bold)
+			     (addch x-bold #:win win #:y 1 #:x 0)
 			     (wrefresh win)
 			     (let ((x2 (mvwinch win 1 0)))
 			       (equal? x-bold x2)))))

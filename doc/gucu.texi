@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.17 2008/12/07 01:44:16 spike_gran Exp $
+@c $Id: gucu.texi,v 1.18 2008/12/07 02:23:02 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -1136,9 +1136,9 @@ Additionally, curses provides some special characters for
 character-based graphics.  You can draw tables, horizonal or vertical
 lines.  Try looking for the procedures beginning with @code{acs-}.
 
-@subsubsection mvaddch, waddch, and mvwaddch
+@subsubsection Moving and windows with addch
 
-@code{mvaddch} is used to move the cursor to a given point, and then
+@code{addch #:y y #:x x} is used to move the cursor to a given point, and then
 print.  Thus the calls
 @example
 (move row col)
@@ -1146,15 +1146,13 @@ print.  Thus the calls
 @end example
 can be replaced by
 @example
-(mvaddch row col ch)
+(addch ch #:x row #:y col)
 @end example
 
-@code{waddch} is similar to @code{addch}, except that it adds a
-character into the given window.  Note that @code{addch} adds a
-character into the window @code{stdscr}.
+@code{addch #:win win} is similar to @code{addch}, except that it adds
+a character into the given window instead of @code{stdscr}.
 
-In a similar fashion, @code{mvwaddch} is used to add a character into
-the given window at the given coordinates.
+In a similar fashion, a combination of both types of optional parameters can be used: @code{addch #:win win #:y y #:x x}.
 
 @subsubsection Complex characters and @code{add-wch}
 
@@ -1762,10 +1760,10 @@ position.
       (plus (char->integer #\+))
       (dash (char->integer #\-))
       (bar (char->integer #\|)))
-  (mvaddch y x plus)
-  (mvaddch y (+ x width) plus)
-  (mvaddch (+ y height) x plus)
-  (mvaddch (+ y height) (+ x width) plus)
+  (addch plus #:x x #:y y)
+  (addch plus #:y y #:x (+ x width))
+  (addch plus #:y (+ y height) #:x x)
+  (addch plus #:y (+ y height) #:x (+ x width))
   (mvhline y (+ x 1) dash (- width 1))  
   (mvhline (+ y height) (+ x 1) dash (- width 1))
   (mvvline (+ y 1) x bar (- height 1))  
@@ -3749,20 +3747,15 @@ Its return value is @code{*unspecified*}.
 There is a family of functions that add a rendered, narrow character
 to a curses window, and then advance the cursor.
 
-@deffn Procedure addch ch
-@deffnx Procedure waddch win ch
-@deffnx Procedure mvaddch y x ch
-@deffnx Procedure mvwaddch win y x ch
-
+@deffn Procedure addch ch #:key win y x
 @findex scrollok 
 
-The @code{addch}, @code{waddch}, @code{mvaddch} and @code{mvwaddch}
-routines put the rendered, narrow character @var{ch} into the given
-window at its current window position, which is then advanced.  If the
-advance is at the right margin, the cursor automatically wraps to the
-beginning of the next line.  At the bottom of the current scrolling
-region, if @code{scrollok} is enabled, the scrolling region is
-scrolled up one line.
+The @code{addch} routine puts the rendered, narrow character @var{ch}
+into the given window at its current window position, which is then
+advanced.  If the advance is at the right margin, the cursor
+automatically wraps to the beginning of the next line.  At the bottom
+of the current scrolling region, if @code{scrollok} is enabled, the
+scrolling region is scrolled up one line.
 
 @findex set-tabsize
 @findex clrtoeol
@@ -3786,7 +3779,7 @@ character.
 Since @var{ch} is a rendered character, the rendition will be applied
 to the character when it is put on the screen.
 
-These functions return @code{OK} on success and @code{ERR} otherwise.
+This function returns @code{#t} on success and @code{#f} otherwise.
 @end deffn
 
 @deffn Procedure echochar ch
@@ -3794,15 +3787,13 @@ These functions return @code{OK} on success and @code{ERR} otherwise.
 
 @findex addch
 @findex refresh
-@findex waddch
 @findex wrefresh
 
-The @code{echochar} and @code{wechochar} routines are equivalent to a
-call to @code{addch} followed by a call to @code{refresh}, or a call
-to @code{waddch} followed by a call to @code{wrefresh}.  The knowledge
-that only a single character is being output allows for efficiency.
+The @code{echochar} routine is equivalent to a call to @code{addch}
+followed by a call to @code{refresh}.  The knowledge that only a
+single character is being output allows for efficiency.
 
-These functions return @code{OK} on success and @code{ERR} otherwise.
+This function returns @code{#t} on success and @code{#f} otherwise.
 @end deffn
 
 @deffn Procecure tabsize
@@ -3949,10 +3940,10 @@ The set of line-graphics characters is given in @ref{tab:ACS}.
 @deffnx Procecure mvwaddstr win y x str
 @deffnx Procecure mvwaddnstr win y x str n
 
-@findex waddch
+@findex addch
 
 These routines write the characters of the unrendered, narrow string
-@var{str} on the given window. It is similar to calling @code{waddch}
+@var{str} on the given window. It is similar to calling @code{addch}
 once for each character in the string.  The four routines with @var{n}
 as the last argument write at most n characters.  If @var{n} is -1,
 then the entire string will be added, up to the maximum number of
@@ -3998,12 +3989,12 @@ been deleted and @code{OK} on success.
 @node Character and window attribute control routines, Bell and screen flash routines, Adding strings of characters and attributes, The basic curses library
 @subsection Character and window attribute control routines
 
-@findex waddch
+@findex addch
 @findex waddstr
 
 These routines manipulate the current attributes of the named window.
 The current attributes of a window apply to all characters that are
-written into the window with @code{waddch} and @code{waddstr}.
+written into the window with @code{addch} and @code{waddstr}.
 Attributes are a property of the character, and move with the
 character through any scrolling and insert/delete line/character
 operations.  To the extent possible, they are displayed as appropriate
@@ -4151,13 +4142,13 @@ flashing, @code{ERR} otherwise.
 @deffn Procedure bkgdset ch
 @deffnx Procedure wbkgdset win ch
 
-@findex waddch
+@findex addch
 
 The @code{bkgdset} and @code{wbkgdset} routines manipulate the
 background of the named window.  The window background consists of any
 combination of attributes (i.e., rendition) and a character @var{ch}.
 The attribute part of the background is combined (@code{logior}'d) with all
-non-blank characters that are written into the window with @code{waddch}.
+non-blank characters that are written into the window with @code{addch}.
 Both the character and attribute parts of the background are combined
 with the blank characters.  The background becomes a property of the
 character and moves with the character through any scrolling and
@@ -5378,13 +5369,13 @@ Returns @code{OK}.
 
 @deffn Procedure immedok win bf
 
-@findex waddch
+@findex addch
 @findex wclrtobot
 @findex wscrl
 @findex wrefresh
 
 If @code{immedok} is called with @code{#t} as argument, any change in
-the window image, such as the ones caused by @code{waddch},
+the window image, such as the ones caused by @code{addch},
 @code{wclrtobot}, @code{wscrl}, etc., automatically cause a call to
 @code{wrefresh}.  However, it may degrade performance considerably,
 due to repeated calls to @code{wrefresh}. It is disabled by default.
@@ -5562,13 +5553,11 @@ Returns @code{ERR} upon failure and @code{OK} upon successful
 
 @findex addch
 @findex refresh
-@findex waddch
 @findex wrefresh
 @findex prefresh
 
 The @code{pechochar} routine is functionally equivalent to a call to
-@code{addch} followed by a call to @code{refresh}, a call to
-@code{waddch} followed by a call to @code{wrefresh}, or a call to
+@code{addch} followed by a call to @code{refresh} or a call to
 @code{waddch} followed by a call to @code{prefresh}.  The knowledge
 that only a single character is being output is taken into
 consideration and, for non-control characters, a considerable
@@ -6237,7 +6226,7 @@ This returns the @code{#f} upon failure and @code{#t} on success.
 @deffnx Procecure mvwaddwstr win y x str
 @deffnx Procecure mvwaddnwstr win y x str n
 
-@findex waddch
+@findex addch
 
 These routines write the characters of the unrendered, wide string
 @var{str} on the given window. It is similar to constructing a
@@ -6288,7 +6277,7 @@ The @code{bkgrndset} and @code{wbkgrndset} routines manipulate the
 background of the named window.  The window background is a rendered,
 complex character.  The attribute part of the background is combined
 (@code{logior}'ed) with all non-blank characters that are written into
-the window with @code{waddch}.  Both the character and attribute parts
+the window with @code{addch}.  Both the character and attribute parts
 of the background are combined with the blank characters.  The
 background becomes a property of the character and moves with the
 character through any scrolling and insert/delete line/character
