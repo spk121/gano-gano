@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.18 2008/12/07 02:23:02 spike_gran Exp $
+@c $Id: gucu.texi,v 1.19 2008/12/07 03:52:52 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -3955,19 +3955,12 @@ on success.
 
 @end deffn
 
-@deffn Procedure addchstr chstr
-@deffnx Procedure addchnstr chstr n
-@deffnx Procedure waddchstr win chstr
-@deffnx Procedure waddchnstr win chstr n
-@deffnx Procedure mvaddchstr y x chstr
-@deffnx Procedure mvaddchnstr y x chstr n
-@deffnx Procedure mvwaddchstr win y x chstr
-@deffnx Procedure mvwaddchnstr win y x chstr n
+@deffn Procedure addchstr chstr #:key win y x n
 
 These routines copy the rendered, narrow string @var{chstr} into the
-window image structure at and after the current cursor position.  The
-four routines with @var{n} as the last argument copy at most n
-elements, but no more than will fit on the line.  If @var{n} equals -1
+window image structure at and after the current cursor position.  If
+@var{n} is defined, copy at most @var{n} elements, but no more than
+will fit on the line.  If @var{n} equals -1 or if it is undefined,
 then the whole string is copied, to the maximum number of characters
 that will fit on the line.
 

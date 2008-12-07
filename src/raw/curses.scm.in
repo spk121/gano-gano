@@ -4,7 +4,6 @@
   #:use-module (ice-9 optargs)
   #:export ( 
 	    addch
-	    addchnstr
 	    addchstr
 	    addnstr
 	    addstr
@@ -79,8 +78,6 @@
 	    meta
 	    mouseinterval
 	    move
-	    mvaddchnstr
-	    mvaddchstr
 	    mvaddnstr
 	    mvaddstr
 	    mvcur
@@ -93,8 +90,6 @@
 	    mvinsnstr
 	    mvinsstr
 	    mvvline
-	    mvwaddchnstr
-	    mvwaddchstr
 	    mvwaddnstr
 	    mvwaddstr
 	    mvwdelch
@@ -179,8 +174,6 @@
 	    use-env
 	    vidattr
 	    vline
-	    waddchnstr
-	    waddchstr
 	    waddnstr
 	    waddstr
 	    wbkgd
@@ -454,6 +447,12 @@
 	   (wmove win y x)
 	   #t)
        (%waddch win ch)))
+
+(define* (addchstr chstr #:key (win (stdscr)) y x (n -1))
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%waddchnstr win chstr n)))
 
 (define* (attr-get #:key (win (stdscr)))
   (%wattr-get win))
