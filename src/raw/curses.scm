@@ -171,7 +171,6 @@
 	    vidattr
 	    vline
 	    wbkgd
-	    wbkgdset
 	    wborder
 	    wclear
 	    wclrtobot
@@ -485,11 +484,20 @@
 (define* (attr-set attr #:key (color 0) (win (stdscr)))
   (%wattr-set win attr color))
 
+(define* (bkgd ch #:key (win (stdscr)))
+  (%wbkgd win ch))
+
+(define* (bkgdset ch #:key (win (stdscr)))
+  (%wbkgdset win ch))
+
 (define* (color-set pair #:key (win (stdscr)))
   (%wcolor-set win pair))
 
 (define* (echochar ch #:key (win (stdscr)))
   (%wechochar win ch))
+
+(define* (getbkgd #:key (win (stdscr)))
+  (%getbkgd win))
 
 (define* (standend #:key (win (stdscr)))
   (%wstandend win))

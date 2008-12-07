@@ -48,32 +48,6 @@ gucu_beep ()
 }
 
 SCM
-gucu_bkgd (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "bkgd");
-
-	chtype c_arg1 = _scm_to_chtype (arg1);
-
-	int ret = bkgd (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_bkgdset (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "bkgdset");
-
-	chtype c_arg1 = _scm_to_chtype (arg1);
-
-	 bkgdset (c_arg1);
-	SCM s_ret = SCM_UNSPECIFIED;
-
-	return s_ret;
-}
-
-SCM
 gucu_border (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7, SCM arg8)
 {
 	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "border");
@@ -394,7 +368,7 @@ gucu_flash ()
   if (ret == ERR)
     return SCM_BOOL_F;
 
-  return SCM_BOOL_T
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -406,17 +380,20 @@ gucu_flushinp ()
 	return s_ret;
 }
 
+/* Return the background rendered character of the given window */
 SCM
-gucu_getbkgd (SCM arg1)
+gucu_getbkgd (SCM win)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "getbkgd");
+  WINDOW *c_win;
+  chtype ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%getbkgd");
 
-	chtype ret = getbkgd (c_arg1);
-	SCM s_ret = _scm_from_chtype (ret);
+  c_win = _scm_to_window (win);
 
-	return s_ret;
+  ret = getbkgd (c_win);
+
+  return _scm_from_chtype (ret);
 }
 
 SCM
@@ -2274,34 +2251,44 @@ gucu_wattr_on (SCM win, SCM attrs)
   return SCM_UNSPECIFIED;
 }
 
+/* Set the background property and apply it to every possible location */
 SCM
-gucu_wbkgd (SCM arg1, SCM arg2)
+gucu_wbkgd (SCM win, SCM ch)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wbkgd");
-	SCM_ASSERT (_scm_is_chtype (arg2), arg2, SCM_ARG2, "wbkgd");
+  WINDOW *c_win;
+  chtype c_ch;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	chtype c_arg2 = _scm_to_chtype (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wbkgd");
+  SCM_ASSERT (_scm_is_chtype (ch), ch, SCM_ARG2, "%wbkgd");
 
-	int ret = wbkgd (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_ch = _scm_to_chtype (ch);
 
-	return s_ret;
+  /* Always returns OK */
+  ret = wbkgd (c_win, c_ch);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
+/* Change the new background character to the given rendered char */
 SCM
-gucu_wbkgdset (SCM arg1, SCM arg2)
+gucu_wbkgdset (SCM win, SCM ch)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wbkgdset");
-	SCM_ASSERT (_scm_is_chtype (arg2), arg2, SCM_ARG2, "wbkgdset");
+  WINDOW *c_win;
+  chtype c_ch;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	chtype c_arg2 = _scm_to_chtype (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wbkgdset");
+  SCM_ASSERT (_scm_is_chtype (ch), ch, SCM_ARG2, "%wbkgdset");
 
-	 wbkgdset (c_arg1, c_arg2);
-	SCM s_ret = SCM_UNSPECIFIED;
+  c_win = _scm_to_window (win);
+  c_ch = _scm_to_chtype (ch);
 
-	return s_ret;
+  wbkgdset (c_win, c_ch);
+
+  return SCM_UNSPECIFIED;
 }
 
 SCM
@@ -2846,8 +2833,6 @@ gucu_init_function ()
 		      gucu_assume_default_colors);
 	scm_c_define_gsubr ("baudrate", 0, 0, 0, gucu_baudrate);
 	scm_c_define_gsubr ("beep", 0, 0, 0, gucu_beep);
-	scm_c_define_gsubr ("bkgd", 1, 0, 0, gucu_bkgd);
-	scm_c_define_gsubr ("bkgdset", 1, 0, 0, gucu_bkgdset);
 	scm_c_define_gsubr ("border", 8, 0, 0, gucu_border);
 	scm_c_define_gsubr ("box", 3, 0, 0, gucu_box);
 	scm_c_define_gsubr ("can-change-color?", 0, 0, 0, 
@@ -2876,7 +2861,7 @@ gucu_init_function ()
 	scm_c_define_gsubr ("filter", 0, 0, 0, gucu_filter);
 	scm_c_define_gsubr ("flash", 0, 0, 0, gucu_flash);
 	scm_c_define_gsubr ("flushinp", 0, 0, 0, gucu_flushinp);
-	scm_c_define_gsubr ("getbkgd", 1, 0, 0, gucu_getbkgd);
+	scm_c_define_gsubr ("%getbkgd", 1, 0, 0, gucu_getbkgd);
 	scm_c_define_gsubr ("getch", 0, 0, 0, gucu_getch);
 	scm_c_define_gsubr ("getwin", 1, 0, 0, gucu_getwin);
 	scm_c_define_gsubr ("halfdelay", 1, 0, 0, gucu_halfdelay);
@@ -3004,8 +2989,8 @@ gucu_init_function ()
 	scm_c_define_gsubr ("%waddnstr", 3, 0, 0, gucu_waddnstr);
 	scm_c_define_gsubr ("%wattr-off", 2, 0, 0, gucu_wattr_off);
 	scm_c_define_gsubr ("%wattr-on", 2, 0, 0, gucu_wattr_on);
-	scm_c_define_gsubr ("wbkgd", 2, 0, 0, gucu_wbkgd);
-	scm_c_define_gsubr ("wbkgdset", 2, 0, 0, gucu_wbkgdset);
+	scm_c_define_gsubr ("%wbkgd", 2, 0, 0, gucu_wbkgd);
+	scm_c_define_gsubr ("%wbkgdset", 2, 0, 0, gucu_wbkgdset);
 	scm_c_define_gsubr ("wborder", 9, 0, 0, gucu_wborder);
 	scm_c_define_gsubr ("%wchgat", 4, 0, 0, gucu_wchgat);
 	scm_c_define_gsubr ("wclear", 1, 0, 0, gucu_wclear);

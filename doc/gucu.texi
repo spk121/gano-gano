@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.23 2008/12/07 17:05:00 spike_gran Exp $
+@c $Id: gucu.texi,v 1.24 2008/12/07 17:31:13 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -4133,12 +4133,11 @@ flashing, @code{#f} otherwise.
 @node Window background manipulation routines, Borders and lines, Bell and screen flash routines, The basic curses library
 @subsection Window background manipulation routines
 
-@deffn Procedure bkgdset ch
-@deffnx Procedure wbkgdset win ch
+@deffn Procedure bkgdset ch #:key win
 
 @findex addch
 
-The @code{bkgdset} and @code{wbkgdset} routines manipulate the
+The @code{bkgdset} routine manipulates the
 background of the named window.  The window background consists of any
 combination of attributes (i.e., rendition) and a character @var{ch}.
 The attribute part of the background is combined (@code{logior}'d) with all
@@ -4156,22 +4155,23 @@ The return of these functions is undefined.
 
 @end deffn
 
-@deffn Procedure bkgd ch
-@deffnx Procedure wbkgd win ch
+@deffn Procedure bkgd ch #:key win
 
-The @code{bkgd} and @code{wbkgd} functions set the background property
-of the current or specified window and then apply this setting to
+The @code{bkgd} function sets the background property
+of the current or specified window and then applies this setting to
 every character position in that window: The rendition of every
 character on the screen is changed to the new background rendition.
 Wherever the former background character appears, it is changed to the
 new background character.
 
-The integer @code{OK} is returned.
+It always returns @code{#t}.
 @end deffn
 
-@deffn Procedure getbkgd win
+@deffn Procedure getbkgd #:key win
+
 The @code{getbkgd} function returns the given window's current background
 character/attribute pair.
+
 @end deffn
 
 @node Borders and lines, Clearing windows and parts of window, Window background manipulation routines, The basic curses library
@@ -4246,11 +4246,11 @@ These functions return @code{OK}.
 @node Clearing windows and parts of window, Color manipulation routines, Borders and lines, The basic curses library
 @subsection Clearing windows and parts of window
 
-@findex wbkgdset
+@findex bkgdset
 
 The following family of functions @dfn{clear} all or part of a window.
 When clearing a window, the blanks created by erasure have the current
-background rendition (as set by @code{wbkgdset}) merged into them.
+background rendition (as set by @code{bkgdset}) merged into them.
 
 @deffn Procedure erase
 @deffnx Procedure werase win

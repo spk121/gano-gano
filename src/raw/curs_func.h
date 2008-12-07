@@ -13,8 +13,6 @@
 SCM gucu_assume_default_colors (SCM fg, SCM bg);
 SCM gucu_baudrate (void) API;
 SCM gucu_beep (void) API;
-SCM gucu_bkgd (SCM arg1) API;
-SCM gucu_bkgdset (SCM arg1) API;
 SCM gucu_border (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7, SCM arg8) API;
 SCM gucu_box (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_can_change_color_p (void) API;
