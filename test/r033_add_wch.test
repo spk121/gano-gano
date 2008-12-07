@@ -38,9 +38,9 @@
 			     *unspecified*))
 		  ;; (sleep 1)
 
-		  (pass-if "mvadd-wch"
+		  (pass-if "add-wch #:y #:x"
 			   (begin
-			     (mvadd-wch 1 0 el_bold)
+			     (add-wch el_bold #:y 1 #:x 0)
 			     (refresh)
 			     (let ((x (mvin-wch 1 0)))
 			       (equal? x el_bold))
@@ -60,42 +60,42 @@
 
 (define win2 (newwin 5 5 5 5))
 
-(with-test-prefix "wadd-wch"
+(with-test-prefix "add-wch #:win"
 		  
- 		  (pass-if "wadd-wch"
+ 		  (pass-if "add-wch #:win"
  			   (begin
  			     (clear)
  			     (move 0 0)
- 			     (wadd-wch win2 el_normal)
+ 			     (add-wch el_normal #:win win2)
  			     (wrefresh win2)
  			     (let ((x (mvwin-wch win2 0 0)))
  			       (equal? x el_normal))
  			     *unspecified*))
 
 
-		  (pass-if "mvwadd-wch"
+		  (pass-if "add-wch #:win #:y #:x"
 			   (begin
 			     (clear)
-			     (mvwadd-wch win2 1 0 el_bold)
+			     (add-wch el_bold #:win win2 #:y 1 #:x 0)
 			     (wrefresh win2)
 			     (let ((x (mvwin-wch win2 1 0)))
 			       (equal? x el_bold))
 			     *unspecified*))
 
-		  (pass-if "wecho-wchar"
+		  (pass-if "echo-wchar #:win"
 			   (begin
 			     (clear)
 			     (wmove win2 2 0)
-			     (wecho-wchar win2 chuu_bold)
+			     (echo-wchar chuu_bold #:win win2)
 			     (let ((x (mvwin-wch win2 2 0)))
 			       (equal? x chuu_bold))
 			     *unspecified*))
 
-		  (pass-if "wecho-wchar combining chars"
+		  (pass-if "echo-wchar #:win combining chars"
 			   (begin
 			     (clear)
 			     (wmove win2 3 0)
-			     (wecho-wchar win2 o_macron)
+			     (echo-wchar o_macron #:win win2)
 			     ;(addstr (format #f "~a" o_macron))
 			     (let ((x (mvwin-wch win2 3 0)))
 			       ;(addstr (format #f "~a" x))

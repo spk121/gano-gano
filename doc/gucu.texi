@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.15 2008/12/06 21:35:52 spike_gran Exp $
+@c $Id: gucu.texi,v 1.16 2008/12/07 00:25:34 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -1175,8 +1175,8 @@ and friends.
 (add-wch (list A_BOLD 0 #x041B))
 @end example
 
-This procedure comes in four variations, @code{add-wch},
-@code{mvadd-wch}, @code{wadd-wch}, and @code{mvwadd-wch}.
+This procedure can optionally be called with a window and/or with a
+position as key arguments.
 
 @node @code{addstr} class of functions, A simple @code{addstr} example, The @code{addch} class of functions, Output functions
 @subsection @code{addstr} class of functions
@@ -6181,16 +6181,13 @@ was compiled.
 @node Adding wide characters, Adding wide strings, Overview (wide), The wide curses library
 @subsection Adding wide characters
 
-@deffn Procedure add-wch wch
-@deffnx Procedure wadd-wch win wch
-@deffnx Procedure mvadd-wch y x wch
-@deffnx Procedure mvwadd-wch win y x wch
+@deffn Procedure add-wch wch #:key win y x
 
-The @code{add-wch}, @code{wadd-wch}, @code{mvadd-wch}, and
-@code{mvwadd-wch} functions put the complex character @var{wch} into the
-given window at its current position, which is then advanced.  These
-functions perform wrapping and special-character processing as
-follows:
+The @code{add-wch} function puts the complex character @var{wch} into
+the given window at its current position, which is then advanced.  If
+@var{y} and @var{x} are supplied, the cursor is moved to this position
+first.  These functions perform wrapping and special-character
+processing as follows:
 
 If @var{wch} refers to a spacing character, then any previous
 character at that location is removed.  A new character specified by
@@ -6209,25 +6206,22 @@ If the character part of @var{wch} is a tab, newline, backspace or
 other control character, the window is updated and the cursor moves as
 if @code{addch} were called.
 
-All routines return the integer @code{ERR} upon failure and
-@code{OK} on success.
+This returns @code{#t} on success and @code{#f} on failure.
+Failure could indicate an illegal character combination or a problem
+with the window structure.
 
 @end deffn
 
-@deffn Procedure echo-wchar wch
-@deffnx Procecure wecho-wchar win wch
+@deffn Procedure echo-wchar wch #:key win
 
 The @code{echo-wchar} function is functionally equivalent to a call to
-@code{add-wch} followed by a call to @code{refresh}.  Similarly, the
-@code{wecho-wchar} is functionally equivalent to a call to
-@code{wadd-wch} followed by a call to @code{wrefresh}.  The knowledge
+@code{add-wch} followed by a call to @code{refresh}.  The knowledge
 that only a single character is being output is taken into
 consideration and, for non-control characters, a considerable
 performance gain might be seen by using the @code{echo} functions
 instead of their equivalents.
 
-All routines return the integer @code{ERR} upon failure and
-@code{OK} on success.
+This returns the @code{#f} upon failure and @code{#t} on success.
 
 @end deffn
 
@@ -6248,7 +6242,7 @@ All routines return the integer @code{ERR} upon failure and
 These routines write the characters of the unrendered, wide string
 @var{str} on the given window. It is similar to constructing a
 rendered, complex character for each unrendered wide character in the
-string, and then calling @code{wadd-wch} once for each resulting
+string, and then calling @code{add-wch} once for each resulting
 rendered, complex character.  The four routines with @var{n} as the
 last argument write at most n characters.  If @var{n} is -1, then the
 entire string will be added, up to the maximum number of characters
