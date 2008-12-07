@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.20 2008/12/07 06:22:13 spike_gran Exp $
+@c $Id: gucu.texi,v 1.21 2008/12/07 08:43:54 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -6211,26 +6211,18 @@ This returns the @code{#f} upon failure and @code{#t} on success.
 @subsection Adding wide strings
 
 @deffn Procecure addwstr str
-@deffnx Procedure addnwstr str n
-@deffnx Procedure waddwstr win str
-@deffnx Procedure waddnwstr win str n
-@deffnx Procedure mvaddwstr y x str
-@deffnx Procecure mvaddnwstr y x str n
-@deffnx Procecure mvwaddwstr win y x str
-@deffnx Procecure mvwaddnwstr win y x str n
 
 @findex addch
 
-These routines write the characters of the unrendered, wide string
+This routine writes the characters of the unrendered, wide string
 @var{str} on the given window. It is similar to constructing a
 rendered, complex character for each unrendered wide character in the
 string, and then calling @code{add-wch} once for each resulting
-rendered, complex character.  The four routines with @var{n} as the
-last argument write at most n characters.  If @var{n} is -1, then the
+rendered, complex character.  The optional argument @var{n} will cause the procedure to write at most n characters.  If @var{n} is -1, then the
 entire string will be added, up to the maximum number of characters
 that will fit on the line, or until a terminating null is reached.
 
-All routines return the integer @code{ERR} upon failure and @code{OK}
+All routines return the integer @code{#f} upon failure and @code{#t}
 on success.
 
 @end deffn
