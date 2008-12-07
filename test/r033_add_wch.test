@@ -9,6 +9,11 @@
 
 (define test (curses-test-start))
 
+(define (mvaddstr y x s)
+  (addstr s #:y y #:x x))
+(define (mvwaddstr w y x s)
+  (addstr s #:win w #:y y #:x x))
+
 (initscr)
 
 ;; U+041B CYRILLIC CAPITAL LETTER EL

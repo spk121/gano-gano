@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.19 2008/12/07 03:52:52 spike_gran Exp $
+@c $Id: gucu.texi,v 1.20 2008/12/07 06:22:13 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -1063,20 +1063,21 @@ Similarly, the call to @code{refresh} works on @code{stdscr} only.
 Say you have created windows, then you have to call a function with a
 'w' added to the usual function.
 @example
-(waddstr win "Hi There!!!")
+(addstr "Hi There!!!" #:win win)
 (wrefresh win)
 @end example
 
 As you will see in the rest of the document, naming of functions
 follows the same convention.  For each function, there usually are
-three more functions.
+three other ways to call it using optional key parameters.
 @example
-(addstr string)       ; Print on stdscr at present cursor location
-(mvaddstr y x string) ; Move to (y, x) then print string
-(waddstr win string)  ; Print on window `win' at present cursor
-                      ; position
-(mvwaddstr win y x string) ; Move to (y, x) relative to window 
-                      ; coordinates and then print
+(addstr string)             ; Print on stdscr at present cursor location
+(addstr string #:y y #:x x) ; Move to (y, x) then print string
+(addstr string #:win w)     ; Print on window `w' at present cursor
+                            ; position
+(addstr string #:win w #:y y #:x x) 
+                            ; Move to (y, x) relative to window 
+                            ; coordinates and then print
 @end example
 
 @node Output functions, Input functions, A word about windows, Curses Tutorial
@@ -1206,14 +1207,15 @@ They can be used effectively in conjuntion with the @code{(ice-9 format)} functi
        (col (second siz)))
 
   ;; Print the message centered in the window
-  (mvaddstr (round (/ row 2))
-            (round (/ (- col len) 2))
-            mesg)
+  (addstr mesg
+	  #:y (round (/ row 2))
+          #:x (round (/ (- col len) 2)))
 
   ;; Use "format" to generate a message, and then print it
-  (mvaddstr (- row 2)
-            0
-            (format #f "This screen has ~a rows and ~a columns ~%" row col))
+  (addstr (format #f "This screen has ~a rows and ~a columns ~%" row col)
+	  #:y (- row 2)
+          #:x 0)
+            
   (addstr "Try resizing your window (if possible) ")
   (addstr "and then run this program again")
   (refresh)
@@ -1221,10 +1223,11 @@ They can be used effectively in conjuntion with the @code{(ice-9 format)} functi
   (endwin))
 @end example
      
-The above program demonstrates how easy it is to use @code{mvaddstr}.
-You just feed the coordinates and the message to be printed on the
-screen.  It also shows how @code{(format #f ...)} can be used in
-conjunction with @code{addstr} to do formatted output.
+The above program demonstrates how easy it is to use @code{addstr}
+with x and y coordinates.  You just feed the coordinates and the
+message to be printed on the screen.  It also shows how @code{(format
+#f ...)} can be used in conjunction with @code{addstr} to do formatted
+output.
 
 The example introduces the new function @code{getmaxyx}.  It gives the
 number of columns and the number of rows in a given window.
@@ -1314,14 +1317,16 @@ returned.
        (siz (getmaxyx (stdscr)))
        (row (car siz))
        (col (cadr siz)))
-  (mvaddstr (round (/ row 2))
-	    0
-	    mesg)
+  (addstr mesg 
+	  #:y(round (/ row 2))
+	  #:x 0)
+
   (refresh)
   (let ((str (getnstr 80)))
-    (mvaddstr (- row 2) 
-	      0
-	      (format #f "You entered: ~a~%" str))
+    (addstr (format #f "You entered: ~a~%" str)
+	    #:y (- row 2) 
+	    #:x 0)
+
     (getch)))
 
 (endwin)
@@ -1945,10 +1950,10 @@ by up and down arrows.
        ((eqv? highlight i)
         (begin
           (attr-on A_REVERSE #:win win)
-          (mvwaddstr win y x (list-ref choices i))
+          (addstr (list-ref choices i) #:win win #:y y #:x x )
           (attr-off A_REVERSE #:win win)))
        (else
-        (mvwaddstr win y x (list-ref choices i))))
+        (addstr (list-ref choices i) #:win win #:y y #:x x)))
 
       (if (< i (- n-choices 1))
           (loop (+ 1 i)
@@ -2014,8 +2019,9 @@ by up and down arrows.
       (print-menu menu-win 0 choices)
       (let ((choice (get-selection menu-win highlight choices)))
              
-        (mvaddstr 23 0 (format #f "You chose ~s ~%"
-                               (list-ref choices choice)))
+        (addstr (format #f "You chose ~s ~%"
+			(list-ref choices choice))
+		#:y 23 #:x 0)
         (clrtoeol)
         (refresh)
         (sleep 2)
@@ -2605,8 +2611,8 @@ form)}.
 (post-form my-form)
 (refresh)
 
-(mvaddstr 4 10 "Value 1:")
-(mvaddstr 6 10 "Value 2:")
+(addstr "Value 1:" #:y 4 #:x 10)
+(addstr "Value 2:" #:y 4 #:x 10)
 (refresh)
 
 ;; Loop through to get user requests
@@ -2822,8 +2828,8 @@ clarifying color attributes.
 (post-form my-form)
 (refresh)
 
-(mvaddstr 4 10 "Value 1:")
-(mvaddstr 6 10 "Value 2:")
+(addstr "Value 1:" #:y 4 #:x 10)
+(addstr "Value 2:" #:y 6 #:x 10)
 (refresh)
 
 ;; Loop through to get user requests
@@ -3009,8 +3015,8 @@ password-like field where the characters are hidden from view.
 (set-field-just (first field) JUSTIFY_CENTER)
 (set-field-buffer (first field) 0 "This is a static field")
 
-(mvaddstr STARTY (- STARTX 10) "Field 1:")
-(mvaddstr (+ STARTY 2) (- STARTX 10) "Field 2:")
+(addstr "Field 1:" #:y STARTY #:x (- STARTX 10))
+(addstr "Field 2:" #:y (+ STARTY 2) #:x (- STARTX 10))
 (refresh)
 
 ;; Loop through to get user requests
@@ -3121,10 +3127,10 @@ similar example.
   (let ((length (string-length str)))
 
     (attr-on color #:win win)
-    (mvwaddstr win 
-	       starty 
-	       (+ startx (/ (- width length) 2))
-	       str)
+    (addstr str #:win win 
+	    #:y starty 
+	    #:x (+ startx (/ (- width length) 2)))
+
     (attr-off color #:win win)
     (refresh)))
     
@@ -3176,7 +3182,8 @@ similar example.
 (post-form my-form)
 (wrefresh my-form-win)
 
-(mvaddstr (- (lines) 2) 0 "Use UP, DOWN arrow keys to switch between fields")
+(addstr "Use UP, DOWN arrow keys to switch between fields" 
+	#:y (- (lines) 2) #:x 0)
 (refresh)
 
 ;; Loop through to get user requests
@@ -3931,26 +3938,19 @@ The set of line-graphics characters is given in @ref{tab:ACS}.
 @node Adding strings of characters and attributes, Character and window attribute control routines, Adding characters, The basic curses library
 @subsection Adding strings
 
-@deffn Procecure addstr
-@deffnx Procedure addnstr str n
-@deffnx Procedure waddstr win str
-@deffnx Procedure waddnstr win str n
-@deffnx Procedure mvaddstr y x str
-@deffnx Procecure mvaddnstr y x str n
-@deffnx Procecure mvwaddstr win y x str
-@deffnx Procecure mvwaddnstr win y x str n
+@deffn Procecure addstr #:key win y x n
 
 @findex addch
 
-These routines write the characters of the unrendered, narrow string
+This routine writes the characters of the unrendered, narrow string
 @var{str} on the given window. It is similar to calling @code{addch}
-once for each character in the string.  The four routines with @var{n}
-as the last argument write at most n characters.  If @var{n} is -1,
+once for each character in the string.  When called witn @var{n}
+it writes at most n characters.  If @var{n} is -1,
 then the entire string will be added, up to the maximum number of
 characters that will fit on the line, or until a terminating null is
 reached.
 
-All routines return the integer @code{ERR} upon failure and @code{OK}
+All routines return the integer @code{#f} upon failure and @code{#t}
 on success.
 
 @end deffn
@@ -3964,10 +3964,10 @@ will fit on the line.  If @var{n} equals -1 or if it is undefined,
 then the whole string is copied, to the maximum number of characters
 that will fit on the line.
 
-@findex waddnstr
+@findex addstr
 
 The window cursor is not advanced, and these routines work faster than
-@code{waddnstr}.  On the other hand, they do not perform any kind of
+@code{addstr}.  On the other hand, they do not perform any kind of
 checking (such as for the newline, backspace, or carriage return
 characters), they do not advance the current cursor position, they do
 not expand other control characters to ^-escapes, and they truncate
@@ -3983,11 +3983,11 @@ been deleted and @code{OK} on success.
 @subsection Character and window attribute control routines
 
 @findex addch
-@findex waddstr
+@findex addstr
 
 These routines manipulate the current attributes of the named window.
 The current attributes of a window apply to all characters that are
-written into the window with @code{addch} and @code{waddstr}.
+written into the window with @code{addch} and @code{addstr}.
 Attributes are a property of the character, and move with the
 character through any scrolling and insert/delete line/character
 operations.  To the extent possible, they are displayed as appropriate

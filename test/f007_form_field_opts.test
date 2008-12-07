@@ -12,58 +12,59 @@
 
 (initscr)
 
-(with-test-prefix "form: field opts"
-		  
-		  (pass-if "default"
-			   (begin
-			     (let* ((field1 (new-field 1 10 0 0 0 0))
-				    (fo (field-opts field1))
-				    (fo2 (logior O_VISIBLE
-						 O_ACTIVE
-						 O_PUBLIC
-						 O_EDIT
-						 O_WRAP
-						 O_BLANK
-						 O_AUTOSKIP
-						 O_NULLOK
-						 O_STATIC
-						 O_PASSOK)))
-						 
-			       
-			       (mvaddstr 6 0 (format #f "VISIBL ~16,'0b~%" O_VISIBLE))
-			       (addstr (format #f "ACTIVE ~16,'0b~%" O_ACTIVE))
-			       (addstr (format #f "PUBLIC ~16,'0b~%" O_PUBLIC))
-			       (addstr (format #f "  EDIT ~16,'0b~%" O_EDIT))
-			       (addstr (format #f "  WRAP ~16,'0b~%" O_WRAP))
-			       (addstr (format #f " BLANK ~16,'0b~%" O_BLANK))
-			       (addstr (format #f "  SKIP ~16,'0b~%" O_AUTOSKIP))
-			       (addstr (format #f "NULLOK ~16,'0b~%" O_NULLOK))
-			       (addstr (format #f "STATIC ~16,'0b~%" O_STATIC))
-			       (addstr (format #f "PASSOK ~16,'0b~%" O_PASSOK))
-			       (addstr (format #f "DEFALT ~16,'0b~%" fo))
-			       (refresh)
-			       (sleep 1)
-			       (eqv? fo fo2))))
+(with-test-prefix 
+ "form: field opts"
+ 
+ (pass-if "default"
+	  (begin
+	    (let* ((field1 (new-field 1 10 0 0 0 0))
+		   (fo (field-opts field1))
+		   (fo2 (logior O_VISIBLE
+				O_ACTIVE
+				O_PUBLIC
+				O_EDIT
+				O_WRAP
+				O_BLANK
+				O_AUTOSKIP
+				O_NULLOK
+				O_STATIC
+				O_PASSOK)))
+	      
+	      
+	      (addstr (format #f "VISIBL ~16,'0b~%" O_VISIBLE) #:y 6 #:x 0)
+	      (addstr (format #f "ACTIVE ~16,'0b~%" O_ACTIVE))
+	      (addstr (format #f "PUBLIC ~16,'0b~%" O_PUBLIC))
+	      (addstr (format #f "  EDIT ~16,'0b~%" O_EDIT))
+	      (addstr (format #f "  WRAP ~16,'0b~%" O_WRAP))
+	      (addstr (format #f " BLANK ~16,'0b~%" O_BLANK))
+	      (addstr (format #f "  SKIP ~16,'0b~%" O_AUTOSKIP))
+	      (addstr (format #f "NULLOK ~16,'0b~%" O_NULLOK))
+	      (addstr (format #f "STATIC ~16,'0b~%" O_STATIC))
+	      (addstr (format #f "PASSOK ~16,'0b~%" O_PASSOK))
+	      (addstr (format #f "DEFALT ~16,'0b~%" fo))
+	      (refresh)
+	      (sleep 1)
+	      (eqv? fo fo2))))
 
-		  (pass-if "set"
-			   (begin
-			     (let ((field1 (new-field 1 10 0 0 0 0)))
-			       (set-field-opts field1 O_VISIBLE)
-			       (eqv? (field-opts field1) O_VISIBLE))))
+ (pass-if "set"
+	  (begin
+	    (let ((field1 (new-field 1 10 0 0 0 0)))
+	      (set-field-opts field1 O_VISIBLE)
+	      (eqv? (field-opts field1) O_VISIBLE))))
 
-		  (pass-if "off"
-			   (begin
-			     (let ((field1 (new-field 1 10 0 0 0 0)))
-			       (set-field-opts field1 O_VISIBLE)
-			       (field-opts-off field1 O_VISIBLE)
-			       (eqv? (field-opts field1) 0))))
+ (pass-if "off"
+	  (begin
+	    (let ((field1 (new-field 1 10 0 0 0 0)))
+	      (set-field-opts field1 O_VISIBLE)
+	      (field-opts-off field1 O_VISIBLE)
+	      (eqv? (field-opts field1) 0))))
 
-		  (pass-if "on"
-			   (begin
-			     (let ((field1 (new-field 1 10 0 0 0 0)))
-			       (set-field-opts field1 O_VISIBLE)
-			       (field-opts-on field1 O_ACTIVE)
-			       (eqv? (field-opts field1) (logior O_VISIBLE O_ACTIVE))))))
+ (pass-if "on"
+	  (begin
+	    (let ((field1 (new-field 1 10 0 0 0 0)))
+	      (set-field-opts field1 O_VISIBLE)
+	      (field-opts-on field1 O_ACTIVE)
+	      (eqv? (field-opts field1) (logior O_VISIBLE O_ACTIVE))))))
 
 
 (endwin)

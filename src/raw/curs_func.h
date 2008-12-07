@@ -10,8 +10,6 @@
 #define API
 #endif
 
-SCM gucu_addnstr (SCM arg1, SCM arg2) API;
-SCM gucu_addstr (SCM arg1) API;
 SCM gucu_baudrate (void) API;
 SCM gucu_beep (void) API;
 SCM gucu_bkgd (SCM arg1) API;
@@ -76,8 +74,6 @@ SCM gucu_longname (void) API;
 SCM gucu_meta (SCM arg1, SCM arg2) API;
 SCM gucu_mouseinterval (SCM arg1) API;
 SCM gucu_move (SCM arg1, SCM arg2) API;
-SCM gucu_mvaddnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4) API;
-SCM gucu_mvaddstr (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_mvcur (SCM arg1, SCM arg2, SCM arg3, SCM arg4) API;
 SCM gucu_mvdelch (SCM arg1, SCM arg2) API;
 SCM gucu_mvderwin (SCM arg1, SCM arg2, SCM arg3) API;
@@ -88,8 +84,6 @@ SCM gucu_mvinsch (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_mvinsnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4) API;
 SCM gucu_mvinsstr (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_mvvline (SCM arg1, SCM arg2, SCM arg3, SCM arg4) API;
-SCM gucu_mvwaddnstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5) API;
-SCM gucu_mvwaddstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4) API;
 SCM gucu_mvwdelch (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_mvwgetch (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_mvwhline (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5) API;
@@ -173,7 +167,6 @@ SCM gucu_vline (SCM arg1, SCM arg2) API;
 SCM gucu_waddch (SCM arg1, SCM arg2) API;
 SCM gucu_waddchnstr (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_waddnstr (SCM arg1, SCM arg2, SCM arg3) API;
-SCM gucu_waddstr (SCM arg1, SCM arg2) API;
 SCM gucu_wattr_off (SCM arg1, SCM arg2) API;
 SCM gucu_wattr_on (SCM arg1, SCM arg2) API;
 SCM gucu_wbkgd (SCM arg1, SCM arg2) API;

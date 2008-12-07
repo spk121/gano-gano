@@ -19,7 +19,7 @@
 			   (begin
 			     (clear)
 			     (refresh)
-			     (mvaddstr 0 0 "xxx")
+			     (addstr "xxx" #:y 0 #:x 0)
 			     (move 0 0)
 			     (insch (char->integer #\z))
 			     (let ((x1 (mvinch 0 0))
@@ -32,7 +32,7 @@
 			   (begin
 			     (clear)
 			     (refresh)
-			     (mvaddstr 0 0 "xxx")
+			     (addstr "xxx" #:y 0 #:x 0)
 			     (mvinsch 0 0 (char->integer #\z))
 			     (let ((x1 (mvinch 0 0))
 				   (x2 (mvinch 0 1)))
@@ -48,7 +48,7 @@
 			   (begin
 			     (wclear win)
 			     (wrefresh win)
-			     (mvwaddstr win 0 0 "xxx")
+			     (addstr "xxx" #:win win #:y 0 #:x 0)
 			     (wmove win 0 0)
 			     (winsch win (char->integer #\z))
 			     (let ((x1 (mvwinch win 0 0))
@@ -61,7 +61,7 @@
 			   (begin
 			     (wclear win)
 			     (wrefresh win)
-			     (mvwaddstr win 0 0 "xxx")
+			     (addstr "xxx" #:win win #:y 0 #:x 0)
 			     (mvwinsch win 0 0 (char->integer #\z))
 			     (let ((x1 (mvwinch win 0 0))
 				   (x2 (mvwinch win 0 1)))

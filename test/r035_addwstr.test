@@ -1,5 +1,5 @@
 ;;;; -*- Mode: scheme; -*-
-;;;; r035_addstr.test --- test suite for curses's addwstr
+;;;; r035_addwstr.test --- test suite for curses's addwstr
 
 (use-modules (test lib)
 	     (test lib2)

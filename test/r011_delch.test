@@ -17,7 +17,7 @@
 		  (pass-if "delch"
 			   (begin
 			     (clear)
-			     (mvaddstr 0 0"abc")
+			     (addstr "abc" #:y 0 #:x 0)
 			     (move 0 1)
 			     (delch)
 			     (refresh)
@@ -30,7 +30,7 @@
 		  (pass-if "mvdelch"
 			   (begin
 			     (clear)
-			     (mvaddstr 0 0"abc")
+			     (addstr "abc" #:y 0 #:x 0)
 			     (mvdelch 0 1)
 			     (refresh)
 			     (let ((x1 (mvinch 0 0))
@@ -46,7 +46,7 @@
 		  (pass-if "wdelch"
 			   (begin
 			     (wclear win)
-			     (mvwaddstr win 0 0"abc")
+			     (addstr "abc" #:win win #:y 0 #:x 0)
 			     (wmove win 0 1)
 			     (wdelch win)
 			     (wrefresh win)
@@ -59,7 +59,7 @@
 		  (pass-if "mvwdelch"
 			   (begin
 			     (wclear win)
-			     (mvwaddstr win 0 0"abc")
+			     (addstr "abc" #:win win #:y 0 #:x 0)
 			     (mvwdelch win 0 1)
 			     (wrefresh win)
 			     (let ((x1 (mvwinch win 0 0))

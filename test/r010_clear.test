@@ -19,8 +19,8 @@
 		  (pass-if "clear"
 			   (begin
 			     (clear)
-			     (mvaddstr 0 0 "xxxx")
-			     (mvaddstr 1 0 "xxxx")
+			     (addstr "xxxx" #:y 0 #:x 0)
+			     (addstr "xxxx" #:y 1 #:x 0)
 			     (clear)
 			     (refresh)
 			     (let ((x1 (mvinch 0 1))
@@ -32,8 +32,8 @@
 		  (pass-if "erase"
 			   (begin
 			     (clear)
-			     (mvaddstr 0 0 "xxxx")
-			     (mvaddstr 1 0 "xxxx")
+			     (addstr "xxxx" #:y 0 #:x 0)
+			     (addstr "xxxx" #:y 1 #:x 0)
 			     (erase)
 			     (refresh)
 			     (let ((x1 (mvinch 0 1))
@@ -46,8 +46,8 @@
 		  (pass-if "clrtobot"
 			   (begin
 			     (clear)
-			     (mvaddstr 0 0 "xxxx")
-			     (mvaddstr 1 0 "xxxx")
+			     (addstr "xxxx" #:y 0 #:x 0)
+			     (addstr "xxxx" #:y 1 #:x 0)
 			     (move 0 0)
 			     (clrtobot)
 			     (refresh)
@@ -60,8 +60,8 @@
 		  (pass-if "clrtoeol"
 			   (begin
 			     (clear)
-			     (mvaddstr 0 0 "xxxx")
-			     (mvaddstr 1 0 "xxxx")
+			     (addstr "xxxx" #:y 0 #:x 0)
+			     (addstr "xxxx" #:y 1 #:x 0)
 			     (move 0 0)
 			     (clrtoeol)
 			     (refresh)
@@ -78,8 +78,8 @@
 		  (pass-if "wclear"
 			   (begin
 			     (wclear win)
-			     (mvwaddstr win 0 0 "xxxx")
-			     (mvwaddstr win 1 0 "xxxx")
+			     (addstr "xxxx" #:win win #:y 0 #:x 0)
+			     (addstr "xxxx" #:win win #:y 1 #:x 0)
 			     (wclear win)
 			     (wrefresh win)
 			     (let ((x1 (mvwinch win 0 1))
@@ -91,8 +91,8 @@
 		  (pass-if "werase"
 			   (begin
 			     (wclear win)
-			     (mvwaddstr win 0 0 "xxxx")
-			     (mvwaddstr win 1 0 "xxxx")
+			     (addstr "xxxx" #:win win #:y 0 #:x 0)
+			     (addstr "xxxx" #:win win #:y 1 #:x 0)
 			     (werase win)
 			     (wrefresh win)
 			     (let ((x1 (mvwinch win 0 1))
@@ -105,8 +105,8 @@
 		  (pass-if "wclrtobot"
 			   (begin
 			     (wclear win)
-			     (mvwaddstr win 0 0 "xxxx")
-			     (mvwaddstr win 1 0 "xxxx")
+			     (addstr "xxxx" #:win win #:y 0 #:x 0)
+			     (addstr "xxxx" #:win win #:y 1 #:x 0)
 			     (wmove win 0 0)
 			     (wclrtobot win)
 			     (wrefresh win)
@@ -119,8 +119,8 @@
 		  (pass-if "clrtoeol"
 			   (begin
 			     (wclear win)
-			     (mvwaddstr win 0 0 "xxxx")
-			     (mvwaddstr win 1 0 "xxxx")
+			     (addstr "xxxx" #:win win #:y 0 #:x 0)
+			     (addstr "xxxx" #:win win #:y 1 #:x 0)
 			     (wmove win 0 0)
 			     (wclrtoeol win)
 			     (wrefresh win)

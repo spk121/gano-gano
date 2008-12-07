@@ -38,7 +38,7 @@
 			     (let ((finfo1 (field-info field1))
 				   (form1 (new-form (list field1))))
 			       (post-form form1)
-			       (mvaddstr 5 0 (format #f "~a" finfo1))
+			       (addstr (format #f "~a" finfo1) #:y 5 #:x 0)
 			       (refresh)
 			       (eqv? (third finfo1) NEWROW)))))
 

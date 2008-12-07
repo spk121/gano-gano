@@ -5,7 +5,6 @@
   #:export ( 
 	    addch
 	    addchstr
-	    addnstr
 	    addstr
 	    attr-get
 	    attr-off
@@ -78,8 +77,6 @@
 	    meta
 	    mouseinterval
 	    move
-	    mvaddnstr
-	    mvaddstr
 	    mvcur
 	    mvdelch
 	    mvderwin
@@ -90,8 +87,6 @@
 	    mvinsnstr
 	    mvinsstr
 	    mvvline
-	    mvwaddnstr
-	    mvwaddstr
 	    mvwdelch
 	    mvwgetch
 	    mvwhline
@@ -174,8 +169,6 @@
 	    use-env
 	    vidattr
 	    vline
-	    waddnstr
-	    waddstr
 	    wbkgd
 	    wbkgdset
 	    wborder
@@ -454,8 +447,33 @@
 	   #t)
        (%waddchnstr win chstr n)))
 
+(define* (addstr str #:key (win (stdscr)) y x (n -1))
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%waddnstr win str n)))
+
 (define* (attr-get #:key (win (stdscr)))
-  (%wattr-get win))
+  (let* ((ac (%wattr-get win))
+	 (attr (car ac))
+	 (color (cadr ac)))
+    (list
+     (logand attr (logior A_STANDOUT
+			  A_UNDERLINE
+			  A_REVERSE
+			  A_BLINK
+			  A_DIM
+			  A_BOLD
+			  A_ALTCHARSET
+			  A_INVIS
+			  A_PROTECT
+			  WA_HORIZONTAL
+			  WA_LEFT
+			  WA_LOW
+			  WA_RIGHT
+			  WA_TOP
+			  WA_VERTICAL))
+     color)))
 
 (define* (attr-off attr #:key (win (stdscr)))
   (%wattr-off win attr))
@@ -463,8 +481,8 @@
 (define* (attr-on attr #:key (win (stdscr)))
   (%wattr-on win attr))
 
-(define* (attr-set attr #:key (pair 0) (win (stdscr)))
-  (%wattr-set win attr pair))
+(define* (attr-set attr #:key (color 0) (win (stdscr)))
+  (%wattr-set win attr color))
 
 (define* (color-set pair #:key (win (stdscr)))
   (%wcolor-set win pair))

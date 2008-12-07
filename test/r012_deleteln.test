@@ -16,9 +16,9 @@
 		  (pass-if "deleteln"
 			   (begin
 			     (clear)
-			     (mvaddstr 0 0 "aaa")
-			     (mvaddstr 1 0 "bbb")
-			     (mvaddstr 2 0 "ccc")
+			     (addstr "aaa" #:y 0 #:x 0)
+			     (addstr "bbb" #:y 1 #:x 0)
+			     (addstr "ccc" #:y 2 #:x 0)
 			     (move 1 0)
 			     (deleteln)
 			     (refresh)
@@ -31,9 +31,9 @@
 		  (pass-if "insdelln -1"
 			   (begin
 			     (clear)
-			     (mvaddstr 0 0 "aaa")
-			     (mvaddstr 1 0 "bbb")
-			     (mvaddstr 2 0 "ccc")
+			     (addstr "aaa" #:y 0 #:x 0)
+			     (addstr "bbb" #:y 1 #:x 0)
+			     (addstr "ccc" #:y 2 #:x 0)
 			     (move 1 0)
 			     (insdelln -1)
 			     (refresh)
@@ -46,9 +46,9 @@
 		  (pass-if "insertln"
 			   (begin
 			     (clear)
-			     (mvaddstr 0 0 "aaa")
-			     (mvaddstr 1 0 "bbb")
-			     (mvaddstr 2 0 "ccc")
+			     (addstr "aaa" #:y 0 #:x 0)
+			     (addstr "bbb" #:y 1 #:x 0)
+			     (addstr "ccc" #:y 2 #:x 0)
 			     (move 1 0)
 			     (insertln)
 			     (refresh)
@@ -61,9 +61,9 @@
 		  (pass-if "insdelln +1"
 			   (begin
 			     (clear)
-			     (mvaddstr 0 0 "aaa")
-			     (mvaddstr 1 0 "bbb")
-			     (mvaddstr 2 0 "ccc")
+			     (addstr "aaa" #:y 0 #:x 0)
+			     (addstr "bbb" #:y 1 #:x 0)
+			     (addstr "ccc" #:y 2 #:x 0)
 			     (move 1 0)
 			     (insdelln 1)
 			     (refresh)
@@ -81,9 +81,9 @@
 		  (pass-if "wdeleteln"
 			   (begin
 			     (wclear win)
-			     (mvwaddstr win 0 0 "aaa")
-			     (mvwaddstr win 1 0 "bbb")
-			     (mvwaddstr win 2 0 "ccc")
+			     (addstr "aaa" #:win win #:y 0 #:x 0)
+			     (addstr "bbb" #:win win #:y 1 #:x 0)
+			     (addstr "ccc" #:win win #:y 2 #:x 0)
 			     (wmove win 1 0)
 			     (wdeleteln win)
 			     (wrefresh win)
@@ -96,9 +96,9 @@
 		  (pass-if "insdelln -1"
 			   (begin
 			     (wclear win)
-			     (mvwaddstr win 0 0 "aaa")
-			     (mvwaddstr win 1 0 "bbb")
-			     (mvwaddstr win 2 0 "ccc")
+			     (addstr "aaa" #:win win #:y 0 #:x 0)
+			     (addstr "bbb" #:win win #:y 1 #:x 0)
+			     (addstr "ccc" #:win win #:y 2 #:x 0)
 			     (wmove win 1 0)
 			     (winsdelln win -1)
 			     (wrefresh win )
@@ -111,9 +111,9 @@
 		  (pass-if "insertln"
 			   (begin
 			     (wclear win)
-			     (mvwaddstr win 0 0 "aaa")
-			     (mvwaddstr win 1 0 "bbb")
-			     (mvwaddstr win 2 0 "ccc")
+			     (addstr "aaa" #:win win #:y 0 #:x 0)
+			     (addstr "bbb" #:win win #:y 1 #:x 0)
+			     (addstr "ccc" #:win win #:y 2 #:x 0)
 			     (wmove win 1 0)
 			     (winsertln win)
 			     (wrefresh win)
@@ -126,9 +126,9 @@
 		  (pass-if "insdelln +1"
 			   (begin
 			     (wclear win)
-			     (mvwaddstr win 0 0 "aaa")
-			     (mvwaddstr win 1 0 "bbb")
-			     (mvwaddstr win 2 0 "ccc")
+			     (addstr "aaa" #:win win #:y 0 #:x 0)
+			     (addstr "bbb" #:win win #:y 1 #:x 0)
+			     (addstr "ccc" #:win win #:y 2 #:x 0)
 			     (wmove win 1 0)
 			     (winsdelln win 1)
 			     (wrefresh win)
