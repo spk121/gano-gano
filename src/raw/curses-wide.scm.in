@@ -6,7 +6,6 @@
   #:export ( 
 	    WEOF
 	    add-wch
-	    add-wchnstr
 	    add-wchstr
 	    addnwstr
 	    addwstr
@@ -27,8 +26,6 @@
 	    inwstr
 	    killwchar
 	    mvadd-wch
-	    mvadd-wchnstr
-	    mvadd-wchstr
 	    mvaddnwstr
 	    mvaddwstr
 	    mvget-wch
@@ -43,8 +40,6 @@
 	    mvinwstr
 	    mvvline-set
 	    mvwadd-wch
-	    mvwadd-wchnstr
-	    mvwadd-wchstr
 	    mvwaddnwstr
 	    mvwaddwstr
 	    mvwget-wch
@@ -84,8 +79,6 @@
 	    wacs-ulcorner
 	    wacs-urcorner
 	    wacs-vline
-	    wadd-wchnstr
-	    wadd-wchstr
 	    waddnwstr
 	    waddwstr
 	    wbkgrnd
@@ -108,6 +101,12 @@
 	   (wmove win y x)
 	   #t)
        (%wadd-wch win ch)))
+
+(define* (add-wchstr wchstr #:key (win (stdscr) x y (n -1)))
+  (and (if (and x y)
+	   (wmove win y x)
+	   #t)
+       (%wadd_wchnstr win wchstr n)))
 
 (define* (echo-wchar ch #:key (win (stdscr)))
   (%wecho-wchar win ch))

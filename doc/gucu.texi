@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.16 2008/12/07 00:25:34 spike_gran Exp $
+@c $Id: gucu.texi,v 1.17 2008/12/07 01:44:16 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -6253,21 +6253,14 @@ on success.
 
 @end deffn
 
-@deffn Procedure add-wchstr wchstr
-@deffnx Procedure add-wchnstr wchstr n
-@deffnx Procedure wadd-wchstr win wchstr
-@deffnx Procedure wadd-wchnstr win wchstr n
-@deffnx Procedure mvadd-wchstr y x wchstr
-@deffnx Procedure mvadd-wchnstr y x wchstr n
-@deffnx Procedure mvwadd-wchstr win y x wchstr
-@deffnx Procedure mvwadd-wchnstr win y x wchstr n
+@deffn Procedure add-wchstr wchstr #:key win y x n
 
-These routines copy the array of complex characters @var{wchstr} into
+This routine copies the array of complex characters @var{wchstr} into
 the window image structure at and after the current cursor position.
-The four routines with @var{n} as the last argument copy at most
+If the optional key parameter @var{n} is given, it will copy at most
 @var{n} elements, but no more than will fit on the line.  If @var{n}
-is -1 then the whole array is copied, to the maximum number of
-characters that will fit on the line.
+is -1 or is not given then the whole array is copied, to the maximum
+number of characters that will fit on the line.
 
 The window cursor is not advanced.  These routines work faster than
 @var{wadd-wnstr}.  On the other hand, they do not perform checking
@@ -6281,8 +6274,7 @@ If a complex character cannot completely fit at the end of the current
 line, the remaining columns are filled with the background character
 and rendition.
 
-All routines return the integer @code{ERR} upon failure and
-@code{OK} on success.
+Returns @code{#t} on success and @code{#f} on failure.
 
 @end deffn
 
