@@ -35,13 +35,16 @@ gucu_baudrate ()
   return scm_from_int (baudrate ());
 }
 
+/* Beep! */
 SCM
 gucu_beep ()
 {
-	int ret = beep ();
-	SCM s_ret = scm_from_int (ret);
+  int ret;
+  ret = beep ();
+  if (ret == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -381,13 +384,17 @@ gucu_filter ()
 	return s_ret;
 }
 
+/* Flash the screen */
 SCM
 gucu_flash ()
 {
-	int ret = flash ();
-	SCM s_ret = scm_from_int (ret);
+  int ret;
+  
+  ret = flash ();
+  if (ret == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T
 }
 
 SCM

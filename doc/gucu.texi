@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.22 2008/12/07 16:54:06 spike_gran Exp $
+@c $Id: gucu.texi,v 1.23 2008/12/07 17:05:00 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -4125,8 +4125,8 @@ sounds the alert.  If neither alert is possible, nothing happens.
 Nearly all terminals have an audible alert (bell or beep), but only
 some can flash the screen.
 
-These routines return @code{OK} if they succeed in beeping or
-flashing, @code{ERR} otherwise.
+These routines return @code{#t} if they succeed in beeping or
+flashing, @code{#f} otherwise.
 
 @end deffn
 
