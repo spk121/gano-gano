@@ -14,6 +14,7 @@
 	    box-set
 	    echo-wchar
 	    erasewchar
+	    getbkgrnd
 	    get-wch
 	    getn-wstr
 	    hline-set
@@ -27,7 +28,6 @@
 	    mvadd-wch
 	    mvget-wch
 	    mvgetn-wstr
-	    mvhline-set
 	    mvin-wch
 	    mvin-wchnstr
 	    mvinnwstr
@@ -35,18 +35,15 @@
 	    mvins-wch
 	    mvins-wstr
 	    mvinwstr
-	    mvvline-set
 	    mvwadd-wch
 	    mvwget-wch
 	    mvwgetn-wstr
-	    mvwhline-set
 	    mvwin-wch
 	    mvwin-wchnstr
 	    mvwins-nwstr
 	    mvwins-wch
 	    mvwins-wstr
 	    mvwinwstr
-	    mvwvline-set
 	    term-attrs
 	    unget-wch
 	    vline-set
@@ -75,19 +72,13 @@
 	    wacs-ulcorner
 	    wacs-urcorner
 	    wacs-vline
-	    wbkgrnd
-	    wbkgrndset
-	    wborder-set
 	    wget-wch
-	    wgetbkgrnd
 	    wgetn-wstr
-	    whline-set
 	    win-wch
 	    win-wchnstr
 	    wins-nwstr
 	    wins-wch
 	    wins-wstr
-	    wvline-set
 ))
 
 (define* (add-wch ch #:key (win (stdscr)) x y)
@@ -108,7 +99,35 @@
 	   #t)
        (%waddnwstr win wstr n)))
 
+(define* (bkgrnd wch #:key (win (stdscr)))
+  (%wbkgrnd win wch))
+
+(define* (bkgrndset wch #:key (win (stdscr)))
+  (%wbkgrndset win wch))
+
+(define* (border-set left right top bottom tl tr bl br #:key (win (stdscr)))
+  (%wborder-set win left right top bottom tl tr bl br))
+
+(define* (box-set #:v h key (win (stdscr)))
+  (%wborder-set win v v h h 0 0 0 0))
+
 (define* (echo-wchar ch #:key (win (stdscr)))
   (%wecho-wchar win ch))
+
+(define* (getbkgrnd #:key win)
+  (%wgetbkgrnd win))
+
+(define* (hline-set ch n #:key (win (stdscr) y x))
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%whline-set win ch n)))
+
+(define* (vline-set ch n #:key (win (stdscr) y x))
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%wvline-set win ch n)))
+
 
 (load-extension "XXlibnameXX" "gucu_cursw_init")

@@ -66,40 +66,42 @@
 					 (list A_DIM 1 plus) 
 					 x2)))))))
 		  
-; (define win (newwin 5 10 5 5))
+(define win (newwin 5 10 5 5))
 
-; (with-test-prefix "wbkgd"
-		  
-; 		  (pass-if "wbkgd"
-; 			   (begin
-; 			     (mvwaddstr win 0 0 "This is a string")
-; 			     (wbkgd win (logior A_BOLD period))
-; 			     (mvwaddstr win 1 0 "This is a new string")
-; 			     (wrefresh win)
-; 			     (let ((x1 (mvwinch win 0 4))
-; 				   (x2 (mvwinch win 1 4)))
-; 			       (begin
-; 				 (wbkgd win (logior A_NORMAL space)) ; clear bkgd
-; 				 (wclear win)
-; 				 (wrefresh win)
-; 				 (and
-; 				  (equal? (logior A_BOLD period) x1)
-; 				  (equal? (logior A_BOLD period) x2))))))
-		  
-; 		  (pass-if "bkgdget / wbkgdset"
-; 			   (begin
-; 			     (wstandend win)
-; 			     (mvwaddstr win 0 0 "This is a string")
-; 			     (wbkgdset win (logior A_DIM (color-pair 1) plus))
-; 			     (mvwaddstr win 1 0 "This is another string")
-; 			     (wrefresh win)
-; 			     (let ((bk (getbkgd win)))
-; 			       (begin
-; 				 (wbkgd win (logior A_NORMAL space)) ; clear bkgd
-; 				 (wclear win)
-; 				 (wrefresh win)
-; 				 (equal? bk (logior A_DIM (color-pair 1) plus)))))))
-;(delwin win)
+(with-test-prefix 
+ "bkgrnd #:win"
+ 
+ (pass-if "bkgrnd #:win"
+	  (begin
+	    (addstr "This is a string" #:win win #:y 0 #:x 0)
+	    (bkgrnd (logior A_BOLD period) #:win win)
+	    (addstr "This is a new string" #:win win #:y 1 #:x 0)
+	    (wrefresh win)
+	    (let ((x1 (mvwinch win 0 4))
+		  (x2 (mvwinch win 1 4)))
+	      (begin
+		(bkgrnd (logior A_NORMAL space) #:win win) ; clear bkgd
+		(wclear win)
+		(wrefresh win)
+		(and
+		 (equal? (logior A_BOLD period) x1)
+		 (equal? (logior A_BOLD period) x2))))))
+ 
+ (pass-if "bkgdget / wbkgdset"
+	  (begin
+	    (standend #:win win)
+	    (addstr "This is a string" #:win win #:y 0 #:x 0)
+	    (bkgdset (logior A_DIM (color-pair 1) plus) #:win win)
+	    (addstr "This is another string" #:win win #:y 1 #:x 0)
+	    (wrefresh win)
+	    (let ((bk (getbkgd #:win win)))
+	      (begin
+		(bkgd (logior A_NORMAL space) #:win win ) ; clear bkgd
+		(wclear win)
+		(wrefresh win)
+		(equal? bk (logior A_DIM (color-pair 1) plus)))))))
+
+(delwin win)
 (refresh)
 
 (endwin)

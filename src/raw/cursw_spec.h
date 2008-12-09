@@ -37,7 +37,6 @@ SCM gucu_WACS_URCORNER (void) API;
 SCM gucu_WACS_VLINE (void) API;
 SCM gucu_erasewchar (void) API;
 SCM gucu_get_wch (void) API;
-SCM gucu_getbkgrnd (void) API;
 SCM gucu_getn_wstr (SCM n) API;
 SCM gucu_in_wch (void) API;
 SCM gucu_in_wchnstr (SCM n) API;

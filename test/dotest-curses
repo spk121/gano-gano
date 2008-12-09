@@ -7,7 +7,7 @@
 ln -s ../src/raw ${PACKAGE}
 
 # MODIFY_ME: A specific test to debug 
-TESTS=r040_term_attrs.test
+TESTS=r036_bkgrnd.test
 
 # This should be the same as in Makefile.am
 LIBGUILE_GUCU_CURSES_MAJOR=0

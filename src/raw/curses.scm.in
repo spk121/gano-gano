@@ -82,21 +82,17 @@
 	    mvdelch
 	    mvderwin
 	    mvgetch
-	    mvhline
 	    mvinch
 	    mvinsch
 	    mvinsnstr
 	    mvinsstr
-	    mvvline
 	    mvwdelch
 	    mvwgetch
-	    mvwhline
 	    mvwin
 	    mvwinch
 	    mvwinsch
 	    mvwinsnstr
 	    mvwinsstr
-	    mvwvline
 	    napms
 	    newpad
 	    newwin
@@ -170,8 +166,6 @@
 	    use-env
 	    vidattr
 	    vline
-	    wbkgd
-	    wborder
 	    wclear
 	    wclrtobot
 	    wclrtoeol
@@ -181,7 +175,6 @@
 	    wenclose
 	    werase
 	    wgetch
-	    whline
 	    winch
 	    winsch
 	    winsdelln
@@ -196,9 +189,7 @@
 	    wsetscrreg
 	    wsyncup
 	    wsyncdown
-	    wtimeout
 	    wtouchln
-	    wvline
 	    EOF
 	    ERR
 	    FALSE
@@ -490,6 +481,19 @@
 (define* (bkgdset ch #:key (win (stdscr)))
   (%wbkgdset win ch))
 
+(define* (border left right top bottom tl tr bl br #:key (win (stdscr)))
+  (%wborder win left right top bottom tl tr bl br))
+
+(define* (box #:v h key (win (stdscr)))
+  (%wborder win v v h h 0 0 0 0))
+
+(define* (chgat n attr color #:key (win (stdscr)) y x)
+  (and
+   (if (and y x)
+       (wmove win y x)
+       #t)
+   (%wchgat win n attr color)))
+
 (define* (color-set pair #:key (win (stdscr)))
   (%wcolor-set win pair))
 
@@ -499,18 +503,51 @@
 (define* (getbkgd #:key (win (stdscr)))
   (%getbkgd win))
 
+(define* (hline ch n #:key (win (stdscr) y x))
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%whline win ch n)))
+
+;; The window information isn't used in the lower level function, so
+;; it is dropped here
+(define (intrflush flag)
+  (%intrflush (stdscr) flag))
+
+(define* (nodelay flag #:key (win (stdscr)))
+  (%nodelay win flag))
+
+(define* (notimeout flag #:key (win (stdscr)))
+  (%notimeout win flag))
+
+(define* (keypad bf #:key (win (stdscr)))
+  (%keypad win bf))
+
+;; The window information isn't used in the lower level function, so
+;; it is dropped here.
+(define (meta bf)
+  (%meta (stdscr) bf))
+
 (define* (standend #:key (win (stdscr)))
   (%wstandend win))
 
 (define* (standout #:key (win (stdscr)))
   (%wstandout win))
 
-(define* (chgat n attr color #:key (win (stdscr)) y x)
-  (and
-   (if (and y x)
-       (wmove win y x)
-       #t)
-   (%wchgat win n attr color)))
+(define* (timeout bf #:key (win (stdscr)))
+  (%wtimeout win bf))
+
+(define (typeahead port-or-fd)
+  (cond 
+   ((port? port-or-fd) (%typeahead (fileno port-or-fd)))
+   (else (%typeahead port-or-fd))))
+    
+(define* (vline ch n #:key (win (stdscr) y x))
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%wvline win ch n)))
+
 
 		
 

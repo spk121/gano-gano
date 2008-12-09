@@ -47,50 +47,6 @@ gucu_beep ()
   return SCM_BOOL_T;
 }
 
-SCM
-gucu_border (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7, SCM arg8)
-{
-	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "border");
-	SCM_ASSERT (_scm_is_chtype (arg2), arg2, SCM_ARG2, "border");
-	SCM_ASSERT (_scm_is_chtype (arg3), arg3, SCM_ARG3, "border");
-	SCM_ASSERT (_scm_is_chtype (arg4), arg4, SCM_ARG4, "border");
-	SCM_ASSERT (_scm_is_chtype (arg5), arg5, SCM_ARG5, "border");
-	SCM_ASSERT (_scm_is_chtype (arg6), arg6, SCM_ARG6, "border");
-	SCM_ASSERT (_scm_is_chtype (arg7), arg7, SCM_ARG7, "border");
-	SCM_ASSERT (_scm_is_chtype (arg8), arg8, 8, "border");
-
-	chtype c_arg1 = _scm_to_chtype (arg1);
-	chtype c_arg2 = _scm_to_chtype (arg2);
-	chtype c_arg3 = _scm_to_chtype (arg3);
-	chtype c_arg4 = _scm_to_chtype (arg4);
-	chtype c_arg5 = _scm_to_chtype (arg5);
-	chtype c_arg6 = _scm_to_chtype (arg6);
-	chtype c_arg7 = _scm_to_chtype (arg7);
-	chtype c_arg8 = _scm_to_chtype (arg8);
-
-	int ret = border (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5, c_arg6, c_arg7, c_arg8);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_box (SCM arg1, SCM arg2, SCM arg3)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "box");
-	SCM_ASSERT (_scm_is_chtype (arg2), arg2, SCM_ARG2, "box");
-	SCM_ASSERT (_scm_is_chtype (arg3), arg3, SCM_ARG3, "box");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	chtype c_arg2 = _scm_to_chtype (arg2);
-	chtype c_arg3 = _scm_to_chtype (arg3);
-
-	int ret = box (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
 /* Check if the colors can be changed. */
 SCM
 gucu_can_change_color_p ()
@@ -104,13 +60,14 @@ gucu_can_change_color_p ()
   return s_ret;
 }
 
+/* Disable line buffering and erase/kill character processing */
 SCM
 gucu_cbreak ()
 {
-	int ret = cbreak ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  if (cbreak () == ERR)
+    return SCM_BOOL_F;
+  
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -315,13 +272,14 @@ gucu_dupwin (SCM arg1)
 	return s_ret;
 }
 
+/* Enable the echoing of user-typed characters */
 SCM
 gucu_echo ()
 {
-	int ret = echo ();
-	SCM s_ret = scm_from_int (ret);
+  if (echo () == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -418,17 +376,20 @@ gucu_getwin (SCM arg1)
 	return s_ret;
 }
 
+/* Set halfdelay. */
 SCM
-gucu_halfdelay (SCM arg1)
+gucu_halfdelay (SCM tenths)
 {
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "halfdelay");
+  int c_tenths;
 
-	int c_arg1 = scm_to_int (arg1);
+  SCM_ASSERT (scm_is_integer (tenths), tenths, SCM_ARG1, "halfdelay");
 
-	int ret = halfdelay (c_arg1);
-	SCM s_ret = scm_from_int (ret);
+  c_tenths = scm_to_int (tenths);
+  
+  if (halfdelay (c_tenths) == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T;
 }
 
 /* Check if this screen has colors */
@@ -459,21 +420,6 @@ gucu_has_il ()
   
   ret = has_il ();
   return (scm_from_bool (ret));
-}
-
-SCM
-gucu_hline (SCM arg1, SCM arg2)
-{
-	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "hline");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "hline");
-
-	chtype c_arg1 = _scm_to_chtype (arg1);
-	int c_arg2 = scm_to_int (arg2);
-
-	int ret = hline (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
 }
 
 SCM
@@ -657,18 +603,23 @@ gucu_insstr (SCM arg1)
 }
 
 SCM
-gucu_intrflush (SCM arg1, SCM arg2)
+gucu_intrflush (SCM win, SCM bf)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "intrflush");
-	SCM_ASSERT (scm_is_bool (arg2), arg2, SCM_ARG2, "intrflush");
+  WINDOW *c_win;
+  bool c_bf;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	bool c_arg2 = scm_to_bool (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%intrflush");
+  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "%intrflush");
 
-	int ret = intrflush (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_bf = scm_to_bool (bf);
 
-	return s_ret;
+  ret = intrflush (c_win, c_bf);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -734,19 +685,25 @@ gucu_keyname (SCM arg1)
 	return s_ret;
 }
 
+/* Enable function key processing */
 SCM
-gucu_keypad (SCM arg1, SCM arg2)
+gucu_keypad (SCM win, SCM bf)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "keypad");
-	SCM_ASSERT (scm_is_bool (arg2), arg2, SCM_ARG2, "keypad");
+  WINDOW *c_win;
+  bool c_bf;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	bool c_arg2 = scm_to_bool (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%keypad");
+  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "%keypad");
 
-	int ret = keypad (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_bf = scm_to_bool (bf);
 
-	return s_ret;
+  ret = keypad (c_win, c_bf);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+  
+  return SCM_BOOL_T;
 }
 
 /* Return the current line kill character */
@@ -786,19 +743,25 @@ gucu_longname ()
   return s_ret;
 }
 
+/* Set the terminal to 7 or 8 bit mode */
 SCM
-gucu_meta (SCM arg1, SCM arg2)
+gucu_meta (SCM win, SCM bf)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "meta");
-	SCM_ASSERT (scm_is_bool (arg2), arg2, SCM_ARG2, "meta");
+  WINDOW *c_win;
+  bool c_bf;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	bool c_arg2 = scm_to_bool (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%meta");
+  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "%meta");
 
-	int ret = meta (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_bf = scm_to_bool (bf);
 
-	return s_ret;
+  ret = meta (c_win, c_bf);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -896,25 +859,6 @@ gucu_mvgetch (SCM arg1, SCM arg2)
 }
 
 SCM
-gucu_mvhline (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "mvhline");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvhline");
-	SCM_ASSERT (_scm_is_chtype (arg3), arg3, SCM_ARG3, "mvhline");
-	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "mvhline");
-
-	int c_arg1 = scm_to_int (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	chtype c_arg3 = _scm_to_chtype (arg3);
-	int c_arg4 = scm_to_int (arg4);
-
-	int ret = mvhline (c_arg1, c_arg2, c_arg3, c_arg4);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
 gucu_mvinch (SCM arg1, SCM arg2)
 {
 	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "mvinch");
@@ -987,25 +931,6 @@ gucu_mvinsstr (SCM arg1, SCM arg2, SCM arg3)
 }
 
 SCM
-gucu_mvvline (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "mvvline");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvvline");
-	SCM_ASSERT (_scm_is_chtype (arg3), arg3, SCM_ARG3, "mvvline");
-	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "mvvline");
-
-	int c_arg1 = scm_to_int (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	chtype c_arg3 = _scm_to_chtype (arg3);
-	int c_arg4 = scm_to_int (arg4);
-
-	int ret = mvvline (c_arg1, c_arg2, c_arg3, c_arg4);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
 gucu_mvwdelch (SCM arg1, SCM arg2, SCM arg3)
 {
 	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "mvwdelch");
@@ -1034,27 +959,6 @@ gucu_mvwgetch (SCM arg1, SCM arg2, SCM arg3)
 	int c_arg3 = scm_to_int (arg3);
 
 	int ret = mvwgetch (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_mvwhline (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "mvwhline");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvwhline");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "mvwhline");
-	SCM_ASSERT (_scm_is_chtype (arg4), arg4, SCM_ARG4, "mvwhline");
-	SCM_ASSERT (scm_is_integer (arg5), arg5, SCM_ARG5, "mvwhline");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
-	chtype c_arg4 = _scm_to_chtype (arg4);
-	int c_arg5 = scm_to_int (arg5);
-
-	int ret = mvwhline (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5);
 	SCM s_ret = scm_from_int (ret);
 
 	return s_ret;
@@ -1158,27 +1062,6 @@ gucu_mvwinsstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 }
 
 SCM
-gucu_mvwvline (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "mvwvline");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvwvline");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "mvwvline");
-	SCM_ASSERT (_scm_is_chtype (arg4), arg4, SCM_ARG4, "mvwvline");
-	SCM_ASSERT (scm_is_integer (arg5), arg5, SCM_ARG5, "mvwvline");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
-	chtype c_arg4 = _scm_to_chtype (arg4);
-	int c_arg5 = scm_to_int (arg5);
-
-	int ret = mvwvline (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
 gucu_napms (SCM arg1)
 {
 	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "napms");
@@ -1234,37 +1117,46 @@ gucu_nl ()
 	return s_ret;
 }
 
+/* Enable line buffering and erase/kill character processing */
 SCM
 gucu_nocbreak ()
 {
-	int ret = nocbreak ();
-	SCM s_ret = scm_from_int (ret);
+  if (nocbreak () == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T;
 }
 
+/* Causes getch() to be non-blocking, so that it returns ERR if no
+   character is ready */
 SCM
-gucu_nodelay (SCM arg1, SCM arg2)
+gucu_nodelay (SCM win, SCM bf)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "nodelay");
-	SCM_ASSERT (scm_is_bool (arg2), arg2, SCM_ARG2, "nodelay");
+  WINDOW *c_win;
+  bool c_bf;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	bool c_arg2 = scm_to_bool (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%nodelay");
+  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "%nodelay");
 
-	int ret = nodelay (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_bf = scm_to_bool (bf);
 
-	return s_ret;
+  ret = nodelay (c_win, c_bf);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
+/* Disable echoing of user-type characters */
 SCM
 gucu_noecho ()
 {
-	int ret = noecho ();
-	SCM s_ret = scm_from_int (ret);
+  if (noecho () == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -1276,37 +1168,43 @@ gucu_nonl ()
 	return s_ret;
 }
 
+/* Do no flush i/o queues on interrupts */
 SCM
 gucu_noqiflush ()
 {
-	 noqiflush ();
-	SCM s_ret = SCM_UNSPECIFIED;
-
-	return s_ret;
+  noqiflush ();
+  return SCM_UNSPECIFIED;
 }
 
+/* Allow control characters to generate signals. */
 SCM
 gucu_noraw ()
 {
-	int ret = noraw ();
-	SCM s_ret = scm_from_int (ret);
+  if (noraw () == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T;
 }
 
+/* Do not set an timer for escape sequence processing */
 SCM
-gucu_notimeout (SCM arg1, SCM arg2)
+gucu_notimeout (SCM win, SCM bf)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "notimeout");
-	SCM_ASSERT (scm_is_bool (arg2), arg2, SCM_ARG2, "notimeout");
+  WINDOW *c_win;
+  bool c_bf;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	bool c_arg2 = scm_to_bool (arg2);
+  SCM_ASSERT (_scm_is_window (win), arg1, SCM_ARG1, "%notimeout");
+  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "%notimeout");
 
-	int ret = notimeout (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_bf = scm_to_bool (bf);
 
-	return s_ret;
+  ret = notimeout (c_win, c_bf);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -1447,22 +1345,22 @@ gucu_putwin (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+/* Flush queues on interupts */
 SCM
 gucu_qiflush ()
 {
-	 qiflush ();
-	SCM s_ret = SCM_UNSPECIFIED;
-
-	return s_ret;
+  qiflush ();
+  return SCM_UNSPECIFIED:
 }
 
+/* Pass control characters instead of generating a signal */
 SCM
 gucu_raw ()
 {
-	int ret = raw ();
-	SCM s_ret = scm_from_int (ret);
+  if (raw () == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -1996,19 +1894,6 @@ gucu_tigetstr (SCM arg1)
 }
 
 SCM
-gucu_timeout (SCM arg1)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "timeout");
-
-	int c_arg1 = scm_to_int (arg1);
-
-	 timeout (c_arg1);
-	SCM s_ret = SCM_UNSPECIFIED;
-
-	return s_ret;
-}
-
-SCM
 gucu_touchline (SCM arg1, SCM arg2, SCM arg3)
 {
 	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "touchline");
@@ -2038,17 +1923,21 @@ gucu_touchwin (SCM arg1)
 	return s_ret;
 }
 
+/* Given a file descriptor, se special optimizations looking for line breaks */
 SCM
-gucu_typeahead (SCM arg1)
+gucu_typeahead (SCM fd)
 {
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "typeahead");
+  int c_fd, ret;
 
-	int c_arg1 = scm_to_int (arg1);
+  SCM_ASSERT (scm_is_integer (fd), fd, SCM_ARG1, "%typeahead");
 
-	int ret = typeahead (c_arg1);
-	SCM s_ret = scm_from_int (ret);
+  c_fd = scm_to_int (fd);
 
-	return s_ret;
+  ret = typeahead (c_fd);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -2113,20 +2002,6 @@ gucu_vidattr (SCM arg1)
 	return s_ret;
 }
 
-SCM
-gucu_vline (SCM arg1, SCM arg2)
-{
-	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "vline");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "vline");
-
-	chtype c_arg1 = _scm_to_chtype (arg1);
-	int c_arg2 = scm_to_int (arg2);
-
-	int ret = vline (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
 
 /* Put the character ch into the window at its current position, which
    is then advanced. */
@@ -2292,32 +2167,41 @@ gucu_wbkgdset (SCM win, SCM ch)
 }
 
 SCM
-gucu_wborder (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7, SCM arg8, SCM arg9)
+gucu_wborder (SCM win, SCM left, SCM right, SCM top, SCM bottom, SCM topleft, 
+	      SCM topright, SCM bottomleft, SCM bottomright)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wborder");
-	SCM_ASSERT (_scm_is_chtype (arg2), arg2, SCM_ARG2, "wborder");
-	SCM_ASSERT (_scm_is_chtype (arg3), arg3, SCM_ARG3, "wborder");
-	SCM_ASSERT (_scm_is_chtype (arg4), arg4, SCM_ARG4, "wborder");
-	SCM_ASSERT (_scm_is_chtype (arg5), arg5, SCM_ARG5, "wborder");
-	SCM_ASSERT (_scm_is_chtype (arg6), arg6, SCM_ARG6, "wborder");
-	SCM_ASSERT (_scm_is_chtype (arg7), arg7, SCM_ARG7, "wborder");
-	SCM_ASSERT (_scm_is_chtype (arg8), arg8, 8, "wborder");
-	SCM_ASSERT (_scm_is_chtype (arg9), arg9, 9, "wborder");
+  WINDOW *c_win;
+  chtype c_left, c_right, c_top, c_bottom;
+  chtype c_topleft, c_topright, c_bottomleft, c_bottomright;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	chtype c_arg2 = _scm_to_chtype (arg2);
-	chtype c_arg3 = _scm_to_chtype (arg3);
-	chtype c_arg4 = _scm_to_chtype (arg4);
-	chtype c_arg5 = _scm_to_chtype (arg5);
-	chtype c_arg6 = _scm_to_chtype (arg6);
-	chtype c_arg7 = _scm_to_chtype (arg7);
-	chtype c_arg8 = _scm_to_chtype (arg8);
-	chtype c_arg9 = _scm_to_chtype (arg9);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wborder");
+  SCM_ASSERT (_scm_is_chtype (left), left, SCM_ARG2, "%wborder");
+  SCM_ASSERT (_scm_is_chtype (right), right, SCM_ARG3, "%wborder");
+  SCM_ASSERT (_scm_is_chtype (top), top, SCM_ARG4, "%wborder");
+  SCM_ASSERT (_scm_is_chtype (bottom), bottom, SCM_ARG5, "%wborder");
+  SCM_ASSERT (_scm_is_chtype (topleft), topleft, SCM_ARG6, "%wborder");
+  SCM_ASSERT (_scm_is_chtype (topright), topright, SCM_ARG7, "%wborder");
+  SCM_ASSERT (_scm_is_chtype (bottomleft), bottomleft, 8, "%wborder");
+  SCM_ASSERT (_scm_is_chtype (bottomright), bottomright, 9, "%wborder");
 
-	int ret = wborder (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5, c_arg6, c_arg7, c_arg8, c_arg9);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_left = _scm_to_chtype (left);
+  c_right = _scm_to_chtype (right);
+  c_top = _scm_to_chtype (top);
+  c_bottom = _scm_to_chtype (bottom);
+  c_topleft = _scm_to_chtype (topleft);
+  c_topright = _scm_to_chtype (topright);
+  c_bottomleft = _scm_to_chtype (bottomleft);
+  c_bottomright = _scm_to_chtype (bottomright);
 
-	return s_ret;
+  ret = wborder (c_win, c_left, c_right, c_top, c_bottom, 
+		 c_topleft, c_topright, c_bottomleft, c_bottomright);
+
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
 /* Change the attributes for N characters at the current position */
@@ -2513,21 +2397,28 @@ gucu_wgetch (SCM arg1)
 	return s_ret;
 }
 
+/* Draw a horizontal line using the given character that is N
+   characters long. */
 SCM
-gucu_whline (SCM arg1, SCM arg2, SCM arg3)
+gucu_whline (SCM win, SCM ch, SCM n)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "whline");
-	SCM_ASSERT (_scm_is_chtype (arg2), arg2, SCM_ARG2, "whline");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "whline");
+  WINDOW *c_win;
+  chtype c_ch;
+  int c_n, ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	chtype c_arg2 = _scm_to_chtype (arg2);
-	int c_arg3 = scm_to_int (arg3);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%whline");
+  SCM_ASSERT (_scm_is_chtype (ch), ch, SCM_ARG2, "%whline");
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG3, "%whline");
+  
+  c_win = _scm_to_window (win);
+  c_ch = _scm_to_chtype (ch);
+  c_n = scm_to_int (n);
 
-	int ret = whline (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
+  ret = whline (c_win, c_arg2, c_n);
+  if (ret == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -2774,19 +2665,23 @@ gucu_wsyncdown (SCM arg1)
 	return s_ret;
 }
 
+/* Set the blocking read timer */
 SCM
-gucu_wtimeout (SCM arg1, SCM arg2)
+gucu_wtimeout (SCM win, SCM delay)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wtimeout");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "wtimeout");
+  WINDOW *c_win;
+  int c_delay;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wtimeout");
+  SCM_ASSERT (scm_is_integer (delay), delay, SCM_ARG2, "%wtimeout");
 
-	 wtimeout (c_arg1, c_arg2);
-	SCM s_ret = SCM_UNSPECIFIED;
+  c_win = _scm_to_window (win);
+  c_delay = scm_to_int (delay);
 
-	return s_ret;
+  wtimeout (c_win, c_delay);
+  
+  return SCM_UNSPECIFIED;
 }
 
 SCM
@@ -2808,21 +2703,29 @@ gucu_wtouchln (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
+/* Draw a vertical line with the given character that is N characters
+   long */
 SCM
-gucu_wvline (SCM arg1, SCM arg2, SCM arg3)
+gucu_wvline (SCM win, SCM ch, SCM n)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wvline");
-	SCM_ASSERT (_scm_is_chtype (arg2), arg2, SCM_ARG2, "wvline");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "wvline");
+  WINDOW *c_win;
+  chtype c_ch;
+  int c_n, ret;
+    
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wvline");
+  SCM_ASSERT (_scm_is_chtype (ch), ch, SCM_ARG2, "%wvline");
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG3, "%wvline");
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	chtype c_arg2 = _scm_to_chtype (arg2);
-	int c_arg3 = scm_to_int (arg3);
+  c_win = _scm_to_window (win);
+  c_ch = _scm_to_chtype (ch);
+  c_n = scm_to_int (n);
 
-	int ret = wvline (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
+  ret = wvline (c_win, c_ch, c_n);
+  if (ret == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T;
+  
 }
 
 
@@ -2833,8 +2736,6 @@ gucu_init_function ()
 		      gucu_assume_default_colors);
 	scm_c_define_gsubr ("baudrate", 0, 0, 0, gucu_baudrate);
 	scm_c_define_gsubr ("beep", 0, 0, 0, gucu_beep);
-	scm_c_define_gsubr ("border", 8, 0, 0, gucu_border);
-	scm_c_define_gsubr ("box", 3, 0, 0, gucu_box);
 	scm_c_define_gsubr ("can-change-color?", 0, 0, 0, 
 			    gucu_can_change_color_p);
 	scm_c_define_gsubr ("cbreak", 0, 0, 0, gucu_cbreak);
@@ -2868,7 +2769,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("has-colors?", 0, 0, 0, gucu_has_colors_p);
 	scm_c_define_gsubr ("has-ic", 0, 0, 0, gucu_has_ic);
 	scm_c_define_gsubr ("has-il", 0, 0, 0, gucu_has_il);
-	scm_c_define_gsubr ("hline", 2, 0, 0, gucu_hline);
 	scm_c_define_gsubr ("idcok", 2, 0, 0, gucu_idcok);
 	scm_c_define_gsubr ("idlok", 2, 0, 0, gucu_idlok);
 	scm_c_define_gsubr ("immedok", 2, 0, 0, gucu_immedok);
@@ -2881,49 +2781,45 @@ gucu_init_function ()
 	scm_c_define_gsubr ("insertln", 0, 0, 0, gucu_insertln);
 	scm_c_define_gsubr ("insnstr", 2, 0, 0, gucu_insnstr);
 	scm_c_define_gsubr ("insstr", 1, 0, 0, gucu_insstr);
-	scm_c_define_gsubr ("intrflush", 2, 0, 0, gucu_intrflush);
+	scm_c_define_gsubr ("%intrflush", 2, 0, 0, gucu_intrflush);
 	scm_c_define_gsubr ("isendwin", 0, 0, 0, gucu_isendwin);
 	scm_c_define_gsubr ("is-linetouched", 2, 0, 0, gucu_is_linetouched);
 	scm_c_define_gsubr ("is-wintouched", 1, 0, 0, gucu_is_wintouched);
 	scm_c_define_gsubr ("key-f", 1, 0, 0, gucu_KEY_F);
 	scm_c_define_gsubr ("keyname", 1, 0, 0, gucu_keyname);
-	scm_c_define_gsubr ("keypad", 2, 0, 0, gucu_keypad);
+	scm_c_define_gsubr ("%keypad", 2, 0, 0, gucu_keypad);
 	scm_c_define_gsubr ("killchar", 0, 0, 0, gucu_killchar);
 	scm_c_define_gsubr ("leaveok", 2, 0, 0, gucu_leaveok);
 	scm_c_define_gsubr ("longname", 0, 0, 0, gucu_longname);
-	scm_c_define_gsubr ("meta", 2, 0, 0, gucu_meta);
+	scm_c_define_gsubr ("%meta", 2, 0, 0, gucu_meta);
 	scm_c_define_gsubr ("mouseinterval", 1, 0, 0, gucu_mouseinterval);
 	scm_c_define_gsubr ("move", 2, 0, 0, gucu_move);
 	scm_c_define_gsubr ("mvcur", 4, 0, 0, gucu_mvcur);
 	scm_c_define_gsubr ("mvdelch", 2, 0, 0, gucu_mvdelch);
 	scm_c_define_gsubr ("mvderwin", 3, 0, 0, gucu_mvderwin);
 	scm_c_define_gsubr ("mvgetch", 2, 0, 0, gucu_mvgetch);
-	scm_c_define_gsubr ("mvhline", 4, 0, 0, gucu_mvhline);
 	scm_c_define_gsubr ("mvinch", 2, 0, 0, gucu_mvinch);
 	scm_c_define_gsubr ("mvinsch", 3, 0, 0, gucu_mvinsch);
 	scm_c_define_gsubr ("mvinsnstr", 4, 0, 0, gucu_mvinsnstr);
 	scm_c_define_gsubr ("mvinsstr", 3, 0, 0, gucu_mvinsstr);
-	scm_c_define_gsubr ("mvvline", 4, 0, 0, gucu_mvvline);
 	scm_c_define_gsubr ("mvwdelch", 3, 0, 0, gucu_mvwdelch);
 	scm_c_define_gsubr ("mvwgetch", 3, 0, 0, gucu_mvwgetch);
-	scm_c_define_gsubr ("mvwhline", 5, 0, 0, gucu_mvwhline);
 	scm_c_define_gsubr ("mvwin", 3, 0, 0, gucu_mvwin);
 	scm_c_define_gsubr ("mvwinch", 3, 0, 0, gucu_mvwinch);
 	scm_c_define_gsubr ("mvwinsch", 4, 0, 0, gucu_mvwinsch);
 	scm_c_define_gsubr ("mvwinsnstr", 5, 0, 0, gucu_mvwinsnstr);
 	scm_c_define_gsubr ("mvwinsstr", 4, 0, 0, gucu_mvwinsstr);
-	scm_c_define_gsubr ("mvwvline", 5, 0, 0, gucu_mvwvline);
 	scm_c_define_gsubr ("napms", 1, 0, 0, gucu_napms);
 	scm_c_define_gsubr ("newpad", 2, 0, 0, gucu_newpad);
 	scm_c_define_gsubr ("newwin", 4, 0, 0, gucu_newwin);
 	scm_c_define_gsubr ("nl", 0, 0, 0, gucu_nl);
 	scm_c_define_gsubr ("nocbreak", 0, 0, 0, gucu_nocbreak);
-	scm_c_define_gsubr ("nodelay", 2, 0, 0, gucu_nodelay);
+	scm_c_define_gsubr ("%nodelay", 2, 0, 0, gucu_nodelay);
 	scm_c_define_gsubr ("noecho", 0, 0, 0, gucu_noecho);
 	scm_c_define_gsubr ("nonl", 0, 0, 0, gucu_nonl);
 	scm_c_define_gsubr ("noqiflush", 0, 0, 0, gucu_noqiflush);
 	scm_c_define_gsubr ("noraw", 0, 0, 0, gucu_noraw);
-	scm_c_define_gsubr ("notimeout", 2, 0, 0, gucu_notimeout);
+	scm_c_define_gsubr ("%notimeout", 2, 0, 0, gucu_notimeout);
 	scm_c_define_gsubr ("overlay", 2, 0, 0, gucu_overlay);
 	scm_c_define_gsubr ("overwrite", 2, 0, 0, gucu_overwrite);
 	scm_c_define_gsubr ("pair-number", 1, 0, 0, gucu_PAIR_NUMBER);
@@ -2974,7 +2870,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("tigetflag", 1, 0, 0, gucu_tigetflag);
 	scm_c_define_gsubr ("tigetnum", 1, 0, 0, gucu_tigetnum);
 	scm_c_define_gsubr ("tigetstr", 1, 0, 0, gucu_tigetstr);
-	scm_c_define_gsubr ("timeout", 1, 0, 0, gucu_timeout);
 	scm_c_define_gsubr ("touchline", 3, 0, 0, gucu_touchline);
 	scm_c_define_gsubr ("touchwin", 1, 0, 0, gucu_touchwin);
 	scm_c_define_gsubr ("typeahead", 1, 0, 0, gucu_typeahead);
@@ -2983,7 +2878,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("use-default-colors", 0, 0, 0, gucu_use_default_colors);
 	scm_c_define_gsubr ("use-env", 1, 0, 0, gucu_use_env);
 	scm_c_define_gsubr ("vidattr", 1, 0, 0, gucu_vidattr);
-	scm_c_define_gsubr ("vline", 2, 0, 0, gucu_vline);
 	scm_c_define_gsubr ("%waddch", 2, 0, 0, gucu_waddch);
 	scm_c_define_gsubr ("%waddchnstr", 3, 0, 0, gucu_waddchnstr);
 	scm_c_define_gsubr ("%waddnstr", 3, 0, 0, gucu_waddnstr);
@@ -2991,7 +2885,7 @@ gucu_init_function ()
 	scm_c_define_gsubr ("%wattr-on", 2, 0, 0, gucu_wattr_on);
 	scm_c_define_gsubr ("%wbkgd", 2, 0, 0, gucu_wbkgd);
 	scm_c_define_gsubr ("%wbkgdset", 2, 0, 0, gucu_wbkgdset);
-	scm_c_define_gsubr ("wborder", 9, 0, 0, gucu_wborder);
+	scm_c_define_gsubr ("%wborder", 9, 0, 0, gucu_wborder);
 	scm_c_define_gsubr ("%wchgat", 4, 0, 0, gucu_wchgat);
 	scm_c_define_gsubr ("wclear", 1, 0, 0, gucu_wclear);
 	scm_c_define_gsubr ("wclrtobot", 1, 0, 0, gucu_wclrtobot);
@@ -3004,7 +2898,7 @@ gucu_init_function ()
 	scm_c_define_gsubr ("wenclose", 3, 0, 0, gucu_wenclose);
 	scm_c_define_gsubr ("werase", 1, 0, 0, gucu_werase);
 	scm_c_define_gsubr ("wgetch", 1, 0, 0, gucu_wgetch);
-	scm_c_define_gsubr ("whline", 3, 0, 0, gucu_whline);
+	scm_c_define_gsubr ("%whline", 3, 0, 0, gucu_whline);
 	scm_c_define_gsubr ("winch", 1, 0, 0, gucu_winch);
 	scm_c_define_gsubr ("winsch", 2, 0, 0, gucu_winsch);
 	scm_c_define_gsubr ("winsdelln", 2, 0, 0, gucu_winsdelln);
@@ -3023,5 +2917,5 @@ gucu_init_function ()
 	scm_c_define_gsubr ("wsyncdown", 1, 0, 0, gucu_wsyncdown);
 	scm_c_define_gsubr ("wtimeout", 2, 0, 0, gucu_wtimeout);
 	scm_c_define_gsubr ("wtouchln", 4, 0, 0, gucu_wtouchln);
-	scm_c_define_gsubr ("wvline", 3, 0, 0, gucu_wvline);
+	scm_c_define_gsubr ("%wvline", 3, 0, 0, gucu_wvline);
 }

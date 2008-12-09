@@ -10,139 +10,6 @@
 #define cstring_t cchar_t
 
 
-// 1: int bkgrnd
-// 2: const cchar_t *
-// 3: 
-// 4: 
-SCM
-gucu_bkgrnd (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_cchar (arg1), arg1, SCM_ARG1, "bkgrnd");
-
-	 cchar_t *c_arg1 = _scm_to_cchar (arg1);
-
-	int ret = bkgrnd (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg1);
-
-	return s_ret;
-}
-
-// 1: void bkgrndset
-// 2: const cchar_t *
-// 3: 
-// 4: 
-SCM
-gucu_bkgrndset (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_cchar (arg1), arg1, SCM_ARG1, "bkgrndset");
-
-	 cchar_t *c_arg1 = _scm_to_cchar (arg1);
-
-	 bkgrndset (c_arg1);
-	SCM s_ret = SCM_UNSPECIFIED;
-
-	free (c_arg1);
-
-	return s_ret;
-}
-
-// 1: int border_set
-// 2: const cchar_t *
-// 3:  const cchar_t *
-// 4:  const cchar_t *
-// 5:  const cchar_t *
-// 6:  const cchar_t *
-// 7:  const cchar_t *
-// 8:  const cchar_t *
-// 9:  const cchar_t *
-// 10: 
-// 11: 
-SCM
-gucu_border_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7, SCM arg8)
-{
-	SCM_ASSERT (_scm_is_cchar (arg1), arg1, SCM_ARG1, "border-set");
-	SCM_ASSERT (_scm_is_cchar (arg2), arg2, SCM_ARG2, "border-set");
-	SCM_ASSERT (_scm_is_cchar (arg3), arg3, SCM_ARG3, "border-set");
-	SCM_ASSERT (_scm_is_cchar (arg4), arg4, SCM_ARG4, "border-set");
-	SCM_ASSERT (_scm_is_cchar (arg5), arg5, SCM_ARG5, "border-set");
-	SCM_ASSERT (_scm_is_cchar (arg6), arg6, SCM_ARG6, "border-set");
-	SCM_ASSERT (_scm_is_cchar (arg7), arg7, SCM_ARG7, "border-set");
-	SCM_ASSERT (_scm_is_cchar (arg8), arg8, 8, "border-set");
-
-	 cchar_t *c_arg1 = _scm_to_cchar (arg1);
-	 cchar_t *c_arg2 = _scm_to_cchar (arg2);
-	 cchar_t *c_arg3 = _scm_to_cchar (arg3);
-	 cchar_t *c_arg4 = _scm_to_cchar (arg4);
-	 cchar_t *c_arg5 = _scm_to_cchar (arg5);
-	 cchar_t *c_arg6 = _scm_to_cchar (arg6);
-	 cchar_t *c_arg7 = _scm_to_cchar (arg7);
-	 cchar_t *c_arg8 = _scm_to_cchar (arg8);
-
-	int ret = border_set (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5, c_arg6, c_arg7, c_arg8);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg1);
-	free (c_arg2);
-	free (c_arg3);
-	free (c_arg4);
-	free (c_arg5);
-	free (c_arg6);
-	free (c_arg7);
-	free (c_arg8);
-
-	return s_ret;
-}
-
-// 1: int box_set
-// 2: WINDOW *
-// 3:  const cchar_t *
-// 4:  const cchar_t *
-// 5: 
-// 6: 
-SCM
-gucu_box_set (SCM arg1, SCM arg2, SCM arg3)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "box-set");
-	SCM_ASSERT (_scm_is_cchar (arg2), arg2, SCM_ARG2, "box-set");
-	SCM_ASSERT (_scm_is_cchar (arg3), arg3, SCM_ARG3, "box-set");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	 cchar_t *c_arg2 = _scm_to_cchar (arg2);
-	 cchar_t *c_arg3 = _scm_to_cchar (arg3);
-
-	int ret = box_set (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg2);
-	free (c_arg3);
-
-	return s_ret;
-}
-
-// 1: int hline_set
-// 2: const cchar_t *
-// 3:  int
-// 4: 
-// 5: 
-SCM
-gucu_hline_set (SCM arg1, SCM arg2)
-{
-	SCM_ASSERT (_scm_is_cchar (arg1), arg1, SCM_ARG1, "hline-set");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "hline-set");
-
-	 cchar_t *c_arg1 = _scm_to_cchar (arg1);
-	int c_arg2 = scm_to_int (arg2);
-
-	int ret = hline_set (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg1);
-
-	return s_ret;
-}
-
 // 1: int ins_nwstr
 // 2: const wchar_t *
 // 3:  int
@@ -199,34 +66,6 @@ gucu_ins_wstr (SCM arg1)
 	SCM s_ret = scm_from_int (ret);
 
 	free (c_arg1);
-
-	return s_ret;
-}
-
-// 1: int mvhline_set
-// 2: int
-// 3:  int
-// 4:  const cchar_t *
-// 5:  int
-// 6: 
-// 7: 
-SCM
-gucu_mvhline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "mvhline-set");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvhline-set");
-	SCM_ASSERT (_scm_is_cchar (arg3), arg3, SCM_ARG3, "mvhline-set");
-	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "mvhline-set");
-
-	int c_arg1 = scm_to_int (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	 cchar_t *c_arg3 = _scm_to_cchar (arg3);
-	int c_arg4 = scm_to_int (arg4);
-
-	int ret = mvhline_set (c_arg1, c_arg2, c_arg3, c_arg4);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg3);
 
 	return s_ret;
 }
@@ -305,65 +144,6 @@ gucu_mvins_wstr (SCM arg1, SCM arg2, SCM arg3)
 	SCM s_ret = scm_from_int (ret);
 
 	free (c_arg3);
-
-	return s_ret;
-}
-
-// 1: int mvvline_set
-// 2: int
-// 3:  int
-// 4:  const cchar_t *
-// 5:  int
-// 6: 
-// 7: 
-SCM
-gucu_mvvline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "mvvline-set");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvvline-set");
-	SCM_ASSERT (_scm_is_cchar (arg3), arg3, SCM_ARG3, "mvvline-set");
-	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "mvvline-set");
-
-	int c_arg1 = scm_to_int (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	 cchar_t *c_arg3 = _scm_to_cchar (arg3);
-	int c_arg4 = scm_to_int (arg4);
-
-	int ret = mvvline_set (c_arg1, c_arg2, c_arg3, c_arg4);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg3);
-
-	return s_ret;
-}
-
-// 1: int mvwhline_set
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  const cchar_t *
-// 6:  int
-// 7: 
-// 8: 
-SCM
-gucu_mvwhline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "mvwhline-set");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvwhline-set");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "mvwhline-set");
-	SCM_ASSERT (_scm_is_cchar (arg4), arg4, SCM_ARG4, "mvwhline-set");
-	SCM_ASSERT (scm_is_integer (arg5), arg5, SCM_ARG5, "mvwhline-set");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
-	 cchar_t *c_arg4 = _scm_to_cchar (arg4);
-	int c_arg5 = scm_to_int (arg5);
-
-	int ret = mvwhline_set (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg4);
 
 	return s_ret;
 }
@@ -455,37 +235,6 @@ gucu_mvwins_wstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 	return s_ret;
 }
 
-// 1: int mvwvline_set
-// 2: WINDOW *
-// 3:  int
-// 4:  int
-// 5:  const cchar_t *
-// 6:  int
-// 7: 
-// 8: 
-SCM
-gucu_mvwvline_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "mvwvline-set");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvwvline-set");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "mvwvline-set");
-	SCM_ASSERT (_scm_is_cchar (arg4), arg4, SCM_ARG4, "mvwvline-set");
-	SCM_ASSERT (scm_is_integer (arg5), arg5, SCM_ARG5, "mvwvline-set");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
-	 cchar_t *c_arg4 = _scm_to_cchar (arg4);
-	int c_arg5 = scm_to_int (arg5);
-
-	int ret = mvwvline_set (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg4);
-
-	return s_ret;
-}
-
 /* Return all the video attributes supported by the terminal */
 SCM
 gucu_term_attrs ()
@@ -514,28 +263,6 @@ gucu_unget_wch (SCM arg1)
 
 	int ret = unget_wch (c_arg1);
 	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-// 1: int vline_set
-// 2: const cchar_t *
-// 3:  int
-// 4: 
-// 5: 
-SCM
-gucu_vline_set (SCM arg1, SCM arg2)
-{
-	SCM_ASSERT (_scm_is_cchar (arg1), arg1, SCM_ARG1, "vline-set");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "vline-set");
-
-	 cchar_t *c_arg1 = _scm_to_cchar (arg1);
-	int c_arg2 = scm_to_int (arg2);
-
-	int ret = vline_set (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg1);
 
 	return s_ret;
 }
@@ -614,98 +341,98 @@ gucu_wadd_wchnstr (SCM win, SCM wchstr, SCM n)
   return SCM_BOOL_T;
 }
 
-// 1: int wbkgrnd
-// 2: WINDOW *
-// 3:  const cchar_t *
-// 4: 
-// 5: 
+/* Set the background property to the window and apply to every char
+   in the window */
 SCM
-gucu_wbkgrnd (SCM arg1, SCM arg2)
+gucu_wbkgrnd (SCM win, SCM wch)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wbkgrnd");
-	SCM_ASSERT (_scm_is_cchar (arg2), arg2, SCM_ARG2, "wbkgrnd");
+  WINDOW *c_win;
+  cchar_t *c_wch;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	 cchar_t *c_arg2 = _scm_to_cchar (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wbkgrnd");
+  SCM_ASSERT (_scm_is_cchar (wch), wch, SCM_ARG2, "%wbkgrnd");
+  
+  c_win = _scm_to_window (win);
+  c_wch = _scm_to_cchar (wch);
 
-	int ret = wbkgrnd (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  ret = wbkgrnd (c_win, c_wch);
 
-	free (c_arg2);
+  free (c_wch);
 
-	return s_ret;
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
-// 1: void wbkgrndset
-// 2: WINDOW *
-// 3:  const cchar_t *
-// 4: 
-// 5: 
+/* Set the background property to the window and apply to every char
+   in the window */
 SCM
-gucu_wbkgrndset (SCM arg1, SCM arg2)
+gucu_wbkgrndset (SCM win, SCM wch)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wbkgrndset");
-	SCM_ASSERT (_scm_is_cchar (arg2), arg2, SCM_ARG2, "wbkgrndset");
+  WINDOW *c_win;
+  cchar_t *c_wch;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	 cchar_t *c_arg2 = _scm_to_cchar (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wbkgrndset");
+  SCM_ASSERT (_scm_is_cchar (wch), wch, SCM_ARG2, "%wbkgrndset");
 
-	 wbkgrndset (c_arg1, c_arg2);
-	SCM s_ret = SCM_UNSPECIFIED;
+  c_win = _scm_to_window (win);
+  c_wch = _scm_to_cchar (wch);
 
-	free (c_arg2);
+  wbkgrndset (c_win, c_wch);
 
-	return s_ret;
+  free (c_wch);
+  
+  return SCM_UNSPECIFIED;
 }
 
-// 1: int wborder_set
-// 2: WINDOW *
-// 3:  const cchar_t *
-// 4:  const cchar_t *
-// 5:  const cchar_t *
-// 6:  const cchar_t *
-// 7:  const cchar_t *
-// 8:  const cchar_t *
-// 9:  const cchar_t *
-// 10:  const cchar_t *
-// 11: 
-// 12: 
+/* Draw a window border using the followin complex characters */
 SCM
-gucu_wborder_set (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM arg7, SCM arg8, SCM arg9)
+gucu_wborder_set (SCM win, SCM left, SCM right, SCM top, SCM bottom, 
+		  SCM topleft, SCM topright, SCM bottomleft, SCM bottomright)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wborder-set");
-	SCM_ASSERT (_scm_is_cchar (arg2), arg2, SCM_ARG2, "wborder-set");
-	SCM_ASSERT (_scm_is_cchar (arg3), arg3, SCM_ARG3, "wborder-set");
-	SCM_ASSERT (_scm_is_cchar (arg4), arg4, SCM_ARG4, "wborder-set");
-	SCM_ASSERT (_scm_is_cchar (arg5), arg5, SCM_ARG5, "wborder-set");
-	SCM_ASSERT (_scm_is_cchar (arg6), arg6, SCM_ARG6, "wborder-set");
-	SCM_ASSERT (_scm_is_cchar (arg7), arg7, SCM_ARG7, "wborder-set");
-	SCM_ASSERT (_scm_is_cchar (arg8), arg8, 8, "wborder-set");
-	SCM_ASSERT (_scm_is_cchar (arg9), arg9, 9, "wborder-set");
+  WINDOW *c_win;
+  cchar_t *left, *right, *top, *bottom;
+  cchar_t *topleft, *topright, *bottomleft, *bottomright;
+  int ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	 cchar_t *c_arg2 = _scm_to_cchar (arg2);
-	 cchar_t *c_arg3 = _scm_to_cchar (arg3);
-	 cchar_t *c_arg4 = _scm_to_cchar (arg4);
-	 cchar_t *c_arg5 = _scm_to_cchar (arg5);
-	 cchar_t *c_arg6 = _scm_to_cchar (arg6);
-	 cchar_t *c_arg7 = _scm_to_cchar (arg7);
-	 cchar_t *c_arg8 = _scm_to_cchar (arg8);
-	 cchar_t *c_arg9 = _scm_to_cchar (arg9);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wborder-set");
+  SCM_ASSERT (_scm_is_cchar (left), left, SCM_ARG2, "%wborder-set");
+  SCM_ASSERT (_scm_is_cchar (right), right, SCM_ARG3, "%wborder-set");
+  SCM_ASSERT (_scm_is_cchar (top), top, SCM_ARG4, "%wborder-set");
+  SCM_ASSERT (_scm_is_cchar (bottom), bottom, SCM_ARG5, "%wborder-set");
+  SCM_ASSERT (_scm_is_cchar (topleft), topleft, SCM_ARG6, "%wborder-set");
+  SCM_ASSERT (_scm_is_cchar (topright), topright, SCM_ARG7, "%wborder-set");
+  SCM_ASSERT (_scm_is_cchar (bottomleft), bottomleft, 8, "%wborder-set");
+  SCM_ASSERT (_scm_is_cchar (bottomright), bottomright, 9, "%wborder-set");
 
-	int ret = wborder_set (c_arg1, c_arg2, c_arg3, c_arg4, c_arg5, c_arg6, c_arg7, c_arg8, c_arg9);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_left = _scm_to_cchar (left);
+  c_right = _scm_to_cchar (right);
+  c_top = _scm_to_cchar (top);
+  c_bottom = _scm_to_cchar (bottom);
+  c_topleft = _scm_to_cchar (topleft);
+  c_topright = _scm_to_cchar (topright);
+  c_bottomleft = _scm_to_cchar (bottomleft);
+  c_bottomright = _scm_to_cchar (bottomright);
 
-	free (c_arg2);
-	free (c_arg3);
-	free (c_arg4);
-	free (c_arg5);
-	free (c_arg6);
-	free (c_arg7);
-	free (c_arg8);
-	free (c_arg9);
+  ret = wborder_set (c_win, c_left, c_right, c_top, c_bottom, 
+		     c_topleft, c_topright, c_bottomleft, c_botttomright);
 
-	return s_ret;
+  free (c_left);
+  free (c_right);
+  free (c_top);
+  free (c_bottom);
+  free (c_topleft);
+  free (c_topright);
+  free (c_bottomleft);
+  free (c_bottomright);
+
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
 /* Write a complex haracter to a window, and then refresh that
@@ -731,29 +458,30 @@ gucu_wecho_wchar (SCM win, SCM ch)
 
 }
 
-// 1: int whline_set
-// 2: WINDOW *
-// 3:  const cchar_t *
-// 4:  int
-// 5: 
-// 6: 
+/* Draw an hline of N complex characters */
 SCM
-gucu_whline_set (SCM arg1, SCM arg2, SCM arg3)
+gucu_whline_set (SCM win, SCM ch, SCM n)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "whline-set");
-	SCM_ASSERT (_scm_is_cchar (arg2), arg2, SCM_ARG2, "whline-set");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "whline-set");
+  WINDOW *c_win;
+  cchar_t *c_ch;
+  int c_n, ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	 cchar_t *c_arg2 = _scm_to_cchar (arg2);
-	int c_arg3 = scm_to_int (arg3);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%whline-set");
+  SCM_ASSERT (_scm_is_cchar (ch), ch, SCM_ARG2, "%whline-set");
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG3, "%whline-set");
+  
+  c_win = _scm_to_window (win);
+  c_ch = _scm_to_cchar (ch);
+  c_n = scm_to_int (n);
 
-	int ret = whline_set (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
+  ret = whline_set (c_win, c_ch, c_n);
 
-	free (c_arg2);
+  free (c_ch);
 
-	return s_ret;
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
 // 1: int wins_nwstr
@@ -825,66 +553,57 @@ gucu_wins_wstr (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
-// 1: int wvline_set
-// 2: WINDOW *
-// 3:  const cchar_t *
-// 4:  int
-// 5: 
-// 6: 
+/* Draw an vline of N complex characters */
 SCM
-gucu_wvline_set (SCM arg1, SCM arg2, SCM arg3)
+gucu_wvline_set (SCM win, SCM ch, SCM n)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wvline-set");
-	SCM_ASSERT (_scm_is_cchar (arg2), arg2, SCM_ARG2, "wvline-set");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "wvline-set");
+  WINDOW *c_win;
+  cchar_t *c_ch;
+  int c_n, ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	 cchar_t *c_arg2 = _scm_to_cchar (arg2);
-	int c_arg3 = scm_to_int (arg3);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wvline-set");
+  SCM_ASSERT (_scm_is_cchar (ch), ch, SCM_ARG2, "%wvline-set");
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG3, "%wvline-set");
+  
+  c_win = _scm_to_window (win);
+  c_ch = _scm_to_cchar (ch);
+  c_n = scm_to_int (n);
 
-	int ret = wvline_set (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
+  ret = wvline_set (c_win, c_ch, c_n);
 
-	free (c_arg2);
+  free (c_ch);
 
-	return s_ret;
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
-
 
 void 
 gucu_cursw_init_function ()
 {
-	scm_c_define_gsubr ("bkgrnd", 1, 0, 0, gucu_bkgrnd);
-	scm_c_define_gsubr ("bkgrndset", 1, 0, 0, gucu_bkgrndset);
-	scm_c_define_gsubr ("border-set", 8, 0, 0, gucu_border_set);
 	scm_c_define_gsubr ("box-set", 3, 0, 0, gucu_box_set);
-	scm_c_define_gsubr ("hline-set", 2, 0, 0, gucu_hline_set);
 	scm_c_define_gsubr ("ins-nwstr", 2, 0, 0, gucu_ins_nwstr);
 	scm_c_define_gsubr ("ins-wch", 1, 0, 0, gucu_ins_wch);
 	scm_c_define_gsubr ("ins-wstr", 1, 0, 0, gucu_ins_wstr);
-	scm_c_define_gsubr ("mvhline-set", 4, 0, 0, gucu_mvhline_set);
 	scm_c_define_gsubr ("mvins-nwstr", 4, 0, 0, gucu_mvins_nwstr);
 	scm_c_define_gsubr ("mvins-wch", 3, 0, 0, gucu_mvins_wch);
 	scm_c_define_gsubr ("mvins-wstr", 3, 0, 0, gucu_mvins_wstr);
-	scm_c_define_gsubr ("mvvline-set", 4, 0, 0, gucu_mvvline_set);
-	scm_c_define_gsubr ("mvwhline-set", 5, 0, 0, gucu_mvwhline_set);
 	scm_c_define_gsubr ("mvwins-nwstr", 5, 0, 0, gucu_mvwins_nwstr);
 	scm_c_define_gsubr ("mvwins-wch", 4, 0, 0, gucu_mvwins_wch);
 	scm_c_define_gsubr ("mvwins-wstr", 4, 0, 0, gucu_mvwins_wstr);
-	scm_c_define_gsubr ("mvwvline-set", 5, 0, 0, gucu_mvwvline_set);
 	scm_c_define_gsubr ("term-attrs", 0, 0, 0, gucu_term_attrs);
 	scm_c_define_gsubr ("unget-wch", 1, 0, 0, gucu_unget_wch);
-	scm_c_define_gsubr ("vline-set", 2, 0, 0, gucu_vline_set);
 	scm_c_define_gsubr ("%waddnwstr", 3, 0, 0, gucu_waddnwstr);
 	scm_c_define_gsubr ("%wadd-wch", 2, 0, 0, gucu_wadd_wch);
 	scm_c_define_gsubr ("%wadd-wchnstr", 3, 0, 0, gucu_wadd_wchnstr);
-	scm_c_define_gsubr ("wbkgrnd", 2, 0, 0, gucu_wbkgrnd);
-	scm_c_define_gsubr ("wbkgrndset", 2, 0, 0, gucu_wbkgrndset);
-	scm_c_define_gsubr ("wborder-set", 9, 0, 0, gucu_wborder_set);
+	scm_c_define_gsubr ("%wbkgrnd", 2, 0, 0, gucu_wbkgrnd);
+	scm_c_define_gsubr ("%wbkgrndset", 2, 0, 0, gucu_wbkgrndset);
+	scm_c_define_gsubr ("%wborder-set", 9, 0, 0, gucu_wborder_set);
 	scm_c_define_gsubr ("%wecho-wchar", 2, 0, 0, gucu_wecho_wchar);
-	scm_c_define_gsubr ("whline-set", 3, 0, 0, gucu_whline_set);
+	scm_c_define_gsubr ("%whline-set", 3, 0, 0, gucu_whline_set);
 	scm_c_define_gsubr ("wins-nwstr", 3, 0, 0, gucu_wins_nwstr);
 	scm_c_define_gsubr ("wins-wch", 2, 0, 0, gucu_wins_wch);
 	scm_c_define_gsubr ("wins-wstr", 2, 0, 0, gucu_wins_wstr);
-	scm_c_define_gsubr ("wvline-set", 3, 0, 0, gucu_wvline_set);
+	scm_c_define_gsubr ("%wvline-set", 3, 0, 0, gucu_wvline_set);
 }

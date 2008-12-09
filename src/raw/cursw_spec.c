@@ -31,25 +31,6 @@ gucu_erasewchar ()
     
 
 SCM
-gucu_getbkgrnd ()
-{
-  cchar_t wch;
-  SCM s_wch;
-  int ret;
-
-  ret = getbkgrnd(&wch);
-  if (ret == OK)
-    {
-      s_wch = _scm_from_cchar (&wch);
-    }
-  else
-    abort();
-
-  return s_wch;
-}
-
-
-SCM
 gucu_getn_wstr (SCM n)
 {
   SCM_ASSERT (scm_is_integer (n), n, SCM_ARG1, "getn-wstr");
@@ -452,21 +433,19 @@ gucu_mvwinnwstr (SCM win, SCM y, SCM x, SCM n)
   return s_str;
 }
 
-
+/* Return the given window's current background character and attribute */
 SCM
 gucu_wgetbkgrnd (SCM win)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wgetnstr");
-
   cchar_t wch;
   SCM s_wch;
   int ret;
 
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wgetbkgrnd");
+
   ret = wgetbkgrnd(_scm_to_window (win), &wch);
   if (ret == OK)
-    {
-      s_wch = _scm_from_cchar (&wch);
-    }
+    s_wch = _scm_from_cchar (&wch);
   else
     abort();
 
@@ -827,7 +806,6 @@ void
 gucu_cursw_init_special ()
 {
    scm_c_define_gsubr ("erasewchar", 0, 0, 0, gucu_erasewchar);
-   scm_c_define_gsubr ("getbkgrnd", 0, 0, 0, gucu_getbkgrnd);
    scm_c_define_gsubr ("getn-wstr", 1, 0, 0, gucu_getn_wstr);
    scm_c_define_gsubr ("get-wch", 0, 0, 0, gucu_get_wch);
    scm_c_define_gsubr ("innwstr", 1, 0, 0, gucu_innwstr);
@@ -847,7 +825,7 @@ gucu_cursw_init_special ()
    scm_c_define_gsubr ("mvwinwstr", 3, 0, 0, gucu_mvwinwstr);
    scm_c_define_gsubr ("mvwin-wch", 3, 0, 0, gucu_mvwin_wch);
    scm_c_define_gsubr ("mvwin-wchnstr", 4, 0, 0, gucu_mvwin_wchnstr);
-   scm_c_define_gsubr ("wgetbkgrnd", 0, 0, 0, gucu_wgetbkgrnd);
+   scm_c_define_gsubr ("%wgetbkgrnd", 0, 0, 0, gucu_wgetbkgrnd);
    scm_c_define_gsubr ("wgetn-wstr", 2, 0, 0, gucu_wgetn_wstr);
    scm_c_define_gsubr ("wget-wch", 1, 0, 0, gucu_wget_wch);
    scm_c_define_gsubr ("winnwstr", 2, 0, 0, gucu_winnwstr);
