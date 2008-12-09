@@ -28,6 +28,7 @@
 	    color-set
 	    copywin
 	    curs-set
+	    curses-version
 	    def-prog-mode
 	    def-shell-mode
 	    delay-output
@@ -79,14 +80,12 @@
 	    mouseinterval
 	    move
 	    mvcur
-	    mvdelch
 	    mvderwin
 	    mvgetch
 	    mvinch
 	    mvinsch
 	    mvinsnstr
 	    mvinsstr
-	    mvwdelch
 	    mvwgetch
 	    mvwin
 	    mvwinch
@@ -129,6 +128,7 @@
 	    scr-set
 	    setscrreg
 	    set-term
+	    setsyx
 	    slk-attr-off
 	    slk-attroff
 	    slk-attr-on
@@ -166,14 +166,9 @@
 	    use-env
 	    vidattr
 	    vline
-	    wclear
-	    wclrtobot
-	    wclrtoeol
 	    wcursyncup
-	    wdelch
 	    wdeleteln
 	    wenclose
-	    werase
 	    wgetch
 	    winch
 	    winsch
@@ -186,7 +181,6 @@
 	    wredrawln
 	    wrefresh
 	    wscrl
-	    wsetscrreg
 	    wsyncup
 	    wsyncdown
 	    wtouchln
@@ -379,6 +373,7 @@
 	    getbegyx
 	    getmaxyx
 	    getparyx
+	    getsyx
 	    getyx
 	    acs-block
 	    acs-board
@@ -494,11 +489,30 @@
        #t)
    (%wchgat win n attr color)))
 
+(define* (clear #:key (win (stdscr)))
+  (%wclear win))
+
+(define* (clrtobot #:key (win (stdscr)))
+  (%wclrtobot win))
+
+(define* (clrtoeol #:key (win (stdscr)))
+  (%wclrtoeol win))
+
 (define* (color-set pair #:key (win (stdscr)))
   (%wcolor-set win pair))
 
+(define* (delch win #:key y x)
+  (and
+   (if (and y x)
+       (wmove win y x)
+       #t)
+   (%wdelch win)))
+
 (define* (echochar ch #:key (win (stdscr)))
   (%wechochar win ch))
+
+(define* (erase #:key (win (stdscr)))
+  (%werase win))
 
 (define* (getbkgd #:key (win (stdscr)))
   (%getbkgd win))
@@ -527,6 +541,9 @@
 ;; it is dropped here.
 (define (meta bf)
   (%meta (stdscr) bf))
+
+(define* (setscrreg top bot #:key (win (stdscr)))
+  (%wsetscrreg win top bot))
 
 (define* (standend #:key (win (stdscr)))
   (%wstandend win))
