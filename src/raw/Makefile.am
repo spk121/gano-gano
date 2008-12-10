@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.13 2008/12/04 05:33:59 spike_gran Exp $
+## $Id: Makefile.am,v 1.14 2008/12/10 14:39:36 spike_gran Exp $
 
 # COMPILE_FLAGS = -Wall -W -Wunused-parameter -Wstrict-prototypes \
 # 	-Wmissing-prototypes -Wpointer-arith \
@@ -23,6 +23,7 @@ libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LDFLAGS = \
 libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES = \
 	curs_const.c curs_const.h \
 	curs_func.c curs_func.h \
+	curs_port.c curs_port.h \
 	type.c type.h \
 	curs_spec.c curs_spec.h \
 	curs_main.c \

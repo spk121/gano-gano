@@ -4,6 +4,7 @@
 #include "curs_func.h"
 #include "curs_spec.h"
 #include "curs_const.h"
+#include "curs_port.h"
 #include "type.h"
 
 #ifdef DLL_EXPORT
@@ -20,5 +21,6 @@ gucu_init ()
   gucu_init_function ();
   gucu_init_special ();
   gucu_init_constant ();
+  gucu_init_port ();
   gucu_init_type ();
 }

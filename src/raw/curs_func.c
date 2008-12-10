@@ -76,7 +76,7 @@ SCM
 gucu_clearok (SCM win, SCM bf)
 {
   WINDOW *c_win;
-  bool c_f;
+  bool c_bf;
   int ret;
 
   SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "clearok");
@@ -191,6 +191,34 @@ gucu_def_shell_mode ()
   return SCM_BOOL_T;
 }
 
+/* Define a keycode and its corresponding control string */
+SCM
+gucu_define_key (SCM defn, SCM keycode)
+{
+  char *c_defn;
+  int c_keycode, ret;
+
+  SCM_ASSERT (scm_is_string (defn), defn, SCM_ARG1, "define-key");
+  SCM_ASSERT (scm_is_integer (keycode), keycode, SCM_ARG2, "define-key");
+
+  c_keycode = scm_to_int (keycode);
+  
+  if (scm_c_string_length (defn) == 0)
+    {
+      ret = define_key (NULL, c_keycode);
+    }
+  else
+    {
+      c_defn = scm_to_locale_string (defn);
+      ret = define_key (c_defn, c_keycode);
+    }
+	
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
+}
+
 /* Inserts a pause in between outputs, possibly with padding
    characters */
 SCM
@@ -209,26 +237,24 @@ gucu_delay_output (SCM ms)
   return SCM_BOOL_T;
 }
 
+/* Free a screen created by newterm.  Should be called after endwin */
 SCM
-gucu_deleteln ()
+gucu_delscreen (SCM scr)
 {
-	int ret = deleteln ();
-	SCM s_ret = scm_from_int (ret);
+  SCREEN *c_scr;
 
-	return s_ret;
-}
+  SCM_ASSERT (_scm_is_screen (scr), scr, SCM_ARG1, "delscreen");
 
-SCM
-gucu_delscreen (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_screen (arg1), arg1, SCM_ARG1, "delscreen");
+  c_scr = _scm_to_screen (scr);
+  
+  if (!isendwin ())
+    scm_misc_error ("delscreen", 
+		    "The terminal was freed while still in curses mode: ~A", 
+		    scr);
 
-	SCREEN *c_arg1 = _scm_to_screen (arg1);
+  delscreen (c_scr);
 
-	 delscreen (c_arg1);
-	SCM s_ret = SCM_UNSPECIFIED;
-
-	return s_ret;
+  return SCM_UNSPECIFIED;
 }
 
 SCM
@@ -284,13 +310,14 @@ gucu_echo ()
   return SCM_BOOL_T;
 }
 
+/* Exit curses mode for this screen */
 SCM
 gucu_endwin ()
 {
-	int ret = endwin ();
-	SCM s_ret = scm_from_int (ret);
+  if (endwin () == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
+  return SCM_BOOL_T;
 }
 
 /* Return the current character used to erase */
@@ -460,7 +487,6 @@ gucu_immedok (SCM win, SCM bf)
 {
   WINDOW *c_win;
   bool c_bf;
-  int ret;
 
   SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "immedok");
   SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "immedok");
@@ -482,13 +508,14 @@ gucu_inch ()
 	return s_ret;
 }
 
+/* Initialize curses and return stdscr */
 SCM
 gucu_initscr ()
 {
-	WINDOW * ret = initscr ();
-	SCM s_ret = _scm_from_window (ret);
+  WINDOW *ret;
 
-	return s_ret;
+  ret = initscr ();
+  return _scm_from_window (ret);
 }
 
 /* Initialize COLOR as an RGB triple. */
@@ -555,28 +582,6 @@ gucu_insch (SCM arg1)
 }
 
 SCM
-gucu_insdelln (SCM arg1)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "insdelln");
-
-	int c_arg1 = scm_to_int (arg1);
-
-	int ret = insdelln (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_insertln ()
-{
-	int ret = insertln ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
 gucu_insnstr (SCM arg1, SCM arg2)
 {
 	SCM_ASSERT (scm_is_string (arg1), arg1, SCM_ARG1, "insnstr");
@@ -628,13 +633,17 @@ gucu_intrflush (SCM win, SCM bf)
   return SCM_BOOL_T;
 }
 
+/* Return true if we are not in curses mode (endwin has been called) */
 SCM
 gucu_isendwin ()
 {
-	bool ret = isendwin ();
-	SCM s_ret = scm_from_bool (ret);
+  SCM s_ret;
+  bool ret;
 
-	return s_ret;
+  ret = isendwin ();
+  s_ret = scm_from_bool (ret);
+
+  return s_ret;
 }
 
 SCM
@@ -726,7 +735,7 @@ SCM
 gucu_leaveok (SCM win, SCM bf)
 {
   WINDOW *c_win;
-  book c_bf;
+  bool c_bf;
   int ret;
 
   SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "leaveok");
@@ -946,21 +955,27 @@ gucu_mvwgetch (SCM arg1, SCM arg2, SCM arg3)
 	return s_ret;
 }
 
+/* Move the window so that the upper left is at y,x */
 SCM
-gucu_mvwin (SCM arg1, SCM arg2, SCM arg3)
+gucu_mvwin (SCM win, SCM y, SCM x)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "mvwin");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvwin");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "mvwin");
+  WINDOW *c_win;
+  int c_y, c_x, ret;
+  
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwin");
+  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwin");
+  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwin");
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
+  c_win = _scm_to_window (win);
+  c_y = scm_to_int (y);
+  c_x = scm_to_int (x);
 
-	int ret = mvwin (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
+  ret = mvwin (c_win, c_y, c_x);
 
-	return s_ret;
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -1075,23 +1090,26 @@ gucu_newpad (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+/* Creates and returns a pointer to a new window */
 SCM
-gucu_newwin (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
+gucu_newwin (SCM nlines, SCM ncols, SCM begin_y, SCM begin_x)
 {
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "newwin");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "newwin");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "newwin");
-	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "newwin");
+  int c_nlines, c_ncols, c_begin_y, c_begin_x;
+  WINDOW *c_win;
 
-	int c_arg1 = scm_to_int (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
-	int c_arg4 = scm_to_int (arg4);
+  SCM_ASSERT (scm_is_integer (nlines), nlines, SCM_ARG1, "newwin");
+  SCM_ASSERT (scm_is_integer (ncols), ncols, SCM_ARG2, "newwin");
+  SCM_ASSERT (scm_is_integer (begin_y), begin_y, SCM_ARG3, "newwin");
+  SCM_ASSERT (scm_is_integer (begin_x), begin_x, SCM_ARG4, "newwin");
 
-	WINDOW * ret = newwin (c_arg1, c_arg2, c_arg3, c_arg4);
-	SCM s_ret = _scm_from_window (ret);
+  c_nlines = scm_to_int (nlines);
+  c_ncols = scm_to_int (ncols);
+  c_begin_y = scm_to_int (begin_y);
+  c_begin_x = scm_to_int (begin_x);
 
-	return s_ret;
+  c_win = newwin (c_nlines, c_ncols, c_begin_y, c_begin_x);
+
+  return _scm_from_window (c_win);
 }
 
 /* Translate return to newline on input */
@@ -1182,7 +1200,7 @@ gucu_notimeout (SCM win, SCM bf)
   bool c_bf;
   int ret;
 
-  SCM_ASSERT (_scm_is_window (win), arg1, SCM_ARG1, "%notimeout");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%notimeout");
   SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "%notimeout");
 
   c_win = _scm_to_window (win);
@@ -1215,7 +1233,7 @@ gucu_overlay (SCM srcwin, SCM destwin)
   return SCM_BOOL_T;
 }
 
-/* Overlay srcwin on top of destwin, including blanks */
+/* Overlay srcwin  on top of destwin, including blanks */
 SCM
 gucu_overwrite (SCM srcwin, SCM destwin)
 {
@@ -1348,7 +1366,7 @@ SCM
 gucu_qiflush ()
 {
   qiflush ();
-  return SCM_UNSPECIFIED:
+  return SCM_UNSPECIFIED;
 }
 
 /* Pass control characters instead of generating a signal */
@@ -1546,17 +1564,20 @@ gucu_setsyx (SCM y, SCM x)
   return SCM_UNSPECIFIED;
 }
 
+/* Switch to a new terminal.  Return the old terminal */
 SCM
-gucu_set_term (SCM arg1)
+gucu_set_term (SCM newterminal)
 {
-	SCM_ASSERT (_scm_is_screen (arg1), arg1, SCM_ARG1, "set-term");
+  SCREEN *c_newterminal, *c_oldterminal;
+  
+  SCM_ASSERT (_scm_is_screen (newterminal), newterminal, SCM_ARG1, "set-term");
 
-	SCREEN *c_arg1 = _scm_to_screen (arg1);
+  c_newterminal = _scm_to_screen (newterminal);
 
-	SCREEN * ret = set_term (c_arg1);
-	SCM s_ret = _scm_from_screen (ret);
-
-	return s_ret;
+  /* FIXME: do I need to refcount the old terminal if I return it here? */
+  c_oldterminal = set_term (c_newterminal);
+  
+  return _scm_from_screen (c_oldterminal);
 }
 
 SCM
@@ -2008,7 +2029,7 @@ gucu_use_extended_names (SCM bf)
   
   c_bf = scm_to_bool (bf);
 
-  if (use_extended_names () == ERR)
+  if (use_extended_names (c_bf) == ERR)
     return SCM_BOOL_F;
 
   return SCM_BOOL_T;
@@ -2363,19 +2384,6 @@ gucu_wdelch (SCM win)
   return SCM_BOOL_T;
 }
 
-SCM
-gucu_wdeleteln (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wdeleteln");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-
-	int ret = wdeleteln (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
 /* Write ch to the given window without advancing the curses.  Refresh
    that character immediately */
 SCM
@@ -2463,7 +2471,7 @@ gucu_whline (SCM win, SCM ch, SCM n)
   c_ch = _scm_to_chtype (ch);
   c_n = scm_to_int (n);
 
-  ret = whline (c_win, c_arg2, c_n);
+  ret = whline (c_win, c_ch, c_n);
   if (ret == ERR)
     return SCM_BOOL_F;
 
@@ -2498,32 +2506,24 @@ gucu_winsch (SCM arg1, SCM arg2)
 	return s_ret;
 }
 
+/* Insert or delete N lines.  Positive n -> insert.  Negative n -> delete */
 SCM
-gucu_winsdelln (SCM arg1, SCM arg2)
+gucu_winsdelln (SCM win, SCM n)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "winsdelln");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "winsdelln");
+  WINDOW *c_win;
+  int c_n, ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "winsdelln");
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG2, "winsdelln");
+  
+  c_win = _scm_to_window (win);
+  c_n = scm_to_int (n);
 
-	int ret = winsdelln (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  ret = winsdelln (c_win, c_n);
+  if (ret == ERR)
+    return SCM_BOOL_F;
 
-	return s_ret;
-}
-
-SCM
-gucu_winsertln (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "winsertln");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-
-	int ret = winsertln (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  return SCM_BOOL_T;
 }
 
 SCM
@@ -2725,7 +2725,6 @@ gucu_wtimeout (SCM win, SCM delay)
 {
   WINDOW *c_win;
   int c_delay;
-  int ret;
 
   SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wtimeout");
   SCM_ASSERT (scm_is_integer (delay), delay, SCM_ARG2, "%wtimeout");
@@ -2800,8 +2799,8 @@ gucu_init_function ()
 	scm_c_define_gsubr ("curses-version", 0, 0, 0, gucu_curses_version);
 	scm_c_define_gsubr ("def-prog-mode", 0, 0, 0, gucu_def_prog_mode);
 	scm_c_define_gsubr ("def-shell-mode", 0, 0, 0, gucu_def_shell_mode);
+	scm_c_define_gsubr ("define-key", 2, 0, 0, gucu_define_key);
 	scm_c_define_gsubr ("delay-output", 1, 0, 0, gucu_delay_output);
-	scm_c_define_gsubr ("deleteln", 0, 0, 0, gucu_deleteln);
 	scm_c_define_gsubr ("delscreen", 1, 0, 0, gucu_delscreen);
 	scm_c_define_gsubr ("derwin", 5, 0, 0, gucu_derwin);
 	scm_c_define_gsubr ("doupdate", 0, 0, 0, gucu_doupdate);
@@ -2827,8 +2826,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("init-color", 4, 0, 0, gucu_init_color);
 	scm_c_define_gsubr ("init-pair", 3, 0, 0, gucu_init_pair);
 	scm_c_define_gsubr ("insch", 1, 0, 0, gucu_insch);
-	scm_c_define_gsubr ("insdelln", 1, 0, 0, gucu_insdelln);
-	scm_c_define_gsubr ("insertln", 0, 0, 0, gucu_insertln);
 	scm_c_define_gsubr ("insnstr", 2, 0, 0, gucu_insnstr);
 	scm_c_define_gsubr ("insstr", 1, 0, 0, gucu_insstr);
 	scm_c_define_gsubr ("%intrflush", 2, 0, 0, gucu_intrflush);
@@ -2944,7 +2941,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("wcursyncup", 1, 0, 0, gucu_wcursyncup);
 	scm_c_define_gsubr ("%wcolor-set", 2, 0, 0, gucu_wcolor_set);
 	scm_c_define_gsubr ("%wdelch", 1, 0, 0, gucu_wdelch);
-	scm_c_define_gsubr ("wdeleteln", 1, 0, 0, gucu_wdeleteln);
 	scm_c_define_gsubr ("%wechochar", 2, 0, 0, gucu_wechochar);
 	scm_c_define_gsubr ("wenclose", 3, 0, 0, gucu_wenclose);
 	scm_c_define_gsubr ("werase", 1, 0, 0, gucu_werase);
@@ -2952,8 +2948,7 @@ gucu_init_function ()
 	scm_c_define_gsubr ("%whline", 3, 0, 0, gucu_whline);
 	scm_c_define_gsubr ("winch", 1, 0, 0, gucu_winch);
 	scm_c_define_gsubr ("winsch", 2, 0, 0, gucu_winsch);
-	scm_c_define_gsubr ("winsdelln", 2, 0, 0, gucu_winsdelln);
-	scm_c_define_gsubr ("winsertln", 1, 0, 0, gucu_winsertln);
+	scm_c_define_gsubr ("%winsdelln", 2, 0, 0, gucu_winsdelln);
 	scm_c_define_gsubr ("winsnstr", 3, 0, 0, gucu_winsnstr);
 	scm_c_define_gsubr ("winsstr", 2, 0, 0, gucu_winsstr);
 	scm_c_define_gsubr ("wmove", 3, 0, 0, gucu_wmove);

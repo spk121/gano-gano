@@ -31,6 +31,7 @@
 	    curses-version
 	    def-prog-mode
 	    def-shell-mode
+	    define-key
 	    delay-output
 	    delch
 	    deleteln
@@ -167,13 +168,10 @@
 	    vidattr
 	    vline
 	    wcursyncup
-	    wdeleteln
 	    wenclose
 	    wgetch
 	    winch
 	    winsch
-	    winsdelln
-	    winsertln
 	    winsnstr
 	    winsstr
 	    wmove
@@ -362,7 +360,6 @@
 	    mvwinnstr
 	    mvwinstr
 	    newterm
-	    newterm-port
 	    pair-content
 	    ungetmouse
 	    wgetnstr
@@ -508,6 +505,13 @@
        #t)
    (%wdelch win)))
 
+(define* (deleteln win #:key y x)
+  (and
+   (if (and y x)
+       (wmove win y x)
+       #t)
+   (%winsdelln win -1)))
+
 (define* (echochar ch #:key (win (stdscr)))
   (%wechochar win ch))
 
@@ -522,6 +526,20 @@
 	   (wmove win y x)
 	   #t)
        (%whline win ch n)))
+
+(define* (insdelln win n #:key y x)
+  (and
+   (if (and y x)
+       (wmove win y x)
+       #t)
+   (%winsdelln win n)))
+
+(define* (insertln win #:key y x)
+  (and
+   (if (and y x)
+       (wmove win y x)
+       #t)
+   (%winsdelln win 1)))
 
 ;; The window information isn't used in the lower level function, so
 ;; it is dropped here

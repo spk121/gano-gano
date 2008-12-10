@@ -393,8 +393,8 @@ gucu_wborder_set (SCM win, SCM left, SCM right, SCM top, SCM bottom,
 		  SCM topleft, SCM topright, SCM bottomleft, SCM bottomright)
 {
   WINDOW *c_win;
-  cchar_t *left, *right, *top, *bottom;
-  cchar_t *topleft, *topright, *bottomleft, *bottomright;
+  cchar_t *c_left, *c_right, *c_top, *c_bottom;
+  cchar_t *c_topleft, *c_topright, *c_bottomleft, *c_bottomright;
   int ret;
 
   SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wborder-set");
@@ -418,7 +418,7 @@ gucu_wborder_set (SCM win, SCM left, SCM right, SCM top, SCM bottom,
   c_bottomright = _scm_to_cchar (bottomright);
 
   ret = wborder_set (c_win, c_left, c_right, c_top, c_bottom, 
-		     c_topleft, c_topright, c_bottomleft, c_botttomright);
+		     c_topleft, c_topright, c_bottomleft, c_bottomright);
 
   free (c_left);
   free (c_right);
@@ -582,7 +582,6 @@ gucu_wvline_set (SCM win, SCM ch, SCM n)
 void 
 gucu_cursw_init_function ()
 {
-	scm_c_define_gsubr ("box-set", 3, 0, 0, gucu_box_set);
 	scm_c_define_gsubr ("ins-nwstr", 2, 0, 0, gucu_ins_nwstr);
 	scm_c_define_gsubr ("ins-wch", 1, 0, 0, gucu_ins_wch);
 	scm_c_define_gsubr ("ins-wstr", 1, 0, 0, gucu_ins_wstr);

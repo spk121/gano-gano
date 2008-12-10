@@ -43,7 +43,7 @@ SCM gucu_wmouse_trafo (SCM win, SCM y, SCM x, SCM to) API;
 SCM gucu_getbegyx (SCM win) API;
 SCM gucu_getmaxyx (SCM win) API;
 SCM gucu_getparyx (SCM win) API;
-SCM gucu_getsyx (SCM win) API;
+SCM gucu_getsyx (void) API;
 SCM gucu_getyx (SCM win) API;
 
 SCM gucu_ACS_BLOCK (void) API;

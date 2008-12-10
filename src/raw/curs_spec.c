@@ -35,6 +35,7 @@ gucu_color_content (SCM s_color)
   return s_list; 
 }
 
+/* Free the C memory of a window */
 SCM
 gucu_delwin (SCM win)
 {
@@ -47,10 +48,12 @@ gucu_delwin (SCM win)
   if (c_win != NULL)
     {
       int ret = delwin (c_win);
-      SCM s_ret = scm_from_int (ret);
-      return s_ret;
+      if (ret == ERR)
+	return SCM_BOOL_F;
+      else
+	return SCM_BOOL_T;
     }
-  return scm_from_int (ERR);
+  return SCM_BOOL_F;
 }
 
 
@@ -395,31 +398,6 @@ gucu_mvwinstr (SCM win, SCM y, SCM x)
   return s_str;
 }
 
-SCM
-gucu_newterm (SCM arg1, SCM arg2, SCM arg3)
-{
-	SCM_ASSERT (scm_is_string (arg1), arg1, SCM_ARG1, "newterm");
-	SCM_ASSERT (_scm_is_file (arg2), arg2, SCM_ARG2, "newterm");
-	SCM_ASSERT (_scm_is_file (arg3), arg3, SCM_ARG3, "newterm");
-
-	char *c_arg1 = scm_to_locale_string (arg1);
-	FILE *c_arg2 = _scm_to_file (arg2);
-	FILE *c_arg3 = _scm_to_file (arg3);
-
-	SCREEN * ret = newterm (c_arg1, c_arg2, c_arg3);
-	if (ret == NULL)
-	  {
-	    scm_error_scm (SCM_BOOL_F,
-			   scm_from_locale_string("newterm"), 
-			   scm_from_locale_string("could not create a terminal"),
-			   SCM_BOOL_F,
-			   SCM_BOOL_F);
-	  }
-
-	SCM s_ret = _scm_from_screen (ret);
-
-	return s_ret;
-}
 
 #if 0
 SCM
@@ -722,13 +700,11 @@ gucu_getparyx (SCM win)
 
 /* Get the location of the virtual screen cursor */
 SCM
-gucu_getsyx (SCM win)
+gucu_getsyx ()
 {
-  int y, x;
+  int y=0, x=0;
 
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "getyx");
-
-  getsyx (_scm_to_window (win), y, x);
+  getsyx (y, x);
 
   return (scm_list_2 (scm_from_int (y), scm_from_int (x)));
 }
@@ -1130,8 +1106,6 @@ gucu_init_special ()
   scm_c_define_gsubr ("mvwinchnstr", 4, 0, 0, gucu_mvwinchnstr);
   scm_c_define_gsubr ("mvwinnstr", 4, 0, 0, gucu_mvwinnstr);
   scm_c_define_gsubr ("mvwinstr", 3, 0, 0, gucu_mvwinstr);
-  scm_c_define_gsubr ("newterm", 3, 0, 0, gucu_newterm);
-  //scm_c_define_gsubr ("newterm-port", 3, 0, 0, gucu_newterm_port);
   scm_c_define_gsubr ("pair-content", 1, 0, 0, gucu_pair_content);
   scm_c_define_gsubr ("ungetmouse", 1, 0, 0, gucu_ungetmouse);
   scm_c_define_gsubr ("%wattr-get", 1, 0, 0, gucu_wattr_get);
@@ -1144,7 +1118,7 @@ gucu_init_special ()
   scm_c_define_gsubr ("getbegyx", 1, 0, 0, gucu_getbegyx);
   scm_c_define_gsubr ("getmaxyx", 1, 0, 0, gucu_getmaxyx);
   scm_c_define_gsubr ("getparyx", 1, 0, 0, gucu_getparyx);
-  scm_c_define_gsubr ("getsyx", 1, 0, 0, gucu_getsyx);
+  scm_c_define_gsubr ("getsyx", 0, 0, 0, gucu_getsyx);
   scm_c_define_gsubr ("getyx", 1, 0, 0, gucu_getyx);
   scm_c_define_gsubr ("acs-block", 0, 0, 0, gucu_ACS_BLOCK);
   scm_c_define_gsubr ("acs-board", 0, 0, 0, gucu_ACS_BOARD);
