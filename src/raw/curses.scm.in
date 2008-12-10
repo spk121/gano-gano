@@ -44,7 +44,7 @@
 	    endwin
 	    erasechar
 	    erase
-	    ;; filter
+	    %filter
 	    flash
 	    flushinp
 	    getbkgd
@@ -65,7 +65,6 @@
 	    insch
 	    insdelln
 	    insertln
-	    insnstr
 	    insstr
 	    intrflush
 	    isendwin
@@ -82,17 +81,7 @@
 	    move
 	    mvcur
 	    mvderwin
-	    mvgetch
-	    mvinch
-	    mvinsch
-	    mvinsnstr
-	    mvinsstr
-	    mvwgetch
 	    mvwin
-	    mvwinch
-	    mvwinsch
-	    mvwinsnstr
-	    mvwinsstr
 	    napms
 	    newpad
 	    newwin
@@ -101,6 +90,7 @@
 	    nodelay
 	    noecho
 	    nonl
+	    nooutrefresh
 	    noqiflush
 	    noraw
 	    notimeout
@@ -115,6 +105,7 @@
 	    qiflush
 	    raw
 	    redrawwin
+	    redrawln
 	    refresh
 	    reset-prog-mode
 	    reset-shell-mode
@@ -169,15 +160,7 @@
 	    vline
 	    wcursyncup
 	    wenclose
-	    wgetch
-	    winch
-	    winsch
-	    winsnstr
-	    winsstr
 	    wmove
-	    wnoutrefresh
-	    wredrawln
-	    wrefresh
 	    wscrl
 	    wsyncup
 	    wsyncdown
@@ -521,11 +504,29 @@
 (define* (getbkgd #:key (win (stdscr)))
   (%getbkgd win))
 
+(define* (getch win #:key y x)
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%wgetch win)))
+  
 (define* (hline ch n #:key (win (stdscr) y x))
   (and (if (and y x)
 	   (wmove win y x)
 	   #t)
        (%whline win ch n)))
+
+(define* (inch win #:key y x)
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%winch win)))
+
+(define* (insch win ch #:key y x)
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%winsch win ch)))
 
 (define* (insdelln win n #:key y x)
   (and
@@ -541,6 +542,13 @@
        #t)
    (%winsdelln win 1)))
 
+(define* (insstr win str #:key y x (n -1))
+  (and
+   (if (and y x)
+       (wmove win y x)
+       #t))
+  (%winsnstr win str n))
+
 ;; The window information isn't used in the lower level function, so
 ;; it is dropped here
 (define (intrflush flag)
@@ -548,6 +556,9 @@
 
 (define* (nodelay flag #:key (win (stdscr)))
   (%nodelay win flag))
+
+(define (nooutrefresh win)
+  (%wnoutrefresh win))
 
 (define* (notimeout flag #:key (win (stdscr)))
   (%notimeout win flag))
@@ -559,6 +570,12 @@
 ;; it is dropped here.
 (define (meta bf)
   (%meta (stdscr) bf))
+
+(define (redrawln win beg_line end_line)
+  (%wredrawln win beg_line end_line)
+
+(define (refresh win)
+  (%wrefresh win))
 
 (define* (setscrreg top bot #:key (win (stdscr)))
   (%wsetscrreg win top bot))

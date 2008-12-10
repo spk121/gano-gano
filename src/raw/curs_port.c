@@ -116,9 +116,65 @@ gucu_newterm (SCM type, SCM inp, SCM outp)
   return s_ret;
 }
 
+/* Create a window based on data saved by putwin */
+SCM
+gucu_getwin (SCM port)
+{
+  FILE *fp;
+  WINDOW *c_win;
+
+  SCM_ASSERT (scm_is_true (scm_input_port_p (port)), port, SCM_ARG1, "getwin");
+
+  fp = fopencookie (&port, "rb", port_func);
+
+  if (fp == NULL)
+    return SCM_BOOL_F;
+
+  c_win = getwin (fp);
+
+  fclose (fp);
+
+  if (c_win == NULL)
+    return SCM_BOOL_F;
+
+  return _scm_from_window (c_win);
+}
+
+
+/* Writes all of the data associated with a window to a given port */
+SCM
+gucu_putwin (SCM win, SCM port)
+{
+  WINDOW *c_win;
+  FILE *fp;
+  int ret;
+  
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "putwin");
+  SCM_ASSERT (scm_is_true (scm_output_port_p (port)), port, SCM_ARG2, 
+	      "putwin");
+
+  c_win = _scm_to_window (win);
+  fp = fopencookie (&port, "wb", port_func);
+
+  if (fp == NULL)
+    return SCM_BOOL_F;
+
+  ret = putwin (c_win, c_port);
+
+  fclose (fp);
+
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
+}
+
+
+
 void
 gucu_init_port ()
 {
   scm_c_define_gsubr ("newterm", 3, 0, 0, gucu_newterm);
-  //scm_c_define_gsubr ("newterm-port", 3, 0, 0, gucu_newterm_port);
+  scm_c_define_gsubr ("getwin", 1, 0, 0, gucu_getwin);
+  scm_c_define_gsubr ("putwin", 2, 0, 0, gucu_putwin);
 }
