@@ -378,26 +378,16 @@ _scm_from_voidstring (void *x)
 int 
 _scm_is_window (SCM x)
 {
-  scm_t_bits tag;
-  if (! SCM_IMP(x))
+  if (SCM_SMOB_PREDICATE (window_tag, x))
     {
-      tag = SCM_TYP16(x);
+      if (SCM_SMOB_DATA (x) != NULL)
+	return 1;
+      else
+	return 0;
     }
   else
-    {
-      tag = -1;
-    }
+    return 0;
   
-  if (window_tag == tag)
-    {
-      return 1;
-    }
-  else
-    {
-      return 0;
-    }
-
-  return SCM_SMOB_PREDICATE (window_tag, x);
 }
 
 WINDOW *
@@ -457,6 +447,12 @@ free_window (SCM x)
   // I'm not sure.
   if (win != NULL)
     {
+      /* This is going to break something */
+      delwin (win);
+      SCM_SET_SMOB_DATA (x, NULL);
+
+      /* Perhaps is should be like this? */
+#if 0      
       if (win == stdscr)
 	{
 	}
@@ -468,9 +464,8 @@ free_window (SCM x)
 	}
       else
 	{
-	  // delwin (win);
-	  // SCM_SET_SMOB_DATA (x, NULL);
 	}
+#endif
     }
 
   return 0;
@@ -484,20 +479,17 @@ print_window (SCM x, SCM port, scm_print_state *pstate)
 
   assert (win != NULL);
 
-  if (0)
-    {
-      fprintf (stderr, "Printing smob window at %d, %d\n",
-	       win->_begx, win->_begy);
-      fflush (stderr);
-    }
-
   scm_puts ("#<window ", port);
 
-  if (asprintf (&str, "%p", win) < 0)
-    scm_puts ("???", port);
+  if (win == 0)
+    scm_puts ("(freed)", port);
   else
-    scm_puts (str, port);
-
+    {
+      if (asprintf (&str, "%p", win) < 0)
+	scm_puts ("???", port);
+      else
+	scm_puts (str, port);
+    }
   scm_puts (">", port);
   
   // non-zero means success 
@@ -509,7 +501,6 @@ gucu_is_window_p (SCM x)
 {
   return scm_from_bool (_scm_is_window (x));
 }
-
 
 
 void 

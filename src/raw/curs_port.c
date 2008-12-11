@@ -159,7 +159,7 @@ gucu_putwin (SCM win, SCM port)
   if (fp == NULL)
     return SCM_BOOL_F;
 
-  ret = putwin (c_win, c_port);
+  ret = putwin (c_win, fp);
 
   fclose (fp);
 

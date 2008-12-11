@@ -84,8 +84,9 @@ am__libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES_DIST =  \
 	panel_spec.h panel_main.c form_const.c form_const.h \
 	form_func.c form_func.h form_type.c form_type.h form_spec.c \
 	form_spec.h form_main.c eti_const.c eti_const.h eti_main.c \
-	cursw_const.c cursw_const.h cursw_func.c cursw_func.h typew.c \
-	typew.h cursw_spec.c cursw_spec.h cursw_main.c
+	slk_func.c slk_func.h cursw_const.c cursw_const.h cursw_func.c \
+	cursw_func.h typew.c typew.h cursw_spec.c cursw_spec.h \
+	cursw_main.c
 @WIDE_TRUE@am__objects_1 = libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.lo \
 @WIDE_TRUE@	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_func.lo \
 @WIDE_TRUE@	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.lo \
@@ -113,6 +114,7 @@ am_libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_OBJECTS = libguile_guc
 	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_main.lo \
 	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_const.lo \
 	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.lo \
+	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo \
 	$(am__objects_1)
 libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_OBJECTS = $(am_libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_OBJECTS)
 libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LINK =  \
@@ -278,7 +280,7 @@ libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES =  \
 	panel_spec.h panel_main.c form_const.c form_const.h \
 	form_func.c form_func.h form_type.c form_type.h form_spec.c \
 	form_spec.h form_main.c eti_const.c eti_const.h eti_main.c \
-	$(am__append_2)
+	slk_func.c slk_func.h $(am__append_2)
 
 # -lguile added to LIBS by autoconf in the AC_CHECK_LIB test
 libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LIBADD = \
@@ -298,11 +300,12 @@ ETAGS_ARGS = curses.scm curses-alt.scm menu.scm panel.scm form.scm \
 EXTRA_DIST = \
 	curses.scm.in curses-wide.scm.in \
 	menu.scm.in panel.scm.in form.scm.in eti.scm.in \
+	slk.scm.in \
 	curses-alt.scm curses-wide-alt.scm
 
-BUILT_SOURCES = curses.scm menu.scm panel.scm form.scm eti.scm \
+BUILT_SOURCES = curses.scm menu.scm panel.scm form.scm eti.scm slk.scm \
 	$(am__append_5)
-CLEANFILES = curses.scm menu.scm panel.scm form.scm eti.scm \
+CLEANFILES = curses.scm menu.scm panel.scm form.scm eti.scm slk.scm \
 	$(am__append_6)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -399,6 +402,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_main.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_spec.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_type.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-type.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.Plo@am__quote@
 
@@ -576,6 +580,13 @@ libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.lo: eti_main.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='eti_main.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.lo `test -f 'eti_main.c' || echo '$(srcdir)/'`eti_main.c
+
+libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo: slk_func.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo `test -f 'slk_func.c' || echo '$(srcdir)/'`slk_func.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='slk_func.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo `test -f 'slk_func.c' || echo '$(srcdir)/'`slk_func.c
 
 libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.lo: cursw_const.c
 @am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.lo `test -f 'cursw_const.c' || echo '$(srcdir)/'`cursw_const.c
@@ -841,6 +852,11 @@ form.scm: form.scm.in
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 eti.scm: eti.scm.in
+	cat $< | \
+	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXpackageXX|$(PACKAGE)|' > $@
+
+slk.scm: slk.scm.in
 	cat $< | \
 	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@

@@ -44,7 +44,7 @@
 	    endwin
 	    erasechar
 	    erase
-	    ;; filter
+	    %filter
 	    flash
 	    flushinp
 	    getbkgd
@@ -65,12 +65,11 @@
 	    insch
 	    insdelln
 	    insertln
-	    insnstr
 	    insstr
 	    intrflush
 	    isendwin
-	    is-linetouched
-	    is-wintouched
+	    is-linetouched?
+	    is-wintouched?
 	    key-f
 	    keyname
 	    keypad
@@ -82,17 +81,7 @@
 	    move
 	    mvcur
 	    mvderwin
-	    mvgetch
-	    mvinch
-	    mvinsch
-	    mvinsnstr
-	    mvinsstr
-	    mvwgetch
 	    mvwin
-	    mvwinch
-	    mvwinsch
-	    mvwinsnstr
-	    mvwinsstr
 	    napms
 	    newpad
 	    newwin
@@ -101,6 +90,7 @@
 	    nodelay
 	    noecho
 	    nonl
+	    nooutrefresh
 	    noqiflush
 	    noraw
 	    notimeout
@@ -110,11 +100,11 @@
 	    pechochar
 	    pnoutrefresh
 	    prefresh
-	    putp
 	    putwin
 	    qiflush
 	    raw
 	    redrawwin
+	    redrawln
 	    refresh
 	    reset-prog-mode
 	    reset-shell-mode
@@ -130,21 +120,6 @@
 	    setscrreg
 	    set-term
 	    setsyx
-	    slk-attr-off
-	    slk-attroff
-	    slk-attr-on
-	    slk-attron
-	    slk-attr-set
-	    slk-attrset
-	    slk-clear
-	    slk-color
-	    slk-init
-	    slk-label
-	    slk-noutrefresh
-	    slk-refresh
-	    slk-restore
-	    slk-set
-	    slk-touch
 	    standend
 	    standout
 	    start-color
@@ -153,35 +128,17 @@
 	    syncok
 	    termattrs
 	    termname
-	    tgetent
-	    tigetflag
-	    tigetnum
-	    tigetstr
 	    timeout
-	    touchline
-	    touchwin
 	    typeahead
 	    ungetch
 	    untouchwin
 	    use-default-colors
 	    use-env
-	    vidattr
 	    vline
 	    wcursyncup
 	    wenclose
-	    wgetch
-	    winch
-	    winsch
-	    winsnstr
-	    winsstr
-	    wmove
-	    wnoutrefresh
-	    wredrawln
-	    wrefresh
-	    wscrl
 	    wsyncup
 	    wsyncdown
-	    wtouchln
 	    EOF
 	    ERR
 	    FALSE
@@ -521,11 +478,29 @@
 (define* (getbkgd #:key (win (stdscr)))
   (%getbkgd win))
 
+(define* (getch win #:key y x)
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%wgetch win)))
+  
 (define* (hline ch n #:key (win (stdscr) y x))
   (and (if (and y x)
 	   (wmove win y x)
 	   #t)
        (%whline win ch n)))
+
+(define* (inch win #:key y x)
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%winch win)))
+
+(define* (insch win ch #:key y x)
+  (and (if (and y x)
+	   (wmove win y x)
+	   #t)
+       (%winsch win ch)))
 
 (define* (insdelln win n #:key y x)
   (and
@@ -541,16 +516,17 @@
        #t)
    (%winsdelln win 1)))
 
+(define* (insstr win str #:key y x (n -1))
+  (and
+   (if (and y x)
+       (wmove win y x)
+       #t))
+  (%winsnstr win str n))
+
 ;; The window information isn't used in the lower level function, so
 ;; it is dropped here
 (define (intrflush flag)
   (%intrflush (stdscr) flag))
-
-(define* (nodelay flag #:key (win (stdscr)))
-  (%nodelay win flag))
-
-(define* (notimeout flag #:key (win (stdscr)))
-  (%notimeout win flag))
 
 (define* (keypad bf #:key (win (stdscr)))
   (%keypad win bf))
@@ -559,6 +535,30 @@
 ;; it is dropped here.
 (define (meta bf)
   (%meta (stdscr) bf))
+
+(define (move win y x)
+  (%wmove win y x))
+
+(define* (nodelay flag #:key (win (stdscr)))
+  (%nodelay win flag))
+
+(define (nooutrefresh win)
+  (%wnoutrefresh win))
+
+(define* (notimeout flag #:key (win (stdscr)))
+  (%notimeout win flag))
+
+(define (redrawln win beg_line end_line)
+  (%wredrawln win beg_line end_line)
+
+(define (refresh win)
+  (%wrefresh win))
+
+(define (scroll win)
+  (%wscrl win 1))
+
+(define (scrl win n)
+  (%wscrl win n))
 
 (define* (setscrreg top bot #:key (win (stdscr)))
   (%wsetscrreg win top bot))
@@ -571,6 +571,18 @@
 
 (define* (timeout bf #:key (win (stdscr)))
   (%wtimeout win bf))
+
+(define (touchwin win)
+  (%wtouchln win 0 (getmaxy win) #t))
+
+(define (untouchwin win)
+  (%wtouchln win 0 (getmaxy win) #f))
+
+(define (touchline win start #:optional (count 1))
+  (%wtouchln win start count #t))
+
+(define (untouchline win start #:optional (count 1))
+  (%wtouchln win start count #f))
 
 (define (typeahead port-or-fd)
   (cond 
