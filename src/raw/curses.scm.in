@@ -68,8 +68,8 @@
 	    insstr
 	    intrflush
 	    isendwin
-	    is-linetouched
-	    is-wintouched
+	    is-linetouched?
+	    is-wintouched?
 	    key-f
 	    keyname
 	    keypad
@@ -100,7 +100,6 @@
 	    pechochar
 	    pnoutrefresh
 	    prefresh
-	    putp
 	    putwin
 	    qiflush
 	    raw
@@ -121,21 +120,6 @@
 	    setscrreg
 	    set-term
 	    setsyx
-	    slk-attr-off
-	    slk-attroff
-	    slk-attr-on
-	    slk-attron
-	    slk-attr-set
-	    slk-attrset
-	    slk-clear
-	    slk-color
-	    slk-init
-	    slk-label
-	    slk-noutrefresh
-	    slk-refresh
-	    slk-restore
-	    slk-set
-	    slk-touch
 	    standend
 	    standout
 	    start-color
@@ -144,27 +128,17 @@
 	    syncok
 	    termattrs
 	    termname
-	    tgetent
-	    tigetflag
-	    tigetnum
-	    tigetstr
 	    timeout
-	    touchline
-	    touchwin
 	    typeahead
 	    ungetch
 	    untouchwin
 	    use-default-colors
 	    use-env
-	    vidattr
 	    vline
 	    wcursyncup
 	    wenclose
-	    wmove
-	    wscrl
 	    wsyncup
 	    wsyncdown
-	    wtouchln
 	    EOF
 	    ERR
 	    FALSE
@@ -554,6 +528,17 @@
 (define (intrflush flag)
   (%intrflush (stdscr) flag))
 
+(define* (keypad bf #:key (win (stdscr)))
+  (%keypad win bf))
+
+;; The window information isn't used in the lower level function, so
+;; it is dropped here.
+(define (meta bf)
+  (%meta (stdscr) bf))
+
+(define (move win y x)
+  (%wmove win y x))
+
 (define* (nodelay flag #:key (win (stdscr)))
   (%nodelay win flag))
 
@@ -563,19 +548,17 @@
 (define* (notimeout flag #:key (win (stdscr)))
   (%notimeout win flag))
 
-(define* (keypad bf #:key (win (stdscr)))
-  (%keypad win bf))
-
-;; The window information isn't used in the lower level function, so
-;; it is dropped here.
-(define (meta bf)
-  (%meta (stdscr) bf))
-
 (define (redrawln win beg_line end_line)
   (%wredrawln win beg_line end_line)
 
 (define (refresh win)
   (%wrefresh win))
+
+(define (scroll win)
+  (%wscrl win 1))
+
+(define (scrl win n)
+  (%wscrl win n))
 
 (define* (setscrreg top bot #:key (win (stdscr)))
   (%wsetscrreg win top bot))
@@ -588,6 +571,18 @@
 
 (define* (timeout bf #:key (win (stdscr)))
   (%wtimeout win bf))
+
+(define (touchwin win)
+  (%wtouchln win 0 (getmaxy win) #t))
+
+(define (untouchwin win)
+  (%wtouchln win 0 (getmaxy win) #f))
+
+(define (touchline win start #:optional (count 1))
+  (%wtouchln win start count #t))
+
+(define (untouchline win start #:optional (count 1))
+  (%wtouchln win start count #f))
 
 (define (typeahead port-or-fd)
   (cond 

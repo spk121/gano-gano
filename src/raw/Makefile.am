@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.14 2008/12/10 14:39:36 spike_gran Exp $
+## $Id: Makefile.am,v 1.15 2008/12/11 06:49:44 spike_gran Exp $
 
 # COMPILE_FLAGS = -Wall -W -Wunused-parameter -Wstrict-prototypes \
 # 	-Wmissing-prototypes -Wpointer-arith \
@@ -42,7 +42,8 @@ libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES = \
 	form_spec.c form_spec.h \
 	form_main.c \
 	eti_const.c eti_const.h \
-	eti_main.c
+	eti_main.c \
+	slk_func.c slk_func.h
 
 
 
@@ -76,10 +77,11 @@ ETAGS_ARGS = curses.scm curses-alt.scm menu.scm panel.scm form.scm eti.scm
 EXTRA_DIST = \
 	curses.scm.in curses-wide.scm.in \
 	menu.scm.in panel.scm.in form.scm.in eti.scm.in \
+	slk.scm.in \
 	curses-alt.scm curses-wide-alt.scm
 
-BUILT_SOURCES = curses.scm menu.scm panel.scm form.scm eti.scm
-CLEANFILES = curses.scm menu.scm panel.scm form.scm eti.scm
+BUILT_SOURCES = curses.scm menu.scm panel.scm form.scm eti.scm slk.scm
+CLEANFILES = curses.scm menu.scm panel.scm form.scm eti.scm slk.scm
 
 curses.scm: curses.scm.in
 	cat $< | \
@@ -102,6 +104,11 @@ form.scm: form.scm.in
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 eti.scm: eti.scm.in
+	cat $< | \
+	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXpackageXX|$(PACKAGE)|' > $@
+
+slk.scm: slk.scm.in
 	cat $< | \
 	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@

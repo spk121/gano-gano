@@ -1,12 +1,8 @@
-
 #include <libguile.h>
 #include <curses.h>
 #include <config.h>
 #include "curs_func.h"
 #include "type.h"
-#include "term.h"
-#define _GNU_SOURCE
-#define cstring_t cchar_t
 
 /* Assign the colors to color pair zero */
 SCM
@@ -578,45 +574,54 @@ gucu_isendwin ()
   return s_ret;
 }
 
+/* Return #t if line has been altered since last refresh */
 SCM
-gucu_is_linetouched (SCM arg1, SCM arg2)
+gucu_is_linetouched (SCM win, SCM line)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "is-linetouched");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "is-linetouched");
+  WINDOW *c_win;
+  int c_line;
+  bool ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "is-linetouched?");
+  SCM_ASSERT (scm_is_integer (line), line, SCM_ARG2, "is-linetouched?");
 
-	bool ret = is_linetouched (c_arg1, c_arg2);
-	SCM s_ret = scm_from_bool (ret);
+  c_win = _scm_to_window (win);
+  c_line = scm_to_int (line);
 
-	return s_ret;
+  ret = is_linetouched (c_win, c_line);
+  
+  return scm_from_bool (ret);
 }
 
+/* Return #t if window has been altered since last refresh */
 SCM
-gucu_is_wintouched (SCM arg1)
+gucu_is_wintouched (SCM win)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "is-wintouched");
+  WINDOW *c_win;
+  bool ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "is-wintouched?");
 
-	bool ret = is_wintouched (c_arg1);
-	SCM s_ret = scm_from_bool (ret);
+  c_win = _scm_to_window (win);
 
-	return s_ret;
+  ret = is_wintouched (c_win);
+
+  return scm_from_bool (ret);
 }
 
+/* Return the function key value that corresponds to a function key */
 SCM
-gucu_KEY_F (SCM arg1)
+gucu_KEY_F (SCM n)
 {
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "key-f");
+  int c_n, ret;
 
-	int c_arg1 = scm_to_int (arg1);
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG1, "key-f");
 
-	int ret = KEY_F (c_arg1);
-	SCM s_ret = scm_from_int (ret);
+  c_n = scm_to_int (n);
 
-	return s_ret;
+  ret = KEY_F (c_n);
+
+  return scm_from_int (ret);
 }
 
 /* Returns a character string corresponding to the short key name */
@@ -722,51 +727,42 @@ gucu_meta (SCM win, SCM bf)
   return SCM_BOOL_T;
 }
 
+/* Set the maximum time between click and release for something to register 
+   as a button press */
 SCM
-gucu_mouseinterval (SCM arg1)
+gucu_mouseinterval (SCM thousandths)
 {
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "mouseinterval");
+  int c_thousandths, ret;
 
-	int c_arg1 = scm_to_int (arg1);
+  SCM_ASSERT (scm_is_integer (thousandths), thousandths, SCM_ARG1, 
+	      "mouseinterval");
 
-	int ret = mouseinterval (c_arg1);
-	SCM s_ret = scm_from_int (ret);
+  c_thousandths = scm_to_int (thousandths);
 
-	return s_ret;
+  ret = mouseinterval (c_thousandths);
+  
+  return scm_from_int (ret);
 }
 
+/* Low-level cursor function: move from old to new position.  Works
+   immediated. DEPRECATED?  Who would ever use this?*/
 SCM
-gucu_move (SCM arg1, SCM arg2)
+gucu_mvcur (SCM oldy, SCM oldx, SCM arg3, SCM arg4)
 {
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "move");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "move");
+  int c_oldy, c_oldx, c_newy, c_newx, ret;
 
-	int c_arg1 = scm_to_int (arg1);
-	int c_arg2 = scm_to_int (arg2);
+  SCM_ASSERT (scm_is_integer (oldy), oldy, SCM_ARG1, "mvcur");
+  SCM_ASSERT (scm_is_integer (oldx), oldx, SCM_ARG2, "mvcur");
+  SCM_ASSERT (scm_is_integer (newy), newy, SCM_ARG3, "mvcur");
+  SCM_ASSERT (scm_is_integer (newx), newx, SCM_ARG4, "mvcur");
+  
+  c_oldy = scm_to_int (oldy);
+  c_oldx = scm_to_int (oldx);
+  c_newy = scm_to_int (newy);
+  c_newx = scm_to_int (newx);
 
-	int ret = move (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_mvcur (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "mvcur");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "mvcur");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "mvcur");
-	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "mvcur");
-
-	int c_arg1 = scm_to_int (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
-	int c_arg4 = scm_to_int (arg4);
-
-	int ret = mvcur (c_arg1, c_arg2, c_arg3, c_arg4);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  ret = mvcur (c_oldy, c_oldx, c_newy, c_newx);
+  return scm_from_int (ret);
 }
 
 /* Move a derived window inside its parent window */
@@ -1086,20 +1082,6 @@ gucu_prefresh (SCM arg1, SCM arg2, SCM arg3, SCM arg4, SCM arg5, SCM arg6, SCM a
 	return s_ret;
 }
 
-SCM
-gucu_putp (SCM arg1)
-{
-	SCM_ASSERT (scm_is_string (arg1), arg1, SCM_ARG1, "putp");
-
-	 char *c_arg1 = scm_to_locale_string (arg1);
-
-	int ret = putp (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg1);
-
-	return s_ret;
-}
 /* Flush queues on interupts */
 SCM
 gucu_qiflush ()
@@ -1205,32 +1187,6 @@ gucu_scr_init (SCM arg1)
 	return s_ret;
 }
 
-SCM
-gucu_scrl (SCM arg1)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "scrl");
-
-	int c_arg1 = scm_to_int (arg1);
-
-	int ret = scrl (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_scroll (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "scroll");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-
-	int ret = scroll (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
 /* If true, the window will scroll when the cursor touches the end of
    the screen */
 SCM
@@ -1314,196 +1270,6 @@ gucu_set_term (SCM newterminal)
   
   return _scm_from_screen (c_oldterminal);
 }
-
-SCM
-gucu_slk_attr_off (SCM arg1, SCM arg2)
-{
-	SCM_ASSERT (_scm_is_attr (arg1), arg1, SCM_ARG1, "slk-attr-off");
-	SCM_ASSERT (_scm_is_voidstring (arg2), arg2, SCM_ARG2, "slk-attr-off");
-
-	const attr_t c_arg1 = _scm_to_attr (arg1);
-	void *c_arg2 = _scm_to_voidstring (arg2);
-
-	int ret = slk_attr_off (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_attroff (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "slk-attroff");
-
-	const chtype c_arg1 = _scm_to_chtype (arg1);
-
-	int ret = slk_attroff (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_attr_on (SCM arg1, SCM arg2)
-{
-	SCM_ASSERT (_scm_is_attr (arg1), arg1, SCM_ARG1, "slk-attr-on");
-	SCM_ASSERT (_scm_is_voidstring (arg2), arg2, SCM_ARG2, "slk-attr-on");
-
-	const attr_t c_arg1 = _scm_to_attr (arg1);
-	void *c_arg2 = _scm_to_voidstring (arg2);
-
-	int ret = slk_attr_on (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_attron (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "slk-attron");
-
-	const chtype c_arg1 = _scm_to_chtype (arg1);
-
-	int ret = slk_attron (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_attr_set (SCM arg1, SCM arg2, SCM arg3)
-{
-	SCM_ASSERT (_scm_is_attr (arg1), arg1, SCM_ARG1, "slk-attr-set");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "slk-attr-set");
-	SCM_ASSERT (_scm_is_voidstring (arg3), arg3, SCM_ARG3, "slk-attr-set");
-
-	const attr_t c_arg1 = _scm_to_attr (arg1);
-	short c_arg2 = scm_to_short (arg2);
-	void *c_arg3 = _scm_to_voidstring (arg3);
-
-	int ret = slk_attr_set (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_attrset (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "slk-attrset");
-
-	const chtype c_arg1 = _scm_to_chtype (arg1);
-
-	int ret = slk_attrset (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_clear ()
-{
-	int ret = slk_clear ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_color (SCM arg1)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "slk-color");
-
-	short c_arg1 = scm_to_short (arg1);
-
-	int ret = slk_color (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_init (SCM arg1)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "slk-init");
-
-	int c_arg1 = scm_to_int (arg1);
-
-	int ret = slk_init (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_label (SCM arg1)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "slk-label");
-
-	int c_arg1 = scm_to_int (arg1);
-
-	char * ret = slk_label (c_arg1);
-	SCM s_ret = scm_from_locale_string (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_noutrefresh ()
-{
-	int ret = slk_noutrefresh ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_refresh ()
-{
-	int ret = slk_refresh ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_restore ()
-{
-	int ret = slk_restore ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_set (SCM arg1, SCM arg2, SCM arg3)
-{
-	SCM_ASSERT (scm_is_integer (arg1), arg1, SCM_ARG1, "slk-set");
-	SCM_ASSERT (scm_is_string (arg2), arg2, SCM_ARG2, "slk-set");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "slk-set");
-
-	int c_arg1 = scm_to_int (arg1);
-	 char *c_arg2 = scm_to_locale_string (arg2);
-	int c_arg3 = scm_to_int (arg3);
-
-	int ret = slk_set (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg2);
-
-	return s_ret;
-}
-
-SCM
-gucu_slk_touch ()
-{
-	int ret = slk_touch ();
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
 /* Initialize the color subsystem. */
 SCM
 gucu_start_color ()
@@ -1616,92 +1382,6 @@ gucu_termname ()
   return s_ret;
 }
 
-SCM
-gucu_tgetent (SCM arg1, SCM arg2)
-{
-	SCM_ASSERT (_scm_is_voidstring (arg1), arg1, SCM_ARG1, "tgetent");
-	SCM_ASSERT (scm_is_string (arg2), arg2, SCM_ARG2, "tgetent");
-
-	void *c_arg1 = _scm_to_voidstring (arg1);
-	 char *c_arg2 = scm_to_locale_string (arg2);
-
-	int ret = tgetent (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	free (c_arg2);
-
-	return s_ret;
-}
-
-SCM
-gucu_tigetflag (SCM arg1)
-{
-	SCM_ASSERT (scm_is_string (arg1), arg1, SCM_ARG1, "tigetflag");
-
-	char *c_arg1 = scm_to_locale_string (arg1);
-
-	int ret = tigetflag (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_tigetnum (SCM arg1)
-{
-	SCM_ASSERT (scm_is_string (arg1), arg1, SCM_ARG1, "tigetnum");
-
-	char *c_arg1 = scm_to_locale_string (arg1);
-
-	int ret = tigetnum (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_tigetstr (SCM arg1)
-{
-	SCM_ASSERT (scm_is_string (arg1), arg1, SCM_ARG1, "tigetstr");
-
-	char *c_arg1 = scm_to_locale_string (arg1);
-
-	char * ret = tigetstr (c_arg1);
-	SCM s_ret = scm_from_locale_string (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_touchline (SCM arg1, SCM arg2, SCM arg3)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "touchline");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "touchline");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "touchline");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
-
-	int ret = touchline (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
-SCM
-gucu_touchwin (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "touchwin");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-
-	int ret = touchwin (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
 /* Given a file descriptor, se special optimizations looking for line breaks */
 SCM
 gucu_typeahead (SCM fd)
@@ -1734,19 +1414,6 @@ gucu_ungetch (SCM ch)
     return SCM_BOOL_F;
 
   return SCM_BOOL_T;
-}
-
-SCM
-gucu_untouchwin (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "untouchwin");
-
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-
-	int ret = untouchwin (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
 }
 
 /* Assign the terminal default colors to the special color number -1 */
@@ -1791,20 +1458,6 @@ gucu_use_extended_names (SCM bf)
 
   return SCM_BOOL_T;
 }
-
-SCM
-gucu_vidattr (SCM arg1)
-{
-	SCM_ASSERT (_scm_is_chtype (arg1), arg1, SCM_ARG1, "vidattr");
-
-	chtype c_arg1 = _scm_to_chtype (arg1);
-
-	int ret = vidattr (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
-}
-
 
 /* Put the character ch into the window at its current position, which
    is then advanced. */
@@ -2165,21 +1818,25 @@ gucu_wechochar (SCM win, SCM ch)
   return SCM_BOOL_T;
 }
 
+/* return #t if y,x is enclosed by win */
 SCM
-gucu_wenclose (SCM arg1, SCM arg2, SCM arg3)
+gucu_wenclose (SCM win, SCM y, SCM x)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wenclose");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "wenclose");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "wenclose");
+  WINDOW *c_win;
+  int c_y, c_x;
+  bool ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wenclose");
+  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "wenclose");
+  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "wenclose");
 
-	bool ret = wenclose (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_bool (ret);
+  c_win = _scm_to_window (win);
+  c_y = scm_to_int (y);
+  c_x = scm_to_int (x);
 
-	return s_ret;
+  ret = wenclose (c_win, c_y, c_x);
+
+  return scm_from_bool (ret);
 }
 
 /* Copy blanks into every position in the window */
@@ -2321,21 +1978,26 @@ gucu_winsnstr (SCM win, SCM str, SCM n)
   return SCM_BOOL_T;
 }
 
+/* Move the cursor to y, x */
 SCM
-gucu_wmove (SCM arg1, SCM arg2, SCM arg3)
+gucu_wmove (SCM win, SCM y, SCM x)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wmove");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "wmove");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "wmove");
+  WINDOW *c_win;
+  int c_y, c_x, ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wmove");
+  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "%wmove");
+  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "%wmove");
+  
+  c_win = _scm_to_window (win);
+  c_y = scm_to_int (y);
+  c_x = scm_to_int (x);
 
-	int ret = wmove (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
+  ret = wmove (c_win, c_y, c_x);
+  if (ret == ERR)
+    return SCM_BOOL_T;
 
-	return s_ret;
+  return SCM_BOOL_F;
 }
 
 SCM
@@ -2395,19 +2057,24 @@ gucu_wrefresh (SCM win)
   return SCM_BOOL_T;
 }
 
+/* Scroll the window N lines.  Positive N == up. Negative N == down */
 SCM
-gucu_wscrl (SCM arg1, SCM arg2)
+gucu_wscrl (SCM win, SCM n)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wscrl");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "wscrl");
+  WINDOW *c_win;
+  int c_n, ret;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wscrl");
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG2, "%wscrl");
+  
+  c_win = _scm_to_window (win);
+  c_n = scm_to_int (n);
 
-	int ret = wscrl (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  ret = wscrl (c_win, c_n);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+  
+  return SCM_BOOL_T;
 }
 
 /* set the scroll region for the window to be between TOP and BOT */
@@ -2515,23 +2182,29 @@ gucu_wtimeout (SCM win, SCM delay)
   return SCM_UNSPECIFIED;
 }
 
+/* Set the lines from y to y+s as either changed (#t) or unchanged (#f) */
 SCM
-gucu_wtouchln (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
+gucu_wtouchln (SCM win, SCM y, SCM n, SCM touched)
 {
-	SCM_ASSERT (_scm_is_window (arg1), arg1, SCM_ARG1, "wtouchln");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "wtouchln");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "wtouchln");
-	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "wtouchln");
+  WINDOW *c_win;
+  int c_y, c_n, ret;
+  bool c_touched;
 
-	WINDOW *c_arg1 = _scm_to_window (arg1);
-	int c_arg2 = scm_to_int (arg2);
-	int c_arg3 = scm_to_int (arg3);
-	int c_arg4 = scm_to_int (arg4);
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wtouchln");
+  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "%wtouchln");
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG3, "%wtouchln");
+  SCM_ASSERT (scm_is_bool (touched), touched, SCM_ARG4, "%wtouchln");
 
-	int ret = wtouchln (c_arg1, c_arg2, c_arg3, c_arg4);
-	SCM s_ret = scm_from_int (ret);
+  c_win = _scm_to_window (win);
+  c_y = scm_to_int (y);
+  c_n = scm_to_int (n);
+  c_touched = scm_to_bool (touched);
 
-	return s_ret;
+  ret = wtouchln (c_win, c_y, c_n, c_touched);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return SCM_BOOL_T;
 }
 
 /* Draw a vertical line with the given character that is N characters
@@ -2603,8 +2276,8 @@ gucu_init_function ()
 	scm_c_define_gsubr ("insnstr", 2, 0, 0, gucu_insnstr);
 	scm_c_define_gsubr ("%intrflush", 2, 0, 0, gucu_intrflush);
 	scm_c_define_gsubr ("isendwin", 0, 0, 0, gucu_isendwin);
-	scm_c_define_gsubr ("is-linetouched", 2, 0, 0, gucu_is_linetouched);
-	scm_c_define_gsubr ("is-wintouched", 1, 0, 0, gucu_is_wintouched);
+	scm_c_define_gsubr ("is-linetouched?", 2, 0, 0, gucu_is_linetouched);
+	scm_c_define_gsubr ("is-wintouched?", 1, 0, 0, gucu_is_wintouched);
 	scm_c_define_gsubr ("key-f", 1, 0, 0, gucu_KEY_F);
 	scm_c_define_gsubr ("keyname", 1, 0, 0, gucu_keyname);
 	scm_c_define_gsubr ("%keypad", 2, 0, 0, gucu_keypad);
@@ -2613,7 +2286,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("longname", 0, 0, 0, gucu_longname);
 	scm_c_define_gsubr ("%meta", 2, 0, 0, gucu_meta);
 	scm_c_define_gsubr ("mouseinterval", 1, 0, 0, gucu_mouseinterval);
-	scm_c_define_gsubr ("move", 2, 0, 0, gucu_move);
 	scm_c_define_gsubr ("mvcur", 4, 0, 0, gucu_mvcur);
 	scm_c_define_gsubr ("mvderwin", 3, 0, 0, gucu_mvderwin);
 	scm_c_define_gsubr ("mvinsnstr", 4, 0, 0, gucu_mvinsnstr);
@@ -2635,7 +2307,6 @@ gucu_init_function ()
 	scm_c_define_gsubr ("pechochar", 2, 0, 0, gucu_pechochar);
 	scm_c_define_gsubr ("pnoutrefresh", 7, 0, 0, gucu_pnoutrefresh);
 	scm_c_define_gsubr ("prefresh", 7, 0, 0, gucu_prefresh);
-	scm_c_define_gsubr ("putp", 1, 0, 0, gucu_putp);
 	scm_c_define_gsubr ("qiflush", 0, 0, 0, gucu_qiflush);
 	scm_c_define_gsubr ("raw", 0, 0, 0, gucu_raw);
 	scm_c_define_gsubr ("redrawwin", 1, 0, 0, gucu_redrawwin);
@@ -2645,49 +2316,24 @@ gucu_init_function ()
 	scm_c_define_gsubr ("savetty", 0, 0, 0, gucu_savetty);
 	scm_c_define_gsubr ("scr-dump", 1, 0, 0, gucu_scr_dump);
 	scm_c_define_gsubr ("scr-init", 1, 0, 0, gucu_scr_init);
-	scm_c_define_gsubr ("scrl", 1, 0, 0, gucu_scrl);
-	scm_c_define_gsubr ("scroll", 1, 0, 0, gucu_scroll);
 	scm_c_define_gsubr ("scrollok", 2, 0, 0, gucu_scrollok);
 	scm_c_define_gsubr ("scr-restore", 1, 0, 0, gucu_scr_restore);
 	scm_c_define_gsubr ("scr-set", 1, 0, 0, gucu_scr_set);
 	scm_c_define_gsubr ("set-term", 1, 0, 0, gucu_set_term);
 	scm_c_define_gsubr ("setsyx", 2, 0, 0, gucu_setsyx);
-	scm_c_define_gsubr ("slk-attr-off", 2, 0, 0, gucu_slk_attr_off);
-	scm_c_define_gsubr ("slk-attroff", 1, 0, 0, gucu_slk_attroff);
-	scm_c_define_gsubr ("slk-attr-on", 2, 0, 0, gucu_slk_attr_on);
-	scm_c_define_gsubr ("slk-attron", 1, 0, 0, gucu_slk_attron);
-	scm_c_define_gsubr ("slk-attr-set", 3, 0, 0, gucu_slk_attr_set);
-	scm_c_define_gsubr ("slk-attrset", 1, 0, 0, gucu_slk_attrset);
-	scm_c_define_gsubr ("slk-clear", 0, 0, 0, gucu_slk_clear);
-	scm_c_define_gsubr ("slk-color", 1, 0, 0, gucu_slk_color);
-	scm_c_define_gsubr ("slk-init", 1, 0, 0, gucu_slk_init);
-	scm_c_define_gsubr ("slk-label", 1, 0, 0, gucu_slk_label);
-	scm_c_define_gsubr ("slk-noutrefresh", 0, 0, 0, gucu_slk_noutrefresh);
-	scm_c_define_gsubr ("slk-refresh", 0, 0, 0, gucu_slk_refresh);
-	scm_c_define_gsubr ("slk-restore", 0, 0, 0, gucu_slk_restore);
-	scm_c_define_gsubr ("slk-set", 3, 0, 0, gucu_slk_set);
-	scm_c_define_gsubr ("slk-touch", 0, 0, 0, gucu_slk_touch);
 	scm_c_define_gsubr ("start-color", 0, 0, 0, gucu_start_color);
 	scm_c_define_gsubr ("subpad", 5, 0, 0, gucu_subpad);
 	scm_c_define_gsubr ("subwin", 5, 0, 0, gucu_subwin);
 	scm_c_define_gsubr ("syncok", 2, 0, 0, gucu_syncok);
 	scm_c_define_gsubr ("termattrs", 0, 0, 0, gucu_termattrs);
 	scm_c_define_gsubr ("termname", 0, 0, 0, gucu_termname);
-	scm_c_define_gsubr ("tgetent", 2, 0, 0, gucu_tgetent);
-	scm_c_define_gsubr ("tigetflag", 1, 0, 0, gucu_tigetflag);
-	scm_c_define_gsubr ("tigetnum", 1, 0, 0, gucu_tigetnum);
-	scm_c_define_gsubr ("tigetstr", 1, 0, 0, gucu_tigetstr);
-	scm_c_define_gsubr ("touchline", 3, 0, 0, gucu_touchline);
-	scm_c_define_gsubr ("touchwin", 1, 0, 0, gucu_touchwin);
 	scm_c_define_gsubr ("typeahead", 1, 0, 0, gucu_typeahead);
 	scm_c_define_gsubr ("ungetch", 1, 0, 0, gucu_ungetch);
-	scm_c_define_gsubr ("untouchwin", 1, 0, 0, gucu_untouchwin);
 	scm_c_define_gsubr ("use-default-colors", 0, 0, 0, 
 			    gucu_use_default_colors);
 	scm_c_define_gsubr ("use-env", 1, 0, 0, gucu_use_env);
 	scm_c_define_gsubr ("use-extended-names", 1, 0, 0, 
 			    gucu_use_extended_names);
-	scm_c_define_gsubr ("vidattr", 1, 0, 0, gucu_vidattr);
 	scm_c_define_gsubr ("%waddch", 2, 0, 0, gucu_waddch);
 	scm_c_define_gsubr ("%waddchnstr", 3, 0, 0, gucu_waddchnstr);
 	scm_c_define_gsubr ("%waddnstr", 3, 0, 0, gucu_waddnstr);
@@ -2712,17 +2358,17 @@ gucu_init_function ()
 	scm_c_define_gsubr ("%winsch", 2, 0, 0, gucu_winsch);
 	scm_c_define_gsubr ("%winsdelln", 2, 0, 0, gucu_winsdelln);
 	scm_c_define_gsubr ("%winsnstr", 3, 0, 0, gucu_winsnstr);
-	scm_c_define_gsubr ("wmove", 3, 0, 0, gucu_wmove);
+	scm_c_define_gsubr ("%wmove", 3, 0, 0, gucu_wmove);
 	scm_c_define_gsubr ("wnoutrefresh", 1, 0, 0, gucu_wnoutrefresh);
 	scm_c_define_gsubr ("%wredrawln", 3, 0, 0, gucu_wredrawln);
 	scm_c_define_gsubr ("%wrefresh", 1, 0, 0, gucu_wrefresh);
-	scm_c_define_gsubr ("wscrl", 2, 0, 0, gucu_wscrl);
+	scm_c_define_gsubr ("%wscrl", 2, 0, 0, gucu_wscrl);
 	scm_c_define_gsubr ("%wsetscrreg", 3, 0, 0, gucu_wsetscrreg);
 	scm_c_define_gsubr ("%wstandend", 1, 0, 0, gucu_wstandend);
 	scm_c_define_gsubr ("%wstandout", 1, 0, 0, gucu_wstandout);
 	scm_c_define_gsubr ("wsyncup", 1, 0, 0, gucu_wsyncup);
 	scm_c_define_gsubr ("wsyncdown", 1, 0, 0, gucu_wsyncdown);
 	scm_c_define_gsubr ("wtimeout", 2, 0, 0, gucu_wtimeout);
-	scm_c_define_gsubr ("wtouchln", 4, 0, 0, gucu_wtouchln);
+	scm_c_define_gsubr ("%wtouchln", 4, 0, 0, gucu_wtouchln);
 	scm_c_define_gsubr ("%wvline", 3, 0, 0, gucu_wvline);
 }
