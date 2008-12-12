@@ -171,8 +171,13 @@ gucu_is_item_p (SCM x)
 struct gucu_menu {
   // Pointer to the menu
   MENU *menu;
-  // A scheme list containing ITEM SCMs
+  /* A scheme list containing ITEM SCMs is held here to guard against
+     GC */
   SCM items;
+  /* The pair of windows that contains the menu are held here to guard
+     against GC */
+  SCM usersub;
+  SCM userwin;
 };
 
 int 
@@ -220,6 +225,8 @@ mark_menu (SCM x)
   scm_assert_smob_type (menu_tag, x);
 
   gm = (struct gucu_menu *) SCM_SMOB_DATA (x);
+  scm_gc_mark (gm->usersub);
+  scm_gc_mark (gm->userwin);
 
   return (gm->items);
 }
@@ -376,6 +383,8 @@ gucu_new_menu (SCM items)
 	abort ();
     }
   gm->items = items;
+  gm->usersub = SCM_BOOL_F;
+  gm->userwin = SCM_BOOL_F;
 
   return smob;
 }

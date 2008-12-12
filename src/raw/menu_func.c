@@ -8,60 +8,83 @@
 #include "menu_type.h"
 #define _GNU_SOURCE
 #define cstring_t cchar_t
+
+
+/* Set the foreground attribute of the menu */
 SCM
-gucu_set_menu_fore (SCM arg1, SCM arg2)
+gucu_set_menu_fore (SCM menu, SCM attr)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-fore");
-	SCM_ASSERT (_scm_is_chtype (arg2), arg2, SCM_ARG2, "set-menu-fore");
+  MENU *c_menu;
+  chtype c_attr;
+  int ret;
 
-	MENU *c_arg1 = _scm_to_menu (arg1);
-	chtype c_arg2 = _scm_to_chtype (arg2);
+  SCM_ASSERT (_scm_is_menu (menu), menu, SCM_ARG1, "set-menu-fore!");
+  SCM_ASSERT (_scm_is_chtype (attr), attr, SCM_ARG2, "set-menu-fore!");
+  
+  c_menu = _scm_to_menu (menu);
+  c_attr = _scm_to_chtype (attr);
 
-	int ret = set_menu_fore (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  ret = set_menu_fore (c_menu, c_attr);
+  if (ret == E_BAD_ARGUMENT)
+    scm_out_of_range ("set-menu-fore!", attr);
+  
+  return SCM_UNSPECIFIED;
 }
 
+/* Return the foreground attribute of the menu */
 SCM
-gucu_menu_fore (SCM arg1)
+gucu_menu_fore (SCM menu)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "menu-fore");
+  MENU *c_menu;
+  chtype ret;
+  SCM s_ret;
 
-	 MENU *c_arg1 = _scm_to_menu (arg1);
+  SCM_ASSERT (_scm_is_menu (menu), menu, SCM_ARG1, "menu-fore");
 
-	chtype ret = menu_fore (c_arg1);
-	SCM s_ret = _scm_from_chtype (ret);
+  c_menu = _scm_to_menu (menu);
 
-	return s_ret;
+  ret = menu_fore (c_menu);
+  s_ret = _scm_from_chtype (ret);
+
+  return s_ret;
 }
 
 SCM
 gucu_set_menu_back (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-back");
-	SCM_ASSERT (_scm_is_chtype (arg2), arg2, SCM_ARG2, "set-menu-back");
+  MENU *c_menu;
+  chtype c_attr;
+  int ret;
 
-	MENU *c_arg1 = _scm_to_menu (arg1);
-	chtype c_arg2 = _scm_to_chtype (arg2);
+  SCM_ASSERT (_scm_is_menu (menu), menu, SCM_ARG1, "set-menu-back!");
+  SCM_ASSERT (_scm_is_chtype (attr), attr, SCM_ARG2, "set-menu-back!");
+  
+  c_menu = _scm_to_menu (menu);
+  c_attr = _scm_to_chtype (attr);
 
-	int ret = set_menu_back (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  ret = set_menu_back (c_menu, c_attr);
+  if (ret == E_BAD_ARGUMENT)
+    scm_out_of_range ("set-menu-back!", attr);
+  
+  return SCM_UNSPECIFIED;
 }
 
+/* Return the background attribute of the menu */
 SCM
 gucu_menu_back (SCM arg1)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "menu-back");
+  MENU *c_menu;
+  chtype ret;
+  SCM s_ret;
 
-	 MENU *c_arg1 = _scm_to_menu (arg1);
+  SCM_ASSERT (_scm_is_menu (menu), menu, SCM_ARG1, "menu-back");
 
-	chtype ret = menu_back (c_arg1);
-	SCM s_ret = _scm_from_chtype (ret);
+  c_menu = _scm_to_menu (menu);
 
-	return s_ret;
+  ret = menu_back (c_menu);
+  s_ret = _scm_from_chtype (ret);
+
+  return s_ret;
 }
 
 SCM
@@ -623,9 +646,9 @@ gucu_item_visible (SCM arg1)
 void 
 gucu_menu_init_function ()
 {
-	scm_c_define_gsubr ("set-menu-fore", 2, 0, 0, gucu_set_menu_fore);
+	scm_c_define_gsubr ("set-menu-fore!", 2, 0, 0, gucu_set_menu_fore);
 	scm_c_define_gsubr ("menu-fore", 1, 0, 0, gucu_menu_fore);
-	scm_c_define_gsubr ("set-menu-back", 2, 0, 0, gucu_set_menu_back);
+	scm_c_define_gsubr ("set-menu-back!", 2, 0, 0, gucu_set_menu_back);
 	scm_c_define_gsubr ("menu-back", 1, 0, 0, gucu_menu_back);
 	scm_c_define_gsubr ("set-menu-grey", 2, 0, 0, gucu_set_menu_grey);
 	scm_c_define_gsubr ("menu-grey", 1, 0, 0, gucu_menu_grey);

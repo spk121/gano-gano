@@ -37,7 +37,7 @@ or #f on failure.
 SCM
 gucu_menu_spacing (SCM menu)
 {
-  SCM_ASSERT (_scm_is_menu (menu), menu, SCM_ARG1, "item-index");
+  SCM_ASSERT (_scm_is_menu (menu), menu, SCM_ARG1, "menu-spacing");
 
   MENU *m = _scm_to_menu (menu);
   
@@ -60,7 +60,7 @@ gucu_menu_spacing (SCM menu)
 SCM
 gucu_menu_itemlen (SCM menu)  
 {
-  SCM_ASSERT (_scm_is_menu (menu), menu, SCM_ARG1, "item-index");
+  SCM_ASSERT (_scm_is_menu (menu), menu, SCM_ARG1, "menu-itemlen");
 
   MENU *m = _scm_to_menu (menu);
 
