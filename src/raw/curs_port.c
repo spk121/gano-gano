@@ -1,11 +1,15 @@
 #define _LARGEFILE64_SOURCE
 #define _GNU_SOURCE
 
+#include <config.h>
+
 #include <libguile.h>
 #include <curses.h>
 #include <stdio.h>
 #include <unistd.h>
 #include "type.h"
+
+#ifdef HAVE_FOPENCOOKIE
 
 ssize_t port_read (SCM *cookie, char *buf, size_t siz);
 ssize_t port_write (SCM *cookie, const char *buf, size_t siz);
@@ -116,6 +120,8 @@ gucu_newterm (SCM type, SCM inp, SCM outp)
   return s_ret;
 }
 
+#endif
+
 /* Create a window based on data saved by putwin */
 SCM
 gucu_getwin (SCM port)
@@ -125,6 +131,7 @@ gucu_getwin (SCM port)
 
   SCM_ASSERT (scm_is_true (scm_input_port_p (port)), port, SCM_ARG1, "getwin");
 
+#ifdef HAVE_FOPENCOOKIE  
   fp = fopencookie (&port, "rb", port_func);
 
   if (fp == NULL)
@@ -133,6 +140,24 @@ gucu_getwin (SCM port)
   c_win = getwin (fp);
 
   fclose (fp);
+#else
+  /* Read all of the data in the port and cache it as a temp file */
+  fp = tmpfile();
+  while (scm_is_false (scm_eof_object_p (port)))
+    {
+      int c;
+      c = scm_to_char (scm_read_char (port));
+      if (fwrite (&c, sizeof(char), 1, fp) != 1)
+	{
+	  scm_syserror ("getwin");
+	}
+    }
+  rewind (fp);
+
+  /* Create a window fromt the contents of the port */
+  c_win = getwin (fp);
+  fclose (fp);      
+#endif
 
   if (c_win == NULL)
     return SCM_BOOL_F;
@@ -154,6 +179,8 @@ gucu_putwin (SCM win, SCM port)
 	      "putwin");
 
   c_win = _scm_to_window (win);
+
+#ifdef HAVE_FOPENCOOKIE
   fp = fopencookie (&port, "wb", port_func);
 
   if (fp == NULL)
@@ -163,18 +190,33 @@ gucu_putwin (SCM win, SCM port)
 
   fclose (fp);
 
+#else
+  fp = tmpfile();
+  ret = putwin (c_win, fp);
+  if (ret == OK)
+    {
+      char c;
+      rewind (fp);
+      while (fread (&c, sizeof(char), 1, fp) == 1)
+	{
+	  scm_write_char (scm_from_char (c), port);
+	}
+    }
+  fclose (fp);
+#endif
+
   if (ret == ERR)
     return SCM_BOOL_F;
 
   return SCM_BOOL_T;
 }
 
-
-
 void
 gucu_init_port ()
 {
+#ifdef HAVE_FOPENCOOKIE
   scm_c_define_gsubr ("newterm", 3, 0, 0, gucu_newterm);
+#endif
   scm_c_define_gsubr ("getwin", 1, 0, 0, gucu_getwin);
   scm_c_define_gsubr ("putwin", 2, 0, 0, gucu_putwin);
 }

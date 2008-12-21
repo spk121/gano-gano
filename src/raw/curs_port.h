@@ -11,6 +11,8 @@
 #endif
 
 SCM gucu_newterm (SCM a, SCM b, SCM c) API;
+SCM gucu_getwin (SCM win, SCM port) API;
+SCM gucu_putwin (SCM win, SCM port) API;
 
 void gucu_init_port (void);
 

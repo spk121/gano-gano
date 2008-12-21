@@ -124,7 +124,7 @@ $lt_unset CDPATH
 : ${MKDIR="mkdir"}
 : ${MV="mv -f"}
 : ${RM="rm -f"}
-: ${SED="/opt/local/bin/gsed"}
+: ${SED="/usr/bin/sed"}
 : ${SHELL="${CONFIG_SHELL-/bin/sh}"}
 : ${Xsed="$SED -e 1s/^X//"}
 
@@ -776,6 +776,7 @@ func_enable_tag ()
 
       --verbose| -v)	preserve_args="$preserve_args $opt"
 			opt_silent=false
+			opt_verbose=true
 			;;
 
       --tag)		test "$#" -eq 0 && func_missing_arg "$opt" && break
@@ -2384,10 +2385,36 @@ extern \"C\" {
 	  func_verbose "extracting global C symbols from \`$dlprefile'"
 	  func_basename "$dlprefile"
 	  name="$func_basename_result"
-	  $opt_dry_run || {
-	    eval '$ECHO ": $name " >> "$nlist"'
-	    eval "$NM $dlprefile 2>/dev/null | $global_symbol_pipe >> '$nlist'"
-	  }
+	  case $host in
+	    *cygwin | *mingw* )
+	      # if an import library, we need to obtain dlname
+	      if eval $file_magic_cmd \"\$dlprefile\" 2>/dev/null |
+	          $SED -e 10q | $EGREP "import" >/dev/null; then
+	        dllname=`func_win32_dllname_for_implib "$dlprefile"`
+	        $opt_dry_run || {
+	          if test -n "$dllname" ; then
+	            eval '$ECHO ": $dllname " >> "$nlist"'
+	          else
+	            func_warning "Could not compute DLL name from $name"
+	            eval '$ECHO ": $name " >> "$nlist"'
+	          fi
+	          eval "$NM $dlprefile 2>/dev/null | $global_symbol_pipe |
+	              $SED -e '/I __imp/d' -e 's/I __nm_/D /;s/_nm__//' >> '$nlist'"
+	        }
+	      else
+	        $opt_dry_run || {
+	          eval '$ECHO ": $name " >> "$nlist"'
+	          eval "$NM $dlprefile 2>/dev/null | $global_symbol_pipe >> '$nlist'"
+	        }
+	      fi
+	      ;;
+	    * )
+	      $opt_dry_run || {
+	        eval '$ECHO ": $name " >> "$nlist"'
+	        eval "$NM $dlprefile 2>/dev/null | $global_symbol_pipe >> '$nlist'"
+	      }
+	      ;;
+	  esac
 	done
 
 	$opt_dry_run || {
@@ -2559,6 +2586,11 @@ func_win32_libid ()
     win32_libid_type="x86 archive import"
     ;;
   *ar\ archive*) # could be an import, or static
+    # In recursive makes, OBJDUMP is often omitted from the
+    # passed-down MAKEFLAGS. As a courtesy, flag an error when
+    # this happens (it's more humane than allowing the sed
+    # expression below to fail).
+    test -z "${OBJDUMP}" && func_fatal_error "\$OBJDUMP is not defined"
     if eval $OBJDUMP -f $1 | $SED -e '10q' 2>/dev/null |
        $EGREP 'file format pe-i386(.*architecture: i386)?' >/dev/null ; then
       win32_nmres=`eval $NM -f posix -A $1 |
@@ -2588,6 +2620,89 @@ func_win32_libid ()
     ;;
   esac
   $ECHO "$win32_libid_type"
+}
+
+
+
+# func_win32_dllname_for_implib implib
+# Obtain the name of the DLL associated with the
+# specified import library.
+#
+func_win32_dllname_for_implib ()
+{
+  $opt_debug
+  f_win32_d_for_i_implib="$1"
+  f_win32_d_for_i_can_use_dlltool=no
+  f_win32_d_for_i_dllname=
+
+  # In recursive makes, DLLTOOL is often omitted from the
+  # passed-down MAKEFLAGS. As a courtesy, warn when this
+  # happens but don't fail; we have a workaround.
+  if test -z "${DLLTOOL}"; then
+    func_warning "\$DLLTOOL is not defined"
+  else
+    # check for --identify option
+    if eval $DLLTOOL --help | $EGREP -- '--identify' >/dev/null ; then
+      f_win32_d_for_i_can_use_dlltool=yes
+    fi
+  fi
+
+  if test "$f_win32_d_for_i_can_use_dlltool" = "yes"; then
+    f_win32_d_for_i_dllname=`$DLLTOOL --identify "$f_win32_d_for_i_implib" 2>/dev/null`
+  fi
+
+  if test -z "$f_win32_d_for_i_dllname"; then
+    # make sure argument is actually an import library
+    if eval $file_magic_cmd \"\$f_win32_d_for_i_implib\" 2>/dev/null |
+      $SED -e 10q | $EGREP "import" >/dev/null; then
+      # gcc puts dllname in the .idata$7 section of ONE member
+      # of the import library -- but the name of that member is
+      # random. No other member contains an .idata$7 section.
+      # So, use objdump to print the contents. We get something
+      # like the following (blank lines elided):
+      #
+      #  |In archive /usr/lib/libncurses++.dll.a:
+      #  |d000253.o:     file format pe-i386
+      #  |Contents of section .idata$7:
+      #  | 0000 6379676e 63757273 65732b2b 2d382e64  cygncurses++-8.d
+      #  | 0010 6c6c0000                             ll..____________
+      #  |d000006.o:     file format pe-i386
+      #  |d000252.o:     file format pe-i386
+      #  |Contents of section .idata$7:
+      #  | 0000 00000000                             ....____________
+      #
+      # where '_' represents a space character. So, we delete all
+      # lines that have less than 43 characters, and chomp the
+      # first 43 characters of the remaining lines. This gives us
+      #
+      #  |cygncurses++-8.d
+      #  |ll..____________
+      #  |....____________
+      #
+      # We are not guaranteed that the name we want is first. So,
+      # remove all newlines, then remove all sequences of two
+      # or more . characters, then remove all sequences of two
+      # or more whitespace characters. Finally, remove leading and
+      # trailing whitespace. This would be simpler if we could
+      # assume that the dllname does not contain whitespace, but we
+      # DO assume the dllname doesn't contain *multiple* adjacent
+      # whitespace, nor *multiple* adjacent . characters.
+
+
+      # In recursive makes, OBJDUMP is often omitted from the
+      # passed-down MAKEFLAGS. As a courtesy, flag an error when
+      # this happens (it's more humane than allowing the sed
+      # expression below to fail).
+      test -z "${OBJDUMP}" && func_fatal_error "\$OBJDUMP is not defined"
+
+      f_win32_d_for_i_dllname=`$OBJDUMP -s --section '.idata$7' $f_win32_d_for_i_implib |
+          $SED -e '/^.\{43\}/!d' -e 's/^.\{43\}//' |
+          $SED -e ':a;N;$!ba;s/\n//g' -e 's/\.\.\.*//g' \
+               -e 's/[ 	][ 	][ 	]*//g' \
+               -e 's/^[ 	]*//' -e 's/[ 	]*$//'`
+    fi
+  fi
+  $ECHO "$f_win32_d_for_i_dllname"
 }
 
 
@@ -5446,10 +5561,21 @@ func_mode_link ()
 	    test -z "$libdir" && \
 		dlpreconveniencelibs="$dlpreconveniencelibs $dir/$old_library"
 	  # Otherwise, use the dlname, so that lt_dlopen finds it.
-	  elif test -n "$dlname"; then
-	    newdlprefiles="$newdlprefiles $dir/$dlname"
+	  # Except on mingw|cygwin, where we must use the import library,
+	  # so lt_dlopen is handled in another way
 	  else
-	    newdlprefiles="$newdlprefiles $dir/$linklib"
+	    case "$host" in
+	      *cygwin* | *mingw* )
+	        newdlprefiles="$newdlprefiles $dir/$linklib"
+	        ;;
+	      * )
+	        if test -n "$dlname"; then
+	          newdlprefiles="$newdlprefiles $dir/$dlname"
+	        else
+	          newdlprefiles="$newdlprefiles $dir/$linklib"
+	        fi
+	        ;;
+	    esac
 	  fi
 	fi # $pass = dlpreopen
 

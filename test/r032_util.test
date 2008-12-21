@@ -30,20 +30,22 @@
 		  (pass-if "keyname home"
 			   (string=? "KEY_HOME" (keyname KEY_HOME))))
 
-;; This test doesn't work with the "make distcheck", because of
-;; file read/write permissions
-; (with-test-prefix "getwin/putwin"
+(with-test-prefix "getwin/putwin"
 		  
-; 		  (define win (newwin 5 5 5 5))
+ 		  (define win (newwin 5 5 5 5))
 
-; 		  (pass-if "putwin"
-; 			   (begin
-; 			     (mvwaddstr win 0 0 "zzz")
-; 			     (wrefresh win)
-; 			     (set! fp (fopen "win.tmp" "w"))
-; 			     (eqv? OK (putwin win fp))))
-		  
-; 		  (fclose fp)
+ 		  (pass-if "putwin"
+ 			   (begin
+ 			     (mvwaddstr win 0 0 "zzz")
+ 			     (wrefresh win)
+			     (let ((str (call-with-output-string
+					 (lambda (port)
+					   (putwin win port)))))
+			       (mvwaddstr win 1 0 str)
+			       (refresh win)
+			       (sleep 3)))))
+
+
 ; 		  (delwin win)
 ; 		  (refresh)
 		  

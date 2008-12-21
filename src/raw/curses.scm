@@ -316,7 +316,6 @@
 	    mvwinchnstr
 	    mvwinnstr
 	    mvwinstr
-	    newterm
 	    pair-content
 	    ungetmouse
 	    wgetnstr
@@ -374,6 +373,13 @@
 	    window?
 	    open-curses-port
 ))
+
+;; These functions may not exist depending on the 
+;; compile time options
+(if (define? 'netwerm)
+    (export newterm))
+
+
 
 (define* (addch ch #:key (win (stdscr)) y x)
   (and (if (and y x)

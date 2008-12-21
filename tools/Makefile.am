@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.8 2008/12/04 05:33:59 spike_gran Exp $
+## $Id: Makefile.am,v 1.9 2008/12/21 01:07:35 spike_gran Exp $
 
 ########### TESTBED ############
 # The program testbed is a statically linked guile interpreter to use
@@ -20,8 +20,9 @@ testbed_SOURCES = \
 	testbed.c \
 	../src/raw/curs_const.c \
 	../src/raw/curs_func.c \
-	../src/raw/curs_main.c  \
+	../src/raw/curs_main.c \
 	../src/raw/curs_spec.c \
+	../src/raw/curs_port.c \
 	../src/raw/type.c \
 	../src/raw/menu_const.c \
 	../src/raw/menu_func.c \

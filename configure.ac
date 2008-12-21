@@ -197,11 +197,6 @@ AC_CHECK_LIB([guile],
              [scm_boot_guile], ,
              [AC_MSG_ERROR([The guile library was not found])])
 
-AC_CHECK_FUNC([cfmakeraw],
-              AC_DEFINE([HAVE_CFMAKERAW], 
-                        [1],
-                        [Define to 1 if you have cfmakeraw]))
-
 ##################
 # Check for header files
 AC_CHECK_HEADERS([wchar.h])
@@ -224,10 +219,21 @@ AC_CHECK_SIZEOF([chtype], ,[#include <curses.h>])
 AC_CHECK_SIZEOF([attr_t], ,[#include <curses.h>])
 AC_CHECK_SIZEOF([wchar_t], ,[#include <stddef.h>])
 AC_CHECK_SIZEOF([wint_t], ,[#include <wchar.h>])
+
 AC_PROG_CC_C99
 
 ##################
 # Check for library functions
+AC_CHECK_FUNC([cfmakeraw],
+              [AC_DEFINE([HAVE_CFMAKERAW], 
+                         [1],
+                         [Define to 1 if you have cfmakeraw])])
+
+AC_CHECK_FUNC([fopencookie],
+              [AC_DEFINE([HAVE_FOPENCOOKIE], 
+                         [1],
+                         [Define to 1 if you have fopencookie])])
+
 
 # Later something should be done with this
 # AC_FUNC_MALLOC

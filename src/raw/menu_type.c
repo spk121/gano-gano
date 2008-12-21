@@ -168,22 +168,18 @@ gucu_is_item_p (SCM x)
 // Note the the C Menu item's internal list of fields must match the SCM
 // list of field to avoid garbage collection madness.
 
-struct gucu_menu {
-  // Pointer to the menu
-  MENU *menu;
-  /* A scheme list containing ITEM SCMs is held here to guard against
-     GC */
-  SCM items;
-  /* The pair of windows that contains the menu are held here to guard
-     against GC */
-  SCM usersub;
-  SCM userwin;
-};
-
 int 
 _scm_is_menu (SCM x)
 {
-  return SCM_SMOB_PREDICATE (menu_tag, x);
+  if (SCM_SMOB_PREDICATE (menu_tag, x))
+    {
+      if (SCM_SMOB_DATA (x) == NULL)
+	return 0;
+      else
+	return 1;
+    }
+  else
+    return 0;
 }
 
 MENU *
@@ -225,10 +221,10 @@ mark_menu (SCM x)
   scm_assert_smob_type (menu_tag, x);
 
   gm = (struct gucu_menu *) SCM_SMOB_DATA (x);
-  scm_gc_mark (gm->usersub);
-  scm_gc_mark (gm->userwin);
+  scm_gc_mark (gm->items_guard);
+  scm_gc_mark (gm->win_guard);
 
-  return (gm->items);
+  return (gm->subwin_guard);
 }
 
 /* The name is gc_free_menu because the curses primitive that frees
@@ -272,15 +268,13 @@ gc_free_menu (SCM x)
 		     SCM_BOOL_F);
     }
 
-
-#if 0
-  
-  if (gm != 0) 
-    {
-      delwin(menu_sub(gm->menu));
-      delwin(menu_win(gm->menu));
-    }
-#endif
+  /* Release scheme objects from the guardians */
+  while (scm_is_true (scm_call_0 (gm->items_guard)))
+    ;
+  while (scm_is_true (scm_call_0 (gm->win_guard)))
+    ;
+  while (scm_is_true (scm_call_0 (gm->subwin_guard)))
+    ;
 
   return 0;
 }
@@ -382,9 +376,12 @@ gucu_new_menu (SCM items)
       else
 	abort ();
     }
-  gm->items = items;
-  gm->usersub = SCM_BOOL_F;
-  gm->userwin = SCM_BOOL_F;
+  gm->items_guard = scm_make_guardian ();
+  gm->win_guard = scm_make_guardian ();
+  gm->subwin_guard = scm_make_guardian ();
+
+  /* Guard the items list */
+  scm_call_1 (gm->items_guard, items);
 
   return smob;
 }

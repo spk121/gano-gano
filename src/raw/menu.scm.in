@@ -3,17 +3,17 @@
 (define-module (XXpackageXX menu)
         #:use-module (XXpackageXX eti)
 	#:export ( 
-		set-menu-fore
+		set-menu-fore!
 		menu-fore
-		set-menu-back
+		set-menu-back!
 		menu-back
-		set-menu-grey
+		set-menu-grey!
 		menu-grey
 		set-menu-pad
 		menu-pad
 		pos-menu-cursor
 		menu-driver
-		set-menu-format
+		set-menu-format!
 		item-count
 		set-menu-mark
 		menu-mark
@@ -28,8 +28,8 @@
 		menu-request-name
 		menu-request-by-name
 		set-menu-spacing
-		set-menu-win
-		set-menu-sub
+		set-menu-win!
+		set-menu-sub!
 		menu-win
 		menu-sub
 		set-current-item
