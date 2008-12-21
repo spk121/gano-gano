@@ -1,26 +1,31 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.15 2008/12/11 06:49:44 spike_gran Exp $
+## $Id: Makefile.am,v 1.16 2008/12/21 20:11:29 spike_gran Exp $
 
-# COMPILE_FLAGS = -Wall -W -Wunused-parameter -Wstrict-prototypes \
-# 	-Wmissing-prototypes -Wpointer-arith \
-# 	-Wreturn-type -Wcast-qual -Wswitch -Wshadow -Wcast-align \
-# 	-Wwrite-strings -Wchar-subscripts -Winline -Wnested-externs -Wredundant-decls
-
-COMPILE_FLAGS = -Wall 
+if WARN
+WARN_FLAGS = -Wall -W -Wunused-parameter -Wstrict-prototypes \
+	-Wmissing-prototypes -Wpointer-arith \
+	-Wreturn-type -Wcast-qual -Wswitch -Wshadow -Wcast-align \
+	-Wwrite-strings -Wchar-subscripts -Winline -Wnested-externs \
+	-Wredundant-decls -Werror
+else
+WARN_FLAGS = 
+endif
 
 lib_LTLIBRARIES = \
-	libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@.la
+	libguile-gucu.la
 
 ### CURSES ###
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS = $(COMPILE_FLAGS)
+libguile_gucu_la_CPPFLAGS = \
+	$(WARN_FLAGS) $(GUILE_CFLAGS)
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LDFLAGS = \
+# Set version flags and indicate that this is meant to be dlopened
+libguile_gucu_la_LDFLAGS = \
+	-module \
 	-no-undefined \
-	-export-dynamic \
 	-version-info @LIBGUILE_GUCU_CURSES_INTERFACE@
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES = \
+libguile_gucu_la_SOURCES = \
 	curs_const.c curs_const.h \
 	curs_func.c curs_func.h \
 	curs_port.c curs_port.h \
@@ -45,18 +50,15 @@ libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES = \
 	eti_main.c \
 	slk_func.c slk_func.h
 
-
-
-# -lguile added to LIBS by autoconf in the AC_CHECK_LIB test
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LIBADD = \
-	@LIBMENU@ @LIBPANEL@ @LIBFORM@ @LIBNCURSES@ 
+libguile_gucu_la_LIBADD = \
+	@LIBMENU@ @LIBPANEL@ @LIBFORM@ @LIBNCURSES@ $(GUILE_LDFLAGS)
 
 ### WIDE CURSES ###
 
 if WIDE
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS += -D_XOPEN_SOURCE_EXTENDED
+libguile_gucu_la_CPPFLAGS += -D_XOPEN_SOURCE_EXTENDED
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES += \
+libguile_gucu_la_SOURCES += \
 	cursw_const.c cursw_const.h \
 	cursw_func.c cursw_func.h \
 	typew.c typew.h \
@@ -68,8 +70,10 @@ endif
 
 guile_sitedir = ${datadir}/guile/site
 pkgguile_sitedir = $(guile_sitedir)/$(PACKAGE)
-pkgguile_site_DATA = curses.scm curses-alt.scm menu.scm panel.scm form.scm eti.scm
-ETAGS_ARGS = curses.scm curses-alt.scm menu.scm panel.scm form.scm eti.scm
+pkgguile_site_DATA = \
+	curses.scm curses-alt.scm menu.scm panel.scm form.scm eti.scm
+ETAGS_ARGS = \
+	curses.scm curses-alt.scm menu.scm panel.scm form.scm eti.scm
 
 
 # Note that the "wide" .scm.in file needs to appear in EXTRA_DIST.  It
@@ -85,32 +89,32 @@ CLEANFILES = curses.scm menu.scm panel.scm form.scm eti.scm slk.scm
 
 curses.scm: curses.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 menu.scm: menu.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 panel.scm: panel.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 form.scm: form.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 eti.scm: eti.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 slk.scm: slk.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 
@@ -122,6 +126,6 @@ CLEANFILES += curses-wide.scm
 
 curses-wide.scm: curses-wide.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 endif

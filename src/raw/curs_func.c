@@ -97,7 +97,7 @@ gucu_COLOR_PAIR (SCM pair1)
 /* Copy part of srcwin onto part of destwin */
 SCM
 gucu_copywin (SCM srcwin, SCM dstwin, SCM sminrow, SCM smincol, SCM dminrow, 
-	      SCM dmincol, SCM dmaxrow, SCM dmaxcol, SCM overlay)
+	      SCM dmincol, SCM dmaxrow, SCM dmaxcol, SCM _overlay)
 {
   WINDOW *c_srcwin, *c_dstwin;
   int c_sminrow, c_smincol, c_dminrow, c_dmincol, c_dmaxrow, c_dmaxcol;
@@ -111,7 +111,7 @@ gucu_copywin (SCM srcwin, SCM dstwin, SCM sminrow, SCM smincol, SCM dminrow,
   SCM_ASSERT (scm_is_integer (dmincol), dmincol, SCM_ARG6, "copywin");
   SCM_ASSERT (scm_is_integer (dmaxrow), dmaxrow, SCM_ARG7, "copywin");
   SCM_ASSERT (scm_is_integer (dmaxcol), dmaxcol, 8, "copywin");
-  SCM_ASSERT (scm_is_integer (overlay), overlay, 9, "copywin");
+  SCM_ASSERT (scm_is_integer (_overlay), _overlay, 9, "copywin");
 
   c_srcwin = _scm_to_window (srcwin);
   c_dstwin = _scm_to_window (dstwin);
@@ -121,7 +121,7 @@ gucu_copywin (SCM srcwin, SCM dstwin, SCM sminrow, SCM smincol, SCM dminrow,
   c_dmincol = scm_to_int (dmincol);
   c_dmaxrow = scm_to_int (dmaxrow);
   c_dmaxcol = scm_to_int (dmaxcol);
-  c_overlay = scm_to_int (overlay);
+  c_overlay = scm_to_int (_overlay);
   
   ret = copywin (c_srcwin, c_dstwin, c_sminrow, c_smincol, c_dminrow, 
 		 c_dmincol, c_dmaxrow, c_dmaxcol, c_overlay);
@@ -437,6 +437,12 @@ gucu_initscr ()
   WINDOW *ret;
 
   ret = initscr ();
+  if (ret == NULL)
+    scm_misc_error 
+      ("initscr", 
+       "Cannot return the stdscr",
+       SCM_BOOL_F);
+
   return _scm_from_window (ret);
 }
 
@@ -1860,7 +1866,11 @@ gucu_wrefresh (SCM win)
   int ret;
 
   SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wrefresh");
-  
+  if (stdscr == NULL)
+    scm_misc_error ("%wrefresh", 
+		    "The standard screen is not available.", 
+		    SCM_BOOL_F);
+
   c_win = _scm_to_window (win);
 
   ret = wrefresh (c_win);

@@ -1,4 +1,3 @@
-
 #ifndef ETI_CONST_H
 #define ETI_CONST_H
 

@@ -69,7 +69,7 @@ equalp_panel (SCM x1, SCM x2)
 }
 
 SCM
-mark_panel (SCM x)
+mark_panel (SCM x __attribute__ ((unused)))
 {
   // No SCMs in the panel type: nothing to do here.
   return (SCM_BOOL_F);
@@ -93,7 +93,7 @@ gc_free_panel (SCM panel)
 }
 
 int
-print_panel (SCM x, SCM port, scm_print_state *pstate)
+print_panel (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
 {
   PANEL *pnl = (PANEL *) SCM_SMOB_DATA (x);
   char *str;

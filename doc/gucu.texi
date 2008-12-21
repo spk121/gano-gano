@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.24 2008/12/07 17:31:13 spike_gran Exp $
+@c $Id: gucu.texi,v 1.25 2008/12/21 20:11:29 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -327,7 +327,7 @@ The curses form library: @code{(gucu form)}
 @section Authors, Copyright, and Declarations
 
 Michael Gran assembled this book, but, wrote only small sections of
-text.  Most of reference text of the raw library is taken directly
+text.  Most of reference text of the curses library is taken directly
 from the documentation of NCurses itself, and then modified to make it
 specific to this Guile binding.  The NCurses library is maintained by
 Tom Dickey, and the manual pages in the library note that the Free
@@ -368,7 +368,7 @@ sale, use or other dealings in this Software without prior written
 authorization.                                                           
 @end quotation
 
-The tutorial for the raw curses library is adapted from the NCurses
+The tutorial for the curses library is adapted from the NCurses
 Programming HowTo by Pradeep Padala, modified by Michael Gran to make
 it specific to the Guile binding.  
 
@@ -539,7 +539,7 @@ accents in its upper 128 characters.
 @item unrendered, narrow characters
 This is simple @abbr{ASCII} or 8-bit character, such as @code{#\a},
 with no color information or attribute (e.g. bold, inverse)
-information.  There are no raw curses functions that use unrendered,
+information.  There are no narrow curses functions that use unrendered,
 narrow characters.  Usually curses functions that take a single narrow
 character will, in fact, be expecting a @emph{rendered character}.  
 
@@ -569,7 +569,7 @@ and @*
 
 These are simple scheme strings, such as @code{"blammo"}.  Strings
 are, in our parlance, made from fixed-length sequences of unrendered,
-narrow characters.  There are raw curses functions that deal
+narrow characters.  There are curses functions that deal
 with unrendered, narrow strings, like @code{addstr}.
 
 @item rendered, narrow strings
@@ -834,24 +834,15 @@ hello to the world.
 @subsection Using the Guile Curses module
 
 To use ncurses library functions, you have to load the @code{(gucu
-raw)} module into the program.  
+curses)} module into the program.  
 
 Here is the Hello World program, using the raw library.
 
-@c include file test/hello_world.scm
 @example
-#!/usr/local/bin/guile
-!#
-(use-modules (gucu curses))
-
-(initscr)
-(addstr "Hello World!!!")
-(refresh)
-(getch)
-(endwin)
+@verbatiminclude ex_hello_world.scm
 @end example
 
-The first line of the example, @code{#!/usr/local/bin/guile}, gives the
+The first line of the example, @code{#!/usr/bin/guile}, gives the
 location of where Guile is installed on my system. This may differ on
 your system.
 
@@ -873,6 +864,12 @@ our present window (called @code{stdscr}) and some other data
 structures.  Under extreme cases, this function might fail due to
 insufficient memory to allocate memory for curses library's data
 structures.
+
+The procedure @code{initscr} returns a @code{#<window>} that contains
+necessary information about the curses screen.  The @code{#<window>}
+that is returns must be stored until the program is finished with the
+curses library.  If that @code{#<window>} is garbage collected, the
+curses library cannot continue.
 
 After this is done, we can do a variety of initializations to
 customize our curses settings
@@ -927,7 +924,7 @@ screen where the interactive guile session occurs.
 Upon initialization @code{gucushell} automatically calls these functions.
 @lisp
 (use-modules (gucu curses))
-(initscr)
+(define stdscr (initscr))
 @end lisp
 @noindent Thus, you must not call @code{(initscr)} in your
 interactive session.

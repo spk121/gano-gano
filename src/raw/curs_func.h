@@ -103,6 +103,7 @@ SCM gucu_termname (void) API;
 SCM gucu_typeahead (SCM arg1) API;
 SCM gucu_ungetch (SCM arg1) API;
 SCM gucu_use_default_colors (void) API;
+SCM gucu_use_extended_names (SCM bf) API;
 SCM gucu_use_env (SCM arg1) API;
 SCM gucu_vidattr (SCM arg1) API;
 SCM gucu_waddch (SCM arg1, SCM arg2) API;

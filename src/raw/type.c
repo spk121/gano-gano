@@ -12,10 +12,7 @@
 
 scm_t_bits screen_tag;
 scm_t_bits file_tag;
-
 scm_t_bits window_tag;
-
-
 
 SCM equalp_window (SCM x1, SCM x2);
 size_t free_window (SCM x);
@@ -160,93 +157,6 @@ _scm_from_chtype (chtype x)
     abort ();
 }
 
-// file -- in C, a FILE *.  In Scheme, a smob that contains that pointer.
-
-int 
-_scm_is_file (SCM x)
-{
-  return SCM_SMOB_PREDICATE (file_tag, x);
-}
-
-FILE *
-_scm_to_file (SCM x)
-{
-  return (FILE *) SCM_SMOB_DATA (x);
-}
-
-SCM
-_scm_from_file (FILE *x)
-{
-  SCM s_file;
-
-  assert (x != NULL);
-
-  SCM_NEWSMOB (s_file, file_tag, x);
-  return s_file;
-}
-
-SCM
-gucu_fopen (SCM fname, SCM mode)
-{
-  SCM_ASSERT (scm_is_string (fname), fname, SCM_ARG1, "fopen");
-  SCM_ASSERT (scm_is_string (mode), mode, SCM_ARG2, "fopen");
-
-  char *c_fname = scm_to_locale_string (fname);
-  char *c_mode = scm_to_locale_string (mode);
-
-  FILE *fp = fopen (c_fname, c_mode);
-  int er;
-  SCM s_fp;
-
-  free (c_fname);
-  free (c_mode);
-
-  if (fp == NULL)
-    {
-      er = errno;
-      scm_error_scm (scm_from_locale_symbol ("system-error"),
-		     scm_from_locale_string ("fopen"), 
-		     scm_from_locale_string("~A"),
-		     scm_list_1 (scm_strerror (scm_from_int (er))),
-		     scm_list_1 (scm_from_int (er)));
-    }
-
-  SCM_NEWSMOB (s_fp, file_tag, fp);
-  
-  return (s_fp);
-}
-
-SCM
-gucu_fclose (SCM fp)
-{
-  SCM_ASSERT (_scm_is_file (fp), fp, SCM_ARG1, "fclose");
-
-  FILE *c_fp = (FILE *) SCM_SMOB_DATA (fp);
-
-  assert (c_fp != NULL);
-
-  int ret = fclose (c_fp);
-  int er;
-
-  if (ret == 0)
-    {
-      return SCM_BOOL_T;
-    }
-  else
-    {
-      er = errno;
-      scm_error_scm (scm_from_locale_symbol ("system-error"),
-		     scm_from_locale_string ("fclose"), 
-		     scm_from_locale_string("~A"),
-		     scm_list_1 (scm_strerror (scm_from_int (er))),
-		     scm_list_1 (scm_from_int (er)));
-
-      /* won't get here */
-      return SCM_BOOL_F;
-    }
-
-}
-
 // mevent -- in C, a MEVENT.  In scheme, a list of 5 elements
 int
 _scm_is_mevent (SCM x)
@@ -329,7 +239,7 @@ _scm_from_screen (SCREEN *x)
 }
 
 int
-print_screen (SCM x, SCM port, scm_print_state *pstate)
+print_screen (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
 {
   SCREEN *screen = (SCREEN *) SCM_SMOB_DATA (x);
   char *str;
@@ -355,32 +265,31 @@ print_screen (SCM x, SCM port, scm_print_state *pstate)
 // list are unused by curses.
 
 int
-_scm_is_voidstring (SCM x)
+_scm_is_voidstring (SCM x __attribute__ ((unused)))
 {
   return 1;
 }
 
 void *
-_scm_to_voidstring (SCM x)
+_scm_to_voidstring (SCM x __attribute__ ((unused)))
 {
   return NULL;
 }
 
 SCM
-_scm_from_voidstring (void *x)
+_scm_from_voidstring (void *x __attribute ((unused)))
 {
   return SCM_EOL;
 }
 
 // window -- in C, a WINDOW *.  In Scheme, a smob that contains the pointer
 
-
 int 
 _scm_is_window (SCM x)
 {
   if (SCM_SMOB_PREDICATE (window_tag, x))
     {
-      if (SCM_SMOB_DATA (x) != NULL)
+      if (SCM_SMOB_DATA (x) != 0)
 	return 1;
       else
 	return 0;
@@ -432,7 +341,7 @@ equalp_window (SCM x1, SCM x2)
 }
 
 SCM
-mark_window (SCM x)
+mark_window (SCM x __attribute__ ((unused)))
 {
   // No SCMs in the window type: nothing to do here.
   return (SCM_BOOL_F);
@@ -443,41 +352,32 @@ free_window (SCM x)
 {
   WINDOW *win = (WINDOW *) SCM_SMOB_DATA (x);
 
-  // Should windows ever be allowed to be GC'd?
-  // I'm not sure.
+  /* Windows should already be null if delwin has been called on them */
   if (win != NULL)
     {
-      /* This is going to break something */
-      delwin (win);
-      SCM_SET_SMOB_DATA (x, NULL);
-
-      /* Perhaps is should be like this? */
-#if 0      
       if (win == stdscr)
 	{
-	}
-      else if (win == curscr)
-	{
-	}
-      else if (win == newscr)
-	{
+	  endwin ();
+	  fprintf (stderr, "Freeing stdscr #<window %p>", stdscr);
+	  delwin (stdscr);
+	  SCM_SET_SMOB_DATA (x, NULL);
 	}
       else
 	{
+	  /* This is going to break something */
+	  delwin (win);
+	  SCM_SET_SMOB_DATA (x, NULL);
 	}
-#endif
     }
 
   return 0;
 }
 
 int
-print_window (SCM x, SCM port, scm_print_state *pstate)
+print_window (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
 {
   WINDOW *win = (WINDOW *) SCM_SMOB_DATA (x);
   char *str;
-
-  assert (win != NULL);
 
   scm_puts ("#<window ", port);
 
@@ -519,10 +419,6 @@ gucu_init_type ()
       scm_set_smob_print (window_tag, print_window);
       scm_set_smob_equalp (window_tag, equalp_window);
       scm_c_define_gsubr ("window?", 1, 0, 0, gucu_is_window_p);
-      
-      file_tag = scm_make_smob_type ("file", sizeof (FILE *));
-      scm_c_define_gsubr ("fopen", 2, 0, 0, gucu_fopen);
-      scm_c_define_gsubr ("fclose", 1, 0, 0, gucu_fclose);
       
       first = 0;
     }

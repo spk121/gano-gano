@@ -1,8 +1,9 @@
-
 #include <curses.h>
 #include <libguile.h>
 #include <form.h>
 #include <menu.h>
+#include "eti_const.h"
+
 #define _GNU_SOURCE
 SCM gucu_E_OK;
 SCM gucu_E_SYSTEM_ERROR;

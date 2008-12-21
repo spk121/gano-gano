@@ -29,8 +29,6 @@ SCM gucu_mvwgetnstr (SCM win, SCM y, SCM x, SCM n) API;
 SCM gucu_mvwinchnstr (SCM y, SCM x, SCM win, SCM n) API;
 SCM gucu_mvwinnstr (SCM y, SCM x, SCM win, SCM n) API;
 SCM gucu_mvwinstr (SCM y, SCM x, SCM win) API;
-SCM gucu_newterm (SCM arg1, SCM arg2, SCM arg3) API;
-//SCM gucu_newterm_port (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_pair_content (SCM s_color) API;
 SCM gucu_ungetmouse (SCM event) API;
 SCM gucu_wattr_get (SCM win) API;

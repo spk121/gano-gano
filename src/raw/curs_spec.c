@@ -399,46 +399,6 @@ gucu_mvwinstr (SCM win, SCM y, SCM x)
 }
 
 
-#if 0
-SCM
-gucu_newterm_port (SCM typ, SCM outport, SCM inport)
-{
-	SCM_ASSERT (scm_is_string (typ), typ, SCM_ARG1, "newterm-port");
-	SCM_ASSERT (scm_is_true (scm_output_port (outport)), 
-		    outport, SCM_ARG2, "newterm-port");
-	SCM_ASSERT (scm_is_true (scm_input_port (inport)), 
-		    inport, SCM_ARG3, "newterm-port");
-
-	char *c_type = scm_to_locale_string (typ);
-	FILE *fp_out = fdopen (scm_to_int (scm_fileno (outport)), "w");
-	FILE *fp_in = fdopen (scm_to_int (scm_fileno (inport)), "r");
-
-	if (fp_out == NULL || fp_in == NULL)
-	  {
-	    scm_error_scm (SCM_BOOL_F,
-			   scm_from_locale_string ("newterm-port"),
-			   scm_from_locale_string ("could not open ports"),
-			   SCM_BOOL_F,
-			   SCM_BOOL_F);
-	  }
-
-	SCREEN * ret = newterm (c_type, fp_out, fp_in);
-	if (ret == NULL)
-	  {
-	    scm_error_scm (SCM_BOOL_F,
-			   scm_from_locale_string("newterm-port"), 
-			   scm_from_locale_string("could not create a terminal"),
-			   SCM_BOOL_F,
-			   SCM_BOOL_F);
-	  }
-
-	SCM s_ret = _scm_from_screen (ret);
-
-	return s_ret;
-}
-#endif
-
-
 /* Return the foreground and background color numbers of a given PAIR */
 SCM
 gucu_pair_content (SCM s_pair)

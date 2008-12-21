@@ -342,8 +342,8 @@ gucu_form_request_name (SCM arg1)
 
 	int c_arg1 = scm_to_int (arg1);
 
-	char * ret = form_request_name (c_arg1);
-	SCM s_ret = scm_from_locale_string (ret);
+	
+	SCM s_ret = scm_from_locale_string (form_request_name (c_arg1));
 
 	return s_ret;
 }

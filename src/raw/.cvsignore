@@ -1,5 +1,11 @@
 Makefile
-curses-wide-raw.scm
-curses-raw.scm
+curses-wide.scm
+curses.scm
+eti.scm
+form.scm
+menu.scm
+panel.scm
+slk.scm
+*.lo
 
 

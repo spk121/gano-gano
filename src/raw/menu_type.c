@@ -112,7 +112,7 @@ equalp_item (SCM x1, SCM x2)
 }
 
 SCM
-mark_item (SCM x)
+mark_item (SCM x __attribute__ ((unused)))
 {
   // No SCMs in the item type: nothing to do here.
   return (SCM_BOOL_F);
@@ -134,7 +134,7 @@ gc_free_item (SCM item)
 }
 
 int
-print_item (SCM x, SCM port, scm_print_state *pstate)
+print_item (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
 {
   ITEM *frm = (ITEM *) SCM_SMOB_DATA (x);
   char *str;
@@ -173,7 +173,7 @@ _scm_is_menu (SCM x)
 {
   if (SCM_SMOB_PREDICATE (menu_tag, x))
     {
-      if (SCM_SMOB_DATA (x) == NULL)
+      if (SCM_SMOB_DATA (x) == 0)
 	return 0;
       else
 	return 1;
@@ -276,22 +276,18 @@ gc_free_menu (SCM x)
   while (scm_is_true (scm_call_0 (gm->subwin_guard)))
     ;
 
+  SCM_SET_SMOB_DATA (x, NULL);
+
   return 0;
 }
 
 int
-print_menu (SCM x, SCM port, scm_print_state *pstate)
+print_menu (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
 {
   MENU *menu = _scm_to_menu (x);
   char *str;
 
   assert (menu != NULL);
-
-  if (0)
-    {
-      fprintf (stderr, "Printing smob menu\n");
-      fflush (stderr);
-    }
 
   scm_puts ("#<menu ", port);
 

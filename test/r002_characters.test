@@ -9,14 +9,14 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
 (with-test-prefix "ASCII"
 		  (pass-if "a"
 			   (begin
-			     (addch (char->integer #\a) #:x 0 #:y 0)
-			     (refresh)
-			     (equal? (mvinch 0 0) (char->integer #\a)))))
+			     (addch win (char->integer #\a) #:x 0 #:y 0)
+			     (refresh win)
+			     (equal? (inch win #:y 0 #:x 0) (char->integer #\a)))))
 
 (define (acs-test-pair pair)
   (acs-test (car pair) (cdr pair)))
@@ -26,11 +26,13 @@
 (define (acs-test xname x)
   (pass-if xname
 	   (begin
-	     (clear)
-	     (addch x #:x 0 #:y 0)
-	     (refresh)
+	     (clear win)
+	     (move win 0 0)
+	     (addch win x)
+	     (refresh win)
 	     (usleep 10000)
-	     (let ((x2 (mvinch 0 0)))
+	     (move win 0 0)
+	     (let ((x2 (inch win)))
 	       (and
 		(equal? x x2)
 		(equal? (logand x2 A_ALTCHARSET) A_ALTCHARSET))))))

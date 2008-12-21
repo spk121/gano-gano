@@ -14,11 +14,6 @@
 
 @SET_MAKE@
 
-# COMPILE_FLAGS = -Wall -W -Wunused-parameter -Wstrict-prototypes \
-# 	-Wmissing-prototypes -Wpointer-arith \
-# 	-Wreturn-type -Wcast-qual -Wswitch -Wshadow -Wcast-align \
-# 	-Wwrite-strings -Wchar-subscripts -Winline -Wnested-externs -Wredundant-decls
-
 
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
@@ -55,10 +50,8 @@ host_triplet = @host@
 subdir = src/raw
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/libtool.m4 \
-	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
-	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
-	$(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/m4/guile.m4 \
+	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -74,54 +67,41 @@ am__installdirs = "$(DESTDIR)$(libdir)" \
 	"$(DESTDIR)$(pkgguile_sitedir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_DEPENDENCIES =
-am__libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES_DIST =  \
-	curs_const.c curs_const.h curs_func.c curs_func.h curs_port.c \
-	curs_port.h type.c type.h curs_spec.c curs_spec.h curs_main.c \
-	menu_const.c menu_const.h menu_func.c menu_func.h menu_type.c \
-	menu_type.h menu_spec.c menu_spec.h menu_main.c panel_func.c \
-	panel_func.h panel_type.c panel_type.h panel_spec.c \
-	panel_spec.h panel_main.c form_const.c form_const.h \
-	form_func.c form_func.h form_type.c form_type.h form_spec.c \
-	form_spec.h form_main.c eti_const.c eti_const.h eti_main.c \
-	slk_func.c slk_func.h cursw_const.c cursw_const.h cursw_func.c \
-	cursw_func.h typew.c typew.h cursw_spec.c cursw_spec.h \
-	cursw_main.c
-@WIDE_TRUE@am__objects_1 = libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.lo \
-@WIDE_TRUE@	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_func.lo \
-@WIDE_TRUE@	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.lo \
-@WIDE_TRUE@	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_spec.lo \
-@WIDE_TRUE@	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_main.lo
-am_libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_OBJECTS = libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_const.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_func.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_port.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-type.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_spec.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_main.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_const.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_func.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_type.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_spec.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_main.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_func.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_type.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_spec.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_main.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_const.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_func.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_type.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_spec.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_main.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_const.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.lo \
-	libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo \
+am__DEPENDENCIES_1 =
+libguile_gucu_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
+am__libguile_gucu_la_SOURCES_DIST = curs_const.c curs_const.h \
+	curs_func.c curs_func.h curs_port.c curs_port.h type.c type.h \
+	curs_spec.c curs_spec.h curs_main.c menu_const.c menu_const.h \
+	menu_func.c menu_func.h menu_type.c menu_type.h menu_spec.c \
+	menu_spec.h menu_main.c panel_func.c panel_func.h panel_type.c \
+	panel_type.h panel_spec.c panel_spec.h panel_main.c \
+	form_const.c form_const.h form_func.c form_func.h form_type.c \
+	form_type.h form_spec.c form_spec.h form_main.c eti_const.c \
+	eti_const.h eti_main.c slk_func.c slk_func.h cursw_const.c \
+	cursw_const.h cursw_func.c cursw_func.h typew.c typew.h \
+	cursw_spec.c cursw_spec.h cursw_main.c
+@WIDE_TRUE@am__objects_1 = libguile_gucu_la-cursw_const.lo \
+@WIDE_TRUE@	libguile_gucu_la-cursw_func.lo \
+@WIDE_TRUE@	libguile_gucu_la-typew.lo \
+@WIDE_TRUE@	libguile_gucu_la-cursw_spec.lo \
+@WIDE_TRUE@	libguile_gucu_la-cursw_main.lo
+am_libguile_gucu_la_OBJECTS = libguile_gucu_la-curs_const.lo \
+	libguile_gucu_la-curs_func.lo libguile_gucu_la-curs_port.lo \
+	libguile_gucu_la-type.lo libguile_gucu_la-curs_spec.lo \
+	libguile_gucu_la-curs_main.lo libguile_gucu_la-menu_const.lo \
+	libguile_gucu_la-menu_func.lo libguile_gucu_la-menu_type.lo \
+	libguile_gucu_la-menu_spec.lo libguile_gucu_la-menu_main.lo \
+	libguile_gucu_la-panel_func.lo libguile_gucu_la-panel_type.lo \
+	libguile_gucu_la-panel_spec.lo libguile_gucu_la-panel_main.lo \
+	libguile_gucu_la-form_const.lo libguile_gucu_la-form_func.lo \
+	libguile_gucu_la-form_type.lo libguile_gucu_la-form_spec.lo \
+	libguile_gucu_la-form_main.lo libguile_gucu_la-eti_const.lo \
+	libguile_gucu_la-eti_main.lo libguile_gucu_la-slk_func.lo \
 	$(am__objects_1)
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_OBJECTS = $(am_libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_OBJECTS)
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LINK =  \
-	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LDFLAGS) \
-	$(LDFLAGS) -o $@
+libguile_gucu_la_OBJECTS = $(am_libguile_gucu_la_OBJECTS)
+libguile_gucu_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libguile_gucu_la_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/build_aux/depcomp
 am__depfiles_maybe = depfiles
@@ -134,8 +114,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES)
-DIST_SOURCES = $(am__libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES_DIST)
+SOURCES = $(libguile_gucu_la_SOURCES)
+DIST_SOURCES = $(am__libguile_gucu_la_SOURCES_DIST)
 pkgguile_siteDATA_INSTALL = $(INSTALL_DATA)
 DATA = $(pkgguile_site_DATA)
 ETAGS = etags
@@ -154,25 +134,34 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CXX = @CXX@
+CXXCPP = @CXXCPP@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
-DUMPBIN = @DUMPBIN@
+ECHO = @ECHO@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
-FGREP = @FGREP@
+F77 = @F77@
+FFLAGS = @FFLAGS@
 GREP = @GREP@
+GUILE = @GUILE@
+GUILE_CFLAGS = @GUILE_CFLAGS@
+GUILE_CONFIG = @GUILE_CONFIG@
+GUILE_LDFLAGS = @GUILE_LDFLAGS@
+GUILE_TOOLS = @GUILE_TOOLS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
-LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBFORM = @LIBFORM@
 LIBGUILE_GUCU_CURSES_INTERFACE = @LIBGUILE_GUCU_CURSES_INTERFACE@
@@ -183,17 +172,13 @@ LIBOBJS = @LIBOBJS@
 LIBPANEL = @LIBPANEL@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
-LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
-NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
-OTOOL = @OTOOL@
-OTOOL64 = @OTOOL64@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
@@ -212,7 +197,8 @@ abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_CC = @ac_ct_CC@
-ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
+ac_ct_CXX = @ac_ct_CXX@
+ac_ct_F77 = @ac_ct_F77@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
@@ -243,7 +229,6 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
@@ -259,33 +244,38 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-COMPILE_FLAGS = -Wall 
+@WARN_FALSE@WARN_FLAGS = 
+@WARN_TRUE@WARN_FLAGS = -Wall -W -Wunused-parameter -Wstrict-prototypes \
+@WARN_TRUE@	-Wmissing-prototypes -Wpointer-arith \
+@WARN_TRUE@	-Wreturn-type -Wcast-qual -Wswitch -Wshadow -Wcast-align \
+@WARN_TRUE@	-Wwrite-strings -Wchar-subscripts -Winline -Wnested-externs \
+@WARN_TRUE@	-Wredundant-decls -Werror
+
 lib_LTLIBRARIES = \
-	libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@.la
+	libguile-gucu.la
 
 
 ### CURSES ###
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS =  \
-	$(COMPILE_FLAGS) $(am__append_1)
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LDFLAGS = \
+libguile_gucu_la_CPPFLAGS = $(WARN_FLAGS) $(GUILE_CFLAGS) \
+	$(am__append_1)
+
+# Set version flags and indicate that this is meant to be dlopened
+libguile_gucu_la_LDFLAGS = \
+	-module \
 	-no-undefined \
-	-export-dynamic \
 	-version-info @LIBGUILE_GUCU_CURSES_INTERFACE@
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_SOURCES =  \
-	curs_const.c curs_const.h curs_func.c curs_func.h curs_port.c \
-	curs_port.h type.c type.h curs_spec.c curs_spec.h curs_main.c \
-	menu_const.c menu_const.h menu_func.c menu_func.h menu_type.c \
-	menu_type.h menu_spec.c menu_spec.h menu_main.c panel_func.c \
-	panel_func.h panel_type.c panel_type.h panel_spec.c \
-	panel_spec.h panel_main.c form_const.c form_const.h \
-	form_func.c form_func.h form_type.c form_type.h form_spec.c \
-	form_spec.h form_main.c eti_const.c eti_const.h eti_main.c \
-	slk_func.c slk_func.h $(am__append_2)
-
-# -lguile added to LIBS by autoconf in the AC_CHECK_LIB test
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LIBADD = \
-	@LIBMENU@ @LIBPANEL@ @LIBFORM@ @LIBNCURSES@ 
+libguile_gucu_la_SOURCES = curs_const.c curs_const.h curs_func.c \
+	curs_func.h curs_port.c curs_port.h type.c type.h curs_spec.c \
+	curs_spec.h curs_main.c menu_const.c menu_const.h menu_func.c \
+	menu_func.h menu_type.c menu_type.h menu_spec.c menu_spec.h \
+	menu_main.c panel_func.c panel_func.h panel_type.c \
+	panel_type.h panel_spec.c panel_spec.h panel_main.c \
+	form_const.c form_const.h form_func.c form_func.h form_type.c \
+	form_type.h form_spec.c form_spec.h form_main.c eti_const.c \
+	eti_const.h eti_main.c slk_func.c slk_func.h $(am__append_2)
+libguile_gucu_la_LIBADD = \
+	@LIBMENU@ @LIBPANEL@ @LIBFORM@ @LIBNCURSES@ $(GUILE_LDFLAGS)
 
 
 ######
@@ -369,8 +359,8 @@ clean-libLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@.la: $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_OBJECTS) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_DEPENDENCIES) 
-	$(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LINK) -rpath $(libdir) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_OBJECTS) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_LIBADD) $(LIBS)
+libguile-gucu.la: $(libguile_gucu_la_OBJECTS) $(libguile_gucu_la_DEPENDENCIES) 
+	$(libguile_gucu_la_LINK) -rpath $(libdir) $(libguile_gucu_la_OBJECTS) $(libguile_gucu_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -378,34 +368,34 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_const.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_func.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_main.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_port.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_spec.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_func.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_main.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_spec.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_const.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_const.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_func.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_main.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_spec.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_type.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_const.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_func.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_main.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_spec.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_type.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_func.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_main.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_spec.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_type.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-type.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-curs_const.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-curs_func.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-curs_main.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-curs_port.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-curs_spec.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-cursw_const.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-cursw_func.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-cursw_main.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-cursw_spec.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-eti_const.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-eti_main.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-form_const.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-form_func.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-form_main.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-form_spec.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-form_type.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-menu_const.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-menu_func.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-menu_main.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-menu_spec.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-menu_type.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-panel_func.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-panel_main.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-panel_spec.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-panel_type.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-slk_func.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-type.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libguile_gucu_la-typew.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -428,201 +418,201 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_const.lo: curs_const.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_const.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_const.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_const.lo `test -f 'curs_const.c' || echo '$(srcdir)/'`curs_const.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_const.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_const.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='curs_const.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_const.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-curs_const.lo: curs_const.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-curs_const.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-curs_const.Tpo -c -o libguile_gucu_la-curs_const.lo `test -f 'curs_const.c' || echo '$(srcdir)/'`curs_const.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-curs_const.Tpo $(DEPDIR)/libguile_gucu_la-curs_const.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='curs_const.c' object='libguile_gucu_la-curs_const.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_const.lo `test -f 'curs_const.c' || echo '$(srcdir)/'`curs_const.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-curs_const.lo `test -f 'curs_const.c' || echo '$(srcdir)/'`curs_const.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_func.lo: curs_func.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_func.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_func.lo `test -f 'curs_func.c' || echo '$(srcdir)/'`curs_func.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_func.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_func.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='curs_func.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_func.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-curs_func.lo: curs_func.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-curs_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-curs_func.Tpo -c -o libguile_gucu_la-curs_func.lo `test -f 'curs_func.c' || echo '$(srcdir)/'`curs_func.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-curs_func.Tpo $(DEPDIR)/libguile_gucu_la-curs_func.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='curs_func.c' object='libguile_gucu_la-curs_func.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_func.lo `test -f 'curs_func.c' || echo '$(srcdir)/'`curs_func.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-curs_func.lo `test -f 'curs_func.c' || echo '$(srcdir)/'`curs_func.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_port.lo: curs_port.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_port.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_port.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_port.lo `test -f 'curs_port.c' || echo '$(srcdir)/'`curs_port.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_port.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_port.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='curs_port.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_port.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-curs_port.lo: curs_port.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-curs_port.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-curs_port.Tpo -c -o libguile_gucu_la-curs_port.lo `test -f 'curs_port.c' || echo '$(srcdir)/'`curs_port.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-curs_port.Tpo $(DEPDIR)/libguile_gucu_la-curs_port.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='curs_port.c' object='libguile_gucu_la-curs_port.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_port.lo `test -f 'curs_port.c' || echo '$(srcdir)/'`curs_port.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-curs_port.lo `test -f 'curs_port.c' || echo '$(srcdir)/'`curs_port.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-type.lo: type.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-type.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-type.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-type.lo `test -f 'type.c' || echo '$(srcdir)/'`type.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-type.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-type.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='type.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-type.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-type.lo: type.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-type.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-type.Tpo -c -o libguile_gucu_la-type.lo `test -f 'type.c' || echo '$(srcdir)/'`type.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-type.Tpo $(DEPDIR)/libguile_gucu_la-type.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='type.c' object='libguile_gucu_la-type.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-type.lo `test -f 'type.c' || echo '$(srcdir)/'`type.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-type.lo `test -f 'type.c' || echo '$(srcdir)/'`type.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_spec.lo: curs_spec.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_spec.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_spec.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_spec.lo `test -f 'curs_spec.c' || echo '$(srcdir)/'`curs_spec.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_spec.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_spec.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='curs_spec.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_spec.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-curs_spec.lo: curs_spec.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-curs_spec.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-curs_spec.Tpo -c -o libguile_gucu_la-curs_spec.lo `test -f 'curs_spec.c' || echo '$(srcdir)/'`curs_spec.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-curs_spec.Tpo $(DEPDIR)/libguile_gucu_la-curs_spec.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='curs_spec.c' object='libguile_gucu_la-curs_spec.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_spec.lo `test -f 'curs_spec.c' || echo '$(srcdir)/'`curs_spec.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-curs_spec.lo `test -f 'curs_spec.c' || echo '$(srcdir)/'`curs_spec.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_main.lo: curs_main.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_main.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_main.lo `test -f 'curs_main.c' || echo '$(srcdir)/'`curs_main.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_main.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_main.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='curs_main.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_main.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-curs_main.lo: curs_main.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-curs_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-curs_main.Tpo -c -o libguile_gucu_la-curs_main.lo `test -f 'curs_main.c' || echo '$(srcdir)/'`curs_main.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-curs_main.Tpo $(DEPDIR)/libguile_gucu_la-curs_main.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='curs_main.c' object='libguile_gucu_la-curs_main.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-curs_main.lo `test -f 'curs_main.c' || echo '$(srcdir)/'`curs_main.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-curs_main.lo `test -f 'curs_main.c' || echo '$(srcdir)/'`curs_main.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_const.lo: menu_const.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_const.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_const.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_const.lo `test -f 'menu_const.c' || echo '$(srcdir)/'`menu_const.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_const.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_const.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='menu_const.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_const.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-menu_const.lo: menu_const.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-menu_const.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-menu_const.Tpo -c -o libguile_gucu_la-menu_const.lo `test -f 'menu_const.c' || echo '$(srcdir)/'`menu_const.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-menu_const.Tpo $(DEPDIR)/libguile_gucu_la-menu_const.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='menu_const.c' object='libguile_gucu_la-menu_const.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_const.lo `test -f 'menu_const.c' || echo '$(srcdir)/'`menu_const.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-menu_const.lo `test -f 'menu_const.c' || echo '$(srcdir)/'`menu_const.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_func.lo: menu_func.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_func.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_func.lo `test -f 'menu_func.c' || echo '$(srcdir)/'`menu_func.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_func.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_func.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='menu_func.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_func.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-menu_func.lo: menu_func.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-menu_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-menu_func.Tpo -c -o libguile_gucu_la-menu_func.lo `test -f 'menu_func.c' || echo '$(srcdir)/'`menu_func.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-menu_func.Tpo $(DEPDIR)/libguile_gucu_la-menu_func.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='menu_func.c' object='libguile_gucu_la-menu_func.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_func.lo `test -f 'menu_func.c' || echo '$(srcdir)/'`menu_func.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-menu_func.lo `test -f 'menu_func.c' || echo '$(srcdir)/'`menu_func.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_type.lo: menu_type.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_type.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_type.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_type.lo `test -f 'menu_type.c' || echo '$(srcdir)/'`menu_type.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_type.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_type.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='menu_type.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_type.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-menu_type.lo: menu_type.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-menu_type.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-menu_type.Tpo -c -o libguile_gucu_la-menu_type.lo `test -f 'menu_type.c' || echo '$(srcdir)/'`menu_type.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-menu_type.Tpo $(DEPDIR)/libguile_gucu_la-menu_type.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='menu_type.c' object='libguile_gucu_la-menu_type.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_type.lo `test -f 'menu_type.c' || echo '$(srcdir)/'`menu_type.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-menu_type.lo `test -f 'menu_type.c' || echo '$(srcdir)/'`menu_type.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_spec.lo: menu_spec.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_spec.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_spec.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_spec.lo `test -f 'menu_spec.c' || echo '$(srcdir)/'`menu_spec.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_spec.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_spec.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='menu_spec.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_spec.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-menu_spec.lo: menu_spec.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-menu_spec.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-menu_spec.Tpo -c -o libguile_gucu_la-menu_spec.lo `test -f 'menu_spec.c' || echo '$(srcdir)/'`menu_spec.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-menu_spec.Tpo $(DEPDIR)/libguile_gucu_la-menu_spec.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='menu_spec.c' object='libguile_gucu_la-menu_spec.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_spec.lo `test -f 'menu_spec.c' || echo '$(srcdir)/'`menu_spec.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-menu_spec.lo `test -f 'menu_spec.c' || echo '$(srcdir)/'`menu_spec.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_main.lo: menu_main.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_main.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_main.lo `test -f 'menu_main.c' || echo '$(srcdir)/'`menu_main.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_main.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_main.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='menu_main.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_main.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-menu_main.lo: menu_main.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-menu_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-menu_main.Tpo -c -o libguile_gucu_la-menu_main.lo `test -f 'menu_main.c' || echo '$(srcdir)/'`menu_main.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-menu_main.Tpo $(DEPDIR)/libguile_gucu_la-menu_main.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='menu_main.c' object='libguile_gucu_la-menu_main.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-menu_main.lo `test -f 'menu_main.c' || echo '$(srcdir)/'`menu_main.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-menu_main.lo `test -f 'menu_main.c' || echo '$(srcdir)/'`menu_main.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_func.lo: panel_func.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_func.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_func.lo `test -f 'panel_func.c' || echo '$(srcdir)/'`panel_func.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_func.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_func.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='panel_func.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_func.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-panel_func.lo: panel_func.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-panel_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-panel_func.Tpo -c -o libguile_gucu_la-panel_func.lo `test -f 'panel_func.c' || echo '$(srcdir)/'`panel_func.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-panel_func.Tpo $(DEPDIR)/libguile_gucu_la-panel_func.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='panel_func.c' object='libguile_gucu_la-panel_func.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_func.lo `test -f 'panel_func.c' || echo '$(srcdir)/'`panel_func.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-panel_func.lo `test -f 'panel_func.c' || echo '$(srcdir)/'`panel_func.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_type.lo: panel_type.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_type.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_type.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_type.lo `test -f 'panel_type.c' || echo '$(srcdir)/'`panel_type.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_type.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_type.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='panel_type.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_type.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-panel_type.lo: panel_type.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-panel_type.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-panel_type.Tpo -c -o libguile_gucu_la-panel_type.lo `test -f 'panel_type.c' || echo '$(srcdir)/'`panel_type.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-panel_type.Tpo $(DEPDIR)/libguile_gucu_la-panel_type.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='panel_type.c' object='libguile_gucu_la-panel_type.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_type.lo `test -f 'panel_type.c' || echo '$(srcdir)/'`panel_type.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-panel_type.lo `test -f 'panel_type.c' || echo '$(srcdir)/'`panel_type.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_spec.lo: panel_spec.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_spec.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_spec.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_spec.lo `test -f 'panel_spec.c' || echo '$(srcdir)/'`panel_spec.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_spec.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_spec.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='panel_spec.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_spec.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-panel_spec.lo: panel_spec.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-panel_spec.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-panel_spec.Tpo -c -o libguile_gucu_la-panel_spec.lo `test -f 'panel_spec.c' || echo '$(srcdir)/'`panel_spec.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-panel_spec.Tpo $(DEPDIR)/libguile_gucu_la-panel_spec.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='panel_spec.c' object='libguile_gucu_la-panel_spec.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_spec.lo `test -f 'panel_spec.c' || echo '$(srcdir)/'`panel_spec.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-panel_spec.lo `test -f 'panel_spec.c' || echo '$(srcdir)/'`panel_spec.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_main.lo: panel_main.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_main.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_main.lo `test -f 'panel_main.c' || echo '$(srcdir)/'`panel_main.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_main.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_main.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='panel_main.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_main.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-panel_main.lo: panel_main.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-panel_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-panel_main.Tpo -c -o libguile_gucu_la-panel_main.lo `test -f 'panel_main.c' || echo '$(srcdir)/'`panel_main.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-panel_main.Tpo $(DEPDIR)/libguile_gucu_la-panel_main.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='panel_main.c' object='libguile_gucu_la-panel_main.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-panel_main.lo `test -f 'panel_main.c' || echo '$(srcdir)/'`panel_main.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-panel_main.lo `test -f 'panel_main.c' || echo '$(srcdir)/'`panel_main.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_const.lo: form_const.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_const.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_const.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_const.lo `test -f 'form_const.c' || echo '$(srcdir)/'`form_const.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_const.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_const.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='form_const.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_const.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-form_const.lo: form_const.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-form_const.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-form_const.Tpo -c -o libguile_gucu_la-form_const.lo `test -f 'form_const.c' || echo '$(srcdir)/'`form_const.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-form_const.Tpo $(DEPDIR)/libguile_gucu_la-form_const.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='form_const.c' object='libguile_gucu_la-form_const.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_const.lo `test -f 'form_const.c' || echo '$(srcdir)/'`form_const.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-form_const.lo `test -f 'form_const.c' || echo '$(srcdir)/'`form_const.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_func.lo: form_func.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_func.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_func.lo `test -f 'form_func.c' || echo '$(srcdir)/'`form_func.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_func.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_func.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='form_func.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_func.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-form_func.lo: form_func.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-form_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-form_func.Tpo -c -o libguile_gucu_la-form_func.lo `test -f 'form_func.c' || echo '$(srcdir)/'`form_func.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-form_func.Tpo $(DEPDIR)/libguile_gucu_la-form_func.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='form_func.c' object='libguile_gucu_la-form_func.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_func.lo `test -f 'form_func.c' || echo '$(srcdir)/'`form_func.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-form_func.lo `test -f 'form_func.c' || echo '$(srcdir)/'`form_func.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_type.lo: form_type.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_type.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_type.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_type.lo `test -f 'form_type.c' || echo '$(srcdir)/'`form_type.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_type.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_type.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='form_type.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_type.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-form_type.lo: form_type.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-form_type.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-form_type.Tpo -c -o libguile_gucu_la-form_type.lo `test -f 'form_type.c' || echo '$(srcdir)/'`form_type.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-form_type.Tpo $(DEPDIR)/libguile_gucu_la-form_type.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='form_type.c' object='libguile_gucu_la-form_type.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_type.lo `test -f 'form_type.c' || echo '$(srcdir)/'`form_type.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-form_type.lo `test -f 'form_type.c' || echo '$(srcdir)/'`form_type.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_spec.lo: form_spec.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_spec.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_spec.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_spec.lo `test -f 'form_spec.c' || echo '$(srcdir)/'`form_spec.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_spec.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_spec.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='form_spec.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_spec.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-form_spec.lo: form_spec.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-form_spec.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-form_spec.Tpo -c -o libguile_gucu_la-form_spec.lo `test -f 'form_spec.c' || echo '$(srcdir)/'`form_spec.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-form_spec.Tpo $(DEPDIR)/libguile_gucu_la-form_spec.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='form_spec.c' object='libguile_gucu_la-form_spec.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_spec.lo `test -f 'form_spec.c' || echo '$(srcdir)/'`form_spec.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-form_spec.lo `test -f 'form_spec.c' || echo '$(srcdir)/'`form_spec.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_main.lo: form_main.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_main.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_main.lo `test -f 'form_main.c' || echo '$(srcdir)/'`form_main.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_main.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_main.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='form_main.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_main.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-form_main.lo: form_main.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-form_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-form_main.Tpo -c -o libguile_gucu_la-form_main.lo `test -f 'form_main.c' || echo '$(srcdir)/'`form_main.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-form_main.Tpo $(DEPDIR)/libguile_gucu_la-form_main.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='form_main.c' object='libguile_gucu_la-form_main.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-form_main.lo `test -f 'form_main.c' || echo '$(srcdir)/'`form_main.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-form_main.lo `test -f 'form_main.c' || echo '$(srcdir)/'`form_main.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_const.lo: eti_const.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_const.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_const.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_const.lo `test -f 'eti_const.c' || echo '$(srcdir)/'`eti_const.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_const.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_const.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='eti_const.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_const.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-eti_const.lo: eti_const.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-eti_const.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-eti_const.Tpo -c -o libguile_gucu_la-eti_const.lo `test -f 'eti_const.c' || echo '$(srcdir)/'`eti_const.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-eti_const.Tpo $(DEPDIR)/libguile_gucu_la-eti_const.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='eti_const.c' object='libguile_gucu_la-eti_const.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_const.lo `test -f 'eti_const.c' || echo '$(srcdir)/'`eti_const.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-eti_const.lo `test -f 'eti_const.c' || echo '$(srcdir)/'`eti_const.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.lo: eti_main.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.lo `test -f 'eti_main.c' || echo '$(srcdir)/'`eti_main.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='eti_main.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-eti_main.lo: eti_main.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-eti_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-eti_main.Tpo -c -o libguile_gucu_la-eti_main.lo `test -f 'eti_main.c' || echo '$(srcdir)/'`eti_main.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-eti_main.Tpo $(DEPDIR)/libguile_gucu_la-eti_main.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='eti_main.c' object='libguile_gucu_la-eti_main.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-eti_main.lo `test -f 'eti_main.c' || echo '$(srcdir)/'`eti_main.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-eti_main.lo `test -f 'eti_main.c' || echo '$(srcdir)/'`eti_main.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo: slk_func.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo `test -f 'slk_func.c' || echo '$(srcdir)/'`slk_func.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='slk_func.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-slk_func.lo: slk_func.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-slk_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-slk_func.Tpo -c -o libguile_gucu_la-slk_func.lo `test -f 'slk_func.c' || echo '$(srcdir)/'`slk_func.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-slk_func.Tpo $(DEPDIR)/libguile_gucu_la-slk_func.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='slk_func.c' object='libguile_gucu_la-slk_func.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-slk_func.lo `test -f 'slk_func.c' || echo '$(srcdir)/'`slk_func.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-slk_func.lo `test -f 'slk_func.c' || echo '$(srcdir)/'`slk_func.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.lo: cursw_const.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.lo `test -f 'cursw_const.c' || echo '$(srcdir)/'`cursw_const.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='cursw_const.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-cursw_const.lo: cursw_const.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-cursw_const.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-cursw_const.Tpo -c -o libguile_gucu_la-cursw_const.lo `test -f 'cursw_const.c' || echo '$(srcdir)/'`cursw_const.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-cursw_const.Tpo $(DEPDIR)/libguile_gucu_la-cursw_const.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='cursw_const.c' object='libguile_gucu_la-cursw_const.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_const.lo `test -f 'cursw_const.c' || echo '$(srcdir)/'`cursw_const.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-cursw_const.lo `test -f 'cursw_const.c' || echo '$(srcdir)/'`cursw_const.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_func.lo: cursw_func.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_func.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_func.lo `test -f 'cursw_func.c' || echo '$(srcdir)/'`cursw_func.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_func.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_func.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='cursw_func.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_func.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-cursw_func.lo: cursw_func.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-cursw_func.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-cursw_func.Tpo -c -o libguile_gucu_la-cursw_func.lo `test -f 'cursw_func.c' || echo '$(srcdir)/'`cursw_func.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-cursw_func.Tpo $(DEPDIR)/libguile_gucu_la-cursw_func.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='cursw_func.c' object='libguile_gucu_la-cursw_func.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_func.lo `test -f 'cursw_func.c' || echo '$(srcdir)/'`cursw_func.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-cursw_func.lo `test -f 'cursw_func.c' || echo '$(srcdir)/'`cursw_func.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.lo: typew.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.lo `test -f 'typew.c' || echo '$(srcdir)/'`typew.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='typew.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-typew.lo: typew.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-typew.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-typew.Tpo -c -o libguile_gucu_la-typew.lo `test -f 'typew.c' || echo '$(srcdir)/'`typew.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-typew.Tpo $(DEPDIR)/libguile_gucu_la-typew.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='typew.c' object='libguile_gucu_la-typew.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-typew.lo `test -f 'typew.c' || echo '$(srcdir)/'`typew.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-typew.lo `test -f 'typew.c' || echo '$(srcdir)/'`typew.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_spec.lo: cursw_spec.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_spec.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_spec.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_spec.lo `test -f 'cursw_spec.c' || echo '$(srcdir)/'`cursw_spec.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_spec.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_spec.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='cursw_spec.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_spec.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-cursw_spec.lo: cursw_spec.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-cursw_spec.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-cursw_spec.Tpo -c -o libguile_gucu_la-cursw_spec.lo `test -f 'cursw_spec.c' || echo '$(srcdir)/'`cursw_spec.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-cursw_spec.Tpo $(DEPDIR)/libguile_gucu_la-cursw_spec.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='cursw_spec.c' object='libguile_gucu_la-cursw_spec.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_spec.lo `test -f 'cursw_spec.c' || echo '$(srcdir)/'`cursw_spec.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-cursw_spec.lo `test -f 'cursw_spec.c' || echo '$(srcdir)/'`cursw_spec.c
 
-libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_main.lo: cursw_main.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_main.Tpo -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_main.lo `test -f 'cursw_main.c' || echo '$(srcdir)/'`cursw_main.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_main.Tpo $(DEPDIR)/libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_main.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='cursw_main.c' object='libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_main.lo' libtool=yes @AMDEPBACKSLASH@
+libguile_gucu_la-cursw_main.lo: cursw_main.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libguile_gucu_la-cursw_main.lo -MD -MP -MF $(DEPDIR)/libguile_gucu_la-cursw_main.Tpo -c -o libguile_gucu_la-cursw_main.lo `test -f 'cursw_main.c' || echo '$(srcdir)/'`cursw_main.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libguile_gucu_la-cursw_main.Tpo $(DEPDIR)/libguile_gucu_la-cursw_main.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='cursw_main.c' object='libguile_gucu_la-cursw_main.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_curses_v_@LIBGUILE_GUCU_CURSES_MAJOR@_la-cursw_main.lo `test -f 'cursw_main.c' || echo '$(srcdir)/'`cursw_main.c
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libguile_gucu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libguile_gucu_la-cursw_main.lo `test -f 'cursw_main.c' || echo '$(srcdir)/'`cursw_main.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -834,37 +824,37 @@ uninstall-am: uninstall-libLTLIBRARIES uninstall-pkgguile_siteDATA
 
 curses.scm: curses.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 menu.scm: menu.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 panel.scm: panel.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 form.scm: form.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 eti.scm: eti.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 slk.scm: slk.scm.in
 	cat $< | \
-	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+	sed 's|XXlibnameXX|libguile-gucu|' | \
 	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 
 @WIDE_TRUE@curses-wide.scm: curses-wide.scm.in
 @WIDE_TRUE@	cat $< | \
-@WIDE_TRUE@	sed 's|XXlibnameXX|libguile-gucu-curses-v-@LIBGUILE_GUCU_CURSES_MAJOR@|' | \
+@WIDE_TRUE@	sed 's|XXlibnameXX|libguile-gucu|' | \
 @WIDE_TRUE@	sed 's|XXpackageXX|$(PACKAGE)|' > $@
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

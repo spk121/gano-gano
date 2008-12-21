@@ -8,13 +8,14 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "type.h"
+#include "curs_port.h"
 
 #ifdef HAVE_FOPENCOOKIE
 
-ssize_t port_read (SCM *cookie, char *buf, size_t siz);
-ssize_t port_write (SCM *cookie, const char *buf, size_t siz);
-int port_seek (SCM *cookie, off64_t *pos, int whence);
-int port_close (SCM *cookie);
+ssize_t port_read (void *cookie, char *buf, size_t siz);
+ssize_t port_write (void *cookie, const char *buf, size_t siz);
+int port_seek (void *cookie, off64_t *pos, int whence);
+int port_close (void *cookie);
 
 #define PORT_ERR (-1)
 #define PORT_OK (0)
@@ -22,22 +23,11 @@ int port_close (SCM *cookie);
 cookie_io_functions_t port_func 
 = {port_read, port_write, port_seek, port_close};
 
-/* Given an input port, return a stream pointer */
-SCM
-port_to_filep (SCM port)
-{
-  FILE *fp;
-  void *cookie;
-
-  fp = fopencookie (&cookie, "r", port_func);
-  return _scm_from_file (fp);
-}
-
 ssize_t 
-port_read (SCM *cookie, char *buf, size_t siz)
+port_read (void *cookie, char *buf, size_t siz)
 {
   size_t bytes_read;
-  SCM port = *cookie;
+  SCM port = *(SCM *)cookie;
 
   if (siz > SSIZE_MAX)
     bytes_read = scm_c_read (port, buf, SSIZE_MAX);
@@ -48,9 +38,9 @@ port_read (SCM *cookie, char *buf, size_t siz)
 }
 
 ssize_t 
-port_write (SCM *cookie, const char *buf, size_t siz)
+port_write (void *cookie, const char *buf, size_t siz)
 {
-  SCM port = *cookie;
+  SCM port = *(SCM *)cookie;
 
   if (siz > SSIZE_MAX)
     {
@@ -65,9 +55,9 @@ port_write (SCM *cookie, const char *buf, size_t siz)
 }
 
 int 
-port_seek (SCM *cookie, off64_t *pos, int whence)
+port_seek (void *cookie, off64_t *pos, int whence)
 {
-  SCM port = *cookie;
+  SCM port = *(SCM *)cookie;
   SCM new_pos;
 
   new_pos = scm_seek (port, scm_from_int64 (*pos), scm_from_int (whence));
@@ -77,9 +67,9 @@ port_seek (SCM *cookie, off64_t *pos, int whence)
 }
 
 int
-port_close (SCM *cookie)
+port_close (void *cookie)
 {
-  SCM port = *cookie;
+  SCM port = *(SCM *)cookie;
 
   scm_close_port (port);
 

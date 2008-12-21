@@ -23,11 +23,22 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_CANONICAL_HOST
 AC_PROG_INSTALL
-LT_INIT([dlopen disable-fast-install win32-dll])
 AC_PROG_MKDIR_P
-#GUILE_PROGS
+GUILE_PROGS
+GUILE_FLAGS
 #NCURSESW_PROGS
 
+##################
+# Check for Libtool
+
+# New method for when Libtool 2.x is default
+#LT_INIT([dlopen disable-fast-install win32-dll])
+
+# Deprecated method for Libtool 1.x
+AC_LIBTOOL_DLOPEN
+AC_DISABLE_FAST_INSTALL
+AC_LIBTOOL_WIN32_DLL
+AC_PROG_LIBTOOL
 
 ##################
 # Initial guess of platform specific options
@@ -192,10 +203,19 @@ AS_IF(
                  [1],
                  [Define if you have to explicitly declare the curses acs_map])])
 
-# Guile gets added to LIBS here
-AC_CHECK_LIB([guile], 
-             [scm_boot_guile], ,
-             [AC_MSG_ERROR([The guile library was not found])])
+## Guile could get added to LIBS here, but, we are going to
+## (foolishly) rely on GUILE_LDFLAGS from guile.m4 to be right.
+
+#AC_CHECK_LIB([guile], 
+#             [scm_boot_guile], ,
+#	     # if guile is not ok
+#             [AC_MSG_ERROR([The guile library was not found])])
+
+AC_ARG_ENABLE([warnings],
+              [AS_HELP_STRING([--enable-warnings],
+                              [Build with most GCC warnings enabled])])
+AM_CONDITIONAL([WARN], [test "$enable_warnings" = yes])
+
 
 ##################
 # Check for header files

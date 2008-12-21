@@ -1,12 +1,11 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.9 2008/12/07 16:54:06 spike_gran Exp $
+## $Id: Makefile.am,v 1.10 2008/12/21 20:08:16 spike_gran Exp $
 
 all-local:
 	-ln -s ../src/raw @PACKAGE@
 
 
-TESTS_ENVIRONMENT = LIBGUILE_GUCU_CURSES_MAJOR=@LIBGUILE_GUCU_CURSES_MAJOR@
-TESTS_ENVIRONMENT += ../libtool -dlopen ../src/raw/libguile-gucu-curses-v-0.la --mode=execute \
+TESTS_ENVIRONMENT = ../libtool -dlopen ../src/raw/libguile-gucu.la --mode=execute \
 	guile -L $(top_srcdir) -L . -s 
 
 NARROWTESTS = r000_test.test \
@@ -87,5 +86,6 @@ EXTRA_DIST = $(NARROWTESTS) \
 	$(WIDETESTS) \
 	dotest-curses \
 	lib.scm \
-	lib2.scm 
+	lib2.scm \
+	gc000_window.test
 

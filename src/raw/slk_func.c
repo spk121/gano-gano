@@ -1,7 +1,7 @@
 #include <libguile.h>
 #include <curses.h>
 #include <config.h>
-#include "curs_func.h"
+#include "slk_func.h"
 #include "type.h"
 
 

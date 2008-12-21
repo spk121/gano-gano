@@ -360,8 +360,6 @@
 	    acs-ulcorner
 	    acs-urcorner
 	    acs-vline
-	    fopen
-	    fclose
 	    lines
 	    cols
 	    colors
@@ -376,30 +374,30 @@
 
 ;; These functions may not exist depending on the 
 ;; compile time options
-(if (define? 'netwerm)
+(if (defined? 'netwerm)
     (export newterm))
 
 
 
-(define* (addch ch #:key (win (stdscr)) y x)
+(define* (addch win ch #:key y x)
   (and (if (and y x)
-	   (wmove win y x)
+	   (%wmove win y x)
 	   #t)
        (%waddch win ch)))
 
-(define* (addchstr chstr #:key (win (stdscr)) y x (n -1))
+(define* (addchstr win chstr #:key y x (n -1))
   (and (if (and y x)
-	   (wmove win y x)
+	   (%wmove win y x)
 	   #t)
        (%waddchnstr win chstr n)))
 
-(define* (addstr str #:key (win (stdscr)) y x (n -1))
+(define* (addstr win str #:key y x (n -1))
   (and (if (and y x)
-	   (wmove win y x)
+	   (%wmove win y x)
 	   #t)
        (%waddnstr win str n)))
 
-(define* (attr-get #:key (win (stdscr)))
+(define (attr-get win)
   (let* ((ac (%wattr-get win))
 	 (attr (car ac))
 	 (color (cadr ac)))
@@ -421,111 +419,111 @@
 			  WA_VERTICAL))
      color)))
 
-(define* (attr-off attr #:key (win (stdscr)))
+(define (attr-off win attr)
   (%wattr-off win attr))
 	
-(define* (attr-on attr #:key (win (stdscr)))
+(define (attr-on win attr)
   (%wattr-on win attr))
 
-(define* (attr-set attr #:key (color 0) (win (stdscr)))
+(define* (attr-set win attr #:key (color 0))
   (%wattr-set win attr color))
 
-(define* (bkgd ch #:key (win (stdscr)))
+(define (bkgd win ch)
   (%wbkgd win ch))
 
-(define* (bkgdset ch #:key (win (stdscr)))
+(define (bkgdset win ch)
   (%wbkgdset win ch))
 
-(define* (border left right top bottom tl tr bl br #:key (win (stdscr)))
+(define (border win left right top bottom tl tr bl br)
   (%wborder win left right top bottom tl tr bl br))
 
-(define* (box #:v h key (win (stdscr)))
+(define (box win v h)
   (%wborder win v v h h 0 0 0 0))
 
-(define* (chgat n attr color #:key (win (stdscr)) y x)
+(define* (chgat win n attr color #:key y x)
   (and
    (if (and y x)
-       (wmove win y x)
+       (%wmove win y x)
        #t)
    (%wchgat win n attr color)))
 
-(define* (clear #:key (win (stdscr)))
+(define (clear win)
   (%wclear win))
 
-(define* (clrtobot #:key (win (stdscr)))
+(define (clrtobot win)
   (%wclrtobot win))
 
-(define* (clrtoeol #:key (win (stdscr)))
+(define (clrtoeol win)
   (%wclrtoeol win))
 
-(define* (color-set pair #:key (win (stdscr)))
+(define (color-set win)
   (%wcolor-set win pair))
 
 (define* (delch win #:key y x)
   (and
    (if (and y x)
-       (wmove win y x)
+       (%wmove win y x)
        #t)
    (%wdelch win)))
 
 (define* (deleteln win #:key y x)
   (and
    (if (and y x)
-       (wmove win y x)
+       (%wmove win y x)
        #t)
    (%winsdelln win -1)))
 
-(define* (echochar ch #:key (win (stdscr)))
+(define (echochar win ch)
   (%wechochar win ch))
 
-(define* (erase #:key (win (stdscr)))
+(define (erase win)
   (%werase win))
 
-(define* (getbkgd #:key (win (stdscr)))
+(define (getbkgd win)
   (%getbkgd win))
 
 (define* (getch win #:key y x)
   (and (if (and y x)
-	   (wmove win y x)
+	   (%wmove win y x)
 	   #t)
        (%wgetch win)))
   
-(define* (hline ch n #:key (win (stdscr) y x))
+(define* (hline win ch n #:key y x)
   (and (if (and y x)
-	   (wmove win y x)
+	   (%wmove win y x)
 	   #t)
        (%whline win ch n)))
 
 (define* (inch win #:key y x)
   (and (if (and y x)
-	   (wmove win y x)
+	   (%wmove win y x)
 	   #t)
        (%winch win)))
 
 (define* (insch win ch #:key y x)
   (and (if (and y x)
-	   (wmove win y x)
+	   (%wmove win y x)
 	   #t)
        (%winsch win ch)))
 
 (define* (insdelln win n #:key y x)
   (and
    (if (and y x)
-       (wmove win y x)
+       (%wmove win y x)
        #t)
    (%winsdelln win n)))
 
 (define* (insertln win #:key y x)
   (and
    (if (and y x)
-       (wmove win y x)
+       (%wmove win y x)
        #t)
    (%winsdelln win 1)))
 
 (define* (insstr win str #:key y x (n -1))
   (and
    (if (and y x)
-       (wmove win y x)
+       (%wmove win y x)
        #t))
   (%winsnstr win str n))
 
@@ -534,7 +532,7 @@
 (define (intrflush flag)
   (%intrflush (stdscr) flag))
 
-(define* (keypad bf #:key (win (stdscr)))
+(define (keypad win bf)
   (%keypad win bf))
 
 ;; The window information isn't used in the lower level function, so
@@ -545,18 +543,18 @@
 (define (move win y x)
   (%wmove win y x))
 
-(define* (nodelay flag #:key (win (stdscr)))
+(define (nodelay win flag)
   (%nodelay win flag))
 
 (define (nooutrefresh win)
   (%wnoutrefresh win))
 
-(define* (notimeout flag #:key (win (stdscr)))
+(define (notimeout win flag)
   (%notimeout win flag))
 
 (define (redrawln win beg_line end_line)
-  (%wredrawln win beg_line end_line)
-
+  (%wredrawln win beg_line end_line))
+  
 (define (refresh win)
   (%wrefresh win))
 
@@ -566,16 +564,16 @@
 (define (scrl win n)
   (%wscrl win n))
 
-(define* (setscrreg top bot #:key (win (stdscr)))
+(define (setscrreg win top bot)
   (%wsetscrreg win top bot))
 
-(define* (standend #:key (win (stdscr)))
+(define (standend win)
   (%wstandend win))
 
-(define* (standout #:key (win (stdscr)))
+(define (standout win)
   (%wstandout win))
 
-(define* (timeout bf #:key (win (stdscr)))
+(define (timeout win bf)
   (%wtimeout win bf))
 
 (define (touchwin win)
@@ -584,24 +582,24 @@
 (define (untouchwin win)
   (%wtouchln win 0 (getmaxy win) #f))
 
-(define (touchline win start #:optional (count 1))
+(define* (touchline win start #:optional (count 1))
   (%wtouchln win start count #t))
 
-(define (untouchline win start #:optional (count 1))
+(define* (untouchline win start #:optional (count 1))
   (%wtouchln win start count #f))
 
 (define (typeahead port-or-fd)
   (cond 
    ((port? port-or-fd) (%typeahead (fileno port-or-fd)))
    (else (%typeahead port-or-fd))))
-    
-(define* (vline ch n #:key (win (stdscr) y x))
+
+(define* (vline win ch n #:key y x)
   (and (if (and y x)
-	   (wmove win y x)
+	   (%wmove win y x)
 	   #t)
        (%wvline win ch n)))
 
 
 		
 
-(load-extension "libguile-gucu-curses-v-0" "gucu_init")
+(load-extension "libguile-gucu" "gucu_init")

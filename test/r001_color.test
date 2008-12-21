@@ -8,7 +8,7 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define scr (initscr))
 
 ;;; These values are the xterm values
 
