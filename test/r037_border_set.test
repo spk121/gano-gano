@@ -9,235 +9,129 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
 ;; Should be able to draw borders
-(with-test-prefix "border-set"
+(with-test-prefix 
+ "border-set"
 		  
-		  (pass-if "border-set default"
-			   (begin
-			     (clear)
-			     (border-set (wacs-vline) (wacs-vline) (wacs-hline) (wacs-hline)
-					 (wacs-ulcorner) (wacs-urcorner) (wacs-llcorner) (wacs-lrcorner))
-			     (refresh)
-			     (let ((l  (mvin-wch 1 	     0))
-				   (r  (mvin-wch 1             (- (cols) 1)))
-				   (t  (mvin-wch 0 	     1))
-				   (b  (mvin-wch (- (lines) 1) 1))
-				   (tl (mvin-wch 0 	     0))
-				   (tr (mvin-wch 0 	     (- (cols) 1)))
-				   (bl (mvin-wch (- (lines) 1) 0))
-				   (br (mvin-wch (- (lines) 1) (- (cols) 1)))
-				   )
-			       (and
-				;; These are the unicode values
-				;; U+2502 BOX DRAWINGS LIGHT VERTICAL
-				(lset= equal? l '(0 0 #x2502))
-				(lset= equal? r '(0 0 #x2502))
-				;; U+2500 BOX DRAWINGS LIGHT HORIZONTAL
-				(lset= equal? t '(0 0 #x2500))
-				(lset= equal? b '(0 0 #x2500))
-				;; U+250C BOX DRAWINGS LIGHT DOWN AND RIGHT
-				(lset= equal? tl '(0 0 #x250C))
-				;; U+2510 BOX DRAWINGS LIGHT DOWN AND LEFT
-				(lset= equal? tr '(0 0 #x2510))
-				;; U+2514 BOX DRAWINGS LIGHT UP AND RIGHT
-				(lset= equal? bl '(0 0 #x2514))
-				;; U+2518 BOX DRAWINGS LIGHT UP AND LEFT
-				(lset= equal? br '(0 0 #x2518))))
-			     *unspecified*))
-
-		  (pass-if "border dashed"
-			   (begin
-			     (clear)
-			     (border-set '(0 0 #x2506) ; dashed vert
-					 '(0 0 #x2506)
-					 '(0 0 #x2504) ; dashed horiz
-					 '(0 0 #x2504)
-					 '(0 0 #x250C)
-					 '(0 0 #x2510)
-					 '(0 0 #x2514)
-					 '(0 0 #x2518))
-			     (refresh)
-			     (let ((l  (mvin-wch 1 	     0))
-				   (r  (mvin-wch 1             (- (cols) 1)))
-				   (t  (mvin-wch 0 	     1))
-				   (b  (mvin-wch (- (lines) 1) 1))
-				   (tl (mvin-wch 0 	     0))
-				   (tr (mvin-wch 0 	     (- (cols) 1)))
-				   (bl (mvin-wch (- (lines) 1) 0))
-				   (br (mvin-wch (- (lines) 1) (- (cols) 1)))
-				   )
-			       (and
-				(lset= equal? l '(0 0 #x2506))
-				(lset= equal? r '(0 0 #x2506))
-				(lset= equal? t '(0 0 #x2504))
-				(lset= equal? b '(0 0 #x2504))
-				(lset= equal? tl '(0 0 #x250C))
-				(lset= equal? tr '(0 0 #x2510))
-				(lset= equal? bl '(0 0 #x2514))
-				(lset= equal? br '(0 0 #x2518))))))
-
-		  (pass-if "hline-set"
-			   (begin
-			     (clear)
-			     (move 1 1)
-			     (hline-set '(0 0 #x2500) 2) 
-			     (refresh)
-			     (let ((x1  (mvin-wch 1 1))
-				   (x2  (mvin-wch 1 2))
-				   )
-			       (and
-				(lset= equal? x1 '(0 0 #x2500))
-				(lset= equal? x2 '(0 0 #x2500))))))
-
-		  (pass-if "vline-set"
-			   (begin
-			     (clear)
-			     (move 1 1)
-			     (vline-set '(0 0 #x2501) 2) 
-			     (refresh)
-			     (let ((x1  (mvin-wch 1 1))
-				   (x2  (mvin-wch 2 1))
-				   )
-			       (and
-				(lset= equal? x1 '(0 0 #x2501))
-				(lset= equal? x2 '(0 0 #x2501))))))
-
-		  (pass-if "mvhline-set"
-			   (begin
-			     (clear)
-			     (mvhline-set 1 1 '(0 0 #x2503) 2) 
-			     (refresh)
-			     (let ((x1  (mvin-wch 1 1))
-				   (x2  (mvin-wch 1 2))
-				   )
-			       (and
-				(lset= equal? x1 '(0 0 #x2503))
-				(lset= equal? x2 '(0 0 #x2503))))))
-
-		  (pass-if "mvvline-set"
-			   (begin
-			     (clear)
-			     (mvvline-set 1 1 '(0 0 #x2504) 2) 
-			     (refresh)
-			     (let ((x1  (mvin-wch 1 1))
-				   (x2  (mvin-wch 2 1))
-				   )
-			       (and
-				(lset= equal? x1 '(0 0 #x2504))
-				(lset= equal? x2 '(0 0 #x2504))))))
-
+ (pass-if "border-set default"
+	  (begin
+	    (clear win)
+	    (border-set win (wacs-vline) (wacs-vline) (wacs-hline) (wacs-hline)
+			(wacs-ulcorner) (wacs-urcorner) (wacs-llcorner) (wacs-lrcorner))
+	    (refresh win)
+	    (let ((l  (in-wch win #:y 1 		#:x 0))
+		  (r  (in-wch win #:y 1			#:x (- (cols) 1)))
+		  (t  (in-wch win #:y 0 		#:x 1))
+		  (b  (in-wch win #:y (- (lines) 1) 	#:x 1))
+		  (tl (in-wch win #:y 0 		#:x 0))
+		  (tr (in-wch win #:y 0 		#:x (- (cols) 1)))
+		  (bl (in-wch win #:y (- (lines) 1) 	#:x 0))
+		  (br (in-wch win #:y (- (lines) 1) 	#:x (- (cols) 1)))
 		  )
+	      (and
+	       ;; These are the unicode values
+	       ;; U+2502 BOX DRAWINGS LIGHT VERTICAL
+	       (lset= equal? l '(0 0 #x2502))
+	       (lset= equal? r '(0 0 #x2502))
+	       ;; U+2500 BOX DRAWINGS LIGHT HORIZONTAL
+	       (lset= equal? t '(0 0 #x2500))
+	       (lset= equal? b '(0 0 #x2500))
+	       ;; U+250C BOX DRAWINGS LIGHT DOWN AND RIGHT
+	       (lset= equal? tl '(0 0 #x250C))
+	       ;; U+2510 BOX DRAWINGS LIGHT DOWN AND LEFT
+	       (lset= equal? tr '(0 0 #x2510))
+	       ;; U+2514 BOX DRAWINGS LIGHT UP AND RIGHT
+	       (lset= equal? bl '(0 0 #x2514))
+	       ;; U+2518 BOX DRAWINGS LIGHT UP AND LEFT
+	       (lset= equal? br '(0 0 #x2518))))
+	    *unspecified*
+	    ))
 
-(define maxy 4)
-(define maxx 9)
-(define win (newwin (+ 1 maxy) (+ 1 maxx) 5 5))
-(with-test-prefix "wborder-set"
-		  
-		  (pass-if "wborder default"
-			   (begin
-			     (wclear win)
-			     (wborder-set win (wacs-vline) (wacs-vline) (wacs-hline) (wacs-hline)
-					  (wacs-ulcorner) (wacs-urcorner) (wacs-llcorner) (wacs-lrcorner))
-			     (wrefresh win)
-			     (let ((l  (mvwin-wch win 1 0))
-				   (r  (mvwin-wch win 1 maxx))
-				   (t  (mvwin-wch win 0 1))
-				   (b  (mvwin-wch win maxy 1))
-				   (tl (mvwin-wch win 0 0))
-				   (tr (mvwin-wch win 0 maxx))
-				   (bl (mvwin-wch win maxy 0))
-				   (br (mvwin-wch win maxy maxx))
-				   )
-			       (and
-				;; These are the unicode values
-				;; U+2502 BOX DRAWINGS LIGHT VERTICAL
-				(lset= equal? l '(0 0 #x2502))
-				(lset= equal? r '(0 0 #x2502))
-				;; U+2500 BOX DRAWINGS LIGHT HORIZONTAL
-				(lset= equal? t '(0 0 #x2500))
-				(lset= equal? b '(0 0 #x2500))
-				;; U+250C BOX DRAWINGS LIGHT DOWN AND RIGHT
-				(lset= equal? tl '(0 0 #x250C))
-				;; U+2510 BOX DRAWINGS LIGHT DOWN AND LEFT
-				(lset= equal? tr '(0 0 #x2510))
-				;; U+2514 BOX DRAWINGS LIGHT UP AND RIGHT
-				(lset= equal? bl '(0 0 #x2514))
-				;; U+2518 BOX DRAWINGS LIGHT UP AND LEFT
-				(lset= equal? br '(0 0 #x2518))))
-			     *unspecified*))
-		  
-		  
-		  (pass-if "box-set"
-			   (begin
-			     (wclear win)
-			     (box-set win '(0 0 #x2020) '(0 0 #x2013)) 
-			     (wrefresh win)
-			     (let ((l  (mvwin-wch win 1 0))
-				   (t  (mvwin-wch win 0 1))
-				   )
-			       (and
-				(equal? l '(0 0 #x2020))
-				(equal? t '(0 0 #x2013))))))
-		  
-
-		  (pass-if "whline-set"
-			   (begin
-			     (wclear win)
-			     (wmove win 1 1)
-			     (whline-set win '(0 0 65) 2) ; A
-			     (wrefresh win)
-			     (let ((x1  (mvwin-wch win 1 1))
-				   (x2  (mvwin-wch win 1 2))
-				   )
-			       (and
-				(lset= equal? x1 '(0 0 65))
-				(lset= equal? x2 '(0 0 65))))))
-
-		  (pass-if "wvline-set"
-			   (begin
-			     (wclear win)
-			     (wmove win 1 1)
-			     (wvline-set win '(0 0 65) 2) ; A
-			     (wrefresh win)
-			     (let ((x1  (mvwin-wch win 1 1))
-				   (x2  (mvwin-wch win 2 1))
-				   )
-			       (and
-				(lset= equal? x1 '(0 0 65))
-				(lset= equal? x2 '(0 0 65))))))
-
-		  (pass-if "mvwhline-set"
-			   (begin
-			     (wclear win)
-			     (mvwhline-set win 1 1 '(0 0 65) 2) ; A
-			     (wrefresh win)
-			     (let ((x1  (mvwin-wch win 1 1))
-				   (x2  (mvwin-wch win 1 2))
-				   )
-			       (and
-				(lset= equal? x1 '(0 0 65))
-				(lset= equal? x2 '(0 0 65))))))
-
-		  (pass-if "mvwvline-set"
-			   (begin
-			     (wclear win)
-			     (mvwvline-set win 1 1 '(0 0 65) 2) ; A
-			     (wrefresh win)
-			     (let ((x1  (mvwin-wch win 1 1))
-				   (x2  (mvwin-wch win 2 1))
-				   )
-			       (and
-				(lset= equal? x1 '(0 0 65))
-				(lset= equal? x2 '(0 0 65))))))
-
+ (pass-if "border dashed"
+	  (begin
+	    (clear win)
+	    (border-set win 
+			'(0 0 #x2506) ; dashed vert
+			'(0 0 #x2506)
+			'(0 0 #x2504) ; dashed horiz
+			'(0 0 #x2504)
+			'(0 0 #x250C)
+			'(0 0 #x2510)
+			'(0 0 #x2514)
+			'(0 0 #x2518))
+	    (refresh win)
+	    (let ((l  (in-wch win #:y 1 	#:x 0))
+		  (r  (in-wch win #:y 1 	#:x (- (cols) 1)))
+		  (t  (in-wch win #:y 0 	#:x 1))
+		  (b  (in-wch win #:y (- (lines) 1) #:x 1))
+		  (tl (in-wch win #:y 0 	#:x 0))
+		  (tr (in-wch win #:y 0 	#:x (- (cols) 1)))
+		  (bl (in-wch win #:y (- (lines) 1) #:x 0))
+		  (br (in-wch win #:y (- (lines) 1) #:x (- (cols) 1)))
 		  )
+	      (and
+	       (lset= equal? l '(0 0 #x2506))
+	       (lset= equal? r '(0 0 #x2506))
+	       (lset= equal? t '(0 0 #x2504))
+	       (lset= equal? b '(0 0 #x2504))
+	       (lset= equal? tl '(0 0 #x250C))
+	       (lset= equal? tr '(0 0 #x2510))
+	       (lset= equal? bl '(0 0 #x2514))
+	       (lset= equal? br '(0 0 #x2518))))))
 
-(delwin win)
-(refresh)
+ (pass-if "hline-set"
+	  (begin
+	    (clear win)
+	    (move win 1 1)
+	    (hline-set win '(0 0 #x2500) 2) 
+	    (refresh win)
+	    (let ((x1 (in-wch win #:y 1 #:x 1))
+		  (x2  (in-wch win #:y 1 #:x 2))
+		  )
+	      (and
+	       (lset= equal? x1 '(0 0 #x2500))
+	       (lset= equal? x2 '(0 0 #x2500))))))
+ 
+ (pass-if "vline-set"
+	  (begin
+	    (clear win)
+	    (move win 1 1)
+	    (vline-set win '(0 0 #x2501) 2) 
+	    (refresh win)
+	    (let ((x1  (in-wch win #:y 1 #:x 1))
+		  (x2  (in-wch win #:y 2 #:x 1))
+		  )
+	      (and
+	       (lset= equal? x1 '(0 0 #x2501))
+	       (lset= equal? x2 '(0 0 #x2501))))))
+ 
+ (pass-if "hline-set #:x #:y"
+	  (begin
+	    (clear win)
+	    (hline-set win '(0 0 #x2503) 2 #:y 1 #:x 1) 
+	    (refresh win)
+	    (let ((x1  (in-wch win #:y 1 #:x 1))
+		  (x2  (in-wch win #:y 1 #:x 2))
+		  )
+	      (and
+	       (lset= equal? x1 '(0 0 #x2503))
+	       (lset= equal? x2 '(0 0 #x2503))))))
 
+ (pass-if "vline-set #:y #:x"
+	  (begin
+	    (clear win)
+	    (vline-set win '(0 0 #x2504) 2 #:y 1 #:x 1) 
+	    (refresh win)
+	    (let ((x1  (in-wch win #:y 1 #:x 1))
+		  (x2  (in-wch win #:y 2 #:x 1))
+		  )
+	      (and
+	       (lset= equal? x1 '(0 0 #x2504))
+	       (lset= equal? x2 '(0 0 #x2504))))))
 
+ )
 
 (endwin)
 
