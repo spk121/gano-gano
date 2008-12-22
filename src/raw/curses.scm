@@ -447,7 +447,7 @@
 (define (clrtoeol win)
   (%wclrtoeol win))
 
-(define (color-set win)
+(define (color-set win pair)
   (%wcolor-set win pair))
 
 (define* (delch win #:key y x)
