@@ -541,7 +541,7 @@ gucu_isendwin ()
 
 /* Return #t if line has been altered since last refresh */
 SCM
-gucu_is_linetouched (SCM win, SCM line)
+gucu_is_linetouched_p (SCM win, SCM line)
 {
   WINDOW *c_win;
   int c_line;
@@ -560,7 +560,7 @@ gucu_is_linetouched (SCM win, SCM line)
 
 /* Return #t if window has been altered since last refresh */
 SCM
-gucu_is_wintouched (SCM win)
+gucu_is_wintouched_p (SCM win)
 {
   WINDOW *c_win;
   bool ret;
@@ -2103,8 +2103,8 @@ gucu_init_function ()
   scm_c_define_gsubr ("init-pair", 3, 0, 0, gucu_init_pair);
   scm_c_define_gsubr ("%intrflush", 2, 0, 0, gucu_intrflush);
   scm_c_define_gsubr ("isendwin", 0, 0, 0, gucu_isendwin);
-  scm_c_define_gsubr ("is-linetouched?", 2, 0, 0, gucu_is_linetouched);
-  scm_c_define_gsubr ("is-wintouched?", 1, 0, 0, gucu_is_wintouched);
+  scm_c_define_gsubr ("is-linetouched?", 2, 0, 0, gucu_is_linetouched_p);
+  scm_c_define_gsubr ("is-wintouched?", 1, 0, 0, gucu_is_wintouched_p);
   scm_c_define_gsubr ("key-f", 1, 0, 0, gucu_KEY_F);
   scm_c_define_gsubr ("keyname", 1, 0, 0, gucu_keyname);
   scm_c_define_gsubr ("%keypad", 2, 0, 0, gucu_keypad);

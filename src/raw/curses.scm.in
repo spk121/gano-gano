@@ -136,9 +136,11 @@
 	    termattrs
 	    termname
 	    timeout
+	    touchline
 	    touchwin
 	    typeahead
 	    ungetch
+	    untouchline
 	    untouchwin
 	    use-default-colors
 	    use-env
