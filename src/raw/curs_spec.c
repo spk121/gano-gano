@@ -329,12 +329,13 @@ gucu_getbegyx (SCM win)
   return (scm_list_2 (scm_from_int (y), scm_from_int (x)));
 }
 
+/* Get the size of the window as a y/x pair*/
 SCM
 gucu_getmaxyx (SCM win)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "getmaxyx");
-
   int y, x;
+
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "getmaxyx");
 
   getmaxyx (_scm_to_window (win), y, x);
 

@@ -9,7 +9,7 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define mainwin (initscr))
 
 (define win (newwin 5 6 7 8))
 (define win2 (subwin win 2 2 8 9))
@@ -20,19 +20,19 @@
 		  
 		  (pass-if "setup"
 			   (begin
-			     (clear)
-			     (refresh)
+			     (clear mainwin)
+			     (refresh mainwin)
 			     (box win 0 0)
 			     (box win2 0 0)
 			     (touchwin win)
-			     (wrefresh win2)
-			     (wrefresh win)
+			     (refresh win2)
+			     (refresh win)
 			     #t))
 
 		  (pass-if "getyx"
 			   (begin
-			     (wmove win 2 1)
-			     (refresh)
+			     (move win 2 1)
+			     (refresh win)
 			     (lset= eqv? '(2 1) (getyx win))))
 
 		  (pass-if "getparyx"
@@ -43,12 +43,6 @@
 
 		  (pass-if "getmaxyx"
 			   (lset= eqv? '(5 6) (getmaxyx win))))
-
-(delwin win2)
-(touchwin win)
-(wrefresh win)
-(delwin win)
-(refresh)
 
 (endwin)
 

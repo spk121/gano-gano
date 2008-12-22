@@ -9,7 +9,7 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
 (define x-normal (char->integer #\x))
 (define x-bold (logior x-normal A_BOLD))
@@ -18,45 +18,20 @@
 		  
 		  (pass-if "inch"
 			   (begin
-			     (clear)
-			     (addch x-normal #:y 4 #:x 5)
-			     (move 4 5)
-			     (refresh)
-			     (let ((x1 (inch)))
+			     (clear win)
+			     (addch win x-normal #:y 4 #:x 5)
+			     (move win 4 5)
+			     (refresh win )
+			     (let ((x1 (inch win)))
 			       (equal? x-normal x1))))
 		  
-		  (pass-if "mvinch"
+		  (pass-if "inch #:y #:x "
 			   (begin
-			     (clear)
-			     (addch x-bold #:y 1 #:x 0)
-			     (refresh)
-			     (let ((x2 (mvinch 1 0)))
+			     (clear win)
+			     (addch win x-bold #:y 1 #:x 0)
+			     (refresh win)
+			     (let ((x2 (inch win #:y 1 #:x 0)))
 			       (equal? x-bold x2)))))
-
-(define win (newwin 5 5 5 5))
-
-(with-test-prefix "winch"
-		  
-		  (pass-if "winch"
-			   (begin
-			     (wclear win)
-			     (addch x-normal #:win win #:y 2 #:x 3)
-			     (wrefresh win)
-			     (wmove win 2 3)
-			     (let ((x1 (winch win)))
-			       (equal? x-normal x1))))
-		  
-		  (pass-if "mvwinch"
-			   (begin
-			     (wclear win)
-			     (addch x-bold #:win win #:y 1 #:x 0)
-			     (wrefresh win)
-			     (let ((x2 (mvwinch win 1 0)))
-			       (equal? x-bold x2)))))
-
-			      
-(delwin win)
-(refresh)
 
 (endwin)
 

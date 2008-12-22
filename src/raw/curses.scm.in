@@ -49,6 +49,8 @@
 	    flushinp
 	    getbkgd
 	    getch
+	    getmaxy
+	    getmaxyx
 	    getnstr
 	    getwin
 	    halfdelay
@@ -133,6 +135,7 @@
 	    termattrs
 	    termname
 	    timeout
+	    touchwin
 	    typeahead
 	    ungetch
 	    untouchwin
@@ -312,7 +315,6 @@
 	    ungetmouse
 	    wmouse-trafo
 	    getbegyx
-	    getmaxyx
 	    getparyx
 	    getsyx
 	    getyx
@@ -476,6 +478,9 @@
 	   (%wmove win y x)
 	   #t)
        (%wgetch win)))
+
+(define (getmaxy win)
+  (car (getmaxyx win)))
 
 (define* (getnstr win n #:key y x)
   (and (if (and y x)
