@@ -27,12 +27,10 @@
 	    key-name
 	    killwchar
 	    mvadd-wch
-	    mvgetn-wstr
 	    mvins-nwstr
 	    mvins-wch
 	    mvins-wstr
 	    mvwadd-wch
-	    mvwgetn-wstr
 	    mvwins-nwstr
 	    mvwins-wch
 	    mvwins-wstr
@@ -64,7 +62,6 @@
 	    wacs-ulcorner
 	    wacs-urcorner
 	    wacs-vline
-	    wgetn-wstr
 	    wins-nwstr
 	    wins-wch
 	    wins-wstr
@@ -114,6 +111,12 @@
 	   (move win y x)
 	   #t)
        (%wget-wch win)))
+
+(define* (getn-wstr win n #:key y x)
+  (and (if (and y x)
+	   (move win y x)
+	   #t)
+       (%wgetn-wstr win n)))
 
 (define* (hline-set win ch n #:key y x)
   (and (if (and y x)
