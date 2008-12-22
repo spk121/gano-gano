@@ -3,13 +3,12 @@
 
 (use-modules (test lib)
 	     (test lib2)
-	     ;; (gucu curses-wide)
 	     (gucu curses)
 	     (srfi srfi-1))
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
 ;; Should be able to refresh the windows
 (with-test-prefix "refresh"
@@ -17,24 +16,29 @@
 		  (pass-if "refresh"
 			   (begin
 			     (and
-			      (eqv? (clear) OK)
-			      (eqv? (refresh) OK)
-			      (eqv? (addstr "a") OK)
-			      (eqv? (refresh) OK)
-			      (eqv? (addstr "b") OK)
-			      (eqv? (wrefresh (stdscr)) OK)
-			      (eqv? (addstr "c") OK)
-			      (eqv? (wnoutrefresh (stdscr)) OK)
-			      (eqv? (doupdate) OK)
-			      (eqv? (begin (display "d")
-					   (wredrawln (stdscr) 0 3))
-				    OK)
-			      (eqv? (refresh) OK)
-			      (eqv? (begin (display "e")
-					   (redrawwin (stdscr)))
-				    OK)
-			      (eqv? (refresh) OK)))))
-				      
+			      (clear win)
+			      (refresh win)
+			      
+			      ;; Normal refresh
+			      (addstr win "a")
+			      (refresh win)
+
+			      ;; Two-part refresh
+			      (addstr win "b")
+			      (noutrefresh win)
+			      (doupdate)
+
+			      ;; Force non-curses output to be overwritten
+			      (begin
+				(display "c")
+				(redrawln win 0 3))
+			      (refresh win)
+
+			      ;; Force non-curses output to be overwritten
+			      (begin
+				(display "d")
+				(redrawwin win))
+			      (refresh win)))))
 
 (endwin)
 

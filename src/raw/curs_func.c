@@ -2181,7 +2181,7 @@ gucu_init_function ()
   scm_c_define_gsubr ("%winsdelln", 2, 0, 0, gucu_winsdelln);
   scm_c_define_gsubr ("%winsnstr", 3, 0, 0, gucu_winsnstr);
   scm_c_define_gsubr ("%wmove", 3, 0, 0, gucu_wmove);
-  scm_c_define_gsubr ("wnoutrefresh", 1, 0, 0, gucu_wnoutrefresh);
+  scm_c_define_gsubr ("%wnoutrefresh", 1, 0, 0, gucu_wnoutrefresh);
   scm_c_define_gsubr ("%wredrawln", 3, 0, 0, gucu_wredrawln);
   scm_c_define_gsubr ("%wrefresh", 1, 0, 0, gucu_wrefresh);
   scm_c_define_gsubr ("%wscrl", 2, 0, 0, gucu_wscrl);

@@ -97,6 +97,7 @@
 	    noecho
 	    nonl
 	    nooutrefresh
+	    noutrefresh
 	    noqiflush
 	    noraw
 	    notimeout
@@ -558,7 +559,11 @@
 (define (nodelay win flag)
   (%nodelay win flag))
 
+;; I hate it when people are 'clever' with dropping letters
 (define (nooutrefresh win)
+  (%wnoutrefresh win))
+
+(define (noutrefresh win)
   (%wnoutrefresh win))
 
 (define (notimeout win flag)
