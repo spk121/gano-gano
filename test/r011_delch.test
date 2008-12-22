@@ -9,68 +9,37 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
+(define (mvinch y x)
+  (inch win #:y y #:x x))
 
 ;; Should be able to delete characters
 (with-test-prefix "delch"
 		  
 		  (pass-if "delch"
 			   (begin
-			     (clear)
-			     (addstr "abc" #:y 0 #:x 0)
-			     (move 0 1)
-			     (delch)
-			     (refresh)
+			     (clear win)
+			     (addstr win "abc" #:y 0 #:x 0)
+			     (move win 0 1)
+			     (delch win)
+			     (refresh win)
 			     (let ((x1 (mvinch 0 0))
 				   (x2 (mvinch 0 1)))
 			       (and
 				(equal? x1 (char->integer #\a))
 				(equal? x2 (char->integer #\c))))))
 		  
-		  (pass-if "mvdelch"
+		  (pass-if "delch #:y #:x"
 			   (begin
-			     (clear)
-			     (addstr "abc" #:y 0 #:x 0)
-			     (mvdelch 0 1)
-			     (refresh)
+			     (clear win)
+			     (addstr win "abc" #:y 0 #:x 0)
+			     (delch win #:y 0 #:x 1)
+			     (refresh win)
 			     (let ((x1 (mvinch 0 0))
 				   (x2 (mvinch 0 1)))
 			       (and
 				(equal? x1 (char->integer #\a))
 				(equal? x2 (char->integer #\c)))))))
-
-(define win (newwin 5 10 5 5))
-
-(with-test-prefix "wdelch"
-		  
-		  (pass-if "wdelch"
-			   (begin
-			     (wclear win)
-			     (addstr "abc" #:win win #:y 0 #:x 0)
-			     (wmove win 0 1)
-			     (wdelch win)
-			     (wrefresh win)
-			     (let ((x1 (mvwinch win 0 0))
-				   (x2 (mvwinch win 0 1)))
-			       (and
-				(equal? x1 (char->integer #\a))
-				(equal? x2 (char->integer #\c))))))
-		  
-		  (pass-if "mvwdelch"
-			   (begin
-			     (wclear win)
-			     (addstr "abc" #:win win #:y 0 #:x 0)
-			     (mvwdelch win 0 1)
-			     (wrefresh win)
-			     (let ((x1 (mvwinch win 0 0))
-				   (x2 (mvwinch win 0 1)))
-			       (and
-				(equal? x1 (char->integer #\a))
-				(equal? x2 (char->integer #\c)))))))
-
-
-(delwin win)
-(refresh)
 
 (endwin)
 
