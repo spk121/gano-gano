@@ -106,18 +106,6 @@ gucu_mvgetn_wstr (SCM y, SCM x, SCM n)
 }
 
 SCM
-gucu_mvget_wch (SCM y, SCM x)
-{
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvget-wch");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvget-wch");
-  wint_t wch = 0;
-
-  int ret = mvget_wch (scm_to_int (y), scm_to_int (x), &wch);
-  return scm_list_2 (scm_from_int (ret), _scm_from_wint (wch));
-
-}
-
-SCM
 gucu_mvwgetn_wstr (SCM win, SCM y, SCM x, SCM n)
 {
   SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwgetn-wstr");
@@ -143,21 +131,6 @@ gucu_mvwgetn_wstr (SCM win, SCM y, SCM x, SCM n)
   
   return (s_str);
 }
-
-SCM
-gucu_mvwget_wch (SCM win, SCM y, SCM x)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwget-wch");
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwget-wch");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwget-wch");
-
-  wint_t wch = 0;
-
-  int ret = mvwget_wch (_scm_to_window (win), scm_to_int (y), scm_to_int (x), &wch);
-  return scm_list_2 (scm_from_int (ret), _scm_from_wint (wch));
-
-}
-
 
 /* Return the given window's current background character and attribute */
 SCM
@@ -204,15 +177,24 @@ gucu_wgetn_wstr (SCM win, SCM n)
   return (s_str);
 }
 
+/* Get a wide character.  If found, return a pair. The first of the pair
+   is 'char or 'key to indicate if it is a keycode or a character */
 SCM
 gucu_wget_wch (SCM win)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wget-wch");
-
   wint_t wch = 0;
+  int ret;
 
-  int ret = wget_wch (_scm_to_window (win), &wch);
-  return scm_list_2 (scm_from_int (ret), _scm_from_wint (wch));
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wget-wch");
+
+  ret = wget_wch (_scm_to_window (win), &wch);
+  
+  if (ret == OK)
+    return scm_list_2 (scm_from_locale_symbol ("char"), _scm_from_wint (wch));
+  else if (ret == KEY_CODE_YES)
+    return scm_list_2 (scm_from_locale_symbol ("key"), _scm_from_wint (wch));
+  else
+    return SCM_BOOL_F;
 }
 
 /* Get a string of wide characters from a curses window */
@@ -533,15 +515,12 @@ gucu_cursw_init_special ()
 {
    scm_c_define_gsubr ("erasewchar", 0, 0, 0, gucu_erasewchar);
    scm_c_define_gsubr ("getn-wstr", 1, 0, 0, gucu_getn_wstr);
-   scm_c_define_gsubr ("get-wch", 0, 0, 0, gucu_get_wch);
    scm_c_define_gsubr ("killwchar", 0, 0, 0, gucu_killwchar);
    scm_c_define_gsubr ("mvgetn-wstr", 3, 0, 0, gucu_mvgetn_wstr);
-   scm_c_define_gsubr ("mvget-wch", 2, 0, 0, gucu_mvget_wch);
    scm_c_define_gsubr ("mvwgetn-wstr", 4, 0, 0, gucu_mvwgetn_wstr);
-   scm_c_define_gsubr ("mvwget-wch", 3, 0, 0, gucu_mvwget_wch);
    scm_c_define_gsubr ("%wgetbkgrnd", 0, 0, 0, gucu_wgetbkgrnd);
    scm_c_define_gsubr ("wgetn-wstr", 2, 0, 0, gucu_wgetn_wstr);
-   scm_c_define_gsubr ("wget-wch", 1, 0, 0, gucu_wget_wch);
+   scm_c_define_gsubr ("%wget-wch", 1, 0, 0, gucu_wget_wch);
    scm_c_define_gsubr ("%winnwstr", 2, 0, 0, gucu_winnwstr);
    scm_c_define_gsubr ("%win-wch", 1, 0, 0, gucu_win_wch);
    scm_c_define_gsubr ("%win-wchnstr", 2, 0, 0, gucu_win_wchnstr);

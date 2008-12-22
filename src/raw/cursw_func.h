@@ -14,6 +14,7 @@
 SCM gucu_ins_nwstr (SCM arg1, SCM arg2) API;
 SCM gucu_ins_wch (SCM arg1) API;
 SCM gucu_ins_wstr (SCM arg1) API;
+SCM gucu_key_name (SCM ch) API;
 SCM gucu_mvins_nwstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4) API;
 SCM gucu_mvins_wch (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_mvins_wstr (SCM arg1, SCM arg2, SCM arg3) API;

@@ -24,15 +24,14 @@
 	    ins-wch
 	    ins-wstr
 	    inwstr
+	    key-name
 	    killwchar
 	    mvadd-wch
-	    mvget-wch
 	    mvgetn-wstr
 	    mvins-nwstr
 	    mvins-wch
 	    mvins-wstr
 	    mvwadd-wch
-	    mvwget-wch
 	    mvwgetn-wstr
 	    mvwins-nwstr
 	    mvwins-wch
@@ -65,7 +64,6 @@
 	    wacs-ulcorner
 	    wacs-urcorner
 	    wacs-vline
-	    wget-wch
 	    wgetn-wstr
 	    wins-nwstr
 	    wins-wch
@@ -110,6 +108,12 @@
 
 (define* (getbkgrnd #:key win)
   (%wgetbkgrnd win))
+
+(define* (get-wch win #:key y x)
+  (and (if (and y x)
+	   (move win y x)
+	   #t)
+       (%wget-wch win)))
 
 (define* (hline-set win ch n #:key y x)
   (and (if (and y x)

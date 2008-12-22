@@ -9,7 +9,6 @@
 #define _GNU_SOURCE
 #define cstring_t cchar_t
 
-
 // 1: int ins_nwstr
 // 2: const wchar_t *
 // 3:  int
@@ -69,6 +68,23 @@ gucu_ins_wstr (SCM arg1)
 
 	return s_ret;
 }
+
+/* Returns a character string corresponding to the key name */
+SCM
+gucu_key_name (SCM ch)
+{
+  wchar_t c_ch;
+  char *ret;
+
+  SCM_ASSERT (scm_is_integer (ch), ch, SCM_ARG1, "key-name");
+  
+  c_ch = _scm_to_wchar (ch);
+
+  ret = key_name (c_ch);
+
+  return scm_from_locale_string (ret);
+}
+
 
 // 1: int mvins_nwstr
 // 2: int
@@ -248,23 +264,23 @@ gucu_term_attrs ()
   return s_ret;
 }
 
-
-
-// 1: int unget_wch
-// 2: const wchar_t
-// 3: 
-// 4: 
+/* Push a wide character back on the input queue */
 SCM
-gucu_unget_wch (SCM arg1)
+gucu_unget_wch (SCM ch)
 {
-	SCM_ASSERT (_scm_is_wchar (arg1), arg1, SCM_ARG1, "unget-wch");
+  int ret;
+  SCM s_ret;
 
-	const wchar_t c_arg1 = _scm_to_wchar (arg1);
+  SCM_ASSERT (_scm_is_wchar (ch), ch, SCM_ARG1, "unget-wch");
+  
+  {
+    const wchar_t c_ch = _scm_to_wchar (ch);
 
-	int ret = unget_wch (c_arg1);
-	SCM s_ret = scm_from_int (ret);
+    ret = unget_wch (c_ch);
+    s_ret = scm_from_int (ret);
 
-	return s_ret;
+    return s_ret;
+  }
 }
 
 /* Write the wide string to the given window */
@@ -585,6 +601,7 @@ gucu_cursw_init_function ()
 	scm_c_define_gsubr ("ins-nwstr", 2, 0, 0, gucu_ins_nwstr);
 	scm_c_define_gsubr ("ins-wch", 1, 0, 0, gucu_ins_wch);
 	scm_c_define_gsubr ("ins-wstr", 1, 0, 0, gucu_ins_wstr);
+	scm_c_define_gsubr ("key-name", 1, 0, 0, gucu_key_name);
 	scm_c_define_gsubr ("mvins-nwstr", 4, 0, 0, gucu_mvins_nwstr);
 	scm_c_define_gsubr ("mvins-wch", 3, 0, 0, gucu_mvins_wch);
 	scm_c_define_gsubr ("mvins-wstr", 3, 0, 0, gucu_mvins_wstr);

@@ -7,165 +7,151 @@
 	     (gucu curses-wide)
 	     (gucu curses))
 
+(setlocale LC_ALL "")
+
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
 (cbreak)
 (echo)
 
-(define win (newwin 5 10 5 5))
-
 ;; Should be able to get characters from the keyboard
-(with-test-prefix "get-wch"
+(with-test-prefix 
+ "get-wch"
 		  
-		  (pass-if "unget-wch / get-wch"
-			   (begin
-			     (let ((x1 (char->integer #\x)))
-			       (unget-wch x1)
-			       (lset= equal? (get-wch) (list OK x1)))))
+ (pass-if "unget-wch / get-wch"
+	  (begin
+	    (let ((x1 (char->integer #\x)))
+	      (unget-wch x1)
+	      (lset= equal? (get-wch win) (list 'char x1)))))
 
-
-		  (pass-if "wget-wch"
-			   (begin
-			     (let ((x1 (char->integer #\x)))
-			       (unget-wch x1)
-			       (lset= equal? (wget-wch win) (list OK x1)))))
-
-
-		  (pass-if "mvget-wch"
-			   (begin
-			     (let ((x1 (char->integer #\x)))
-			       (begin
-				 (clear)
-				 (unget-wch x1)
-				 (let ((x2 (mvget-wch 2 2))
-				       (pos (getyx (stdscr))))
-				   (and
-				    (lset= equal? x2 (list OK x1))
-				    (lset= equal? pos '(2 2))))))))
+ (pass-if "get-wch #:y #:x"
+	  (begin
+	    (let ((x1 (char->integer #\x)))
+	      (begin
+		(clear win)
+		(unget-wch x1)
+		(let ((x2 (get-wch win #:y 2 #:x 2))
+		      (pos (getyx win)))
+		  (and
+		   (lset= equal? x2 (list 'char x1))
+		   (lset= equal? pos '(2 2)))))))))
 					  
-		  (pass-if "mvwget-wch"
-			   (begin
-			     (let ((x1 (char->integer #\x)))
-			       (begin
-				 (wclear win)
-				 (unget-wch x1)
-				 (let ((x2 (mvwget-wch win 2 2))
-				       (pos (getyx win)))
-				   (and
-				    (lset= equal? x2 (list OK x1))
-				    (lset= eqv? pos '(2 2)))))))))
-
-(delwin win)
-(refresh)
-
-; 		  (map (lambda (key)
-; 			 (pass-if (keyname key) (has-key key)))
-; 		       `(
-; 			 KEY_BREAK
-; 			 KEY_DOWN
-; 			 KEY_UP
-; 			 KEY_LEFT
-; 			 KEY_RIGHT
-; 			 KEY_HOME
-; 			 KEY_BACKSPACE
-; 			 KEY_F0
-; 			 ,(key-f 1)
-; 			 ,(key-f 2)
-; 			 ,(key-f 3)
-; 			 ,(key-f 4)
-; 			 ,(key-f 5)
-; 			 ,(key-f 6)
-; 			 ,(key-f 7)
-; 			 ,(key-f 8)
-; 			 ,(key-f 9)
-; 			 ,(key-f 10)
-; 			 ,(key-f 11)
-; 			 ,(key-f 12)
-; 			 KEY_DL
-; 			 KEY_IL
-; 			 KEY_DC
-; 			 KEY_IC
-; 			 KEY_EIC
-; 			 KEY_CLEAR
-; 			 KEY_EOS
-; 			 KEY_EOL
-; 			 KEY_SF
-; 			 KEY_SR
-; 			 KEY_NPAGE
-; 			 KEY_PPAGE
-; 			 KEY_STAB
-; 			 KEY_CTAB
-; 			 KEY_CATAB
-; 			 KEY_ENTER
-; 			 KEY_SRESET
-; 			 KEY_RESET
-; 			 KEY_PRINT
-; 			 KEY_LL
-; 			 KEY_A1
-; 			 KEY_A3
-; 			 KEY_B2
-; 			 KEY_C1
-; 			 KEY_C3
-; 			 KEY_BTAB
-; 			 KEY_BEG
-; 			 KEY_CANCEL
-; 			 KEY_CLOSE
-; 			 KEY_COMMAND
-; 			 KEY_COPY
-; 			 KEY_CREATE
-; 			 KEY_END
-; 			 KEY_EXIT
-; 			 KEY_FIND
-; 			 KEY_HELP
-; 			 KEY_MARK
-; 			 KEY_MESSAGE
-; 			 KEY_MOUSE
-; 			 KEY_MOVE
-; 			 KEY_NEXT
-; 			 KEY_OPEN
-; 			 KEY_OPTIONS
-; 			 KEY_PREVIOUS
-; 			 KEY_REDO
-; 			 KEY_REFERENCE
-; 			 KEY_REFRESH
-; 			 KEY_REPLACE
-; 			 KEY_RESIZE
-; 			 KEY_RESTART
-; 			 KEY_RESUME
-; 			 KEY_SAVE
-; 			 KEY_SBEG
-; 			 KEY_SCANCEL
-; 			 KEY_SCOMMAND
-; 			 KEY_SCOPY
-; 			 KEY_SCREATE
-; 			 KEY_SDC
-; 			 KEY_SDL
-; 			 KEY_SELECT
-; 			 KEY_SEND
-; 			 KEY_SEOL
-; 			 KEY_SEXIT
-; 			 KEY_SFIND
-; 			 KEY_SHELP
-; 			 KEY_SHOME
-; 			 KEY_SIC
-; 			 KEY_SLEFT
-; 			 KEY_SMESSAGE
-; 			 KEY_SMOVE
-; 			 KEY_SNEXT
-; 			 KEY_SOPTIONS
-; 			 KEY_SPREVIOUS
-; 			 KEY_SPRINT
-; 			 KEY_SREDO
-; 			 KEY_SREPLACE
-; 			 KEY_SRIGHT
-; 			 KEY_SRSUME
-; 			 KEY_SSAVE
-; 			 KEY_SSUSPEND
-; 			 KEY_SUNDO
-; 			 KEY_SUSPEND
-; 			 KEY_UNDO)))
+(refresh win)
+(scrollok win #t)
+(move win 0 0)
+(map (lambda (key)
+       (pass-if (keyname key)
+		(begin
+		  ;;(addstr win (format #f "~S ~S ~S\n" key (keyname key) (key-name key)))
+		  ;;(refresh win)
+		  ;;(usleep 10000)
+		  (key-name key))))
+     (list
+      KEY_BREAK
+      KEY_DOWN
+      KEY_UP
+      KEY_LEFT
+      KEY_RIGHT
+      KEY_HOME
+      KEY_BACKSPACE
+      KEY_F0
+      (key-f 1)
+      (key-f 2)
+      (key-f 3)
+      (key-f 4)
+      (key-f 5)
+      (key-f 6)
+      (key-f 7)
+      (key-f 8)
+      (key-f 9)
+      (key-f 10)
+      (key-f 11)
+      (key-f 12)
+      KEY_DL
+      KEY_IL
+      KEY_DC
+      KEY_IC
+      KEY_EIC
+      KEY_CLEAR
+      KEY_EOS
+      KEY_EOL
+      KEY_SF
+      KEY_SR
+      KEY_NPAGE
+      KEY_PPAGE
+      KEY_STAB
+      KEY_CTAB
+      KEY_CATAB
+      KEY_ENTER
+      KEY_SRESET
+      KEY_RESET
+      KEY_PRINT
+      KEY_LL
+      KEY_A1
+      KEY_A3
+      KEY_B2
+      KEY_C1
+      KEY_C3
+      KEY_BTAB
+      KEY_BEG
+      KEY_CANCEL
+      KEY_CLOSE
+      KEY_COMMAND
+      KEY_COPY
+      KEY_CREATE
+      KEY_END
+      KEY_EXIT
+      KEY_FIND
+      KEY_HELP
+      KEY_MARK
+      KEY_MESSAGE
+      KEY_MOUSE
+      KEY_MOVE
+      KEY_NEXT
+      KEY_OPEN
+      KEY_OPTIONS
+      KEY_PREVIOUS
+      KEY_REDO
+      KEY_REFERENCE
+      KEY_REFRESH
+      KEY_REPLACE
+      KEY_RESIZE
+      KEY_RESTART
+      KEY_RESUME
+      KEY_SAVE
+      KEY_SBEG
+      KEY_SCANCEL
+      KEY_SCOMMAND
+      KEY_SCOPY
+      KEY_SCREATE
+      KEY_SDC
+      KEY_SDL
+      KEY_SELECT
+      KEY_SEND
+      KEY_SEOL
+      KEY_SEXIT
+      KEY_SFIND
+      KEY_SHELP
+      KEY_SHOME
+      KEY_SIC
+      KEY_SLEFT
+      KEY_SMESSAGE
+      KEY_SMOVE
+      KEY_SNEXT
+      KEY_SOPTIONS
+      KEY_SPREVIOUS
+      KEY_SPRINT
+      KEY_SREDO
+      KEY_SREPLACE
+      KEY_SRIGHT
+      KEY_SRSUME
+      KEY_SSAVE
+      KEY_SSUSPEND
+      KEY_SUNDO
+      KEY_SUSPEND
+      KEY_UNDO))
 
 (endwin)
 (curses-test-end test "r038_get_wch.out")
