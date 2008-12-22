@@ -9,66 +9,38 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
+(define (mvinch y x)
+  (inch win #:y y #:x x))
 
 ;; Should be able to change input options
 (with-test-prefix "insch"
 		  
 		  (pass-if "insch"
 			   (begin
-			     (clear)
-			     (refresh)
-			     (addstr "xxx" #:y 0 #:x 0)
-			     (move 0 0)
-			     (insch (char->integer #\z))
+			     (clear win)
+			     (refresh win)
+			     (addstr win "xxx" #:y 0 #:x 0)
+			     (move win 0 0)
+			     (insch win (char->integer #\z))
 			     (let ((x1 (mvinch 0 0))
 				   (x2 (mvinch 0 1)))
 			       (and
 				(equal? x1 (char->integer #\z))
 				(equal? x2 (char->integer #\x))))))
 
-		  (pass-if "mvinsch"
+		  (pass-if "insch #:y #:x"
 			   (begin
-			     (clear)
-			     (refresh)
-			     (addstr "xxx" #:y 0 #:x 0)
-			     (mvinsch 0 0 (char->integer #\z))
+			     (clear win)
+			     (refresh win)
+			     (addstr win "xxx" #:y 0 #:x 0)
+			     (insch win (char->integer #\z) #:y 0 #:x 0)
 			     (let ((x1 (mvinch 0 0))
 				   (x2 (mvinch 0 1)))
 			       (and
 				(equal? x1 (char->integer #\z))
 				(equal? x2 (char->integer #\x)))))))
-
-(define win (newwin 5 5 5 5))
-
-(with-test-prefix "winsch"
-		  
-		  (pass-if "winsch"
-			   (begin
-			     (wclear win)
-			     (wrefresh win)
-			     (addstr "xxx" #:win win #:y 0 #:x 0)
-			     (wmove win 0 0)
-			     (winsch win (char->integer #\z))
-			     (let ((x1 (mvwinch win 0 0))
-				   (x2 (mvwinch win 0 1)))
-			       (and
-				(equal? x1 (char->integer #\z))
-				(equal? x2 (char->integer #\x))))))
-
-		  (pass-if "mvwinsch"
-			   (begin
-			     (wclear win)
-			     (wrefresh win)
-			     (addstr "xxx" #:win win #:y 0 #:x 0)
-			     (mvwinsch win 0 0 (char->integer #\z))
-			     (let ((x1 (mvwinch win 0 0))
-				   (x2 (mvwinch win 0 1)))
-			       (and
-				(equal? x1 (char->integer #\z))
-				(equal? x2 (char->integer #\x)))))))
-
 (endwin)
 
 (curses-test-end test "r019_insch.out")		  

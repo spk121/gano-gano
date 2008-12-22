@@ -128,7 +128,7 @@ SCM gucu_werase (SCM arg1) API;
 SCM gucu_wgetch (SCM arg1) API;
 SCM gucu_whline (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_winch (SCM arg1) API;
-SCM gucu_winsch (SCM arg1, SCM arg2) API;
+SCM gucu_winsch (SCM win, SCM ch) API;
 SCM gucu_winsdelln (SCM arg1, SCM arg2) API;
 SCM gucu_winsnstr (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_wmove (SCM arg1, SCM arg2, SCM arg3) API;
