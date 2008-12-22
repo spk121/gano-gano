@@ -42,6 +42,7 @@ SCM gucu_halfdelay (SCM arg1) API;
 SCM gucu_has_colors_p (void) API;
 SCM gucu_has_ic (void) API;
 SCM gucu_has_il (void) API;
+SCM gucu_has_key_p (SCM key) API;
 SCM gucu_idcok (SCM arg1, SCM arg2) API;
 SCM gucu_idlok (SCM arg1, SCM arg2) API;
 SCM gucu_immedok (SCM arg1, SCM arg2) API;

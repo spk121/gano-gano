@@ -54,6 +54,7 @@
 	    has-colors?
 	    has-ic
 	    has-il
+	    has-key?
 	    hline
 	    idcok
 	    idlok

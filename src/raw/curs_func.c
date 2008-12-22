@@ -376,6 +376,19 @@ gucu_has_il ()
   return (scm_from_bool (ret));
 }
 
+/* Return #t/#f if the terminal type recognizes a key of that value */
+SCM
+gucu_has_key_p (SCM key)
+{
+  int c_key;
+
+  SCM_ASSERT (scm_is_integer (key), key, SCM_ARG1, "has-key");
+
+  c_key = scm_to_int (key);
+
+  RETURNTF (has_key (c_key));
+}
+
 /* When true, try to use a terminal's hardware to clear characters */
 SCM
 gucu_idcok (SCM win, SCM bf)
@@ -1700,7 +1713,7 @@ gucu_werase (SCM win)
   RETURNTF(ret);
 }
 
-/* Get a keypress and apply it to the window */
+/* Get a keypress and apply it to the window. Return the keycode. */
 SCM
 gucu_wgetch (SCM win)
 {
@@ -1712,7 +1725,7 @@ gucu_wgetch (SCM win)
   c_win = _scm_to_window (win);
 
   ret = wgetch (c_win);
-  RETURNTF(ret);
+  return scm_from_int (ret);
 }
 
 /* Draw a horizontal line using the given character that is N
@@ -2074,6 +2087,7 @@ gucu_init_function ()
   scm_c_define_gsubr ("has-colors?", 0, 0, 0, gucu_has_colors_p);
   scm_c_define_gsubr ("has-ic", 0, 0, 0, gucu_has_ic);
   scm_c_define_gsubr ("has-il", 0, 0, 0, gucu_has_il);
+  scm_c_define_gsubr ("has-key?", 1, 0, 0, gucu_has_key_p);
   scm_c_define_gsubr ("idcok", 2, 0, 0, gucu_idcok);
   scm_c_define_gsubr ("idlok", 2, 0, 0, gucu_idlok);
   scm_c_define_gsubr ("immedok", 2, 0, 0, gucu_immedok);
