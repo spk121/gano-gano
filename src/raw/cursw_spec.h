@@ -38,24 +38,17 @@ SCM gucu_WACS_VLINE (void) API;
 SCM gucu_erasewchar (void) API;
 SCM gucu_get_wch (void) API;
 SCM gucu_getn_wstr (SCM n) API;
-SCM gucu_innwstr (SCM n) API;
-SCM gucu_inwstr (void) API;
 SCM gucu_killwchar (void) API;
 SCM gucu_mvget_wch (SCM y, SCM x) API;
 SCM gucu_mvgetn_wstr (SCM y, SCM x, SCM n) API;
-SCM gucu_mvinnwstr (SCM y, SCM x, SCM n) API;
-SCM gucu_mvinwstr (SCM y, SCM x) API;
 SCM gucu_mvwget_wch (SCM win, SCM y, SCM x) API;
 SCM gucu_mvwgetn_wstr (SCM win, SCM y, SCM x, SCM n) API;
-SCM gucu_mvwinnwstr (SCM y, SCM x, SCM win, SCM n) API;
-SCM gucu_mvwinwstr (SCM y, SCM x, SCM win) API;
 SCM gucu_wget_wch (SCM win) API;
 SCM gucu_wgetbkgrnd (SCM win) API;
 SCM gucu_wgetn_wstr (SCM win, SCM n) API;
 SCM gucu_win_wch (SCM win) API;
 SCM gucu_win_wchnstr (SCM win, SCM n) API;
 SCM gucu_winnwstr (SCM win, SCM n) API;
-SCM gucu_winwstr (SCM win) API;
 
 void gucu_cursw_init_special (void);
 #endif

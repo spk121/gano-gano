@@ -28,18 +28,15 @@
 	    mvadd-wch
 	    mvget-wch
 	    mvgetn-wstr
-	    mvinnwstr
 	    mvins-nwstr
 	    mvins-wch
 	    mvins-wstr
-	    mvinwstr
 	    mvwadd-wch
 	    mvwget-wch
 	    mvwgetn-wstr
 	    mvwins-nwstr
 	    mvwins-wch
 	    mvwins-wstr
-	    mvwinwstr
 	    term-attrs
 	    unget-wch
 	    vline-set
@@ -131,6 +128,12 @@
 	   (move win y x)
 	   #t)
        (%win-wchnstr win n)))
+
+(define* (inwstr win #:key y x (n -1))
+  (and (if (and y x)
+	   (move win y x)
+	   #t)
+       (%winnwstr win n)))
 
 (define* (vline-set win ch n #:key y x)
   (and (if (and y x)

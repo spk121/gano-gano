@@ -64,49 +64,6 @@ gucu_get_wch ()
   return scm_list_2 (scm_from_int (ret), _scm_from_wint (wch));
 }
 
-SCM
-gucu_innwstr (SCM n)
-{
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG1, "innwstr");
-
-  wchar_t *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (scm_to_int (n) + 1));
-
-  ret = innwstr (c_str, scm_to_int (n) + 1);
-  if (ret != ERR)
-    {
-      s_str = _scm_from_wchar_string (c_str);
-    }
-  else
-    abort ();
-
-  free (c_str);
-
-  return s_str;
-}
-
-SCM
-gucu_inwstr (void)
-{
-  wchar_t *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (COLS + 1));
-  ret = inwstr (c_str);
-  if (ret != ERR)
-    {
-      s_str = _scm_from_wchar_string (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
-}
-
 
 /* Return the current line kill character */
 SCM
@@ -201,113 +158,6 @@ gucu_mvwget_wch (SCM win, SCM y, SCM x)
 
 }
 
-SCM
-gucu_mvinnwstr (SCM y, SCM x, SCM n)
-{
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvinnwstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvinnwstr");
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG3, "mvinnwstr");
-
-  wchar_t *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (scm_to_int (n) + 1));
-
-  ret = mvinnwstr (scm_to_int (y), scm_to_int (x), c_str, scm_to_int (n) + 1);
-  if (ret != ERR)
-    {
-      s_str = _scm_from_wchar_string (c_str);
-    }
-  else
-    abort ();
-
-  free (c_str);
-
-  return s_str;
-}
-
-SCM
-gucu_mvinwstr (SCM y, SCM x)
-{
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvinwstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvinwstr");
-
-  wchar_t *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (COLS + 1));
-
-  ret = mvinwstr (scm_to_int (y), scm_to_int (x), c_str);
-  if (ret != ERR)
-    {
-      s_str = _scm_from_wchar_string (c_str);
-    }
-  else
-    abort ();
-
-  free (c_str);
-
-  return s_str;
-}
-
-
-SCM
-gucu_mvwinwstr (SCM win, SCM y, SCM x)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwinwstr");
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwinwstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwinwstr");
-
-  wchar_t *c_str;
-  SCM s_str;
-  int ret;
-  
-  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (COLS + 1));
-
-  ret = mvwinwstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), c_str);
-
-  if (ret != ERR)
-    {
-      s_str = _scm_from_wchar_string (c_str);
-    }
-  else
-    abort ();
-
-  free (c_str);
-
-  return s_str;
-}
-
-
-SCM
-gucu_mvwinnwstr (SCM win, SCM y, SCM x, SCM n)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwinnwstr");
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwinnwstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwinnwstr");
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG4, "mvwinnstr");
-
-  wchar_t *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (scm_to_int (n) + 1));
-
-  ret = mvwinnwstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), 
-		   c_str, scm_to_int (n) + 1);
-  if (ret != ERR)
-    {
-      s_str = _scm_from_wchar_string (c_str);
-    }
-  else
-    abort ();
-
-  free (c_str);
-
-  return s_str;
-}
 
 /* Return the given window's current background character and attribute */
 SCM
@@ -365,19 +215,31 @@ gucu_wget_wch (SCM win)
   return scm_list_2 (scm_from_int (ret), _scm_from_wint (wch));
 }
 
+/* Get a string of wide characters from a curses window */
 SCM
 gucu_winnwstr (SCM win, SCM n)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "winnwstr");
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG2, "winnwstr");
-
   wchar_t *c_str;
   SCM s_str;
+  int c_n;
   int ret;
+  int y, x;
 
-  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (scm_to_int (n) + 1));
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%winnwstr");
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG2, "%winnwstr");
+  
+  c_n = scm_to_int (n);
+  if (c_n == -1)
+    {
+      getmaxyx (_scm_to_window (win), y, x);
+      c_n = x;
+    }
+  if (c_n <= 0)
+    scm_out_of_range ("%winnwstr", n);
 
-  ret = winnwstr (_scm_to_window (win), c_str, scm_to_int (n) + 1);
+  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (c_n + 1));
+
+  ret = winnwstr (_scm_to_window (win), c_str, c_n + 1);
   if (ret != ERR)
     {
       s_str = _scm_from_wchar_string (c_str);
@@ -389,31 +251,6 @@ gucu_winnwstr (SCM win, SCM n)
 
   return s_str;
 }
-
-SCM
-gucu_winwstr (SCM win)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "winwstr");
-
-  wchar_t *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (wchar_t *) scm_malloc (sizeof (wchar_t) * (COLS + 1));
-
-  ret = winwstr (_scm_to_window (win), c_str);
-  if (ret != ERR)
-    {
-      s_str = _scm_from_wchar_string (c_str);
-    }
-  else
-    abort ();
-
-  free (c_str);
-
-  return s_str;
-}
-
 
 /* extract a complex rendered character from the window */
 SCM
@@ -697,22 +534,15 @@ gucu_cursw_init_special ()
    scm_c_define_gsubr ("erasewchar", 0, 0, 0, gucu_erasewchar);
    scm_c_define_gsubr ("getn-wstr", 1, 0, 0, gucu_getn_wstr);
    scm_c_define_gsubr ("get-wch", 0, 0, 0, gucu_get_wch);
-   scm_c_define_gsubr ("innwstr", 1, 0, 0, gucu_innwstr);
-   scm_c_define_gsubr ("inwstr", 0, 0, 0, gucu_inwstr);
    scm_c_define_gsubr ("killwchar", 0, 0, 0, gucu_killwchar);
    scm_c_define_gsubr ("mvgetn-wstr", 3, 0, 0, gucu_mvgetn_wstr);
    scm_c_define_gsubr ("mvget-wch", 2, 0, 0, gucu_mvget_wch);
-   scm_c_define_gsubr ("mvinnwstr", 3, 0, 0, gucu_mvinnwstr);
-   scm_c_define_gsubr ("mvinwstr", 2, 0, 0, gucu_mvinwstr);
    scm_c_define_gsubr ("mvwgetn-wstr", 4, 0, 0, gucu_mvwgetn_wstr);
    scm_c_define_gsubr ("mvwget-wch", 3, 0, 0, gucu_mvwget_wch);
-   scm_c_define_gsubr ("mvwinnwstr", 4, 0, 0, gucu_mvwinnwstr);
-   scm_c_define_gsubr ("mvwinwstr", 3, 0, 0, gucu_mvwinwstr);
    scm_c_define_gsubr ("%wgetbkgrnd", 0, 0, 0, gucu_wgetbkgrnd);
    scm_c_define_gsubr ("wgetn-wstr", 2, 0, 0, gucu_wgetn_wstr);
    scm_c_define_gsubr ("wget-wch", 1, 0, 0, gucu_wget_wch);
-   scm_c_define_gsubr ("winnwstr", 2, 0, 0, gucu_winnwstr);
-   scm_c_define_gsubr ("winwstr", 1, 0, 0, gucu_winwstr);
+   scm_c_define_gsubr ("%winnwstr", 2, 0, 0, gucu_winnwstr);
    scm_c_define_gsubr ("%win-wch", 1, 0, 0, gucu_win_wch);
    scm_c_define_gsubr ("%win-wchnstr", 2, 0, 0, gucu_win_wchnstr);
    scm_c_define_gsubr ("wacs-block", 0, 0, 0, gucu_WACS_BLOCK);

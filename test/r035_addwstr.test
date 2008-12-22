@@ -21,9 +21,9 @@
 	  (begin
 	    (clear win)
 	    (move win 0 0)
-	    (addwstr (string->wstring "hello"))
-	    (refresh)
-	    (let ((w2 (mvinwstr 0 0)))
+	    (addwstr win (string->wstring "hello"))
+	    (refresh win)
+	    (let ((w2 (inwstr win #:y 0 #:x 0)))
 	      (lset= eqv?  
 		     (string->wstring "hello") 
 		     (take w2 (string-length "hello"))))))
@@ -31,85 +31,34 @@
 
  (pass-if "addwstr #:n"
 	  (begin
-	    (clear)
-	    (move 0 0)
-	    (addwstr (string->wstring "hello") #:n 2)
-	    (refresh)
-	    (let ((w2 (mvinwstr 0 0)))
+	    (clear win)
+	    (move win 0 0)
+	    (addwstr win (string->wstring "hello") #:n 2)
+	    (refresh win)
+	    (let ((w2 (instr win #:y 0 #:x 0)))
 	      (lset= eqv? 
 		     (string->wstring "he")
 		     (take w2 (string-length "he"))))))
 
  (pass-if "addwstr #:y #:x"
 	  (begin
-	    (clear)
-	    (addwstr (string->wstring "bold") #:y 1 #:x 0)
-	    (refresh)
-	    (let ((x2 (mvinwstr 1 0)))
+	    (clear win)
+	    (addwstr win (string->wstring "bold") #:y 1 #:x 0)
+	    (refresh win)
+	    (let ((x2 (instr win #:y 1 #:x 0)))
 	      (lset= eqv? 
 		     (string->wstring "bold") 
 		     (take x2 (string-length "bold"))))))
 
  (pass-if "addwstr #:y #:x #:n"
 	  (begin
-	    (clear)
-	    (addwstr (string->wstring "bold") #:y 1 #:x 0 #:n 2)
-	    (refresh)
-	    (let ((x2 (mvinwstr 1 0)))
+	    (clear win)
+	    (addwstr win (string->wstring "bold") #:y 1 #:x 0 #:n 2)
+	    (refresh win)
+	    (let ((x2 (instr win #:y 1 #:x 0)))
 	      (lset= eqv? 
 		     (string->wstring "bo")
 		     (take x2 (string-length "bo")))))))
-
-(define win (newwin 5 10 5 5))
-
-(with-test-prefix 
- "waddwstr"
- 
- (pass-if "addwstr #:win"
-	  (begin
-	    (wclear win)
-	    (wmove win 0 0)
-	    (addwstr (string->wstring "hello") #:win win)
-	    (wrefresh win)
-	    (let ((w2 (mvwinwstr win 0 0)))
-	      (lset= eqv? 
-		     (string->wstring "hello") 
-		     (take w2 (string-length "hello"))))))
-
- (pass-if "waddnwstr"
-	  (begin
-	    (wclear win)
-	    (wmove win 0 0)
-	    (addwstr (string->wstring "hello") #:win win #:n 2)
-	    (wrefresh win)
-	    (let ((w2 (mvwinwstr win 0 0)))
-	      (lset= eqv? 
-		     (string->wstring "he") 
-		     (take w2 (string-length "he"))))))
-
- (pass-if "addwstr"
-	  (begin
-	    (wclear win)
-	    (addwstr (string->wstring "bold") #:y 1 #:x 0 #:win win)
-	    (wrefresh win)
-	    (let ((x2 (mvwinwstr win 1 0)))
-	      (lset= eqv? 
-		     (string->wstring "bold") 
-		     (take x2 (string-length "bold"))))))
-
- (pass-if "mvaddnstr"
-	  (begin
-	    (wclear win)
-	    (addwstr (string->wstring "bold") #:win win #:y 1 #:x 0 #:n 2)
-	    (wrefresh win)
-	    (let ((x2 (mvwinwstr win 1 0)))
-	      (lset= eqv? 
-		     (string->wstring "bo") 
-		     (take x2 (string-length "bo")))))))
-
-
-(delwin win)
-(refresh)
 
 (endwin)
 
