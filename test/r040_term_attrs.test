@@ -10,12 +10,7 @@
 
 (define test (curses-test-start))
 
-(define (mvaddstr y x s)
-  (addstr s #:y y #:x x))
-(define (mvwaddstr w y x s)
-  (addstr s #:win w #:y y #:x x))
-
-(initscr)
+(define win (initscr))
 
 ;; Should be able to get term attributes
 (with-test-prefix 
@@ -26,12 +21,12 @@
  ;; #\del.  Cygwin gives ERR.
  (pass-if "erasewchar"
 	  (begin
-	    (clear)
-	    (refresh)
+	    (clear win)
+	    (refresh win)
 	    (let ((c (erasewchar)))
-	      (addstr (format #f "erasewchar: ~a" c))
-	      (refresh)
-	      ;;(sleep 2)
+	      (addstr win (format #f "erasewchar: ~a" c))
+	      (refresh win)
+	      (sleep 2)
 	      (eqv? c (char->integer #\del)))
 	    *unspecified*))
 		  
@@ -40,19 +35,19 @@
  ;; gives ERR
  (pass-if "killwchar"
 	  (begin
-	    (clear)
-	    (refresh)
+	    (clear win)
+	    (refresh win)
 	    (let ((c (killwchar)))
-	      (addstr (format #f "killwchar: ~a" c))
-	      (refresh)
-	      ;;(sleep 2)
+	      (addstr win (format #f "killwchar: ~a" c))
+	      (refresh win)
+	      (sleep 2)
 	      (eqv? c (char->integer #\del)))
 	    *unspecified*))
 
  (pass-if "term-attrs"
 	  (begin
-	    (clear)
-	    (refresh)
+	    (clear win)
+	    (refresh win)
 	    (let ((ta (term-attrs))
 		  (ta2 (logior 
 			A_ALTCHARSET
@@ -64,26 +59,26 @@
 			A_REVERSE
 			A_STANDOUT
 			A_UNDERLINE))) 
-	      
-	      (mvaddstr 0 0 (format #f "      ~32,'0b~%" ta))
-	      (addstr (format #f " LEFT ~32,'0b~%" WA_LEFT))
-	      (addstr (format #f "  LOW ~32,'0b~%" WA_LOW))
-	      (addstr (format #f "RIGHT ~32,'0b~%" WA_RIGHT))
-	      (addstr (format #f "  TOP ~32,'0b~%" WA_TOP))
-	      (addstr (format #f " VERT ~32,'0b~%" WA_VERTICAL))
-	      (addstr (format #f "PRTCT ~32,'0b~%" A_PROTECT))
-	      (addstr (format #f "INVIS ~32,'0b~%" A_INVIS))
-	      (addstr (format #f "  ALT ~32,'0b~%" A_ALTCHARSET))
-	      (addstr (format #f " BOLD ~32,'0b~%" A_BOLD))
-	      (addstr (format #f "  DIM ~32,'0b~%" A_DIM))
-	      (addstr (format #f "BLINK ~32,'0b~%" A_BLINK))
-	      (addstr (format #f "RVRSE ~32,'0b~%" A_REVERSE))
-	      (addstr (format #f "UNDRL ~32,'0b~%" A_UNDERLINE))
-	      (addstr (format #f "STNDT ~32,'0b~%" A_STANDOUT))
-	      (addstr (format #f "HORIZ ~32,'0b~%" WA_HORIZONTAL))
-	      (addstr (format #f "COLOR ~32,'0b~%" A_COLOR))
-	      (addstr (format #f "      ~32,'0b~%" ta2))
-	      (refresh)
+	      (move win 0 0)
+	      (addstr win (format #f "      ~32,'0b~%" ta))
+	      (addstr win (format #f " LEFT ~32,'0b~%" WA_LEFT))
+	      (addstr win (format #f "  LOW ~32,'0b~%" WA_LOW))
+	      (addstr win (format #f "RIGHT ~32,'0b~%" WA_RIGHT))
+	      (addstr win (format #f "  TOP ~32,'0b~%" WA_TOP))
+	      (addstr win (format #f " VERT ~32,'0b~%" WA_VERTICAL))
+	      (addstr win (format #f "PRTCT ~32,'0b~%" A_PROTECT))
+	      (addstr win (format #f "INVIS ~32,'0b~%" A_INVIS))
+	      (addstr win (format #f "  ALT ~32,'0b~%" A_ALTCHARSET))
+	      (addstr win (format #f " BOLD ~32,'0b~%" A_BOLD))
+	      (addstr win (format #f "  DIM ~32,'0b~%" A_DIM))
+	      (addstr win (format #f "BLINK ~32,'0b~%" A_BLINK))
+	      (addstr win (format #f "RVRSE ~32,'0b~%" A_REVERSE))
+	      (addstr win (format #f "UNDRL ~32,'0b~%" A_UNDERLINE))
+	      (addstr win (format #f "STNDT ~32,'0b~%" A_STANDOUT))
+	      (addstr win (format #f "HORIZ ~32,'0b~%" WA_HORIZONTAL))
+	      (addstr win (format #f "COLOR ~32,'0b~%" A_COLOR))
+	      (addstr win (format #f "      ~32,'0b~%" ta2))
+	      (refresh win )
 	      (sleep 1)
 	      (eqv? ta ta2))
 	    *unspecified*))
