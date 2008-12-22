@@ -1066,6 +1066,7 @@ gucu_savetty ()
   RETURNTF(savetty ());
 }
 
+/* Write a curses screen to a file */
 SCM
 gucu_scr_dump (SCM fname)
 {
@@ -1081,6 +1082,7 @@ gucu_scr_dump (SCM fname)
   RETURNTF(ret);
 }
 
+/* Given a file, use it to initialize the curses data structures */
 SCM
 gucu_scr_init (SCM fname)
 {
@@ -1096,6 +1098,7 @@ gucu_scr_init (SCM fname)
   RETURNTF(ret);
 }
 
+/* Sets the virtual screen to the contents of filename */
 SCM
 gucu_scr_restore (SCM fname)
 {
@@ -1111,6 +1114,7 @@ gucu_scr_restore (SCM fname)
   RETURNTF(ret);
 }
 
+/* sets the screen to the contents of filename */
 SCM
 gucu_scr_set (SCM fname)
 {

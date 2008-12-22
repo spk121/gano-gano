@@ -9,45 +9,43 @@
 
 (define test (curses-test-start))
 
-(define (mvaddstr y x s)
-  (addstr s #:y y #:x x))
-(define (mvwaddstr w y x s)
-  (addstr s #:win w #:y y #:x x))
+(define win (initscr))
 
-(initscr)
-
-;; Should be able to dump windows to files
+;; Scroll the screens
 (with-test-prefix "scroll"
 
 		  (pass-if "scroll"
 			   (begin
-			     (clear)
-			     (mvaddstr 1 0 "xxx")
-			     (scrollok (stdscr) #t)
-			     (scroll (stdscr))
-			     (refresh)
-			     (let ((x1 (mvinnstr 0 0 3)))
+			     (clear win)
+			     (move win 1 0)
+			     (addstr win "xxx")
+			     (scrollok win #t)
+			     (scroll win)
+			     (refresh win)
+			     (let ((x1 (instr win #:y 0 #:x 0 #:n 3)))
 			       (string=? "xxx" x1))))
 
 
 		  (pass-if "scrl"
 			   (begin
-			     (clear)
-			     (mvaddstr 0 0 "xxx")
-			     (scrollok (stdscr) #t)
-			     (scrl -1)
-			     (refresh)
-			     (let ((x1 (mvinnstr 1 0 3)))
+			     (clear win)
+			     (move win 0 0)
+			     (addstr win "xxx")
+			     (scrollok win #t)
+			     (scrl win -1)
+			     (refresh win)
+			     (let ((x1 (instr win #:y 1 #:x 0 #:n 3)))
 			       (string=? "xxx" x1))))
 
 		  (pass-if "scrl"
 			   (begin
-			     (clear)
-			     (mvaddstr 0 0 "xxx")
-			     (scrollok (stdscr) #t)
-			     (wscrl (stdscr) -1)
-			     (refresh)
-			     (let ((x1 (mvinnstr 1 0 3)))
+			     (clear win)
+			     (move win 1 0)
+			     (addstr win "xxx")
+			     (scrollok win #t)
+			     (scrl win 1)
+			     (refresh win)
+			     (let ((x1 (instr win #:y 0 #:x 0 #:n 3)))
 			       (string=? "xxx" x1))))
 		  )
 
