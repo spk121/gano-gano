@@ -2156,7 +2156,7 @@ gucu_init_function ()
   scm_c_define_gsubr ("%wdelch", 1, 0, 0, gucu_wdelch);
   scm_c_define_gsubr ("%wechochar", 2, 0, 0, gucu_wechochar);
   scm_c_define_gsubr ("wenclose", 3, 0, 0, gucu_wenclose);
-  scm_c_define_gsubr ("werase", 1, 0, 0, gucu_werase);
+  scm_c_define_gsubr ("%werase", 1, 0, 0, gucu_werase);
   scm_c_define_gsubr ("%wgetch", 1, 0, 0, gucu_wgetch);
   scm_c_define_gsubr ("%whline", 3, 0, 0, gucu_whline);
   scm_c_define_gsubr ("%winch", 1, 0, 0, gucu_winch);

@@ -9,7 +9,10 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
+
+(define (mvinch y x)
+  (inch win #:y y #:x x))
 
 (define space (char->integer #\sp))
 
@@ -18,11 +21,11 @@
 		  
 		  (pass-if "clear"
 			   (begin
-			     (clear)
-			     (addstr "xxxx" #:y 0 #:x 0)
-			     (addstr "xxxx" #:y 1 #:x 0)
-			     (clear)
-			     (refresh)
+			     (clear win)
+			     (addstr win "xxxx" #:y 0 #:x 0)
+			     (addstr win "xxxx" #:y 1 #:x 0)
+			     (clear win)
+			     (refresh win)
 			     (let ((x1 (mvinch 0 1))
 				   (x2 (mvinch 1 1)))
 			       (and
@@ -31,11 +34,11 @@
 
 		  (pass-if "erase"
 			   (begin
-			     (clear)
-			     (addstr "xxxx" #:y 0 #:x 0)
-			     (addstr "xxxx" #:y 1 #:x 0)
-			     (erase)
-			     (refresh)
+			     (clear win)
+			     (addstr win "xxxx" #:y 0 #:x 0)
+			     (addstr win "xxxx" #:y 1 #:x 0)
+			     (erase win)
+			     (refresh win)
 			     (let ((x1 (mvinch 0 1))
 				   (x2 (mvinch 1 1)))
 			       (and
@@ -45,12 +48,12 @@
 
 		  (pass-if "clrtobot"
 			   (begin
-			     (clear)
-			     (addstr "xxxx" #:y 0 #:x 0)
-			     (addstr "xxxx" #:y 1 #:x 0)
-			     (move 0 0)
-			     (clrtobot)
-			     (refresh)
+			     (clear win)
+			     (addstr win "xxxx" #:y 0 #:x 0)
+			     (addstr win "xxxx" #:y 1 #:x 0)
+			     (move win 0 0)
+			     (clrtobot win)
+			     (refresh win)
 			     (let ((x1 (mvinch 0 1))
 				   (x2 (mvinch 1 1)))
 			       (and
@@ -59,80 +62,17 @@
 
 		  (pass-if "clrtoeol"
 			   (begin
-			     (clear)
-			     (addstr "xxxx" #:y 0 #:x 0)
-			     (addstr "xxxx" #:y 1 #:x 0)
-			     (move 0 0)
-			     (clrtoeol)
-			     (refresh)
+			     (clear win)
+			     (addstr win "xxxx" #:y 0 #:x 0)
+			     (addstr win "xxxx" #:y 1 #:x 0)
+			     (move win 0 0)
+			     (clrtoeol win)
+			     (refresh win)
 			     (let ((x1 (mvinch 0 1))
 				   (x2 (mvinch 1 1)))
 			       (and
 				(equal? x1 space)
 				(equal? x2 (char->integer #\x)))))))
-
-(define win (newwin 5 10 5 5))
-
-(with-test-prefix "wclear"
-		  
-		  (pass-if "wclear"
-			   (begin
-			     (wclear win)
-			     (addstr "xxxx" #:win win #:y 0 #:x 0)
-			     (addstr "xxxx" #:win win #:y 1 #:x 0)
-			     (wclear win)
-			     (wrefresh win)
-			     (let ((x1 (mvwinch win 0 1))
-				   (x2 (mvwinch win 1 1)))
-			       (and
-				(equal? x1 space)
-				(equal? x2 space)))))
-
-		  (pass-if "werase"
-			   (begin
-			     (wclear win)
-			     (addstr "xxxx" #:win win #:y 0 #:x 0)
-			     (addstr "xxxx" #:win win #:y 1 #:x 0)
-			     (werase win)
-			     (wrefresh win)
-			     (let ((x1 (mvwinch win 0 1))
-				   (x2 (mvwinch win 1 1)))
-			       (and
-				(equal? x1 space)
-				(equal? x2 space)))))
-			      
-
-		  (pass-if "wclrtobot"
-			   (begin
-			     (wclear win)
-			     (addstr "xxxx" #:win win #:y 0 #:x 0)
-			     (addstr "xxxx" #:win win #:y 1 #:x 0)
-			     (wmove win 0 0)
-			     (wclrtobot win)
-			     (wrefresh win)
-			     (let ((x1 (mvwinch win 0 1))
-				   (x2 (mvwinch win 1 1)))
-			       (and
-				(equal? x1 space))
-				(equal? x2 space))))
-
-		  (pass-if "clrtoeol"
-			   (begin
-			     (wclear win)
-			     (addstr "xxxx" #:win win #:y 0 #:x 0)
-			     (addstr "xxxx" #:win win #:y 1 #:x 0)
-			     (wmove win 0 0)
-			     (wclrtoeol win)
-			     (wrefresh win)
-			     (let ((x1 (mvwinch win 0 1))
-				   (x2 (mvwinch win 1 1)))
-			       (and
-				(equal? x1 space)
-				(equal? x2 (char->integer #\x)))))))
-
-
-(delwin win)
-(refresh)
 
 (endwin)
 
