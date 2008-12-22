@@ -59,6 +59,7 @@
 	    idlok
 	    immedok
 	    inch
+	    inchstr
 	    initscr
 	    init-color
 	    init-pair
@@ -303,23 +304,19 @@
 	    delwin
 	    getmouse
 	    getnstr
-	    inchnstr
 	    innstr
 	    instr
 	    mousemask
 	    mouse-trafo
 	    mvgetnstr
 	    mvwgetnstr
-	    mvinchnstr
 	    mvinnstr
 	    mvinstr
-	    mvwinchnstr
 	    mvwinnstr
 	    mvwinstr
 	    pair-content
 	    ungetmouse
 	    wgetnstr
-	    winchnstr
 	    winnstr
 	    winstr
 	    wmouse-trafo
@@ -499,6 +496,12 @@
 	   (%wmove win y x)
 	   #t)
        (%winch win)))
+
+(define* (inchstr win #:key y x (n -1))
+  (and (if (and y x)
+	   (%wmove win y x)
+	   #t)
+       (%winchnstr win n)))
 
 (define* (insch win ch #:key y x)
   (and (if (and y x)

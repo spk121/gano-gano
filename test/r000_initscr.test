@@ -12,14 +12,14 @@
 ;;; initscr
 ;;;
 
-(define scr #f)
+(define mainwin #f)
 
 ;; Pass if OK
 (with-test-prefix "initscr"
 		  
 		  (pass-if "(default)"
-			   (set! scr (initscr))
-			   (window? scr)))
+			   (set! mainwin (initscr))
+			   (window? mainwin)))
 
 (with-test-prefix "isendwin"
 		  (pass-if "before endwin"
@@ -35,7 +35,7 @@
 			   (equal? #t (isendwin))))
 
 ;; Reenter curses
-(refresh)
+(refresh mainwin)
 
 (with-test-prefix "isendwin"
 		  (pass-if "after refresh"

@@ -8,7 +8,7 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define mainwin (initscr))
 
 (define hello (map char->integer (string->list "hello")))
 (define he (map char->integer (string->list "he")))
@@ -23,78 +23,37 @@
 		  
 		  (pass-if "addchstr"
 			   (begin
-			     (clear)
-			     (move 0 0)
-			     (addchstr hello)
-			     (refresh)
-			     (let ((w2 (mvinchnstr 0 0 10)))
+			     (clear mainwin)
+			     (move mainwin 0 0)
+			     (addchstr mainwin hello)
+			     (refresh mainwin)
+			     (let ((w2 (inchstr mainwin #:y 0 #:x 0 #:n 10)))
 			       (lset= equal? hello (list-head w2 (length hello))))))
 
 		  (pass-if "addchstr #:n"
 			   (begin
-			     (clear)
-			     (move 0 0)
-			     (addchstr hello #:n 2)
-			     (refresh)
-			     (let ((w2 (mvinchnstr 0 0 10)))
+			     (clear mainwin)
+			     (move mainwin 0 0)
+			     (addchstr mainwin hello #:n 2)
+			     (refresh mainwin)
+			     (let ((w2 (inchstr mainwin #:y 0 #:x 0 #:n 10)))
 			       (lset= equal? he (list-head w2 (length he))))))
 
 		  (pass-if "addchstr #:y #:x"
 			   (begin
-			     (clear)
-			     (addchstr hello-bold #:y 1 #:x 0)
-			     (refresh)
-			     (let ((x2 (mvinchnstr 1 0 10)))
+			     (clear mainwin)
+			     (addchstr mainwin hello-bold #:y 1 #:x 0)
+			     (refresh mainwin)
+			     (let ((x2 (inchstr mainwin #:y 1 #:x 0 #:n 10)))
 			       (equal? hello-bold (list-head x2 (length hello-bold))))))
 
 		  (pass-if "addchstr #:y #:x #:n"
 			   (begin
-			     (clear)
-			     (addchstr hello-bold #:y 1 #:x 0 #:n 2)
-			     (refresh)
-			     (let ((x2 (mvinchnstr 1 0 10)))
+			     (clear mainwin)
+			     (addchstr mainwin hello-bold #:y 1 #:x 0 #:n 2)
+			     (refresh mainwin)
+			     (let ((x2 (inchstr mainwin #:y 1 #:x 0 #:n 10)))
 			       (equal? he-bold (list-head x2 (length he-bold)))))))
-
-(define win (newwin 5 10 5 5))
-
-(with-test-prefix "addchstr #:win"
-		  
-		  (pass-if "addchstr #:win"
-			   (begin
-			     (wclear win)
-			     (wmove win 0 0)
-			     (addchstr hello #:win win)
-			     (wrefresh win)
-			     (let ((w2 (mvwinchnstr win 0 0 10)))
-			       (lset= equal? hello (list-head w2 (length hello))))))
-
-		  (pass-if "addchstr #:win #:n"
-			   (begin
-			     (wclear win)
-			     (wmove win 0 0)
-			     (addchstr hello #:win win #:n 2)
-			     (wrefresh win)
-			     (let ((w2 (mvwinchnstr win 0 0 10)))
-			       (lset= equal? he (list-head w2 (length he))))))
-
-		  (pass-if "addchstr #:win #:y #:x"
-			   (begin
-			     (wclear win)
-			     (addchstr hello-bold #:win win #:y 1 #:x 0)
-			     (wrefresh win)
-			     (let ((x2 (mvwinchnstr win 1 0 10)))
-			       (equal? hello-bold (list-head x2 (length hello-bold))))))
-
-		  (pass-if "addchstr #:win #:y #:x #:n"
-			   (begin
-			     (wclear win)
-			     (addchstr hello-bold #:win win #:y 1 #:x 0 #:n 2)
-			     (wrefresh win)
-			     (let ((x2 (mvwinchnstr win 1 0 10)))
-			       (equal? he-bold (list-head x2 (length he-bold)))))))
-			      
-(delwin win)
-(refresh)
 
 (endwin)
 

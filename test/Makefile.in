@@ -242,7 +242,8 @@ EXTRA_DIST = $(NARROWTESTS) \
 	$(WIDETESTS) \
 	dotest-curses \
 	lib.scm \
-	lib2.scm 
+	lib2.scm \
+	gc000_window.test
 
 all: all-am
 
