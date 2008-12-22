@@ -98,51 +98,6 @@ gucu_getnstr (SCM n)
 }
 
 SCM
-gucu_innstr (SCM n)
-{
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG1, "innstr");
-
-  char *c_str;
-  SCM s_str;
-  int c_n;
-  int ret;
-
-  c_n = scm_to_int (n);
-  c_str = (char *) scm_malloc (sizeof (char) * (c_n + 1));
-
-  ret = innstr (c_str, c_n+1);
-  if (ret != ERR)
-    {
-      c_str[c_n] = 0;
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
-}
-
-SCM
-gucu_instr (void)
-{
-  char *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (char *) scm_malloc (sizeof (char) * (COLS + 1));
-  ret = instr (c_str);
-  if (ret != ERR)
-    {
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
-}
-
-    
-SCM
 gucu_mousemask (SCM x)
 {
   return scm_from_ulong (mousemask (scm_to_ulong (x), NULL));
@@ -218,109 +173,6 @@ gucu_mvwgetnstr (SCM win, SCM y, SCM x, SCM n)
     abort ();
   
   return (s_str);
-}
-
-SCM
-gucu_mvinnstr (SCM y, SCM x, SCM n)
-{
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvinnstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvinnstr");
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG3, "mvinnstr");
-
-  char *c_str;
-  SCM s_str;
-  int c_n;
-  int ret;
-
-  c_n = scm_to_int (n);
-  c_str = (char *) scm_malloc (sizeof (char) * (c_n + 1));
-
-  ret = mvinnstr (scm_to_int (y), scm_to_int (x), c_str, c_n+1);
-  if (ret != ERR)
-    {
-      c_str[c_n] = 0;
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
-}
-SCM
-gucu_mvinstr (SCM y, SCM x)
-{
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvinstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvinstr");
-
-  char *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (char *) scm_malloc (sizeof (char) * (COLS + 1));
-
-  ret = mvinstr (scm_to_int (y), scm_to_int (x), c_str);
-  if (ret != ERR)
-    {
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
-}
-
-
-SCM
-gucu_mvwinnstr (SCM win, SCM y, SCM x, SCM n)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwinnstr");
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwinnstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwinnstr");
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG4, "mvwinnstr");
-
-  char *c_str;
-  SCM s_str;
-  int c_n;
-  int ret;
-
-  c_n = scm_to_int (n);
-  c_str = (char *) scm_malloc (sizeof (char) * (c_n + 1));
-
-  ret = mvwinnstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), 
-		   c_str, c_n+1);
-  if (ret != ERR)
-    {
-      c_str[c_n] = 0;
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
-}
-SCM
-gucu_mvwinstr (SCM win, SCM y, SCM x)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwinstr");
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwinstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwinstr");
-
-  char *c_str;
-  SCM s_str;
-  int ret;
-  
-  c_str = (char *) scm_malloc (sizeof (char) * (COLS + 1));
-
-  ret = mvwinstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), c_str);
-
-  if (ret != ERR)
-    {
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
 }
 
 
@@ -475,18 +327,26 @@ gucu_winchnstr (SCM win, SCM n)
   return s_str;
 }
 
+/* Get a string of characters from a curses window */
 SCM
 gucu_winnstr (SCM win, SCM n)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "winnstr");
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG2, "winnstr");
-
   char *c_str;
   SCM s_str;
   int c_n;
   int ret;
+  int y, x;
 
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%winnstr");
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG2, "%winnstr");
+
+  /* -1 indicates that up to an entire line is requested */
   c_n = scm_to_int (n);
+  if (c_n == -1)
+    {
+      getmaxyx (_scm_to_window (win), y, x);
+      c_n = x;
+    }
   c_str = (char *) scm_malloc (sizeof (char) * (c_n + 1));
 
   ret = winnstr (_scm_to_window (win), c_str, c_n+1);
@@ -500,30 +360,6 @@ gucu_winnstr (SCM win, SCM n)
 
   return s_str;
 }
-
-
-SCM
-gucu_winstr (SCM win)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "winstr");
-
-  char *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (char *) scm_malloc (sizeof (char) * (COLS + 1));
-
-  ret = winstr (_scm_to_window (win), c_str);
-  if (ret != ERR)
-    {
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-
-  return s_str;
-}
-
 
 
 SCM 
@@ -980,24 +816,17 @@ gucu_init_special ()
   scm_c_define_gsubr ("delwin", 1, 0, 0, gucu_delwin);
   scm_c_define_gsubr ("getmouse", 0, 0, 0, gucu_getmouse);
   scm_c_define_gsubr ("getnstr", 1, 0, 0, gucu_getnstr);
-  scm_c_define_gsubr ("innstr", 1, 0, 0, gucu_innstr);
-  scm_c_define_gsubr ("instr", 0, 0, 0, gucu_instr);
   scm_c_define_gsubr ("mousemask", 1, 0, 0, gucu_mousemask);
   scm_c_define_gsubr ("mouse-trafo", 3, 0, 0, gucu_mouse_trafo);
   scm_c_define_gsubr ("mvgetnstr", 3, 0, 0, gucu_mvgetnstr);
-  scm_c_define_gsubr ("mvinnstr", 3, 0, 0, gucu_mvinnstr);
-  scm_c_define_gsubr ("mvinstr", 2, 0, 0, gucu_mvinstr);
   scm_c_define_gsubr ("mvwgetnstr", 4, 0, 0, gucu_mvwgetnstr);
-  scm_c_define_gsubr ("mvwinnstr", 4, 0, 0, gucu_mvwinnstr);
-  scm_c_define_gsubr ("mvwinstr", 3, 0, 0, gucu_mvwinstr);
   scm_c_define_gsubr ("pair-content", 1, 0, 0, gucu_pair_content);
   scm_c_define_gsubr ("ungetmouse", 1, 0, 0, gucu_ungetmouse);
   scm_c_define_gsubr ("%wattr-get", 1, 0, 0, gucu_wattr_get);
   scm_c_define_gsubr ("%wattr-set", 3, 0, 0, gucu_wattr_set);
   scm_c_define_gsubr ("wgetnstr", 2, 0, 0, gucu_wgetnstr);
   scm_c_define_gsubr ("%winchnstr", 2, 0, 0, gucu_winchnstr);
-  scm_c_define_gsubr ("winnstr", 2, 0, 0, gucu_winnstr);
-  scm_c_define_gsubr ("winstr", 1, 0, 0, gucu_winstr);
+  scm_c_define_gsubr ("%winnstr", 2, 0, 0, gucu_winnstr);
   scm_c_define_gsubr ("wmouse-trafo", 4, 0, 0, gucu_wmouse_trafo);
   scm_c_define_gsubr ("getbegyx", 1, 0, 0, gucu_getbegyx);
   scm_c_define_gsubr ("getmaxyx", 1, 0, 0, gucu_getmaxyx);

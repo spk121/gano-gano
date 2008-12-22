@@ -67,6 +67,7 @@
 	    insdelln
 	    insertln
 	    insstr
+	    instr
 	    intrflush
 	    isendwin
 	    is-linetouched?
@@ -304,21 +305,13 @@
 	    delwin
 	    getmouse
 	    getnstr
-	    innstr
-	    instr
 	    mousemask
 	    mouse-trafo
 	    mvgetnstr
 	    mvwgetnstr
-	    mvinnstr
-	    mvinstr
-	    mvwinnstr
-	    mvwinstr
 	    pair-content
 	    ungetmouse
 	    wgetnstr
-	    winnstr
-	    winstr
 	    wmouse-trafo
 	    getbegyx
 	    getmaxyx
@@ -375,6 +368,7 @@
     (export newterm))
 
 
+;; Scheme calling wrappers for C functions
 
 (define* (addch win ch #:key y x)
   (and (if (and y x)
@@ -508,6 +502,12 @@
 	   (%wmove win y x)
 	   #t)
        (%winsch win ch)))
+
+(define* (instr win #:key y x (n -1))
+  (and (if (and y x)
+	   (%wmove win y x)
+	   #t)
+       (%winnstr win n)))
 
 (define* (insdelln win n #:key y x)
   (and
