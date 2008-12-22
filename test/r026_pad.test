@@ -9,12 +9,7 @@
 
 (define test (curses-test-start))
 
-(define (mvaddstr y x s)
-  (addstr s #:y y #:x x))
-(define (mvwaddstr w y x s)
-  (addstr s #:win w #:y y #:x x))
-
-(initscr)
+(define mainwin (initscr))
 
 ;; Should be able to make big windows
 (define win (newpad 10 10))
@@ -23,22 +18,22 @@
 
 		  (pass-if "newpad / prefresh"
 			   (begin
-			     (clear)
-			     (refresh)
+			     (clear mainwin)
+			     (refresh mainwin)
 			     (box win 0 0)
-			     (mvwaddstr win 1 1 "xxx")
+			     (addstr win "xxx" #:y 1 #:x 1)
 			     (prefresh win 0 0 5 5 15 15)
-			     (let ((x1 (mvwinnstr win 1 1 3)))
+			     (let ((x1 (instr win #:y 1 #:x 1 #:n 3)))
 			       (string=? x1 "xxx"))))
 
 		  (pass-if "subpad / pnoutrefresh"
 			   (begin 
 			     (box win2 0 0)
-			     (mvwaddstr win2 1 1 "yy")
+			     (addstr win2 "yy" #:y 1 #:x 1)
 			     (touchwin win)
 			     (pnoutrefresh win 0 0 5 5 15 15)
-			     (refresh)
-			     (let ((x1 (mvwinnstr win2 1 1 2)))
+			     (refresh mainwin)
+			     (let ((x1 (instr win2 #:y 1 #:x 1 #:n 2)))
 				 (string=? x1 "yy"))))
 
 		  (pass-if "pechochar"
@@ -47,14 +42,14 @@
 			     (pechochar win (char->integer #\2))
 			     (pechochar win (char->integer #\3))
 			     (pechochar win (char->integer #\4))
-			     (refresh)
-			     (let ((x1 (mvwinnstr win 1 1 4)))
+			     (refresh mainwin)
+			     (let ((x1 (instr win #:y 1 #:x 1 #:n 4)))
 			       (string=? x1 "1234"))))
 
 		  )
 (delwin win2)
 (delwin win)
-(refresh)
+(refresh mainwin)
 
 (endwin)
 
