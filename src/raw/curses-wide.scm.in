@@ -90,10 +90,10 @@
 	   #t)
        (%waddnwstr win wstr n)))
 
-(define* (bkgrnd wch #:key (win (stdscr)))
+(define* (bkgrnd win wch)
   (%wbkgrnd win wch))
 
-(define* (bkgrndset wch #:key (win (stdscr)))
+(define* (bkgrndset win wch)
   (%wbkgrndset win wch))
 
 (define* (border-set left right top bottom tl tr bl br #:key (win (stdscr)))
