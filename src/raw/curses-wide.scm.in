@@ -93,9 +93,9 @@
 	   #t)
        (%wadd-wchnstr win wchstr n)))
 
-(define* (addwstr wstr #:key (win (stdscr)) x y (n -1))
+(define* (addwstr win wstr #:key x y (n -1))
   (and (if (and x y)
-	   (wmove win y x)
+	   (%wmove win y x)
 	   #t)
        (%waddnwstr win wstr n)))
 

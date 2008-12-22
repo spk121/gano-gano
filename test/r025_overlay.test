@@ -3,18 +3,12 @@
 
 (use-modules (test lib)
 	     (test lib2)
-	     ;; (gucu curses-wide)
 	     (gucu curses)
 	     (srfi srfi-1))
 
 (define test (curses-test-start))
 
-(define (mvaddstr y x s)
-  (addstr s #:y y #:x x))
-(define (mvwaddstr w y x s)
-  (addstr s #:win w #:y y #:x x))
-
-(initscr)
+(define mainwin (initscr))
 
 ;; Should be able to overlay one window onto another
 
@@ -23,59 +17,57 @@
 		  
 		  (pass-if "overlay"
 			   (begin
-			     (wclear win)
-			     (wrefresh win)
-			     (clear)
-			     (refresh)
+			     (clear win)
+			     (refresh win)
+			     (clear mainwin)
+			     (refresh mainwin)
 
-			     (mvwaddstr win 0 0 "xxx")
-			     (wrefresh win)
+			     (addstr win "xxx" #:y 0 #:x 0)
+			     (refresh win)
 
-			     (overlay win (stdscr))
+			     (overlay win mainwin)
 			     (delwin win)
-			     (refresh)
+			     (refresh mainwin)
 
-			     (let ((x1 (mvinnstr 5 5 3)))
+			     (let ((x1 (instr mainwin #:y 5 #:x 5 #:n 3)))
 			       (string=? x1 "xxx"))))
-
 
 		  (pass-if "overwrite"
 			   (begin
 			     (set! win (newwin 5 5 5 5))
-			     (wclear win)
-			     (wrefresh win)
-			     (clear)
-			     (refresh)
+			     (clear win)
+			     (refresh win)
+			     (clear mainwin)
+			     (refresh mainwin)
 
-			     (mvwaddstr win 0 0 "xxx")
-			     (wrefresh win)
+			     (addstr win "xxx" #:y 0 #:x 0)
+			     (refresh win)
 
-			     (overwrite win (stdscr))
+			     (overwrite win mainwin)
 			     (delwin win)
-			     (refresh)
+			     (refresh mainwin)
 
-			     (let ((x1 (mvinnstr 5 5 3)))
+			     (let ((x1 (instr mainwin #:y 5 #:x 5 #:n 3)))
 			       (string=? x1 "xxx"))))
 
 		  (pass-if "copywin"
 			   (begin
 			     (set! win (newwin 5 5 5 5))
-			     (wclear win)
-			     (wrefresh win)
-			     (clear)
-			     (refresh)
+			     (clear win)
+			     (refresh win)
+			     (clear mainwin)
+			     (refresh mainwin)
 
-			     (mvwaddstr win 0 0 "xxx")
-			     (wrefresh win)
+			     (addstr win "xxx" #:y 0 #:x 0)
+			     (refresh win)
 
-			     (copywin win (stdscr) 0 0 0 0 4 4 1)
-			     (refresh)
+			     (copywin win mainwin 0 0 0 0 4 4 1)
+			     (refresh mainwin)
 			     (delwin win)
-			     (refresh)
+			     (refresh mainwin)
 
-			     (let ((x1 (mvinnstr 0 0 3)))
+			     (let ((x1 (instr mainwin #:y 0 #:x 0 #:n 3)))
 			       (string=? x1 "xxx"))))
-
 
 		  )
 

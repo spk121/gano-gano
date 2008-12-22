@@ -9,8 +9,7 @@
 
 (define test (curses-test-start))
 
-(initscr)
-
+(define win (initscr))
 
 (define (string->wstring str)	
   (map char->integer (string->list str)))
@@ -20,8 +19,8 @@
  
  (pass-if "addwstr"
 	  (begin
-	    (clear)
-	    (move 0 0)
+	    (clear win)
+	    (move win 0 0)
 	    (addwstr (string->wstring "hello"))
 	    (refresh)
 	    (let ((w2 (mvinwstr 0 0)))

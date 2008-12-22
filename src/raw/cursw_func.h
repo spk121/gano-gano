@@ -22,7 +22,7 @@ SCM gucu_mvwins_wch (SCM arg1, SCM arg2, SCM arg3, SCM arg4) API;
 SCM gucu_mvwins_wstr (SCM arg1, SCM arg2, SCM arg3, SCM arg4) API;
 SCM gucu_term_attrs (void) API;
 SCM gucu_unget_wch (SCM arg1) API;
-SCM gucu_waddnwstr (SCM arg1, SCM arg2, SCM arg3) API;
+SCM gucu_waddnwstr (SCM win, SCM wstr, SCM n) API;
 SCM gucu_wadd_wch (SCM arg1, SCM arg2) API;
 SCM gucu_wadd_wchnstr (SCM arg1, SCM arg2, SCM arg3) API;
 SCM gucu_wbkgrnd (SCM arg1, SCM arg2) API;
