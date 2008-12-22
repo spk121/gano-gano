@@ -9,56 +9,53 @@
 
 (define test (curses-test-start))
 
-(define (mvaddstr y x s)
-  (addstr s #:y y #:x x))
-(define (mvwaddstr w y x s)
-  (addstr s #:win w #:y y #:x x))
- 
-(initscr)
+(define win (initscr))
 
 ;; Should be able to move the cursor
-(with-test-prefix "outopts"
+(with-test-prefix 
+ "outopts"
 		  
-		  (pass-if "setscrreg #t"
-			   (begin
-			     (clear)
-			     (setscrreg 0 3)
-			     (scrollok (stdscr) #t)
-			     (mvaddstr 0 0 "aaa\n")
-			     (addstr "bbb\n")
-			     (addstr "ccc\n")
-			     (addstr "ddd\n")
-			     (addstr "eee\n")
-			     (refresh)
-			     (let ((x1 (mvinnstr 0 0 3))
-				   (x2 (mvinnstr 1 0 3))
-				   (x3 (mvinnstr 2 0 3)))
-			       (and
-				(string=? x1 "ccc")
-				(string=? x2 "ddd")
-				(string=? x3 "eee")))))
+ (pass-if "setscrreg #t"
+	  (begin
+	    (clear win)
+	    (setscrreg win 0 3)
+	    (scrollok win #t)
+	    (move win 0 0)
+	    (addstr win "aaa\n")
+	    (addstr win "bbb\n")
+	    (addstr win "ccc\n")
+	    (addstr win "ddd\n")
+	    (addstr win "eee\n")
+	    (refresh win)
+	    (let ((x1 (instr win #:y 0 #:x 0 #:n 3))
+		  (x2 (instr win #:y 1 #:x 0 #:n 3))
+		  (x3 (instr win #:y 2 #:x 0 #:n 3)))
+	      (and
+	       (string=? x1 "ccc")
+	       (string=? x2 "ddd")
+	       (string=? x3 "eee")))))
 		  
-		  (pass-if "setscrreg #f"
-			   (begin
-			     (clear)
-			     (setscrreg 0 3)
-			     (scrollok (stdscr) #f)
-			     (mvaddstr 0 0 "aaa\n")
-			     (addstr "bbb\n")
-			     (addstr "ccc\n")
-			     (addstr "ddd\n")
-			     (addstr "eee\n")
-			     (refresh)
-			     (let ((x1 (mvinnstr 0 0 3))
-				   (x2 (mvinnstr 1 0 3))
-				   (x3 (mvinnstr 2 0 3)))
-			       (and
-				(string=? x1 "aaa")
-				(string=? x2 "bbb")
-				(string=? x3 "ccc"))))))
+ (pass-if "setscrreg #f"
+	  (begin
+	    (clear win)
+	    (setscrreg win 0 3)
+	    (scrollok win #f)
+	    (move win 0 0)
+	    (addstr win "aaa\n")
+	    (addstr win "bbb\n")
+	    (addstr win "ccc\n")
+	    (addstr win "ddd\n")
+	    (addstr win "eee\n")
+	    (refresh win)
+	    (let ((x1 (instr win #:y 0 #:x 0 #:n 3))
+		  (x2 (instr win #:y 1 #:x 0 #:n 3))
+		  (x3 (instr win #:y 2 #:x 0 #:n 3)))
+	      (and
+	       (string=? x1 "aaa")
+	       (string=? x2 "bbb")
+	       (string=? x3 "ccc"))))))
 
-(setscrreg 0 (- (lines) 1))
-
+(setscrreg win 0 (- (lines) 1))
 
 (endwin)
 
