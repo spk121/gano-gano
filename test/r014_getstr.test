@@ -1,5 +1,5 @@
 ;;;; -*- Mode: scheme; -*-
-;;;; r014_getstr.test --- test suite for curses's getstr
+;;;; r014_getnstr.test --- test suite for curses's getnstr
 
 (use-modules (test lib)
 	     (test lib2)
@@ -9,130 +9,71 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
-(define win (newwin 5 10 5 5))
 (define letter-h (char->integer #\h))
 (define letter-i (char->integer #\i))
 (define letter-p (char->integer #\p))
 (define newline (char->integer #\nl))
-(standend)
-(attr-on (logior (color-pair 0) A_NORMAL))
 
 ;; Should be able to get strings from the keyboard
 
-(with-test-prefix "getstr"
+(with-test-prefix "getnstr"
 		  
-		  (pass-if "getstr"
+		  (pass-if "getnstr"
 			   (begin
-			     (erase)
-			     (refresh)
+			     (erase win)
+			     (refresh win)
 			     (ungetch newline)
 			     (ungetch letter-p)
 			     (ungetch letter-i)
 			     (ungetch letter-h)
-			     (let ((s1 (getnstr 10)))
+			     (let ((s1 (getnstr win 10)))
 			       (begin
-				 (refresh)
+				 (refresh win)
 				 (string=? s1 "hip")))))
 
 		  (pass-if "getnstr"
 			   (begin
-			     (erase)
-			     (refresh)
+			     (erase win)
+			     (refresh win)
 			     (ungetch newline)
 			     (ungetch letter-p)
 			     (ungetch letter-i)
 			     (ungetch letter-h)
-			     (let ((s1 (getnstr 2)))
+			     (let ((s1 (getnstr win 2)))
 			       (begin
-				 (refresh)
+				 (refresh win)
 				 (string=? s1 "hi")))))
 
 
-		  (pass-if "mvgetstr"
+		  (pass-if "getnstr #:y #:x"
 			   (begin
-			     (erase)
-			     (refresh)
+			     (erase win)
+			     (refresh win)
 			     (ungetch newline)
 			     (ungetch letter-p)
 			     (ungetch letter-i)
 			     (ungetch letter-h)
-			     (let ((s1 (mvgetnstr 1 1 10)))
+			     (let ((s1 (getnstr win 10 #:y 1 #:x 1)))
 			       (begin
-				 (refresh)
+				 (refresh win)
 				 (string=? s1 "hip")))))
 
-		  (pass-if "mvgetnstr"
+		  (pass-if "getnstr #:y #:x"
 			   (begin
-			     (erase)
-			     (refresh)
+			     (erase win)
+			     (refresh win)
 			     (ungetch newline)
 			     (ungetch letter-p)
 			     (ungetch letter-i)
 			     (ungetch letter-h)
-			     (let ((s1 (mvgetnstr 1 1 2)))
+			     (let ((s1 (getnstr win 2 #:y 1 #:x 1)))
 			       (begin
-				 (refresh)
-				 (string=? s1 "hi"))))))
-
-
-(with-test-prefix "wgetstr"
-		  
-		  (pass-if "wgetstr"
-			   (begin
-			     (werase win)
-			     (wrefresh win)
-			     (ungetch newline)
-			     (ungetch letter-p)
-			     (ungetch letter-i)
-			     (ungetch letter-h)
-			     (let ((s1 (wgetnstr win 10)))
-			       (begin
-				 (wrefresh win)
-				 (string=? s1 "hip")))))
-
-		  (pass-if "getnstr"
-			   (begin
-			     (werase win)
-			     (wrefresh win)
-			     (ungetch newline)
-			     (ungetch letter-p)
-			     (ungetch letter-i)
-			     (ungetch letter-h)
-			     (let ((s1 (wgetnstr win 2)))
-			       (begin
-				 (wrefresh win)
-				 (string=? s1 "hi")))))
-
-
-		  (pass-if "mvgetstr"
-			   (begin
-			     (werase win)
-			     (wrefresh win)
-			     (ungetch newline)
-			     (ungetch letter-p)
-			     (ungetch letter-i)
-			     (ungetch letter-h)
-			     (let ((s1 (mvwgetnstr win 1 1 10)))
-			       (begin
-				 (wrefresh win)
-				 (string=? s1 "hip")))))
-
-		  (pass-if "mvgetnstr"
-			   (begin
-			     (werase win)
-			     (wrefresh win)
-			     (ungetch newline)
-			     (ungetch letter-p)
-			     (ungetch letter-i)
-			     (ungetch letter-h)
-			     (let ((s1 (mvwgetnstr win 1 1 2)))
-			       (begin
-				 (wrefresh win)
+				 (refresh win)
 				 (string=? s1 "hi"))))))
 
 (endwin)
 
-(curses-test-end test "r014_getstr.out")
+(curses-test-end test "r014_getnstr.out")
 

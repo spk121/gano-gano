@@ -49,6 +49,7 @@
 	    flushinp
 	    getbkgd
 	    getch
+	    getnstr
 	    getwin
 	    halfdelay
 	    has-colors?
@@ -305,14 +306,10 @@
 	    color-content
 	    delwin
 	    getmouse
-	    getnstr
 	    mousemask
 	    mouse-trafo
-	    mvgetnstr
-	    mvwgetnstr
 	    pair-content
 	    ungetmouse
-	    wgetnstr
 	    wmouse-trafo
 	    getbegyx
 	    getmaxyx
@@ -479,6 +476,12 @@
 	   (%wmove win y x)
 	   #t)
        (%wgetch win)))
+
+(define* (getnstr win n #:key y x)
+  (and (if (and y x)
+	   (%wmove win y x)
+	   #t)
+       (%wgetnstr win n)))
   
 (define* (hline win ch n #:key y x)
   (and (if (and y x)

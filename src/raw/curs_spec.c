@@ -77,27 +77,6 @@ gucu_getmouse ()
 
 
 SCM
-gucu_getnstr (SCM n)
-{
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG1, "getnstr");
-
-  char *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
-  ret = getnstr (c_str, scm_to_int (n));
-  if (ret == OK)
-    {
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-  
-  return (s_str);
-}
-
-SCM
 gucu_mousemask (SCM x)
 {
   return scm_from_ulong (mousemask (scm_to_ulong (x), NULL));
@@ -122,59 +101,6 @@ gucu_mouse_trafo (SCM sy, SCM sx, SCM to_screen)
   else
     return SCM_BOOL_F;
 }
-
- 
-
-SCM
-gucu_mvgetnstr (SCM y, SCM x, SCM n)
-{
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvgetnstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvgetnstr");
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG3, "mvgetnstr");
-
-  char *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
-
-  ret = mvgetnstr (scm_to_int (y), scm_to_int (x), c_str, scm_to_int (n));
-  if (ret == OK)
-    {
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-  
-  return (s_str);
-
-}
-
-
-SCM
-gucu_mvwgetnstr (SCM win, SCM y, SCM x, SCM n)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwgetnstr");
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwgetnstr");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwgetnstr");
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG4, "mvwgetnstr");
-
-  char *c_str;
-  SCM s_str;
-  int ret;
-
-  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
-  ret = mvwgetnstr (_scm_to_window (win), scm_to_int (y), scm_to_int (x), c_str, scm_to_int (n));
-  if (ret == OK)
-    {
-      s_str = scm_take_locale_string (c_str);
-    }
-  else
-    abort ();
-  
-  return (s_str);
-}
-
 
 /* Return the foreground and background color numbers of a given PAIR */
 SCM
@@ -278,19 +204,25 @@ gucu_wattr_set (SCM win, SCM attrs, SCM pair)
   return SCM_UNSPECIFIED;
 }
 
+/* Accept character strings from the curses terminal keyboard */
 SCM
 gucu_wgetnstr (SCM win, SCM n)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wgetnstr");
-  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG2, "wgetnstr");
-
   char *c_str;
   SCM s_str;
   int ret;
+  int c_n;
 
-  c_str = (char *) scm_malloc (sizeof (char) * (scm_to_int (n) + 1));
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wgetnstr");
+  SCM_ASSERT (scm_is_integer (n), n, SCM_ARG2, "%wgetnstr");
 
-  ret = wgetnstr (_scm_to_window (win), c_str, scm_to_int (n));
+  c_n = scm_to_int (n);
+  if (c_n <= 0)
+    scm_out_of_range ("%wgetnstr", n);
+
+  c_str = (char *) scm_malloc (sizeof (char) * (c_n + 1));
+
+  ret = wgetnstr (_scm_to_window (win), c_str, c_n);
   if (ret == OK)
     {
       s_str = scm_take_locale_string (c_str);
@@ -815,16 +747,13 @@ gucu_init_special ()
   scm_c_define_gsubr ("color-content", 1, 0, 0, gucu_color_content);
   scm_c_define_gsubr ("delwin", 1, 0, 0, gucu_delwin);
   scm_c_define_gsubr ("getmouse", 0, 0, 0, gucu_getmouse);
-  scm_c_define_gsubr ("getnstr", 1, 0, 0, gucu_getnstr);
   scm_c_define_gsubr ("mousemask", 1, 0, 0, gucu_mousemask);
   scm_c_define_gsubr ("mouse-trafo", 3, 0, 0, gucu_mouse_trafo);
-  scm_c_define_gsubr ("mvgetnstr", 3, 0, 0, gucu_mvgetnstr);
-  scm_c_define_gsubr ("mvwgetnstr", 4, 0, 0, gucu_mvwgetnstr);
   scm_c_define_gsubr ("pair-content", 1, 0, 0, gucu_pair_content);
   scm_c_define_gsubr ("ungetmouse", 1, 0, 0, gucu_ungetmouse);
   scm_c_define_gsubr ("%wattr-get", 1, 0, 0, gucu_wattr_get);
   scm_c_define_gsubr ("%wattr-set", 3, 0, 0, gucu_wattr_set);
-  scm_c_define_gsubr ("wgetnstr", 2, 0, 0, gucu_wgetnstr);
+  scm_c_define_gsubr ("%wgetnstr", 2, 0, 0, gucu_wgetnstr);
   scm_c_define_gsubr ("%winchnstr", 2, 0, 0, gucu_winchnstr);
   scm_c_define_gsubr ("%winnstr", 2, 0, 0, gucu_winnstr);
   scm_c_define_gsubr ("wmouse-trafo", 4, 0, 0, gucu_wmouse_trafo);
