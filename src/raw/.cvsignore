@@ -7,5 +7,8 @@ menu.scm
 panel.scm
 slk.scm
 *.lo
+.libs
+.deps
+libguile-gucu.*
 
 
