@@ -55,8 +55,8 @@
 	    getwin
 	    halfdelay
 	    has-colors?
-	    has-ic
-	    has-il
+	    has-ic?
+	    has-il?
 	    has-key?
 	    hline
 	    idcok

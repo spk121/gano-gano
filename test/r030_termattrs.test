@@ -10,116 +10,128 @@
 
 (define test (curses-test-start))
 
-(define (mvaddstr y x s)
-  (addstr s #:y y #:x x))
-(define (mvwaddstr w y x s)
-  (addstr s #:win w #:y y #:x x))
-
-(initscr)
+(define win (initscr))
 
 ;; Should be able to get term attributes
-(with-test-prefix "termattrs"
+(with-test-prefix 
+ "termattrs"
 
-		  (pass-if "baudrate"
-			   (begin
-			     (clear)
-			     (refresh)
-			     (let ((b (baudrate)))
-			       (eqv? b 38400)
-			       *unspecified*)))
+ (pass-if "baudrate"
+	  (begin
+	    (clear win)
+	    (let ((b (baudrate)))
+	      (addstr win (format #f "Baudrate: ~a" b))
+	      (refresh win)
+	      (sleep 1)
+	      (eqv? b 38400)
+	      *unspecified*)))
 
-		  ;; Not sure what the correct answer for
-		  ;; erasechar should be.  Gnu/Linux xterm gives
-		  ;; #\del.  Cygwin gives ERR.
-		  (pass-if "erasechar"
-			   (begin
-			     (clear)
-			     (mvaddstr 0 0 "test")
-			     (refresh)
-			     (let ((c (erasechar)))
-			       (eqv? c (char->integer #\del)))
-			     *unspecified*))
-		  
-		  ;; Not sure what the correct answer for killchar
-		  ;; should be.  Gnu/Linux xterm give #\nak. Cygwin
-		  ;; gives ERR
-		  (pass-if "killchar"
-			   (begin
-			     (clear)
-			     (refresh)
-			     (let ((c (killchar)))
-			       (eqv? c (char->integer #\nak)))
-			     *unspecified*))
+ ;; Not sure what the correct answer for
+ ;; erasechar should be.  Gnu/Linux xterm gives
+ ;; #\del.  Cygwin gives ERR.
+ (pass-if "erasechar"
+	  (begin
+	    (clear win)
+	    (move win 0 0)
+	    (let ((c (erasechar)))
+	      (addstr win (format #f "Erasechar: ~a" c))
+	      (refresh win)
+	      ;; (usleep 500000)
+	      (eqv? c (char->integer #\del)))
+	    *unspecified*))
+ 
+ ;; Not sure what the correct answer for killchar
+ ;; should be.  Gnu/Linux xterm give #\nak. Cygwin
+ ;; gives ERR
+ (pass-if "killchar"
+	  (begin
+	    (clear win)
+	    (move win 0 0)
+	    (let ((c (killchar)))
+	      (addstr win (format #f "Killchar: ~a" c))
+	      (refresh win)
+	      ;; (usleep 500000)
+	      (eqv? c (char->integer #\nak)))
+	    *unspecified*))
 
-		  (pass-if "has-ic"
-			   (begin
-			     (let ((h (has-ic)))
-			       (eqv? h #t))))
+ (pass-if "has-ic?"
+	  (begin
+	    (clear win)
+	    (move win 0 0)
+	    (let ((h (has-ic?)))
+	      (addstr win (format #f "Has IC: ~a" h))
+	      (refresh win)
+	      ;; (usleep 500000)
+	      (eqv? h #t))))
 
-		  (pass-if "has-il"
-			   (begin
-			     (let ((h (has-il)))
-			       (eqv? h #t))))
+ (pass-if "has-il?"
+	  (begin
+	    (clear win)
+	    (move win 0 0)
+	    (let ((h (has-il?)))
+	      (addstr win (format #f "Has IL: ~a" h))
+	      (refresh win)
+	      ;; (usleep 500000)
+	      (eqv? h #t))))
 
-		  (pass-if "longname"
-			   (begin
-			     (clear)
-			     (refresh)
-			     (let ((c (longname)))
-			       (mvaddstr 0 0 c)
-			       (refresh)
-			       (sleep 1)
-			       (not (not (string= c "xterm" 0 4 0 4))))
-			     *unspecified*))
-
-
-		  (pass-if "termname"
-			   (begin
-			     (clear)
-			     (refresh)
-			     (let ((c (termname)))
-			       (mvaddstr 0 0 c)
-			       (refresh)
-			       (sleep 1)
-			       (not (not (string= c "xterm" 0 4 0 4))))
-			     *unspecified*))
+ (pass-if "longname"
+	  (begin
+	    (clear win)
+	    (move win 0 0)
+	    (let ((c (longname)))
+	      (addstr win c)
+	      (refresh win)
+	      ;; (usleep 500000)
+	      (not (not (string= c "xterm" 0 4 0 4))))
+	    *unspecified*))
 
 
-		  (pass-if "termattrs"
-			   (begin
-			     (clear)
-			     (refresh)
-			     (let ((ta (termattrs))
-				   (ta2 (logior 
-					 A_ALTCHARSET
-					 A_BLINK
-					 A_BOLD
-					 ; A_DIM
-					 A_COLOR
-					 A_INVIS
-					 ; A_PROTECT
-					 A_REVERSE
-					 A_STANDOUT
-					 A_UNDERLINE))) 
-			       
-			       (mvaddstr 0 0 (format #f "      ~32,'0b~%" ta))
-			       (addstr (format #f "PRTCT ~32,'0b~%" A_PROTECT))
-			       (addstr (format #f "INVIS ~32,'0b~%" A_INVIS))
-			       (addstr (format #f "  ALT ~32,'0b~%" A_ALTCHARSET))
-			       (addstr (format #f " BOLD ~32,'0b~%" A_BOLD))
-			       (addstr (format #f "  DIM ~32,'0b~%" A_DIM))
-			       (addstr (format #f "BLINK ~32,'0b~%" A_BLINK))
-			       (addstr (format #f "RVRSE ~32,'0b~%" A_REVERSE))
-			       (addstr (format #f "UNDRL ~32,'0b~%" A_UNDERLINE))
-			       (addstr (format #f "STNDT ~32,'0b~%" A_STANDOUT))
-			       (addstr (format #f "COLOR ~32,'0b~%" A_COLOR))
-			       (addstr (format #f "      ~32,'0b~%" ta2))
-			       (refresh)
-			       (sleep 1)
-			       (eqv? ta ta2))
-			     *unspecified*))
+ (pass-if "termname"
+	  (begin
+	    (clear win)
+	    (move win 0 0)
+	    (let ((c (termname)))
+	      (addstr win c)
+	      (refresh win)
+	      ;; (usleep 500000)
+	      (not (not (string= c "xterm" 0 4 0 4))))
+	    *unspecified*))
 
-		  )
+
+ (pass-if "termattrs"
+	  (begin
+	    (clear win)
+	    (let ((ta (termattrs))
+		  (ta2 (logior 
+			A_ALTCHARSET
+			A_BLINK
+			A_BOLD
+					; A_DIM
+			A_COLOR
+			A_INVIS
+					; A_PROTECT
+			A_REVERSE
+			A_STANDOUT
+			A_UNDERLINE))) 
+	      (move win 0 0)
+	      (addstr win (format #f "      ~32,'0b~%" ta))
+	      (addstr win (format #f "PRTCT ~32,'0b~%" A_PROTECT))
+	      (addstr win (format #f "INVIS ~32,'0b~%" A_INVIS))
+	      (addstr win (format #f "  ALT ~32,'0b~%" A_ALTCHARSET))
+	      (addstr win (format #f " BOLD ~32,'0b~%" A_BOLD))
+	      (addstr win (format #f "  DIM ~32,'0b~%" A_DIM))
+	      (addstr win (format #f "BLINK ~32,'0b~%" A_BLINK))
+	      (addstr win (format #f "RVRSE ~32,'0b~%" A_REVERSE))
+	      (addstr win (format #f "UNDRL ~32,'0b~%" A_UNDERLINE))
+	      (addstr win (format #f "STNDT ~32,'0b~%" A_STANDOUT))
+	      (addstr win (format #f "COLOR ~32,'0b~%" A_COLOR))
+	      (addstr win (format #f "      ~32,'0b~%" ta2))
+	      (refresh win)
+	      (sleep 1)
+	      (eqv? ta ta2))
+	    *unspecified*))
+
+ )
 
 
 (endwin)

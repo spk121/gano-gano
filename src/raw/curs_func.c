@@ -361,14 +361,14 @@ gucu_has_colors_p ()
 
 /* True if the terminal has insert and delete character capabilities */
 SCM
-gucu_has_ic ()
+gucu_has_ic_p ()
 {
   return (scm_from_bool (has_ic()));
 }
 
 /* True if the terminal and insert- and delete-line capabilities */
 SCM
-gucu_has_il ()
+gucu_has_il_p ()
 {
   bool ret;
   
@@ -2092,8 +2092,8 @@ gucu_init_function ()
   scm_c_define_gsubr ("%getbkgd", 1, 0, 0, gucu_getbkgd);
   scm_c_define_gsubr ("halfdelay", 1, 0, 0, gucu_halfdelay);
   scm_c_define_gsubr ("has-colors?", 0, 0, 0, gucu_has_colors_p);
-  scm_c_define_gsubr ("has-ic", 0, 0, 0, gucu_has_ic);
-  scm_c_define_gsubr ("has-il", 0, 0, 0, gucu_has_il);
+  scm_c_define_gsubr ("has-ic?", 0, 0, 0, gucu_has_ic_p);
+  scm_c_define_gsubr ("has-il?", 0, 0, 0, gucu_has_il_p);
   scm_c_define_gsubr ("has-key?", 1, 0, 0, gucu_has_key_p);
   scm_c_define_gsubr ("idcok", 2, 0, 0, gucu_idcok);
   scm_c_define_gsubr ("idlok", 2, 0, 0, gucu_idlok);
