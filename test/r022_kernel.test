@@ -3,30 +3,29 @@
 
 (use-modules (test lib)
 	     (test lib2)
-	     ;; (gucu curses-wide)
 	     (gucu curses)
 	     (srfi srfi-1))
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
 ;; Should be able to save and reset tty
 (with-test-prefix "kernel"
 		  
-; 		  (pass-if "getsyx / setsyx"
-; 			   (begin
-; 			     (clear)
-; 			     (refresh)
-; 			     (setsyx 6 6)
-; 			     (lset= equal? '(6 6) (getsx))))
+ 		  (pass-if "getsyx / setsyx"
+ 			   (begin
+ 			     (clear win)
+ 			     (refresh win)
+ 			     (setsyx 6 6)
+ 			     (lset= equal? '(6 6) (getsyx))))
 
 		  (pass-if "savetty / resettty"
 			   (begin
-			     (clear)
-			     (refresh)
-			     (savetty)
-			     (resetty)))
+			     (clear win)
+			     (refresh win)
+			     (and (savetty)
+				  (resetty))))
 
 		  )
 

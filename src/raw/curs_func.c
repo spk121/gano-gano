@@ -1145,6 +1145,8 @@ gucu_scrollok (SCM win, SCM bf)
   RETURNTF(ret);
 }
 
+/* Set the virtual screen cursor to y, x.  This is an obscure and
+   pointless feature. */
 SCM
 gucu_setsyx (SCM y, SCM x)
 {
