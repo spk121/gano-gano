@@ -3,33 +3,21 @@
 
 (use-modules (test lib)
 	     (test lib2)
-	     ;; (gucu curses-wide)
 	     (gucu curses)
 	     (srfi srfi-1))
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
 ;; Should be able to move the cursor
 (with-test-prefix "move"
 		  
 		  (pass-if "move"
-			   (clear)
-			   (move 1 1)
-			   (refresh)
-			   (lset= eqv? '(1 1) (getyx (stdscr)))))
-
-(define win (newwin 5 5 5 5))
-
-(with-test-prefix "wmove"
-		  
-		  (pass-if "wmove"
-			   (wclear win)
-			   (wmove win 1 1)
-			   (wrefresh win)
+			   (clear win)
+			   (move win 1 1)
+			   (refresh win)
 			   (lset= eqv? '(1 1) (getyx win))))
-
 
 (endwin)
 
