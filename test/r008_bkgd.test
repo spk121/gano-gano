@@ -9,88 +9,51 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
 (define period (char->integer #\.))
 (define plus (char->integer #\+))
 (define space (char->integer #\sp))
 
 
-(clear)
-(standend)
+(clear win)
+(standend win)
 
 (with-test-prefix 
  "bkgd"
  
  (pass-if "bkgd"
 	  (begin
-	    (addstr "This is a string" #:y 0 #:x 0)
-	    (bkgd (logior A_BOLD period))
-	    (addstr "This is a new string" #:y 1 #:x 0)
-	    (refresh)
-	    (let ((x1 (mvinch 0 4)) ;Loc of space between "This" and "is"
-		  (x2 (mvinch 1 4)))
+	    (addstr win "This is a string" #:y 0 #:x 0)
+	    (bkgd win (logior A_BOLD period))
+	    (addstr win "This is a new string" #:y 1 #:x 0)
+	    (refresh win)
+	    (let ((x1 (inch win #:y 0 #:x 4)) ;Loc of space between "This" and "is"
+		  (x2 (inch win #:y 1 #:x 4)))
 	      (begin
-		(bkgd (logior A_NORMAL space)) ; clear bkgd
-		(clear)
-		(refresh)
+		(bkgd win (logior A_NORMAL space)) ; clear bkgd
+		(clear win)
+		(refresh win)
 		(and
 		 (equal? (logior A_BOLD period) x1)
 		 (equal? (logior A_BOLD period) x2))))))
  
  (pass-if "bkgdset"
 	  (begin
-	    (standend)
-	    (addstr "This is a string" #:y 0 #:x 0)
-	    (bkgdset (logior A_DIM (color-pair 1) plus))
-	    (addstr "This is another string" #:y 1 #:x 0)
-	    (refresh)
-	    (let ((x1 (mvinch 0 4))
-		  (x2 (mvinch 1 4)))
+	    (standend win)
+	    (addstr win "This is a string" #:y 0 #:x 0)
+	    (bkgdset win (logior A_DIM (color-pair 1) plus))
+	    (addstr win "This is another string" #:y 1 #:x 0)
+	    (refresh win)
+	    (let ((x1 (inch win #:y 0 #:x 4))
+		  (x2 (inch win #:y 1 #:x 4)))
 	      (begin
-		(bkgd (logior A_NORMAL space)) ; clear bkgd
-		(clear)
-		(refresh)
+		(bkgd win (logior A_NORMAL space)) ; clear bkgd
+		(clear win)
+		(refresh win)
 		(and
 		 (equal? (logior A_NORMAL space) x1)
 		 (equal? (logior A_DIM (color-pair 1) plus) x2)))))))
-
-(define win (newwin 5 10 5 5))
-
-(with-test-prefix 
- "wbkgd"
- 
- (pass-if "bkgd #:win"
-	  (begin
-	    (addstr "This is a string" #:win win #:y 0 #:x 0)
-	    (bkgd (logior A_BOLD period) #:win win)
-	    (addstr "This is a new string" #:win win #:y 1 #:x 0)
-	    (wrefresh win)
-	    (let ((x1 (mvwinch win 0 4))
-		  (x2 (mvwinch win 1 4)))
-	      (begin
-		(bkgd (logior A_NORMAL space) #:win win ) ; clear bkgd
-		(wclear win)
-		(wrefresh win)
-		(and
-		 (equal? (logior A_BOLD period) x1)
-		 (equal? (logior A_BOLD period) x2))))))
- 
- (pass-if "bkgdget"
-	  (begin
-	    (standend #:win win)
-	    (addstr "This is a string" #:win win #:y 0 #:x 0)
-	    (bkgdset (logior A_DIM (color-pair 1) plus) #:win win)
-	    (addstr "This is another string" #:win win #:y 1 #:x 0)
-	    (wrefresh win)
-	    (let ((bk (getbkgd #:win win)))
-	      (begin
-		(bkgd (logior A_NORMAL space) #:win win) ; clear bkgd
-		(wclear win)
-		(wrefresh win)
-		(equal? bk (logior A_DIM (color-pair 1) plus)))))))
-(delwin win)
-(refresh)
 
 (endwin)
 

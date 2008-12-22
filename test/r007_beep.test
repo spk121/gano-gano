@@ -9,21 +9,21 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
 ;; Should be able to beep and flash
 (with-test-prefix "beep"
 		  
 		  (pass-if "beep"
 			   (begin
-			     (clear)
-			     (refresh)
+			     (clear win)
+			     (refresh win)
 			     (and (beep) (beep) (beep))))
 
 		  (pass-if "flash"
 			   (begin
-			     (clear)
-			     (refresh)
+			     (clear win)
+			     (refresh win)
 			     (and (flash) (flash) (flash)))))
 
 
