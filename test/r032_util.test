@@ -9,55 +9,44 @@
 
 (define test (curses-test-start))
 
-(define (mvaddstr y x s)
-  (addstr s #:y y #:x x))
-(define (mvwaddstr w y x s)
-  (addstr s #:win w #:y y #:x x))
+(define mainwin (initscr))
 
-(initscr)
+;; Try some of the obscure utilities
 
-;; Should be able to get term attributes
-(define fp #f)
 (with-test-prefix "util"
-
 		  
 		  (pass-if "keyname #\\bel"
 			   (string=? "^G" (keyname (char->integer #\bel))))
-
+		  
 		  (pass-if "keyname x"
 			   (string=? "x" (keyname (char->integer #\x))))
-
+		  
 		  (pass-if "keyname home"
 			   (string=? "KEY_HOME" (keyname KEY_HOME))))
 
-(with-test-prefix "getwin/putwin"
-		  
- 		  (define win (newwin 5 5 5 5))
+(with-test-prefix 
+ "getwin/putwin"
 
- 		  (pass-if "putwin"
- 			   (begin
- 			     (mvwaddstr win 0 0 "zzz")
- 			     (wrefresh win)
-			     (let ((str (call-with-output-string
-					 (lambda (port)
-					   (putwin win port)))))
-			       (mvwaddstr win 1 0 str)
-			       (refresh win)
-			       (sleep 3)))))
+ (let ((win (newwin 5 5 5 5))
+       (windata #f))
 
-
-; 		  (delwin win)
-; 		  (refresh)
-		  
-; 		  (pass-if "getwin"
-; 			   (begin
-; 			     (clear)
-; 			     (refresh)
-; 			     (set! fp (fopen "win.tmp" "r"))
-; 			     (set! win (getwin fp))
-; 			     (wrefresh win)
-; 			     (string=? "zzz" (mvwinnstr win 0 0 3))
-; 			     )))
+   (pass-if "putwin"
+	    (begin
+	      (addstr win "zzz" #:y 0 #:x 0)
+	      (refresh win)
+	      (set! windata (call-with-output-string
+			     (lambda (port)
+			       (putwin win port))))
+	      (not (string-null? windata))))
+   
+   (pass-if "getwin"
+	    (begin
+	      (clear mainwin)
+	      (refresh mainwin)
+	      (let ((win (call-with-input-string windata getwin)))
+		(refresh win)
+		(sleep 3)
+		(string=? "zzz" (instr win #:y 0 #:x 0 #:n 3)))))))
 
 (endwin)
 
