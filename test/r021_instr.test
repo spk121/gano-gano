@@ -9,94 +9,48 @@
 
 (define test (curses-test-start))
 
-(define (mvaddstr y x s)
-  (addstr s #:y y #:x x))
-(define (mvwaddstr w y x s)
-  (addstr s #:win w #:y y #:x x))
+(define win (initscr))
 
-(initscr)
+(with-test-prefix 
+ "instr"
+ 
+ (pass-if "instr"
+	  (begin
+	    (clear win)
+	    (move win 0 0)
+	    (addstr win "hello")
+	    (refresh win)
+	    (move win 0 0)
+	    (let ((w2 (instr win)))
+	      (string=? "hello" (string-take w2 (string-length "hello"))))))
 
-(with-test-prefix "instr"
-		  
-		  (pass-if "instr"
-			   (begin
-			     (clear)
-			     (mvaddstr 0 0 "hello")
-			     (refresh)
-			     (move 0 0)
-			     (let ((w2 (instr)))
-			       (string=? "hello" (string-take w2 (string-length "hello"))))))
+ (pass-if "instr #:n"
+	  (begin
+	    (clear win)
+	    (move win 0 0)
+	    (addstr win "hello")
+	    (refresh win)
+	    (move win 0 0)
+	    (let ((w2 (instr win #:n 2)))
+	      (string=? "he" w2))))
 
-		  (pass-if "innstr"
-			   (begin
-			     (clear)
-			     (mvaddstr 0 0 "hello")
-			     (refresh)
-			     (move 0 0)
-			     (let ((w2 (innstr 2)))
-			       (mvaddstr 1 0 w2)
-			       (refresh)
-			       (string=? "he" w2))))
+ (pass-if "instr #:x #:y"
+	  (begin
+	    (clear win)
+	    (move win 1 0)
+	    (addstr win "bold")
+	    (refresh win)
+	    (let ((x2 (instr win #:y 1 #:x 0)))
+	      (string=? "bold" (string-take x2 (string-length "bold"))))))
 
-		  (pass-if "mvinstr"
-			   (begin
-			     (clear)
-			     (mvaddstr 1 0 "bold")
-			     (refresh)
-			     (let ((x2 (mvinstr 1 0)))
-			       (string=? "bold" (string-take x2 (string-length "bold"))))))
-
-		  (pass-if "mvinnstr"
-			   (begin
-			     (clear)
-			     (mvaddstr 1 0 "bold")
-			     (refresh)
-			     (let ((x2 (mvinnstr 1 0 2)))
-			       (string=? "bo" x2)))))
-
-(define win (newwin 5 10 5 5))
-
-
-(with-test-prefix "winstr"
-		  
-		  (pass-if "winstr"
-			   (begin
-			     (wclear win)
-			     (mvwaddstr win 0 0 "hello")
-			     (wrefresh win)
-			     (wmove win 0 0)
-			     (let ((w2 (winstr win)))
-			       (string=? "hello" (string-take w2 (string-length "hello"))))))
-
-		  (pass-if "winnstr"
-			   (begin
-			     (wclear win)
-			     (mvwaddstr win 0 0 "hello")
-			     (wrefresh win)
-			     (wmove win 0 0)
-			     (let ((w2 (winnstr win 2)))
-			       (string=? "he" w2))))
-
-		  (pass-if "mvwinstr"
-			   (begin
-			     (wclear win)
-			     (mvwaddstr win 1 0 "bold")
-			     (wrefresh win)
-			     (let ((x2 (mvwinstr win 1 0)))
-			       (string=? "bold" (string-take x2 (string-length "bold"))))))
-
-		  (pass-if "mvwinnstr"
-			   (begin
-			     (wclear win)
-			     (mvwaddstr win 1 0 "bold")
-			     (wrefresh win)
-			     (let ((x2 (mvwinnstr win 1 0 2)))
-			       (string=? "bo" x2)))))
-			      
-(delwin win)
-(refresh)
-
-
+ (pass-if "instr #:y #:x #:n"
+	  (begin
+	    (clear win)
+	    (move win 1 0)
+	    (addstr win "bold")
+	    (refresh win)
+	    (let ((x2 (instr win #:y 1 #:x 0 #:n 2)))
+	      (string=? "bo" x2)))))
 (endwin)
 
 (curses-test-end test "r021_instr.out")		  
