@@ -1,5 +1,5 @@
 ;;;; -*- Mode: scheme; -*-
-;;;; r003_add_wch.test --- test suite for curses's wide character functions
+;;;; r033_add_wch.test --- test suite for curses's wide character functions
 
 (use-modules (test lib)
 	     (test lib2)

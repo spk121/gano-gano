@@ -19,7 +19,7 @@
 	    getn-wstr
 	    hline-set
 	    in-wch
-	    in-wchnstr
+	    in-wchstr
 	    ins-nwstr
 	    ins-wch
 	    ins-wstr
@@ -28,7 +28,6 @@
 	    mvadd-wch
 	    mvget-wch
 	    mvgetn-wstr
-	    mvin-wchnstr
 	    mvinnwstr
 	    mvins-nwstr
 	    mvins-wch
@@ -37,7 +36,6 @@
 	    mvwadd-wch
 	    mvwget-wch
 	    mvwgetn-wstr
-	    mvwin-wchnstr
 	    mvwins-nwstr
 	    mvwins-wch
 	    mvwins-wstr
@@ -72,7 +70,6 @@
 	    wacs-vline
 	    wget-wch
 	    wgetn-wstr
-	    win-wchnstr
 	    wins-nwstr
 	    wins-wch
 	    wins-wstr
@@ -84,7 +81,7 @@
 	   #t)
        (%wadd-wch win ch)))
 
-(define* (add-wchstr wchstr #:key (win (stdscr)) x y (n -1))
+(define* (add-wchstr win wchstr #:key x y (n -1))
   (and (if (and x y)
 	   (move win y x)
 	   #t)
@@ -128,6 +125,12 @@
 	   (move win y x)
 	   #t)
        (%win-wch win)))
+
+(define* (in-wchstr win #:key y x (n -1))
+  (and (if (and y x)
+	   (move win y x)
+	   #t)
+       (%win-wchnstr win n)))
 
 (define* (vline-set win ch n #:key y x)
   (and (if (and y x)
