@@ -550,7 +550,7 @@
 ;; The window information isn't used in the lower level function, so
 ;; it is dropped here.
 (define (meta bf)
-  (%meta (stdscr) bf))
+  (%meta bf))
 
 (define (move win y x)
   (%wmove win y x))

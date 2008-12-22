@@ -667,19 +667,16 @@ gucu_longname ()
 
 /* Set the terminal to 7 or 8 bit mode */
 SCM
-gucu_meta (SCM win, SCM bf)
+gucu_meta (SCM bf)
 {
-  WINDOW *c_win;
   bool c_bf;
   int ret;
 
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%meta");
-  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "%meta");
+  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG1, "%meta");
 
-  c_win = _scm_to_window (win);
   c_bf = scm_to_bool (bf);
 
-  ret = meta (c_win, c_bf);
+  ret = meta ((WINDOW *) 0, c_bf);
   RETURNTF(ret);
 }
 
@@ -826,7 +823,7 @@ gucu_nocbreak ()
   RETURNTF(nocbreak ());
 }
 
-/* Causes getch() to be non-blocking, so that it returns ERR if no
+/* Causes getch() to be non-blocking, so that it returns #f if no
    character is ready */
 SCM
 gucu_nodelay (SCM win, SCM bf)
@@ -1725,6 +1722,10 @@ gucu_wgetch (SCM win)
   c_win = _scm_to_window (win);
 
   ret = wgetch (c_win);
+
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
   return scm_from_int (ret);
 }
 
@@ -2104,7 +2105,7 @@ gucu_init_function ()
   scm_c_define_gsubr ("killchar", 0, 0, 0, gucu_killchar);
   scm_c_define_gsubr ("leaveok", 2, 0, 0, gucu_leaveok);
   scm_c_define_gsubr ("longname", 0, 0, 0, gucu_longname);
-  scm_c_define_gsubr ("%meta", 2, 0, 0, gucu_meta);
+  scm_c_define_gsubr ("%meta", 1, 0, 0, gucu_meta);
   scm_c_define_gsubr ("mouseinterval", 1, 0, 0, gucu_mouseinterval);
   scm_c_define_gsubr ("mvcur", 4, 0, 0, gucu_mvcur);
   scm_c_define_gsubr ("mvderwin", 3, 0, 0, gucu_mvderwin);

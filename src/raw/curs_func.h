@@ -59,7 +59,7 @@ SCM gucu_keypad (SCM arg1, SCM arg2) API;
 SCM gucu_killchar (void) API;
 SCM gucu_leaveok (SCM arg1, SCM arg2) API;
 SCM gucu_longname (void) API;
-SCM gucu_meta (SCM arg1, SCM arg2) API;
+SCM gucu_meta (SCM bf) API;
 SCM gucu_mouseinterval (SCM arg1) API;
 SCM gucu_mvcur (SCM arg1, SCM arg2, SCM arg3, SCM arg4) API;
 SCM gucu_mvderwin (SCM arg1, SCM arg2, SCM arg3) API;
