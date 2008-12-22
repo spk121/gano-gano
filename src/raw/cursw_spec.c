@@ -109,17 +109,6 @@ gucu_inwstr (void)
 
 
 SCM
-gucu_in_wch ()
-{
-  int ret;
-  cchar_t ch;
-  
-  ret = in_wch (&ch);
-  
-  return _scm_from_cchar (&ch);
-}
-
-SCM
 gucu_in_wchnstr (SCM n)
 {
   SCM_ASSERT (scm_is_integer (n), n, SCM_ARG1, "in-wchnstr");
@@ -262,23 +251,6 @@ gucu_mvwget_wch (SCM win, SCM y, SCM x)
 }
 
 SCM
-gucu_mvin_wch (SCM y, SCM x)
-{
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvin-wch");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG2, "mvin-wch");
-
-  int ret;
-  cchar_t ch;
-  
-  ret = mvin_wch (scm_to_int (y), scm_to_int (x), &ch);
-  
-  return _scm_from_cchar (&ch);
-}
-
-
-
-
-SCM
 gucu_mvinnwstr (SCM y, SCM x, SCM n)
 {
   SCM_ASSERT (scm_is_integer (y), y, SCM_ARG1, "mvinnwstr");
@@ -356,23 +328,6 @@ gucu_mvwinwstr (SCM win, SCM y, SCM x)
 
   return s_str;
 }
-
-SCM
-gucu_mvwin_wch (SCM win, SCM y, SCM x)
-{
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mvwin-wch");
-  SCM_ASSERT (scm_is_integer (y), y, SCM_ARG2, "mvwin-wch");
-  SCM_ASSERT (scm_is_integer (x), x, SCM_ARG3, "mvwin-wch");
-
-  int ret;
-  cchar_t ch;
-  
-  ret = mvwin_wch (_scm_to_window (win), scm_to_int (y), scm_to_int (x), &ch);
-  
-  return _scm_from_cchar (&ch);
-}
-
-
 
 
 SCM
@@ -539,10 +494,11 @@ gucu_winwstr (SCM win)
 }
 
 
+/* extract a complex rendered character from the window */
 SCM
 gucu_win_wch (SCM win)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "win-wch");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%win-wch");
 
   int ret;
   cchar_t ch;
@@ -810,27 +766,24 @@ gucu_cursw_init_special ()
    scm_c_define_gsubr ("get-wch", 0, 0, 0, gucu_get_wch);
    scm_c_define_gsubr ("innwstr", 1, 0, 0, gucu_innwstr);
    scm_c_define_gsubr ("inwstr", 0, 0, 0, gucu_inwstr);
-   scm_c_define_gsubr ("in-wch", 0, 0, 0, gucu_in_wch);
    scm_c_define_gsubr ("in-wchnstr", 1, 0, 0, gucu_in_wchnstr);
    scm_c_define_gsubr ("killwchar", 0, 0, 0, gucu_killwchar);
    scm_c_define_gsubr ("mvgetn-wstr", 3, 0, 0, gucu_mvgetn_wstr);
    scm_c_define_gsubr ("mvget-wch", 2, 0, 0, gucu_mvget_wch);
    scm_c_define_gsubr ("mvinnwstr", 3, 0, 0, gucu_mvinnwstr);
    scm_c_define_gsubr ("mvinwstr", 2, 0, 0, gucu_mvinwstr);
-   scm_c_define_gsubr ("mvin-wch", 2, 0, 0, gucu_mvin_wch);
    scm_c_define_gsubr ("mvin-wchnstr", 3, 0, 0, gucu_mvin_wchnstr);
    scm_c_define_gsubr ("mvwgetn-wstr", 4, 0, 0, gucu_mvwgetn_wstr);
    scm_c_define_gsubr ("mvwget-wch", 3, 0, 0, gucu_mvwget_wch);
    scm_c_define_gsubr ("mvwinnwstr", 4, 0, 0, gucu_mvwinnwstr);
    scm_c_define_gsubr ("mvwinwstr", 3, 0, 0, gucu_mvwinwstr);
-   scm_c_define_gsubr ("mvwin-wch", 3, 0, 0, gucu_mvwin_wch);
    scm_c_define_gsubr ("mvwin-wchnstr", 4, 0, 0, gucu_mvwin_wchnstr);
    scm_c_define_gsubr ("%wgetbkgrnd", 0, 0, 0, gucu_wgetbkgrnd);
    scm_c_define_gsubr ("wgetn-wstr", 2, 0, 0, gucu_wgetn_wstr);
    scm_c_define_gsubr ("wget-wch", 1, 0, 0, gucu_wget_wch);
    scm_c_define_gsubr ("winnwstr", 2, 0, 0, gucu_winnwstr);
    scm_c_define_gsubr ("winwstr", 1, 0, 0, gucu_winwstr);
-   scm_c_define_gsubr ("win-wch", 1, 0, 0, gucu_win_wch);
+   scm_c_define_gsubr ("%win-wch", 1, 0, 0, gucu_win_wch);
    scm_c_define_gsubr ("win-wchnstr", 2, 0, 0, gucu_win_wchnstr);
    scm_c_define_gsubr ("wacs-block", 0, 0, 0, gucu_WACS_BLOCK);
    scm_c_define_gsubr ("wacs-board", 0, 0, 0, gucu_WACS_BOARD);

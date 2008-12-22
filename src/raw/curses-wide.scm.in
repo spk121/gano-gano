@@ -28,7 +28,6 @@
 	    mvadd-wch
 	    mvget-wch
 	    mvgetn-wstr
-	    mvin-wch
 	    mvin-wchnstr
 	    mvinnwstr
 	    mvins-nwstr
@@ -38,7 +37,6 @@
 	    mvwadd-wch
 	    mvwget-wch
 	    mvwgetn-wstr
-	    mvwin-wch
 	    mvwin-wchnstr
 	    mvwins-nwstr
 	    mvwins-wch
@@ -74,28 +72,27 @@
 	    wacs-vline
 	    wget-wch
 	    wgetn-wstr
-	    win-wch
 	    win-wchnstr
 	    wins-nwstr
 	    wins-wch
 	    wins-wstr
 ))
 
-(define* (add-wch ch #:key (win (stdscr)) x y)
+(define* (add-wch win ch #:key x y)
   (and (if (and x y)
-	   (wmove win y x)
+	   (move win y x)
 	   #t)
        (%wadd-wch win ch)))
 
 (define* (add-wchstr wchstr #:key (win (stdscr)) x y (n -1))
   (and (if (and x y)
-	   (wmove win y x)
+	   (move win y x)
 	   #t)
        (%wadd-wchnstr win wchstr n)))
 
 (define* (addwstr win wstr #:key x y (n -1))
   (and (if (and x y)
-	   (%wmove win y x)
+	   (move win y x)
 	   #t)
        (%waddnwstr win wstr n)))
 
@@ -108,24 +105,33 @@
 (define* (border-set left right top bottom tl tr bl br #:key (win (stdscr)))
   (%wborder-set win left right top bottom tl tr bl br))
 
-(define* (box-set #:v h key (win (stdscr)))
+(define (box-set win v h key)
   (%wborder-set win v v h h 0 0 0 0))
 
-(define* (echo-wchar ch #:key (win (stdscr)))
-  (%wecho-wchar win ch))
+(define* (echo-wchar win ch #:key y x)
+  (and (if (and y x)
+	   (move win y x)
+	   #t)
+       (%wecho-wchar win ch)))
 
 (define* (getbkgrnd #:key win)
   (%wgetbkgrnd win))
 
-(define* (hline-set ch n #:key (win (stdscr) y x))
+(define* (hline-set win ch n #:key y x)
   (and (if (and y x)
-	   (wmove win y x)
+	   (move win y x)
 	   #t)
        (%whline-set win ch n)))
 
-(define* (vline-set ch n #:key (win (stdscr) y x))
+(define* (in-wch win #:key y x)
   (and (if (and y x)
-	   (wmove win y x)
+	   (move win y x)
+	   #t)
+       (%win-wch win)))
+
+(define* (vline-set win ch n #:key y x)
+  (and (if (and y x)
+	   (move win y x)
 	   #t)
        (%wvline-set win ch n)))
 

@@ -7,14 +7,11 @@
 	     (gucu curses)
 	     (srfi srfi-1))
 
+(setlocale LC_ALL "")
+
 (define test (curses-test-start))
 
-(define (mvaddstr y x s)
-  (addstr s #:y y #:x x))
-(define (mvwaddstr w y x s)
-  (addstr s #:win w #:y y #:x x))
-
-(initscr)
+(define win (initscr))
 
 ;; U+041B CYRILLIC CAPITAL LETTER EL
 (define el_normal `(,A_NORMAL 0 #x041B))
@@ -34,83 +31,55 @@
 		  
 		  (pass-if "add-wch"
 			   (begin
-			     (clear)
-			     (move 0 0)
-			     (add-wch el_normal)
-			     (refresh)
-			     (let ((x (mvin-wch 0 0)))
+			     (clear win)
+			     (move win 0 0)
+			     (add-wch win el_normal)
+			     (refresh win)
+			     (sleep 2)
+			     (let ((x (in-wch win #:y 0 #:x 0)))
 			       (equal? x el_normal))
-			     *unspecified*))
+			     ;; *unspecified*
+			     ))
+		  
 		  ;; (sleep 1)
 
 		  (pass-if "add-wch #:y #:x"
 			   (begin
-			     (add-wch el_bold #:y 1 #:x 0)
-			     (refresh)
-			     (let ((x (mvin-wch 1 0)))
+			     (add-wch win el_bold #:y 1 #:x 0)
+			     (refresh win)
+			     (sleep 2)
+			     (let ((x (in-wch win #:y 1 #:x 0)))
 			       (equal? x el_bold))
-			     *unspecified*))
+			     ;;*unspecified*
+			     ))
 
 		  ;; (sleep 1)
 
 		  (pass-if "echo-wchar"
 			   (begin
-			     (move 2 0)
-			     (echo-wchar chuu_normal)
-			     (let ((x (mvin-wch 2 0)))
+			     (move win 2 0)
+			     (echo-wchar win chuu_normal)
+			     (sleep 2)
+			     (let ((x (in-wch win #:y 2 #:x 0)))
 			       (equal? x chuu_normal))
-			     *unspecified*)))
+			     ;; *unspecified*
+			     ))
 
-(sleep 1)
-
-(define win2 (newwin 5 5 5 5))
-
-(with-test-prefix "add-wch #:win"
-		  
- 		  (pass-if "add-wch #:win"
- 			   (begin
- 			     (clear)
- 			     (move 0 0)
- 			     (add-wch el_normal #:win win2)
- 			     (wrefresh win2)
- 			     (let ((x (mvwin-wch win2 0 0)))
- 			       (equal? x el_normal))
- 			     *unspecified*))
-
-
-		  (pass-if "add-wch #:win #:y #:x"
+		  (pass-if "echo-wchar combining chars"
 			   (begin
-			     (clear)
-			     (add-wch el_bold #:win win2 #:y 1 #:x 0)
-			     (wrefresh win2)
-			     (let ((x (mvwin-wch win2 1 0)))
-			       (equal? x el_bold))
-			     *unspecified*))
-
-		  (pass-if "echo-wchar #:win"
-			   (begin
-			     (clear)
-			     (wmove win2 2 0)
-			     (echo-wchar chuu_bold #:win win2)
-			     (let ((x (mvwin-wch win2 2 0)))
-			       (equal? x chuu_bold))
-			     *unspecified*))
-
-		  (pass-if "echo-wchar #:win combining chars"
-			   (begin
-			     (clear)
-			     (wmove win2 3 0)
-			     (echo-wchar o_macron #:win win2)
-			     ;(addstr (format #f "~a" o_macron))
-			     (let ((x (mvwin-wch win2 3 0)))
-			       ;(addstr (format #f "~a" x))
-			       ;(refresh)
+			     (clear win)
+			     (move win 3 0)
+			     (echo-wchar win o_macron)
+			     (sleep 2)
+			     (addstr win (format #f "~a" o_macron))
+			     (let ((x (in-wch win #:y 3 #:x 0)))
+			       (addstr win (format #f "~a" x))
+			       (refresh win)
+			       (sleep 2)
 			       (equal? x o_macron))
-			     *unspecified*)))
-
-(sleep 1)
-(delwin win2)
-(refresh)
+			     ;; *unspecified*
+			     )))
+(refresh win)
 
 (endwin)
 
