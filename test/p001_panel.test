@@ -10,7 +10,7 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define mainwin (initscr))
 
 ;; Should be able to make a panel
 (with-test-prefix 

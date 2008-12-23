@@ -35,7 +35,7 @@
 			     (move win 0 0)
 			     (add-wch win el_normal)
 			     (refresh win)
-			     (sleep 2)
+			     ;; (sleep 1)
 			     (let ((x (in-wch win #:y 0 #:x 0)))
 			       (equal? x el_normal))
 			     ;; *unspecified*
@@ -47,7 +47,7 @@
 			   (begin
 			     (add-wch win el_bold #:y 1 #:x 0)
 			     (refresh win)
-			     (sleep 2)
+			     ;; (sleep 1)
 			     (let ((x (in-wch win #:y 1 #:x 0)))
 			       (equal? x el_bold))
 			     ;;*unspecified*
@@ -59,7 +59,7 @@
 			   (begin
 			     (move win 2 0)
 			     (echo-wchar win chuu_normal)
-			     (sleep 2)
+			     ;; (sleep 1)
 			     (let ((x (in-wch win #:y 2 #:x 0)))
 			       (equal? x chuu_normal))
 			     ;; *unspecified*
@@ -70,12 +70,12 @@
 			     (clear win)
 			     (move win 3 0)
 			     (echo-wchar win o_macron)
-			     (sleep 2)
+			     ;; (sleep 1)
 			     (addstr win (format #f "~a" o_macron))
 			     (let ((x (in-wch win #:y 3 #:x 0)))
 			       (addstr win (format #f "~a" x))
 			       (refresh win)
-			       (sleep 2)
+			       ;; (sleep 1)
 			       (equal? x o_macron))
 			     ;; *unspecified*
 			     )))

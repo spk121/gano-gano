@@ -216,7 +216,7 @@
 	    (let ((x2 (attr-get win)))
 	      (addstr win (format #f "~A" x2))
 	      (refresh win)
-	      (sleep 4)
+	      ;; (sleep 1)
 	      (and
 	       (equal? (car x2) A_UNDERLINE)
 	       (equal? (cadr x2) 1)))))

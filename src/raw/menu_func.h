@@ -53,7 +53,7 @@ SCM gucu_item_opts_off (SCM arg1, SCM arg2) API;
 SCM gucu_item_opts (SCM arg1) API;
 SCM gucu_set_item_value (SCM arg1, SCM arg2) API;
 SCM gucu_item_value (SCM arg1) API;
-SCM gucu_item_visible (SCM arg1) API;
+SCM gucu_item_visible_p (SCM arg1) API;
 
 void gucu_menu_init_function (void) API;
 #endif

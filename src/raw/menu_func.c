@@ -140,8 +140,8 @@ gucu_menu_grey (SCM menu)
 SCM
 gucu_set_menu_pad (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-pad");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "set-menu-pad");
+	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-pad!");
+	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "set-menu-pad!");
 
 	MENU *c_arg1 = _scm_to_menu (arg1);
 	int c_arg2 = scm_to_int (arg2);
@@ -238,8 +238,8 @@ gucu_item_count (SCM arg1)
 SCM
 gucu_set_menu_mark (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-mark");
-	SCM_ASSERT (scm_is_string (arg2), arg2, SCM_ARG2, "set-menu-mark");
+	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-mark!");
+	SCM_ASSERT (scm_is_string (arg2), arg2, SCM_ARG2, "set-menu-mark!");
 
 	MENU *c_arg1 = _scm_to_menu (arg1);
 	 char *c_arg2 = scm_to_locale_string (arg2);
@@ -270,8 +270,8 @@ gucu_menu_mark (SCM menu)
 SCM
 gucu_set_menu_opts (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-opts");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "set-menu-opts");
+	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-opts!");
+	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "set-menu-opts!");
 
 	MENU *c_arg1 = _scm_to_menu (arg1);
 	int c_arg2 = scm_to_int (arg2);
@@ -285,8 +285,8 @@ gucu_set_menu_opts (SCM arg1, SCM arg2)
 SCM
 gucu_menu_opts_off (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "menu-opts-off");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "menu-opts-off");
+	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "menu-opts-off!");
+	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "menu-opts-off!");
 
 	MENU *c_arg1 = _scm_to_menu (arg1);
 	int c_arg2 = scm_to_int (arg2);
@@ -300,8 +300,8 @@ gucu_menu_opts_off (SCM arg1, SCM arg2)
 SCM
 gucu_menu_opts_on (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "menu-opts-on");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "menu-opts-on");
+	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "menu-opts-on!");
+	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "menu-opts-on!");
 
 	MENU *c_arg1 = _scm_to_menu (arg1);
 	int c_arg2 = scm_to_int (arg2);
@@ -328,8 +328,8 @@ gucu_menu_opts (SCM arg1)
 SCM
 gucu_set_menu_pattern (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-pattern");
-	SCM_ASSERT (scm_is_string (arg2), arg2, SCM_ARG2, "set-menu-pattern");
+	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-pattern!");
+	SCM_ASSERT (scm_is_string (arg2), arg2, SCM_ARG2, "set-menu-pattern!");
 
 	MENU *c_arg1 = _scm_to_menu (arg1);
 	 char *c_arg2 = scm_to_locale_string (arg2);
@@ -429,10 +429,10 @@ gucu_menu_request_by_name (SCM arg1)
 SCM
 gucu_set_menu_spacing (SCM arg1, SCM arg2, SCM arg3, SCM arg4)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-spacing");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "set-menu-spacing");
-	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "set-menu-spacing");
-	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "set-menu-spacing");
+	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-menu-spacing!");
+	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "set-menu-spacing!");
+	SCM_ASSERT (scm_is_integer (arg3), arg3, SCM_ARG3, "set-menu-spacing!");
+	SCM_ASSERT (scm_is_integer (arg4), arg4, SCM_ARG4, "set-menu-spacing!");
 
 	MENU *c_arg1 = _scm_to_menu (arg1);
 	int c_arg2 = scm_to_int (arg2);
@@ -526,8 +526,8 @@ gucu_menu_sub (SCM arg1)
 SCM
 gucu_set_current_item (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-current-item");
-	SCM_ASSERT (_scm_is_item (arg2), arg2, SCM_ARG2, "set-current-item");
+	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-current-item!");
+	SCM_ASSERT (_scm_is_item (arg2), arg2, SCM_ARG2, "set-current-item!");
 
 	MENU *c_arg1 = _scm_to_menu (arg1);
 	 ITEM *c_arg2 = _scm_to_item (arg2);
@@ -554,8 +554,8 @@ gucu_current_item (SCM arg1)
 SCM
 gucu_set_top_row (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-top-row");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "set-top-row");
+	SCM_ASSERT (_scm_is_menu (arg1), arg1, SCM_ARG1, "set-top-row!");
+	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "set-top-row!");
 
 	MENU *c_arg1 = _scm_to_menu (arg1);
 	int c_arg2 = scm_to_int (arg2);
@@ -621,8 +621,8 @@ gucu_item_description (SCM item)
 SCM
 gucu_set_item_opts (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_item (arg1), arg1, SCM_ARG1, "set-item-opts");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "set-item-opts");
+	SCM_ASSERT (_scm_is_item (arg1), arg1, SCM_ARG1, "set-item-opts!");
+	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "set-item-opts!");
 
 	ITEM *c_arg1 = _scm_to_item (arg1);
 	int c_arg2 = scm_to_int (arg2);
@@ -636,8 +636,8 @@ gucu_set_item_opts (SCM arg1, SCM arg2)
 SCM
 gucu_item_opts_on (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_item (arg1), arg1, SCM_ARG1, "item-opts-on");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "item-opts-on");
+	SCM_ASSERT (_scm_is_item (arg1), arg1, SCM_ARG1, "item-opts-on!");
+	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "item-opts-on!");
 
 	ITEM *c_arg1 = _scm_to_item (arg1);
 	int c_arg2 = scm_to_int (arg2);
@@ -651,8 +651,8 @@ gucu_item_opts_on (SCM arg1, SCM arg2)
 SCM
 gucu_item_opts_off (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_item (arg1), arg1, SCM_ARG1, "item-opts-off");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "item-opts-off");
+	SCM_ASSERT (_scm_is_item (arg1), arg1, SCM_ARG1, "item-opts-off!");
+	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "item-opts-off!");
 
 	ITEM *c_arg1 = _scm_to_item (arg1);
 	int c_arg2 = scm_to_int (arg2);
@@ -679,8 +679,8 @@ gucu_item_opts (SCM arg1)
 SCM
 gucu_set_item_value (SCM arg1, SCM arg2)
 {
-	SCM_ASSERT (_scm_is_item (arg1), arg1, SCM_ARG1, "set-item-value");
-	SCM_ASSERT (scm_is_bool (arg2), arg2, SCM_ARG2, "set-item-value");
+	SCM_ASSERT (_scm_is_item (arg1), arg1, SCM_ARG1, "set-item-value!");
+	SCM_ASSERT (scm_is_bool (arg2), arg2, SCM_ARG2, "set-item-value!");
 
 	ITEM *c_arg1 = _scm_to_item (arg1);
 	bool c_arg2 = scm_to_bool (arg2);
@@ -705,9 +705,9 @@ gucu_item_value (SCM arg1)
 }
 
 SCM
-gucu_item_visible (SCM arg1)
+gucu_item_visible_p (SCM arg1)
 {
-	SCM_ASSERT (_scm_is_item (arg1), arg1, SCM_ARG1, "item-visible");
+	SCM_ASSERT (_scm_is_item (arg1), arg1, SCM_ARG1, "item-visible?");
 
 	 ITEM *c_arg1 = _scm_to_item (arg1);
 
@@ -727,19 +727,19 @@ gucu_menu_init_function ()
 	scm_c_define_gsubr ("menu-back", 1, 0, 0, gucu_menu_back);
 	scm_c_define_gsubr ("set-menu-grey!", 2, 0, 0, gucu_set_menu_grey);
 	scm_c_define_gsubr ("menu-grey", 1, 0, 0, gucu_menu_grey);
-	scm_c_define_gsubr ("set-menu-pad", 2, 0, 0, gucu_set_menu_pad);
+	scm_c_define_gsubr ("set-menu-pad!", 2, 0, 0, gucu_set_menu_pad);
 	scm_c_define_gsubr ("menu-pad", 1, 0, 0, gucu_menu_pad);
 	scm_c_define_gsubr ("pos-menu-cursor", 1, 0, 0, gucu_pos_menu_cursor);
 	scm_c_define_gsubr ("menu-driver", 2, 0, 0, gucu_menu_driver);
 	scm_c_define_gsubr ("set-menu-format!", 3, 0, 0, gucu_set_menu_format);
 	scm_c_define_gsubr ("item-count", 1, 0, 0, gucu_item_count);
-	scm_c_define_gsubr ("set-menu-mark", 2, 0, 0, gucu_set_menu_mark);
+	scm_c_define_gsubr ("set-menu-mark!", 2, 0, 0, gucu_set_menu_mark);
 	scm_c_define_gsubr ("menu-mark", 1, 0, 0, gucu_menu_mark);
-	scm_c_define_gsubr ("set-menu-opts", 2, 0, 0, gucu_set_menu_opts);
-	scm_c_define_gsubr ("menu-opts-off", 2, 0, 0, gucu_menu_opts_off);
-	scm_c_define_gsubr ("menu-opts-on", 2, 0, 0, gucu_menu_opts_on);
+	scm_c_define_gsubr ("set-menu-opts!", 2, 0, 0, gucu_set_menu_opts);
+	scm_c_define_gsubr ("menu-opts-off!", 2, 0, 0, gucu_menu_opts_off);
+	scm_c_define_gsubr ("menu-opts-on!", 2, 0, 0, gucu_menu_opts_on);
 	scm_c_define_gsubr ("menu-opts", 1, 0, 0, gucu_menu_opts);
-	scm_c_define_gsubr ("set-menu-pattern", 2, 0, 0, gucu_set_menu_pattern);
+	scm_c_define_gsubr ("set-menu-pattern!", 2, 0, 0, gucu_set_menu_pattern);
 	scm_c_define_gsubr ("menu-pattern", 1, 0, 0, gucu_menu_pattern);
 	scm_c_define_gsubr ("post-menu", 1, 0, 0, gucu_post_menu);
 	scm_c_define_gsubr ("unpost-menu", 1, 0, 0, gucu_unpost_menu);
@@ -750,18 +750,18 @@ gucu_menu_init_function ()
 	scm_c_define_gsubr ("set-menu-sub!", 2, 0, 0, gucu_set_menu_sub);
 	scm_c_define_gsubr ("menu-win", 1, 0, 0, gucu_menu_win);
 	scm_c_define_gsubr ("menu-sub", 1, 0, 0, gucu_menu_sub);
-	scm_c_define_gsubr ("set-current-item", 2, 0, 0, gucu_set_current_item);
+	scm_c_define_gsubr ("set-current-item!", 2, 0, 0, gucu_set_current_item);
 	scm_c_define_gsubr ("current-item", 1, 0, 0, gucu_current_item);
-	scm_c_define_gsubr ("set-top-row", 2, 0, 0, gucu_set_top_row);
+	scm_c_define_gsubr ("set-top-row!", 2, 0, 0, gucu_set_top_row);
 	scm_c_define_gsubr ("top-row", 1, 0, 0, gucu_top_row);
 	scm_c_define_gsubr ("item-index", 1, 0, 0, gucu_item_index);
 	scm_c_define_gsubr ("item-name", 1, 0, 0, gucu_item_name);
 	scm_c_define_gsubr ("item-description", 1, 0, 0, gucu_item_description);
-	scm_c_define_gsubr ("set-item-opts", 2, 0, 0, gucu_set_item_opts);
-	scm_c_define_gsubr ("item-opts-on", 2, 0, 0, gucu_item_opts_on);
-	scm_c_define_gsubr ("item-opts-off", 2, 0, 0, gucu_item_opts_off);
+	scm_c_define_gsubr ("set-item-opts!", 2, 0, 0, gucu_set_item_opts);
+	scm_c_define_gsubr ("item-opts-on!", 2, 0, 0, gucu_item_opts_on);
+	scm_c_define_gsubr ("item-opts-off!", 2, 0, 0, gucu_item_opts_off);
 	scm_c_define_gsubr ("item-opts", 1, 0, 0, gucu_item_opts);
-	scm_c_define_gsubr ("set-item-value", 2, 0, 0, gucu_set_item_value);
+	scm_c_define_gsubr ("set-item-value!", 2, 0, 0, gucu_set_item_value);
 	scm_c_define_gsubr ("item-value", 1, 0, 0, gucu_item_value);
-	scm_c_define_gsubr ("item-visible", 1, 0, 0, gucu_item_visible);
+	scm_c_define_gsubr ("item-visible?", 1, 0, 0, gucu_item_visible_p);
 }

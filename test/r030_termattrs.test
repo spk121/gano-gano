@@ -22,7 +22,7 @@
 	    (let ((b (baudrate)))
 	      (addstr win (format #f "Baudrate: ~a" b))
 	      (refresh win)
-	      (sleep 1)
+	      ;; (sleep 1)
 	      (eqv? b 38400)
 	      *unspecified*)))
 
@@ -36,7 +36,7 @@
 	    (let ((c (erasechar)))
 	      (addstr win (format #f "Erasechar: ~a" c))
 	      (refresh win)
-	      ;; (usleep 500000)
+	      ;; (sleep 1)
 	      (eqv? c (char->integer #\del)))
 	    *unspecified*))
  
@@ -50,7 +50,7 @@
 	    (let ((c (killchar)))
 	      (addstr win (format #f "Killchar: ~a" c))
 	      (refresh win)
-	      ;; (usleep 500000)
+	      ;; (sleep 1)
 	      (eqv? c (char->integer #\nak)))
 	    *unspecified*))
 
@@ -61,7 +61,7 @@
 	    (let ((h (has-ic?)))
 	      (addstr win (format #f "Has IC: ~a" h))
 	      (refresh win)
-	      ;; (usleep 500000)
+	      ;; (sleep 1)
 	      (eqv? h #t))))
 
  (pass-if "has-il?"
@@ -71,7 +71,7 @@
 	    (let ((h (has-il?)))
 	      (addstr win (format #f "Has IL: ~a" h))
 	      (refresh win)
-	      ;; (usleep 500000)
+	      ;; (sleep 1)
 	      (eqv? h #t))))
 
  (pass-if "longname"
@@ -81,7 +81,7 @@
 	    (let ((c (longname)))
 	      (addstr win c)
 	      (refresh win)
-	      ;; (usleep 500000)
+	      ;; (sleep 1)
 	      (not (not (string= c "xterm" 0 4 0 4))))
 	    *unspecified*))
 
@@ -93,7 +93,7 @@
 	    (let ((c (termname)))
 	      (addstr win c)
 	      (refresh win)
-	      ;; (usleep 500000)
+	      ;; (sleep 1)
 	      (not (not (string= c "xterm" 0 4 0 4))))
 	    *unspecified*))
 

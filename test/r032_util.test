@@ -45,7 +45,7 @@
 	      (refresh mainwin)
 	      (let ((win (call-with-input-string windata getwin)))
 		(refresh win)
-		(sleep 3)
+		;; (sleep 1)
 		(string=? "zzz" (instr win #:y 0 #:x 0 #:n 3)))))))
 
 (endwin)

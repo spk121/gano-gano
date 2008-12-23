@@ -50,7 +50,7 @@
 			       (post-form frm)
 			       ;; Paint it
 			       (refresh)
-			       (sleep 1)
+			       ;;(sleep 1)
 			       (unpost-form frm)
 			       (and (eqv? (field-fore field1) A_BLINK)
 				    (eqv? (field-fore field2) A_BOLD)
@@ -96,7 +96,7 @@
 			       (post-form frm)
 			       ;; Paint it
 			       (refresh)
-			       (sleep 1)
+			       ;;(sleep 1)
 			       (unpost-form frm)
 			       (and (eqv? (field-back field1) A_BLINK)
 				    (eqv? (field-back field2) A_BOLD)
@@ -127,7 +127,7 @@
 			       (post-form frm)
 			       ;; Paint it
 			       (refresh)
-			       (sleep 1)
+			       ;;(sleep 1)
 			       (and (eqv? (field-pad field1) (char->integer #\sp))
 				    (eqv? (field-pad field2) (char->integer #\.))
 				    (eqv? (field-pad field3) (char->integer #\+)))))))

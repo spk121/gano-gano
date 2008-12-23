@@ -26,7 +26,7 @@
 	    (let ((c (erasewchar)))
 	      (addstr win (format #f "erasewchar: ~a" c))
 	      (refresh win)
-	      (sleep 2)
+	      ;; (sleep 2)
 	      (eqv? c (char->integer #\del)))
 	    *unspecified*))
 		  
@@ -40,7 +40,7 @@
 	    (let ((c (killwchar)))
 	      (addstr win (format #f "killwchar: ~a" c))
 	      (refresh win)
-	      (sleep 2)
+	      ;; (sleep 2)
 	      (eqv? c (char->integer #\del)))
 	    *unspecified*))
 

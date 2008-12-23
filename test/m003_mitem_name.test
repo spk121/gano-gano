@@ -9,7 +9,7 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
 ;; Should be able to make a menu
 (with-test-prefix "mitem-name"
@@ -19,14 +19,14 @@
 				  (item2 (new-item "item2" "description2"))
 				  (m (new-menu (list item1 item2))))
 			     (post-menu m)
-			     (refresh)
-			     ;;(sleep 1)
+			     (refresh win)
+			     (sleep 1)
 			     (let ((ret (and (string= (item-name item1) "item1")
 					     (string= (item-description item1) "description1")
 					     (string= (item-name item2) "item2")
 					     (string= (item-description item2) "description2"))))
 			       (unpost-menu m)
-			       (refresh)
+			       (refresh win)
 			       ret))))
 
 (endwin)

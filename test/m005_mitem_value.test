@@ -9,7 +9,7 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define win (initscr))
 
 ;; Should be able to make a menu
 (with-test-prefix "mitem-value"
@@ -21,14 +21,14 @@
 				  (item4 (new-item "item4" "description4"))
 				  (item5 (new-item "item5" "description5"))
 				  (m (new-menu (list item1 item2 item3 item4 item5))))
-			     (menu-opts-off m O_ONEVALUE)
+			     (menu-opts-off! m O_ONEVALUE)
 			     (post-menu m)
-			     (set-item-value item1 #t)
-			     (set-item-value item2 #f)
-			     (set-item-value item3 #t)
-			     (set-item-value item4 #f)
-			     (set-item-value item5 #t)
-			     (refresh)
+			     (set-item-value! item1 #t)
+			     (set-item-value! item2 #f)
+			     (set-item-value! item3 #t)
+			     (set-item-value! item4 #f)
+			     (set-item-value! item5 #t)
+			     (refresh win)
 			     ;; (sleep 3)
 			     (let ((ret (and (item-value item1)
 					     (not (item-value item2))
@@ -36,7 +36,7 @@
 					     (not (item-value item4))
 					     (item-value item5))))
 			       (unpost-menu m)
-			       (refresh)
+			       (refresh win)
 			       ret))))
 
 
