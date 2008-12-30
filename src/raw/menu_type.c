@@ -301,7 +301,6 @@ print_menu (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
   // non-zero means success 
   return 1;
 }
-
 SCM
 gucu_is_menu_p (SCM x)
 {

@@ -6,6 +6,8 @@
 #include "panel_type.h"
 #include "panel_spec.h"
 
+/* This won't work because of the guardians */
+#if 0
 // Get the panel above PAN
 SCM
 gucu_panel_above (SCM pan)
@@ -49,7 +51,10 @@ gucu_panel_below (SCM pan)
   /* Never reached */
   return SCM_BOOL_F;
 }
+#endif
 
+/* FIXME: this needs to be worked in with the smob garbage collector */
+#if 0
 SCM
 gucu_set_panel_userdata (SCM pan, SCM data)
 {
@@ -77,13 +82,15 @@ gucu_panel_userdata (SCM pan)
   /* Never reached */
   return SCM_UNDEFINED;
 }
-
+#endif
 
 void
 gucu_panel_init_special (void)
 {
-   scm_c_define_gsubr ("panel-above", 1, 0, 0, gucu_panel_above);
-   scm_c_define_gsubr ("panel-below", 1, 0, 0, gucu_panel_below);
-   scm_c_define_gsubr ("set-panel-userdata", 2, 0, 0, gucu_set_panel_userdata);
-   scm_c_define_gsubr ("panel-userdata", 1, 0, 0, gucu_panel_userdata);
+  #if 0
+  scm_c_define_gsubr ("panel-above", 1, 0, 0, gucu_panel_above);
+  scm_c_define_gsubr ("panel-below", 1, 0, 0, gucu_panel_below);
+  scm_c_define_gsubr ("set-panel-userdata", 2, 0, 0, gucu_set_panel_userdata);
+  scm_c_define_gsubr ("panel-userdata", 1, 0, 0, gucu_panel_userdata);
+  #endif
 }

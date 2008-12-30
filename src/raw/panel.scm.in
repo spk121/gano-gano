@@ -1,23 +1,23 @@
 
 ;; -*- Mode: scheme; -*-
 (define-module (XXpackageXX panel)
-	#:export ( 
-		new-panel
-		bottom-panel
-		top-panel
-		show-panel
-		update-panels
-		hide-panel
-		panel-window
-		replace-panel
-		move-panel
-		panel-hidden
-		del-panel
+  #:export ( 
+	    new-panel
+	    bottom-panel
+	    top-panel
+	    show-panel
+	    update-panels
+	    hide-panel
+	    panel-window
+	    replace-panel
+	    move-panel
+	    panel-hidden?
+	    del-panel
 		
-		panel-above
-		panel-below
-		set-panel-userdata
-		panel-userdata
+	    ;;panel-above
+	    ;;panel-below
+	    ;;set-panel-userdata
+	    ;;panel-userdata
 ))
 
 (load-extension "XXlibnameXX" "gucu_panel_init")
