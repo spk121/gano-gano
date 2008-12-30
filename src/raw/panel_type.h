@@ -4,6 +4,15 @@
 #include <libguile.h>
 #include <panel.h>
 
+struct gucu_panel {
+  /* Pointer to the menu */
+  MENU *menu;
+
+  /* Guardians to hold the window SCM objects */
+  SCM win_guard;
+};
+
+
 int _scm_is_panel (SCM x);
 PANEL *_scm_to_panel (SCM x);
 SCM _scm_from_panel (PANEL *x);

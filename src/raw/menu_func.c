@@ -17,7 +17,7 @@ static void menu_posted_error (const char *funcname)
 
 static void menu_not_connected_error (const char *funcname)
 {
-  scm_misc_error (funcname, "Menu has no itemsd", SCM_BOOL_F);
+  scm_misc_error (funcname, "Menu has no items", SCM_BOOL_F);
 }
 
 /* Set the foreground attribute of the menu */
@@ -486,7 +486,7 @@ gucu_set_menu_sub (SCM menu, SCM win)
   c_menu = _scm_to_menu (menu);
   c_win = _scm_to_window (win);
 
-  ret = set_menu_win (c_menu, c_win);
+  ret = set_menu_sub (c_menu, c_win);
   if (ret == E_POSTED)
     menu_posted_error ("set-menu-sub!");
   

@@ -311,8 +311,6 @@ gucu_is_menu_p (SCM x)
 SCM
 gucu_new_menu (SCM items)
 {
-  SCM_ASSERT (scm_is_true (scm_list_p (items)), items, SCM_ARG1, "new-menu");
-
   struct gucu_menu *gm;
   size_t len;
   ITEM **c_items;
@@ -320,17 +318,25 @@ gucu_new_menu (SCM items)
   SCM entry;
   size_t i;
 
-  // Step 1: allocate memory
-  gm = scm_gc_malloc (sizeof (struct gucu_menu), "gucu_menu");
-
+  /* Step 0: Check input list */
+  SCM_ASSERT (scm_is_true (scm_list_p (items)), items, SCM_ARG1, "new-menu");
+  
   len = scm_to_size_t (scm_length (items));
   if (len == 0)
     {
       scm_wrong_type_arg ("new-menu", SCM_ARG1, items);
-
-      // Shouldn't get here
       return (SCM_UNSPECIFIED);
     }
+  for (i = 0; i < len; i ++)
+    {
+      entry = scm_list_ref (items, scm_from_int (i));
+      if (!_scm_is_item (entry))
+	scm_wrong_type_arg ("new-menu", SCM_ARG1, items);
+    }
+
+  // Step 1: allocate memory
+  gm = scm_gc_malloc (sizeof (struct gucu_menu), "gucu_menu");
+
   c_items = scm_gc_malloc (sizeof (ITEM *) * (len+1), "gucu_menu");
 
   // Step 2: initialize it with C code
@@ -355,11 +361,7 @@ gucu_new_menu (SCM items)
       free (c_items);
       if (errno == E_NOT_CONNECTED)
 	{
-	  scm_error_scm (SCM_BOOL_F,
-			 scm_from_locale_string ("new-menu"),
-			 scm_from_locale_string ("not connected"),
-			 items,
-			 SCM_BOOL_F);
+	  scm_misc_error ("new-menu", "Menu has no items", SCM_BOOL_F);
 	}
       else if (errno == E_SYSTEM_ERROR)
 	{
@@ -372,6 +374,7 @@ gucu_new_menu (SCM items)
       else
 	abort ();
     }
+  scm_remember_upto_here_1 (items);
   gm->items_guard = scm_make_guardian ();
   gm->win_guard = scm_make_guardian ();
   gm->subwin_guard = scm_make_guardian ();

@@ -19,7 +19,7 @@ SCM mark_panel (SCM x);
 int print_panel (SCM x, SCM port, scm_print_state *pstate);
 
 
-// panel -- in C, a PANEL.  In Scheme, a smob that contains the pointer
+/* panel -- in C, a PANEL.  In Scheme, a smob that contains the pointer */
 
 int 
 _scm_is_panel (SCM x)
@@ -30,9 +30,19 @@ _scm_is_panel (SCM x)
 PANEL *
 _scm_to_panel (SCM x)
 {
-  return (PANEL *) SCM_SMOB_DATA (x);
+  struct gucu_panel *gp;
+  
+  scm_assert_smob_type (panel_tag, x);
+
+  gp = (struct gucu_panel *) SCM_SMOB_DATA (x);
+
+  return (PANEL *) gp->panel;
 }
 
+/* Since a panel needs to carry around a guardian of the window used
+   to create it, it is not possible to have an scm_from_panel without
+   some extra lookup table */
+#if 0
 SCM
 _scm_from_panel (PANEL *x)
 {
@@ -52,13 +62,14 @@ _scm_from_panel (PANEL *x)
 
   return (s_panel);
 }
+#endif
 
 // Panels are equal if they point to the same C structure
 SCM
 equalp_panel (SCM x1, SCM x2)
 {
-  PANEL *panel1 = (PANEL *) SCM_SMOB_DATA (x1);
-  PANEL *panel2 = (PANEL *) SCM_SMOB_DATA (x2);
+  PANEL *panel1 = (PANEL *) _scm_to_panel (x1);
+  PANEL *panel2 = (PANEL *) _scm_to_panel (x2);
 
   if ((panel1 == NULL) || (panel2 == NULL))
     return SCM_BOOL_F;
