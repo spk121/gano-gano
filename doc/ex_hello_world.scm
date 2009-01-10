@@ -2,8 +2,8 @@
 !#
 (use-modules (gucu curses))
 
-(define screen (initscr))
-(addstr screen "Hello World!!!")       
-(refresh screen)      
-(getch screen)
+(define stdscr (initscr))
+(addstr stdscr "Hello World!!!")       
+(refresh stdscr)      
+(getch stdscr)
 (endwin)

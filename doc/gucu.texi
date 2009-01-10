@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.25 2008/12/21 20:11:29 spike_gran Exp $
+@c $Id: gucu.texi,v 1.26 2009/01/10 23:05:37 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -58,7 +58,7 @@ authorization.
 @subtitle For version @value{VERSION}, @value{UPDATED}
 @author Michael L. Gran
 @author Pradeep Padala
-@author Tom Dickey and the NCurses Team
+@author Tom Dickey and the ncurses Team
 
 
 @page
@@ -328,17 +328,17 @@ The curses form library: @code{(gucu form)}
 
 Michael Gran assembled this book, but, wrote only small sections of
 text.  Most of reference text of the curses library is taken directly
-from the documentation of NCurses itself, and then modified to make it
-specific to this Guile binding.  The NCurses library is maintained by
+from the documentation of ncurses itself, and then modified to make it
+specific to this Guile binding.  The ncurses library is maintained by
 Tom Dickey, and the manual pages in the library note that the Free
 Software Foundation holds the copyright.
 
 I've put his name on the title page, because it would seem rude not to
 do so; however, one should not get the impression that he approves of
-the GuCu project or that he is involved
-with the GuCu project, or, indeed, that he is even aware of it.
+the GuCu project or that he is involved with the GuCu project, or,
+indeed, that he is even aware of it.
 
-The license for the original NCurses documentation is as follows. 
+The license for the original ncurses documentation is as follows. 
 
 @quotation
 Copyright (c) 1998-2005,2006 Free Software Foundation, Inc.              
@@ -368,8 +368,8 @@ sale, use or other dealings in this Software without prior written
 authorization.                                                           
 @end quotation
 
-The tutorial for the curses library is adapted from the NCurses
-Programming HowTo by Pradeep Padala, modified by Michael Gran to make
+The tutorial for the curses library is adapted from the @emph{ncurses
+Programming HowTo} by Pradeep Padala, modified by Michael Gran to make
 it specific to the Guile binding.  
 
 Again, I've put his name on the title page, because it would seem rude
@@ -419,12 +419,12 @@ terminals.  Actual hardware terminals, such as the DEC VT220 or the
 Boundless Technologies VT525, are dedicated thin clients that interact
 with a networked computer via a serial port.  These are still somewhat
 common in industrial applications where computers would be too
-expensive or too fragile.  The consoles of text-mode operating
-systems, such as the console of GNU/Linux when used without X/Windows
-or the command prompt of FreeDOS, are the second type.  The third type
-are the terminal emulation programs that some windowing systems have.
-The best known terminal emulation program is probably XTerm, which
-does a good emulation of a VT220 terminal.
+expensive or too fragile, but, they are becoming less common.  Second
+are the consoles of text-mode operating systems, such as the console
+of GNU/Linux when used without X/Windows or the command prompt of
+FreeDOS.  The third type is the terminal emulation programs that some
+windowing systems have.  The best known terminal emulation program is
+probably XTerm, which does a good emulation of a VT220 terminal.
 
 The curses library attempts to create a standardized solution for
 these problems.
@@ -449,6 +449,9 @@ color, or to erase the screen?
 
 @node Terminal Capabilities, Keyboards and Keys, Components of a Curses Interface, Components of a Curses Interface
 @section Terminal Capabilities
+
+@cindex terminfo
+@cindex termcap
 
 The first step in any curses program is to understand the terminal's
 capabilities and attributes.  Curses includes a database of terminals
@@ -481,6 +484,9 @@ As the goal of curses is to allow a program to take advantage of the
 capabilities of terminal, each character on the screen has a
 @dfn{color pair} and a set of @dfn{attributes}.
 
+@cindex Color pairs
+@cindex Attributes
+
 In curses, the colors are usually defined in terms of  @dfn{color
 pairs}, which is a combination of a foreground and a background
 color.  Each character written to a terminal will have an associated
@@ -489,11 +495,15 @@ color pair, assuming the terminal supports color.
 Also each character has a set of attributes, such as @dfn{bold},
 @dfn{underline}, or @dfn{blink}.
 
+@cindex Rendition
+
 A character's color pair and its attributes are collectively called
 its @dfn{rendition}.
 
 @node Windows,  , Characters, Components of a Curses Interface
 @section Windows
+
+@cindex Window
 
 Curses uses the concept of a @dfn{window} to visually organize the
 terminal.  A window is a rectangular area on the terminal.  A terminal
@@ -528,6 +538,9 @@ standard scheme types, while others are represented as opaque types
 
 @node Narrow character types, Wide character types, Types and encodings, Types and encodings
 @section Narrow character types
+
+@cindex Character Types
+@cindex Types of Characters
 
 A narrow character is a simple 8-bit character, such as would be found
 in the @abbr{ASCII} encoded text used in the United States, or one of
@@ -589,6 +602,9 @@ An example of a rendered, narrow string would be @*
 
 @node Wide character types, Opaque types, Narrow character types, Types and encodings
 @section Wide character types
+
+@cindex Unicode
+@cindex Wide characters
 
 Wide-characters are 32-bit characters and include all the glyphs for
 the major languages.  The ``wide'' in wide characters refers to the
@@ -653,12 +669,12 @@ first 64k codepoints of the Basic Multilingual Plane to be used.
 @item unrendered, wide strings 
 
 An unrendered, wide string is a sequence of unrendered wide
-characters.  It is also referred to as a @emph{codepoint list}.  In C, is an
-array of @code{wchar_t} values.  In Scheme, it is a list of integers,
-where each integer represents a Unicode code-point.
+characters.  It is also referred to as a @emph{codepoint list}.  In C,
+is an array of @code{wchar_t} values.  In Scheme, it is a list of
+integers, where each integer represents a Unicode code-point.
 
-Some examples of the scheme representation of an unrendered wide string
-areas follows:
+Some examples of the scheme representation of an unrendered wide
+string:
 @example
 ;; A wide string consisting of the letter 'x' 
 ;; and U+041B Cyrillic Capital Letter El
@@ -675,7 +691,8 @@ element in the list is the attribute flags.  The second is the color
 pair.  The remaining elements in the list are the characters that form
 this glyph.
 
-Some examples of rendered, complex characters would be as follows:
+Here are examples of Scheme representations rendered, complex
+characters:
 @example
 ;; The letter 'x'
 (A_NORMAL 0 (char->integer #\x))
@@ -714,6 +731,9 @@ Liberal use of the scheme function @code{map} may help here.
 @node Opaque types,  , Wide character types, Types and encodings
 @section Opaque types
 
+@cindex SMOBs used in Curses
+@cindex Opaque types
+
 These are types from system libraries that are complex or
 system-depentent.  They are implemented as @code{SMOB}s.
 
@@ -739,20 +759,6 @@ created with the function @code{newterm} and used by the function
 
 This type is usually only found in programs that use multiple
 terminals.
-
-@item The @code{#<file>} type
-
-@tindex #<file>
-@findex newterm
-@findex typeahead
-@findex putwin
-
-The @code{#<file>} type is an opaque type that represents a file or
-port.  They are created with the @code{(gucu curses)} function
-@code{fopen}, freed with @code{fclose}.  They are used in functions
-that save window information to a file, load window information from a
-file, or interact with ports, such as @code{newterm},
-@code{typeahead}, and @code{putwin}.
 
 @item The @code{#<panel>} type
 
@@ -836,6 +842,8 @@ hello to the world.
 To use ncurses library functions, you have to load the @code{(gucu
 curses)} module into the program.  
 
+@cindex Hello, world
+
 Here is the Hello World program, using the raw library.
 
 @example
@@ -855,15 +863,20 @@ Let's dissect it line by line.
 @subsubsection About @code{initscr}
 
 @findex initscr
+@cindex Initializing the terminal
+@cindex Terminal initialization
+@cindex Initialization
 
 The procedure @code{initscr} initializes the terminal in curses mode.
 It clears the screen and presents a blank screen.  To do any screen
 manipulation using the curses package, this has to be called first.
 This function initializes the curses system and allocates memory for
-our present window (called @code{stdscr}) and some other data
-structures.  Under extreme cases, this function might fail due to
-insufficient memory to allocate memory for curses library's data
-structures.
+screen handling and some other data structures.  It returns a SMOB
+that represents the default window: the window that represents the
+entire screen.  By convention, this window is denoted @code{stdscr},
+the @emph{standard screen}.  Under extreme cases, this function might
+fail due to insufficient memory to allocate memory for curses
+library's data structures.
 
 The procedure @code{initscr} returns a @code{#<window>} that contains
 necessary information about the curses screen.  The @code{#<window>}
@@ -876,14 +889,17 @@ customize our curses settings
 
 @subsubsection The mysterious @code{refresh}
 
+@cindex Refreshing the window
+@cindex Redrawing the window
+
 The next line @code{addstr} prints the string ``Hello World!!!'' on to
 the screen.  This function prints the data on a window called
 @code{stdscr} at the current @code{(y, x)} coordinates.  Since our
-present coordinates are at 0,0 the string is printed at the left-hand
-corner of the window.
+present coordinates are at 0,0 the string is printed at the top,
+left-hand corner of the window.
 
-This brings us to the mysterious @code{(refresh)}.  Well, when we
-called @code{addstr}, the data is actually written to an imaginary
+This brings us to the mysterious @code{(refresh stdscr)}.  Well, when
+we called @code{addstr}, the data is actually written to an imaginary
 window, which is not updated on the screen yet.  The job of
 @code{addstr} is to update a few flags and data structures and write
 the data to a buffer corresponding to @code{stdscr}.  In order to show
@@ -901,6 +917,8 @@ did some update through @code{addstr}.
 
 @subsubsection About @code{endwin}
 
+@cindex Quitting Curses
+
 And finally, don't forget to end the curses mode.  Otherwise your
 terminal might behave strangely after the program quits.
 @code{endwin} frees the memory taken by the curses sub-system and its
@@ -909,6 +927,8 @@ must be called after you are done with curses mode.
 
 @node  Interactive sessions and @code{gucushell}, The Gory Details, Hello World!!!, Curses Tutorial
 @section Interactive sessions and @code{gucushell}
+
+@cindex gucushell
 
 If you would like to try out these functions interactively by typing
 them into the scheme schell, instead of typing them and running them
@@ -961,19 +981,26 @@ are normally called immediately after @code{initscr}.
 
 @subsubsection @code{raw} and @code{cbreak}
 
+@cindex Line buffering
+@cindex Character buffering
+@cindex Buffering
+@cindex Signals, disabling
+
 Normally the terminal driver buffers the characters a user types until
-a new line or carriage return is encountered.  But most program
+a newline or carriage return is encountered.  But most programs
 require that the characters be available as soon as the user types
-them.. The above two functions are used to disable line buffering.
-The difference between these two functions is in the way control
-characters like suspend (Ctrl-Z), interrupt and quit (Ctrl-C) are
-passed to the program.  In the @code{raw} mode, these characters are
-directly passed to the program without generating a signal.  In the
-@code{cbreak} mode, these control characters are interpreted as any
-other character by the terminal driver, allowing Ctrl-C and Ctrl-Z to
-quit and suspend the program.
+them. The functions @code{cbreak} and @code{raw} are used to disable
+line buffering.  The difference between these two functions is in the
+way control characters like suspend (@kbd{Ctrl-Z}), interrupt and quit
+(@kbd{Ctrl-C}) are passed to the program.  In the @code{raw} mode,
+these characters are directly passed to the program without generating
+a signal.  In the @code{cbreak} mode, these control characters are
+interpreted as any other character by the terminal driver, allowing
+@kbd{Ctrl-C} and @kbd{Ctrl-Z} to quit and suspend the program.
 
 @subsubsection @code{echo} and @code{noecho}
+
+@cindex Echoing
 
 These functions control the echoing of characters typed by the user to
 the terminal.  @code{noecho} switches off echoing. With echoing off,
@@ -981,13 +1008,18 @@ when a user presses a character, it is not displayed on the screen.
 
 @subsubsection keypad
 
+@cindex Function keys
+
 This function enables the reading of function keys like @key{F1},
 @key{F2}, arrow keys, etc.  Almost every interactive program enables
 this, as arrow keys are a major part of any user interface.  Do
-@code{(keypad (stdscr) #t)} to enable this feature for the regular
-screen @code{stdscr}. 
+@code{(keypad stdscr #t)} to enable this feature for the regular
+screen @code{stdscr} (assuming that @code{stdscr} is the variable
+you used to hold the output of @code{initscr}.)
 
 @subsubsection halfdelay
+
+@cindex Half-delay mode
 
 This function is useful when you want to ask the user for input, and
 if he doesn't respond within a certain time, do something else.  One
@@ -1002,35 +1034,15 @@ input, it return @code{ERR}.
 
 Let's write a program that will clarify the usage of these functions.
 
-@c init_func_usage.scm
 @example
-#!/usr/local/bin/guile
-!#
-(use-modules (gucu curses))
-
-(initscr)                               ; Start curses mode
-(raw)                                   ; Line buffering disabled
-(keypad (stdscr) #t)                    ; We get F1, F2, etc
-(noecho)                                ; Don't echo when we get a keypress
-(addstr "Type any character to see it in bold\n")
-(let ((ch (getch)))                     ; Read a key press, put it in 'ch'
-
-  (if (eqv? ch (KEY_F 1))               ; If the key pressed is F1
-      (addstr "F1 Key pressed")
-      
-      (begin
-        (addstr "The pressed key is ")
-        (addch (logior A_BOLD ch))))    ; Print the char in bold
-  (refresh)                             ; Print it on the real screen
-  (getch)                               ; Wait for user input
-  (endwin))                             ; End curses mode
+@verbatiminclude ex_init_func_usage.scm
 @end example
 
-Hopefully this program is easy to follow.  But I used functions that
-aren't explained yet.  The procedure @code{getch} is used to get a
-character from the user.  The @code{(logior A_BOLD ch)} adds the bold
-attribute to the character, and @code{addch} prints the character on
-the screen.
+Hopefully this program is easy to follow even though I used functions
+that aren't explained yet.  The procedure @code{getch} is used to get
+a character from the user.  The @code{(logior A_BOLD ch)} adds the
+bold attribute to the character, and @code{addch} prints the character
+on the screen.
 
 @node A word about windows, Output functions, Initialization, Curses Tutorial
 @section A word about windows
@@ -1042,44 +1054,42 @@ following sections.
 A window is an imaginary screen defined by the curses system.  A
 window does not mean a bordered window which you usually see in GNOME
 or KDE system.  When curses is initialized, it creates a default
-window named @code{stdscr} which represents your 80x25 (or the size of
-window in which you are running) screen.l  I fyou are doing simple
-tasks like printing a few strings, reading input, etc., you can safely
-use this single window for all of your purposes.  You can also create
-windows and call functions which explicitly work on the specified
-window.
+window conventially named @code{stdscr} which represents your 80x25
+(or the size of window in which you are running) screen. If you are
+doing simple tasks like printing a few strings, reading input, etc.,
+you can safely use this single window for all of your purposes.  You
+can also create windows and call functions which explicitly work on
+the specified window.
 
 For example, if you call
 @example
-(addstr "Hi There!!!")
-(refresh)
+(addstr stdscr "Hi There!!!")
+(refresh stdscr)
 @end example
 
 It prints the string on @code{stdscr} at the present cursor position.
 Similarly, the call to @code{refresh} works on @code{stdscr} only.
 
-Say you have created windows, then you have to call a function with a
-'w' added to the usual function.
+Say you have created multiple windows, then you have to call the
+functions separately on each window.  When you call @code{refresh},
+you need to call it on the window that was updated.
 @example
-(addstr "Hi There!!!" #:win win)
-(wrefresh win)
+(addstr win "Hi There!!!")
+(refresh win)
 @end example
 
-As you will see in the rest of the document, naming of functions
-follows the same convention.  For each function, there usually are
-three other ways to call it using optional key parameters.
+For many functions, there are optional key parameters.
 @example
-(addstr string)             ; Print on stdscr at present cursor location
-(addstr string #:y y #:x x) ; Move to (y, x) then print string
-(addstr string #:win w)     ; Print on window `w' at present cursor
-                            ; position
-(addstr string #:win w #:y y #:x x) 
-                            ; Move to (y, x) relative to window 
-                            ; coordinates and then print
+(addstr stdscr string)             ; Print on stdscr at present 
+                                   ; cursor location
+(addstr stdscr string #:y y #:x x) ; Move to (y, x) then print string
 @end example
 
 @node Output functions, Input functions, A word about windows, Curses Tutorial
 @section Output functions
+
+@cindex Output procecures
+@cindex Print procedures
 
 I guess you can't wait any more to see some action.  Back to our
 odyssey of curses functions.  Now that curses is initialized, let's
@@ -1089,11 +1099,11 @@ There are three classes of functions which you can use to output
 narrow characters and strings to the screen.
 @enumerate
 @item
-The @code{addch} class: print rendered, narrow characters
+The @code{addch} class: output rendered, narrow characters
 @item
-The @code{addstr} class: print unrendered, narrrow strings
+The @code{addstr} class: output unrendered, narrrow strings
 @item
-The @code{addchstr} class: print rendered, narrow strings
+The @code{addchstr} class: output rendered, narrow strings
 @end enumerate
 
 @menu
@@ -1107,12 +1117,16 @@ The @code{addchstr} class: print rendered, narrow strings
 @node The @code{addch} class of functions, @code{addstr} class of functions, Output functions, Output functions
 @subsection The @code{addch} class of functions
 
-These functions put a single rendered narrow character into the
-current cursor location and advance the position of the cursor.
+@cindex Outputting characters
+
+The @code{addch} function puts a single rendered narrow character into
+the current cursor location and advances the position of the cursor.
 Attributes are explained in detail in later sections of the document.
 If a character is associated with an attribute (bold, reverse video,
 etc.), when curses prints the character, it is printed with that
 rendition.
+
+@cindex Attributes, adding to a character
 
 In order to combine a character with some attributes, you have two
 options:
@@ -1135,25 +1149,22 @@ Additionally, curses provides some special characters for
 character-based graphics.  You can draw tables, horizonal or vertical
 lines.  Try looking for the procedures beginning with @code{acs-}.
 
-@subsubsection Moving and windows with addch
+@subsubsection Moving the cursor addch
 
-@code{addch #:y y #:x x} is used to move the cursor to a given point, and then
-print.  Thus the calls
+The optional key parameters @code{#:y y #:x x} can be used to move the
+cursor to a given point, and then print.  Thus the calls
 @example
-(move row col)
-(addch ch)
+(move stdscr row col)
+(addch stdscr ch)
 @end example
 can be replaced by
 @example
-(addch ch #:x row #:y col)
+(addch stdscr ch #:y row #:x col)
 @end example
 
-@code{addch #:win win} is similar to @code{addch}, except that it adds
-a character into the given window instead of @code{stdscr}.
-
-In a similar fashion, a combination of both types of optional parameters can be used: @code{addch #:win win #:y y #:x x}.
-
 @subsubsection Complex characters and @code{add-wch}
+
+@cindex Outputting wide characters
 
 For every function that operates on narrow characters, there is a
 parallel function that operates on wide characters.  The functions
@@ -1169,19 +1180,21 @@ To add a rendered, complex character to the screen, use @code{add-wch}
 and friends.
 @example
 ;; Bold U+041B Cyrillic Capital Letter El
-(add-wch (list A_BOLD 0 #x041B))
+(add-wch stdscr (list A_BOLD 0 #x041B))
 @end example
 
-This procedure can optionally be called with a window and/or with a
-position as key arguments.
+This procedure can optionally be called with a position as key
+arguments.
 
 @node @code{addstr} class of functions, A simple @code{addstr} example, The @code{addch} class of functions, Output functions
 @subsection @code{addstr} class of functions
 
+@cindex Outputting strings
+
 These functions output entire strings to the screen.
 
-They can be used effectively in conjuntion with the @code{(ice-9 format)} function
-@code{format}.
+They can be used effectively in conjuntion with the @code{format}
+procedure from @code{(ice-9 format)}.
 
 @menu
 * A simple @code{addstr} example::  
@@ -1193,39 +1206,15 @@ They can be used effectively in conjuntion with the @code{(ice-9 format)} functi
 @subsection A simple @code{addstr} example
 
 @example
-(use-modules (gucu curses)
-	     (srfi srfi-1))
-
-(initscr)
-
-(let* ((mesg "Just a string")
-       (len (string-length mesg))
-       (siz (getmaxyx (stdscr)))
-       (row (first siz))
-       (col (second siz)))
-
-  ;; Print the message centered in the window
-  (addstr mesg
-	  #:y (round (/ row 2))
-          #:x (round (/ (- col len) 2)))
-
-  ;; Use "format" to generate a message, and then print it
-  (addstr (format #f "This screen has ~a rows and ~a columns ~%" row col)
-	  #:y (- row 2)
-          #:x 0)
-            
-  (addstr "Try resizing your window (if possible) ")
-  (addstr "and then run this program again")
-  (refresh)
-  (getch)
-  (endwin))
+@verbatiminclude ex_centered_screen.scm
 @end example
      
-The above program demonstrates how easy it is to use @code{addstr}
-with x and y coordinates.  You just feed the coordinates and the
-message to be printed on the screen.  It also shows how @code{(format
-#f ...)} can be used in conjunction with @code{addstr} to do formatted
-output.
+The above program demonstrates how easy it is to combine @code{addstr}
+and @code{move} to print at a specific location on the screen.  It
+also shows how to use the equivalent key parameters @code{#:y} and
+@code{#:x}.  They do exactly the same thing.  It also shows how
+@code{(format #f ...)} can be used in conjunction with @code{addstr}
+to do formatted output.
 
 The example introduces the new function @code{getmaxyx}.  It gives the
 number of columns and the number of rows in a given window.
@@ -1233,23 +1222,31 @@ number of columns and the number of rows in a given window.
 @code{y} and @code{x}.
 
 @node A word of caution, Adding wide strings (tutorial), A simple @code{addstr} example, Output functions
-@subsection A word of caution
+@subsection A word about coordinates
 
-All these functions take a @code{y} coordinate first and then @code{x}
-in their arguments.  A common mistake by beginners is to pass
-@code{x}, @code{y} in that order.  If you are doing too many
-manipulations of @code{(y,x)} coordinates, think of dividing the
-screen into windows and manipulate each one separately. 
+The @code{move} function takes the @code{y} coordinate first and then
+@code{x} as its arguments.  A common mistake by beginners is to pass
+@code{x}, @code{y} in that order.  
+
+If you use the @code{#:y} and @code{#:x} key parameters that most
+output procedures have in lieu of using the @code{move} statement, you
+can use enter the coordinates in whichever order seems most natural to
+you.
+@example
+;; either
+(addstr win "Hi" #:x 0 #:y 10)
+;; or
+(addstr win "Hi" #:y 10 #:x 0)
+@end example
+
 
 @node Adding wide strings (tutorial),  , A word of caution, Output functions
 @subsection Adding wide strings
 
 The @code{addstr} functions print unrendered, narrow strings, which
-are the same as standard Guile strings.  For
-unrendered, wide strings use the @code{add-wstr} class of functions:
-@code{add-wstr}, @code{mvadd-wstr}, @code{wadd-wstr}, and
-@code{mvwadd-wstr}. Unrendered, wide strings are lists of integers,
-where each integer is a codepoint.
+are the same as standard Guile strings.  For unrendered, wide strings
+use the @code{add-wstr} procedure.  Unrendered, wide strings are lists
+of integers, where each integer is a codepoint.
 
 Again, the wide string functions are in the @code{(gucu curses-wide)}
 module.  They require that @code{setlocale} be called prior to the
@@ -1259,14 +1256,12 @@ module.  They require that @code{setlocale} be called prior to the
 @section Input functions
 
 Well, printing without taking input is boring.  Let's see functions
-which allow us to get input from the user.  These functions also can
-be divided into two categories.
-
+which allow us to get input from the user.  
 @enumerate
 @item
-@code{getch} class: get a character
+@code{getch}: get a character
 @item
-@code{getnstr} class: get a string
+@code{getnstr}: get a string
 @end enumerate
 
 
@@ -1277,57 +1272,37 @@ be divided into two categories.
 @end menu
 
 @node @code{getch} class of functions, @code{getnstr} class of functions, Input functions, Input functions
-@subsection @code{getch} class of functions
+@subsection @code{getch} 
 
-These functions read a single character from the terminal.  But there
-are several subtle facts to consider.  For example, if you don't use
-the function @code{cbreak}, curses will not read your input characters
-contiguously, but, will begin to read them only after @key{RET} has
-been pressed or after and @key{EOF} has been encountered.  In order to
-avoid this, the @code{cbreak} function must be used so that characters
-are immediately available to your program.  Another widely used
-function is @code{noecho}.  As the name suggests, when this function
-is set (used), the characters that are keyed in by the user will not
-show up on the screen.  The two functions @code{cbreak} and
-@code{noecho} are typical examples of key management.
+The procedure @code{getch} reads a single character from the terminal.
+But there are several subtle facts to consider.  For example, if you
+don't use the function @code{cbreak}, curses will not read your input
+characters contiguously, but, will begin to read them only after
+@key{RET} has been pressed or after and @key{EOF} has been
+encountered.  In order to avoid this, the @code{cbreak} function must
+be used so that characters are immediately available to your program.
+Another widely used function is @code{noecho}.  As the name suggests,
+when this function is set (used), the characters that are keyed in by
+the user will not show up on the screen.  The two functions
+@code{cbreak} and @code{noecho} are typical examples of key
+management.
 
 
 @node @code{getnstr} class of functions, An example of @code{getnstr} and @code{getch}, @code{getch} class of functions, Input functions
-@subsection @code{getnstr} class of functions
+@subsection @code{getnstr}
 
-These functions are used to get strings from the terminal.  In
-essence, these functions perform the same task as would be achieved by
-a series of calls to @code{getch} until a @key{NL}, @key{CR}, or
-@key{EOF} is received.  The resulting string of characters is
-returned.
+The @code{getnstr} procedure is used to get strings from the terminal.
+In essence, it performs the same task as would be achieved by a series
+of calls to @code{getch} until a @key{NL}, @key{CR}, or @key{EOF} is
+received.  The resulting string of characters is returned.  The
+procedure always takes a length parameter which is the maximum length
+of string that it will allow to be input.
 
 @node An example of @code{getnstr} and @code{getch},  , @code{getnstr} class of functions, Input functions
 @subsection An example of @code{getnstr} and @code{getch}
 
 @example
-(use-modules (gucu curses)
-	     (ice-9 format))
-
-(initscr)
-
-(let* ((mesg "Enter a string: ")
-       (len (string-length mesg))
-       (siz (getmaxyx (stdscr)))
-       (row (car siz))
-       (col (cadr siz)))
-  (addstr mesg 
-	  #:y(round (/ row 2))
-	  #:x 0)
-
-  (refresh)
-  (let ((str (getnstr 80)))
-    (addstr (format #f "You entered: ~a~%" str)
-	    #:y (- row 2) 
-	    #:x 0)
-
-    (getch)))
-
-(endwin)
+@verbatiminclude ex_getnstr.scm
 @end example
 
 @node Attributes, Windows Tutorial, Input functions, Curses Tutorial
@@ -1344,65 +1319,12 @@ turning of the @code{A_BOLD} attribute using @code{attr-off} when a
 newline is detected.  Have a look.
 
 @example
-#!/usr/local/bin/guile 
-!#
-
-(use-modules (gucu curses)
-             (ice-9 format))
-
-;; A helper function that return the cursor's current row
-(define (getrow)
-  (car (getyx (stdscr))))
-
-;; The program should be passed a filename from the command line
-(if (not (eqv? 2 (length (command-line))))
-    (begin
-      (format #t "Usage: ~a <scm file name>~%" (car (command-line)))
-      (primitive-exit 1)))
-
-
-(let* ((filename (cadr (command-line)))
-       (fport (open-input-file filename)))
-
-  (initscr)
-
-  ;; Read one char at a time from the file
-  (let loop ((ch (read-char fport)))
-    (if (not (eof-object? ch))
-        (begin
-
-          ;; Wait for a key press once a page
-          ;; of text has been printed
-          (if (eqv? (getrow) (- (lines) 1))
-              (begin
-                (addstr "<-Press any key->")
-                (refresh)
-                (getch)
-                (clear)
-                (move 0 0)))
-
-          ;; Bold all text between a semicolon
-          ;; and the end of a line
-          (cond 
-           ((eqv? ch #\;) 
-            (attr-on A_BOLD))
-           ((eqv? ch #\nl)
-            (attr-off A_BOLD)))
-          (addch (char->integer ch))
-          (refresh)
-          (loop (read-char fport)))
-
-        ;; Clean up on exit
-        (begin
-          (endwin)
-          (close-input-port fport)))))
-	   
+@verbatiminclude ex_attrib.scm
 @end example
 
-The function also introruces the two useful functions @code{getyx} and
-@code{move}.  The first function gets the coordinates of the present
-cursor as a list of two elements.  The second moves the cursor to the
-coordinates given to it.
+The function also introduces the useful function @code{getyx}.  It
+returns the coordinates of the present cursor as a list of two
+elements.
 
 The above program is really a simple one which doesn't do much.  Along
 these lines once could write a more useful program which reads a scheme
@@ -1458,28 +1380,28 @@ A procedure that returns the bit mask for a color-pair
 Colors are explained in the next sections.
 
 We can @code{logior} any number of attributes to get a combined
-effect.  If you wanted reverse video with blinking characters, you can
-use
+effect.  If you wanted the character in window @code{win} to have
+reverse video with blinking characters, you can use
 @example
-(attr-on (logior A_REVERSE A_BLINK))
+(attr-on win (logior A_REVERSE A_BLINK))
 @end example
 
 @node @code{attr-on} vs @code{attr-set}, @code{attr-get}, The details, Attributes
 @subsection @code{attr-on} vs @code{attr-set}
 
-Then what is the difference between @code{attr-on} and @code{attr-set}?
-@code{attr-set} sets the attributes of a window whereas @code{attr-on}
-just switches on the attribute given to it.  So @code{attr-set} fully
-overrides whatever attributes the window previously had and sets it to
-the new attribute(s).  Similarly, @code{attr-off} just switches off the
-attributes(s) given to it as an argument.  This gives us the
-flexibility of managing attributes easily.  But, if you use them
-carelessly, you may lose track of what attributes the window has and
-garble the display.  This is especially true while managing menus with
-colors and highlighting.  So decide on a consistent policy and stick
-to it.  You can always use @code{standend} which is equivalent to
-@code{(attr-set A_NORMAL)} which turns off all attributes and brings
-you back to normal mode.
+Then what is the difference between @code{attr-on} and
+@code{attr-set}?  @code{attr-set} sets the attributes of a window
+whereas @code{attr-on} just switches on the attribute given to it.  So
+@code{attr-set} fully overrides whatever attributes the window
+previously had and sets it to the new attribute(s).  Similarly,
+@code{attr-off} just switches off the attributes(s) given to it as an
+argument.  This gives us the flexibility of managing attributes
+easily.  But, if you use them carelessly, you may lose track of what
+attributes the window has and garble the display.  This is especially
+true while managing menus with colors and highlighting.  So decide on
+a consistent policy and stick to it.  You can always use
+@code{standend} which is equivalent to @code{(attr-set win A_NORMAL)}
+which turns off all attributes and brings you back to normal mode.
 
 @node @code{attr-get}, @code{wattr} functions, @code{attr-on} vs @code{attr-set}, Attributes
 @subsection @code{attr-get}
@@ -1491,12 +1413,6 @@ wanted to do some complex update on the screen and we are not sure
 what attribute each character is associated with.  Then this function
 can be used with either @code{attr-set} or @code{attr-on} to produce the
 desired effect.
-
-@node @code{wattr} functions, @code{chgat} functions, @code{attr-get}, Attributes
-@subsection @code{wattr} functions
-
-For each of the above functions, they can take the optional keyed
-parameter @code{#:win} to oerate on a particular window.
 
 @node @code{chgat} functions,  , @code{wattr} functions, Attributes
 @subsection @code{chgat} functions
@@ -1510,48 +1426,33 @@ cursor location.
 You can pass it -1 as the character count to update until the end of
 the current line.  
 
-The following example changes the attributes of characters from
-the current position to the end of the line to reverse video.
+The following example changes the attributes of characters from the
+current position to the end of the line to reverse video on a window
+named @code{win1}.
 
 @example
-(chgat -1 A_REVERSE 0)
+(chgat win1 -1 A_REVERSE 0)
 @end example
 
-There are optional key parameters that may be used with
-@code{chgat}. @code{#:y} and @code{#:x} moves the cursor before
-modifying characters.  @code{#:win} has @code{chgat} operate on a
-given window.
+The are optional key parameters @code{#:y} and @code{#:x} can be used
+with @code{chgat}.
 
 The following example will print a string on the screen.  Then it will
 set the first 5 characters of the string to blink and change color to
 cyan.
 
 @example
-(use-modules (gucu curses))
-
-(initscr)
-
-;; Prep the color functions
-(start-color)
-
-;; Label cyan on black as color-pair #1
-(init-pair 1 COLOR_CYAN COLOR_BLACK)
-
-(addstr "Blink Don't Blink")
-
-(chgat   5                   ; num of chars 
-         A_BLINK             ; attributes
-         1                   ; use color pair #1
-         #:y 0               ; start y
-         #:x 0)              ; start x
-
-(refresh)
-(getch)
-(endwin)
+@verbatiminclude ex_blink.scm
 @end example
 
 This example also introduces us to the color world of curses.  Colors
-will be explained in detail later.  Use 0 for no color.
+will be explained in detail later.  Use 0 for white on black.
+
+Now wait...  Did you try running this little script?  Did it work?
+Blinking is one of those features that may not be implemented on your
+terminal.  As of the moment of this writing, Gnome terminal doesn't do
+blinking.  The standard xterm does do blinking, but, it doesn't blink
+at the location of the cursor.
 
 @node Windows Tutorial, Colors, Attributes, Curses Tutorial
 @section Windows Tutorial
@@ -3629,11 +3530,11 @@ specified before the coordinates.
 @node Curses screen initialization and manipulation routines, Adding characters, Overview, The basic curses library
 @subsection Curses screen initialization and manipulation routines
 
-@cindex initialization
-@cindex screens, creation
-@cindex curses, initialization
-@cindex curses, ending
-@cindex curses, termination
+@cindex Initialization
+@cindex Screens, creation
+@cindex Curses, initialization
+@cindex Curses, ending
+@cindex Curses, termination
 
 @findex initscr
 @findex slk-init
@@ -3970,7 +3871,7 @@ checking (such as for the newline, backspace, or carriage return
 characters), they do not advance the current cursor position, they do
 not expand other control characters to ^-escapes, and they truncate
 the string if it crosses the right margin, rather than wrapping it
-around to the new line.
+around to the newline.
 
 All routines return the integer @code{ERR} if the window has already
 been deleted and @code{OK} on success.
@@ -6262,7 +6163,7 @@ The window cursor is not advanced.  These routines work faster than
 they do not advance the current cursor position, they do not expand
 other control characters to @kbd{^}-escapes, and they truncate the
 string if it crosses the right margin, rather than wrapping it around
-to the new line.
+to the newline.
 
 If a complex character cannot completely fit at the end of the current
 line, the remaining columns are filled with the background character
@@ -6572,7 +6473,7 @@ doesn't return the attributes for the rarely usable modes
 
 @end deffn
 
-@deffn erasewchar
+@deffn Procedure erasewchar
 
 This returns the character currently used as the erase character when
 using wide characters.  If wide strings are not or usable, this
@@ -6580,7 +6481,7 @@ returns @code{#f}.
 
 @end deffn
 
-@deffn killwchar
+@deffn Procedure killwchar
 
 This returns the character used to erase lines of wide characters, or
 @code{#f} if no such character is defined.
@@ -7321,7 +7222,7 @@ The form driver requests are as follows:
 @item @code{REQ_DOWN_CHAR}
 @tab  Move down in the field.
 @item @code{REQ_NEW_LINE}
-@tab  Insert or overlay a new line.
+@tab  Insert or overlay a newline.
 @item @code{REQ_INS_CHAR}
 @tab  Insert a blank at the cursor.
 @item @code{REQ_INS_LINE}
