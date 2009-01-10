@@ -11,7 +11,6 @@
 #include "type.h"
 
 scm_t_bits screen_tag;
-scm_t_bits file_tag;
 scm_t_bits window_tag;
 
 SCM equalp_window (SCM x1, SCM x2);
