@@ -1,4 +1,3 @@
-
 #include <libguile.h>
 #include <curses.h>
 #include <form.h>
@@ -8,251 +7,253 @@
 #include "form_type.h"
 #define _GNU_SOURCE
 #define cstring_t cchar_t
-// 1: bool data_ahead
-// 2: const FORM *
-// 3: 
-// 4: 
-SCM
-gucu_data_ahead (SCM arg1)
+
+/* Errors */
+
+static void form_bad_state_error (const char *funcname)
 {
-	SCM_ASSERT (_scm_is_form (arg1), arg1, SCM_ARG1, "data-ahead");
-
-	 FORM *c_arg1 = _scm_to_form (arg1);
-
-	bool ret = data_ahead (c_arg1);
-	SCM s_ret = scm_from_bool (ret);
-
-	return s_ret;
+  scm_misc_error (funcname, "Bad state", SCM_BOOL_F);
 }
 
-// 1: bool data_behind
-// 2: const FORM *
-// 3: 
-// 4: 
-SCM
-gucu_data_behind (SCM arg1)
+static void form_current_field_error (const char *funcname)
 {
-	SCM_ASSERT (_scm_is_form (arg1), arg1, SCM_ARG1, "data-behind");
-
-	 FORM *c_arg1 = _scm_to_form (arg1);
-
-	bool ret = data_behind (c_arg1);
-	SCM s_ret = scm_from_bool (ret);
-
-	return s_ret;
+  scm_misc_error (funcname, "The field is the current field", SCM_BOOL_F);
 }
 
-// 1: chtype field_back
-// 2: const FIELD *
-// 3: 
-// 4: 
-SCM
-gucu_field_back (SCM arg1)
+static void form_invalid_field_error (const char *funcname)
 {
-	SCM_ASSERT (_scm_is_field (arg1), arg1, SCM_ARG1, "field-back");
-
-	 FIELD *c_arg1 = _scm_to_field (arg1);
-
-	chtype ret = field_back (c_arg1);
-	SCM s_ret = _scm_from_chtype (ret);
-
-	return s_ret;
+  scm_misc_error (funcname, "The field is invalid", SCM_BOOL_F);
 }
 
-// 1: int field_count
-// 2: const FORM *
-// 3: 
-// 4: 
-SCM
-gucu_field_count (SCM arg1)
+static void form_not_connected_error (const char *funcname)
 {
-	SCM_ASSERT (_scm_is_form (arg1), arg1, SCM_ARG1, "field-count");
+  scm_misc_error (funcname, "The field is not connected to a form", SCM_BOOL_F);
+} 
 
-	 FORM *c_arg1 = _scm_to_form (arg1);
-
-	int ret = field_count (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+static void form_not_posted_error (const char *funcname)
+{
+  scm_misc_error (funcname, "The form is not posted", SCM_BOOL_F);
 }
 
-// 1: chtype field_fore
-// 2: const FIELD *
-// 3: 
-// 4: 
+/* Tests for off-screen data ahead on the form */
 SCM
-gucu_field_fore (SCM arg1)
+gucu_data_ahead_p (SCM form)
 {
-	SCM_ASSERT (_scm_is_field (arg1), arg1, SCM_ARG1, "field-fore");
+  SCM_ASSERT (_scm_is_form (form), form, SCM_ARG1, "data-ahead?");
 
-	 FIELD *c_arg1 = _scm_to_field (arg1);
-
-	chtype ret = field_fore (c_arg1);
-	SCM s_ret = _scm_from_chtype (ret);
-
-	return s_ret;
+  const FORM *c_form = _scm_to_form (form);
+  
+  return scm_from_bool (data_ahead (c_form));
 }
 
-// 1: int field_index
-// 2: const FIELD *
-// 3: 
-// 4: 
+/* Tests for off-screen data behind on the form */
 SCM
-gucu_field_index (SCM arg1)
+gucu_data_behind_p (SCM form)
 {
-	SCM_ASSERT (_scm_is_field (arg1), arg1, SCM_ARG1, "field-index");
+  SCM_ASSERT (_scm_is_form (form), form, SCM_ARG1, "data-behind?");
 
-	 FIELD *c_arg1 = _scm_to_field (arg1);
+  const FORM *c_form = _scm_to_form (form);
 
-	int ret = field_index (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  return scm_from_bool (data_behind (c_form));
 }
 
-// 1: int field_just
-// 2: const FIELD *
-// 3: 
-// 4: 
+/* Returns the background attribute of FIELD */
 SCM
-gucu_field_just (SCM arg1)
+gucu_field_back (SCM field)
 {
-	SCM_ASSERT (_scm_is_field (arg1), arg1, SCM_ARG1, "field-just");
+  SCM_ASSERT (_scm_is_field (field), field, SCM_ARG1, "field-back");
 
-	 FIELD *c_arg1 = _scm_to_field (arg1);
-
-	int ret = field_just (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  const FIELD *c_field = _scm_to_field (field);
+  chtype ret = field_back (c_field);
+  return _scm_from_chtype (ret);
 }
 
-// 1: int field_opts
-// 2: const FIELD *
-// 3: 
-// 4: 
+/* Returns the count of fields in FORM */
 SCM
-gucu_field_opts (SCM arg1)
+gucu_field_count (SCM form)
 {
-	SCM_ASSERT (_scm_is_field (arg1), arg1, SCM_ARG1, "field-opts");
+  SCM_ASSERT (_scm_is_form (form), form, SCM_ARG1, "field-count");
 
-	 FIELD *c_arg1 = _scm_to_field (arg1);
+  const FORM *c_form = _scm_to_form (form);
+  int ret = field_count (c_form);
 
-	int ret = field_opts (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  return scm_from_int (ret);
 }
 
-// 1: int field_opts_off
-// 2: FIELD *
-// 3:  int
-// 4: 
-// 5: 
+/* Returns the foreground attribute of FIELD */
 SCM
-gucu_field_opts_off (SCM arg1, SCM arg2)
+gucu_field_fore (SCM field)
 {
-	SCM_ASSERT (_scm_is_field (arg1), arg1, SCM_ARG1, "field-opts-off");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "field-opts-off");
+  SCM_ASSERT (_scm_is_field (field), field, SCM_ARG1, "field-fore");
 
-	FIELD *c_arg1 = _scm_to_field (arg1);
-	int c_arg2 = scm_to_int (arg2);
+  const FIELD *c_field = _scm_to_field (field);
+  chtype ret = field_fore (c_field);
 
-	int ret = field_opts_off (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  return _scm_from_chtype (ret);
 }
 
-// 1: int field_opts_on
-// 2: FIELD *
-// 3:  int
-// 4: 
-// 5: 
+/* Return the index of the field in the field array of the form to
+   which it is connected */
 SCM
-gucu_field_opts_on (SCM arg1, SCM arg2)
+gucu_field_index (SCM field)
 {
-	SCM_ASSERT (_scm_is_field (arg1), arg1, SCM_ARG1, "field-opts-on");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "field-opts-on");
+  SCM_ASSERT (_scm_is_field (field), field, SCM_ARG1, "field-index");
 
-	FIELD *c_arg1 = _scm_to_field (arg1);
-	int c_arg2 = scm_to_int (arg2);
+  const FIELD *c_field = _scm_to_field (field);
 
-	int ret = field_opts_on (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  int ret = field_index (c_field);
+  if (ret == ERR)
+    form_not_connected_error ("field-index");
 
-	return s_ret;
+  SCM s_ret = scm_from_int (ret);
+
+  return s_ret;
 }
 
-// 1: int field_pad
-// 2: const FIELD *
-// 3: 
-// 4: 
+/* Returns the justification attribute of the field */
 SCM
-gucu_field_pad (SCM arg1)
+gucu_field_just (SCM field)
 {
-	SCM_ASSERT (_scm_is_field (arg1), arg1, SCM_ARG1, "field-pad");
+  SCM_ASSERT (_scm_is_field (field), field, SCM_ARG1, "field-just");
+  
+  const FIELD *c_field = _scm_to_field (field);
 
-	 FIELD *c_arg1 = _scm_to_field (arg1);
+  int ret = field_just (c_field);
+  SCM s_ret = scm_from_int (ret);
 
-	int ret = field_pad (c_arg1);
-	SCM s_ret = scm_from_int (ret);
-
-	return s_ret;
+  return s_ret;
 }
 
-// 1: bool field_status
-// 2: const FIELD *
-// 3: 
-// 4: 
+/* Returns the field's current option bits */
 SCM
-gucu_field_status (SCM arg1)
+gucu_field_opts (SCM field)
 {
-	SCM_ASSERT (_scm_is_field (arg1), arg1, SCM_ARG1, "field-status");
+  SCM_ASSERT (_scm_is_field (field), field, SCM_ARG1, "field-opts");
 
-	 FIELD *c_arg1 = _scm_to_field (arg1);
-
-	bool ret = field_status (c_arg1);
-	SCM s_ret = scm_from_bool (ret);
-
-	return s_ret;
+  const FIELD *c_field = _scm_to_field (field);
+  
+  Field_Options ret = field_opts (c_field);
+  SCM s_ret = scm_from_int (ret);
+  
+  return s_ret;
 }
 
-// 1: int form_driver
-// 2: FORM *
-// 3:  int
-// 4: 
-// 5: 
+/* Turn off the given option bits, leaving others alone */
 SCM
-gucu_form_driver (SCM arg1, SCM arg2)
+gucu_field_opts_off_x (SCM field, SCM opts)
 {
-	SCM_ASSERT (_scm_is_form (arg1), arg1, SCM_ARG1, "form-driver");
-	SCM_ASSERT (scm_is_integer (arg2), arg2, SCM_ARG2, "form-driver");
+  SCM_ASSERT (_scm_is_field (field), field, SCM_ARG1, "field-opts-off!");
+  SCM_ASSERT (scm_is_integer (opts), opts, SCM_ARG2, "field-opts-off!");
+  
+  FIELD *c_field = _scm_to_field (field);
+  Field_Options c_opts = scm_to_int (opts);
 
-	FORM *c_arg1 = _scm_to_form (arg1);
-	int c_arg2 = scm_to_int (arg2);
+  int ret = field_opts_off (c_field, c_opts);
 
-	int ret = form_driver (c_arg1, c_arg2);
-	SCM s_ret = scm_from_int (ret);
+  if (ret == E_BAD_ARGUMENT)
+    scm_out_of_range ("field-opts-off!", opts);
+  else if (ret == E_SYSTEM_ERROR)
+    scm_syserror ("field-opts-off!");
+  else if (ret == E_CURRENT)
+    form_current_field_error ("field-opts-off!");
 
-	return s_ret;
+  return SCM_UNSPECIFIED;
 }
 
-// 1: int form_opts
-// 2: const FORM *
-// 3: 
-// 4: 
+/* Turn on the given option bits, leaving others alone */
+SCM
+gucu_field_opts_on_x (SCM field, SCM opts)
+{
+  SCM_ASSERT (_scm_is_field (field), field, SCM_ARG1, "field-opts-on!");
+  SCM_ASSERT (scm_is_integer (opts), opts, SCM_ARG2, "field-opts-on!");
+
+  FIELD *c_field = _scm_to_field (field);
+  int c_opts = scm_to_int (opts);
+
+  int ret = field_opts_on (c_field, c_opts);
+
+  if (ret == E_BAD_ARGUMENT)
+    scm_out_of_range ("field-opts-on!", opts);
+  else if (ret == E_SYSTEM_ERROR)
+    scm_syserror ("field-opts-on!");
+  else if (ret == E_CURRENT)
+    form_current_field_error ("field-opts-on!");
+
+  return SCM_UNSPECIFIED;
+}
+
+/* Returns the pad character of the form */
+SCM
+gucu_field_pad (SCM field)
+{
+  SCM_ASSERT (_scm_is_field (field), field, SCM_ARG1, "field-pad");
+
+  const FIELD *c_field = _scm_to_field (field);
+
+  int ret = field_pad (c_field);
+  SCM s_ret = scm_from_int (ret);
+
+  return s_ret;
+}
+
+/* True if the field has changed */
+SCM
+gucu_field_status_p (SCM field)
+{
+  SCM_ASSERT (_scm_is_field (field), field, SCM_ARG1, "field-status?");
+
+  const FIELD *c_field = _scm_to_field (field);
+  
+  bool ret = field_status (c_field);
+  SCM s_ret = scm_from_bool (ret);
+  
+  return s_ret;
+}
+
+/* Operate on character or event C */
+SCM
+gucu_form_driver (SCM form, SCM c)
+{
+  SCM_ASSERT (_scm_is_form (form), form, SCM_ARG1, "form-driver");
+  SCM_ASSERT (scm_is_integer (c), c, SCM_ARG2, "form-driver");
+
+  FORM *c_form = _scm_to_form (form);
+  int c_c = scm_to_int (c);
+
+  int ret = form_driver (c_form, c_c);
+
+  if (ret == E_BAD_ARGUMENT)
+    scm_out_of_range ("form-driver", c);
+  else if (ret == E_BAD_STATE)
+    form_bad_state_error ("form-driver");
+  else if (ret == E_NOT_POSTED)
+    form_not_posted_error ("form-driver");
+  else if (ret == E_INVALID_FIELD)
+    form_invalid_field_error ("form-driver");
+  else if (ret == E_SYSTEM_ERROR)
+    scm_syserror ("form-driver");
+  else if (ret == E_CURRENT)
+    form_current_field_error ("field-opts-off!");
+
+  /* Return E_OK, E_REQUEST_DENIED (mouse error), or
+     E_UNKNOWN_COMMAND */
+  SCM s_ret = scm_from_int (ret);
+
+  return s_ret;
+}
+
+/* Retrieve current form option flags */
 SCM
 gucu_form_opts (SCM arg1)
 {
-	SCM_ASSERT (_scm_is_form (arg1), arg1, SCM_ARG1, "form-opts");
+  SCM_ASSERT (_scm_is_form (arg1), arg1, SCM_ARG1, "form-opts");
 
-	 FORM *c_arg1 = _scm_to_form (arg1);
+  const FORM *c_arg1 = _scm_to_form (arg1);
 
-	int ret = form_opts (c_arg1);
-	SCM s_ret = scm_from_int (ret);
+  int ret = form_opts (c_arg1);
+  SCM s_ret = scm_from_int (ret);
 
-	return s_ret;
+  return s_ret;
 }
 
 // 1: int form_opts_on
@@ -796,18 +797,18 @@ gucu_unpost_form (SCM arg1)
 void 
 gucu_form_init_function ()
 {
-	scm_c_define_gsubr ("data-ahead", 1, 0, 0, gucu_data_ahead);
-	scm_c_define_gsubr ("data-behind", 1, 0, 0, gucu_data_behind);
-	scm_c_define_gsubr ("field-back", 1, 0, 0, gucu_field_back);
-	scm_c_define_gsubr ("field-count", 1, 0, 0, gucu_field_count);
-	scm_c_define_gsubr ("field-fore", 1, 0, 0, gucu_field_fore);
-	scm_c_define_gsubr ("field-index", 1, 0, 0, gucu_field_index);
-	scm_c_define_gsubr ("field-just", 1, 0, 0, gucu_field_just);
-	scm_c_define_gsubr ("field-opts", 1, 0, 0, gucu_field_opts);
-	scm_c_define_gsubr ("field-opts-off", 2, 0, 0, gucu_field_opts_off);
-	scm_c_define_gsubr ("field-opts-on", 2, 0, 0, gucu_field_opts_on);
-	scm_c_define_gsubr ("field-pad", 1, 0, 0, gucu_field_pad);
-	scm_c_define_gsubr ("field-status", 1, 0, 0, gucu_field_status);
+  scm_c_define_gsubr ("data-ahead?", 1, 0, 0, gucu_data_ahead_p);
+  scm_c_define_gsubr ("data-behind?", 1, 0, 0, gucu_data_behind_p);
+  scm_c_define_gsubr ("field-back", 1, 0, 0, gucu_field_back);
+  scm_c_define_gsubr ("field-count", 1, 0, 0, gucu_field_count);
+  scm_c_define_gsubr ("field-fore", 1, 0, 0, gucu_field_fore);
+  scm_c_define_gsubr ("field-index", 1, 0, 0, gucu_field_index);
+  scm_c_define_gsubr ("field-just", 1, 0, 0, gucu_field_just);
+  scm_c_define_gsubr ("field-opts", 1, 0, 0, gucu_field_opts);
+  scm_c_define_gsubr ("field-opts-off!", 2, 0, 0, gucu_field_opts_off_x);
+  scm_c_define_gsubr ("field-opts-on!", 2, 0, 0, gucu_field_opts_on_x);
+  scm_c_define_gsubr ("field-pad", 1, 0, 0, gucu_field_pad);
+  scm_c_define_gsubr ("field-status?", 1, 0, 0, gucu_field_status_p);
 	scm_c_define_gsubr ("form-driver", 2, 0, 0, gucu_form_driver);
 	scm_c_define_gsubr ("form-opts", 1, 0, 0, gucu_form_opts);
 	scm_c_define_gsubr ("form-opts-on", 2, 0, 0, gucu_form_opts_on);

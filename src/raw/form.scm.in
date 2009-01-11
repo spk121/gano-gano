@@ -3,18 +3,18 @@
 (define-module (XXpackageXX form)
         #:use-module (XXpackageXX eti)
 	#:export ( 
-		data-ahead
-		data-behind
+		data-ahead?
+		data-behind?
 		field-back
 		field-count
 		field-fore
 		field-index
 		field-just
 		field-opts
-		field-opts-off
-		field-opts-on
+		field-opts-off!
+		field-opts-on!
 		field-pad
-		field-status
+		field-status?
 		form-driver
 		form-opts
 		form-opts-on

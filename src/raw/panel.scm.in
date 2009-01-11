@@ -9,7 +9,7 @@
 	    update-panels
 	    hide-panel
 	    panel-window
-	    replace-panel
+	    replace-panel!
 	    move-panel
 	    panel-hidden?
 	    del-panel

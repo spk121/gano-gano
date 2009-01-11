@@ -82,8 +82,8 @@ gucu_replace_panel (SCM pan, SCM win)
 {
   struct gucu_panel *gp;
 
-  SCM_ASSERT (_scm_is_panel (pan), pan, SCM_ARG1, "replace-panel");
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG2, "replace-panel");
+  SCM_ASSERT (_scm_is_panel (pan), pan, SCM_ARG1, "replace-panel!");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG2, "replace-panel!");
 
   gp = (struct gucu_panel *) SCM_SMOB_DATA (pan);
   
@@ -147,7 +147,7 @@ gucu_panel_init_function ()
 	scm_c_define_gsubr ("update-panels", 0, 0, 0, gucu_update_panels);
 	scm_c_define_gsubr ("hide-panel", 1, 0, 0, gucu_hide_panel);
 	scm_c_define_gsubr ("panel-window", 1, 0, 0, gucu_panel_window);
-	scm_c_define_gsubr ("replace-panel", 2, 0, 0, gucu_replace_panel);
+	scm_c_define_gsubr ("replace-panel!", 2, 0, 0, gucu_replace_panel);
 	scm_c_define_gsubr ("move-panel", 3, 0, 0, gucu_move_panel);
 	scm_c_define_gsubr ("panel-hidden?", 1, 0, 0, gucu_panel_hidden);
 	scm_c_define_gsubr ("del-panel", 1, 0, 0, gucu_del_panel);
