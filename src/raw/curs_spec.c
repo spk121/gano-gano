@@ -82,26 +82,6 @@ gucu_mousemask (SCM x)
   return scm_from_ulong (mousemask (scm_to_ulong (x), NULL));
 }
 
-SCM 
-gucu_mouse_trafo (SCM sy, SCM sx, SCM to_screen)
-{
-  SCM_ASSERT (scm_is_integer (sy), sy, SCM_ARG1, "mouse-trafo");
-  SCM_ASSERT (scm_is_integer (sx), sx, SCM_ARG2, "mouse-trafo");
-  SCM_ASSERT (scm_is_bool (to_screen), to_screen, SCM_ARG3, "mouse-trafo");
-
-  int x, y, ret;
-
-  y = scm_to_int (sy);
-  x = scm_to_int (sx);
-  ret = mouse_trafo (&y, &x, scm_to_bool (to_screen));
-  if (ret)
-    {
-      return scm_list_2 (scm_from_int (y), scm_from_int (x));
-    }
-  else
-    return SCM_BOOL_F;
-}
-
 /* Return the foreground and background color numbers of a given PAIR */
 SCM
 gucu_pair_content (SCM s_pair)
@@ -294,13 +274,14 @@ gucu_winnstr (SCM win, SCM n)
 }
 
 
+/* Convert mouse coordinates to screen coordinates */
 SCM 
 gucu_wmouse_trafo (SCM win, SCM sy, SCM sx, SCM to_screen)
 {
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wmouse-trafo");
-  SCM_ASSERT (scm_is_integer (sy), sy, SCM_ARG2, "wmouse-trafo");
-  SCM_ASSERT (scm_is_integer (sx), sx, SCM_ARG3, "wmouse-trafo");
-  SCM_ASSERT (scm_is_bool (to_screen), to_screen, SCM_ARG4, "wmouse-trafo");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "mouse-trafo");
+  SCM_ASSERT (scm_is_integer (sy), sy, SCM_ARG2, "mouse-trafo");
+  SCM_ASSERT (scm_is_integer (sx), sx, SCM_ARG3, "mouse-trafo");
+  SCM_ASSERT (scm_is_bool (to_screen), to_screen, SCM_ARG4, "mouse-trafo");
 
   int x, y, ret;
   x = scm_to_int (sx);
@@ -749,7 +730,6 @@ gucu_init_special ()
   scm_c_define_gsubr ("delwin", 1, 0, 0, gucu_delwin);
   scm_c_define_gsubr ("getmouse", 0, 0, 0, gucu_getmouse);
   scm_c_define_gsubr ("mousemask", 1, 0, 0, gucu_mousemask);
-  scm_c_define_gsubr ("mouse-trafo", 3, 0, 0, gucu_mouse_trafo);
   scm_c_define_gsubr ("pair-content", 1, 0, 0, gucu_pair_content);
   scm_c_define_gsubr ("ungetmouse", 1, 0, 0, gucu_ungetmouse);
   scm_c_define_gsubr ("%wattr-get", 1, 0, 0, gucu_wattr_get);
@@ -757,7 +737,7 @@ gucu_init_special ()
   scm_c_define_gsubr ("%wgetnstr", 2, 0, 0, gucu_wgetnstr);
   scm_c_define_gsubr ("%winchnstr", 2, 0, 0, gucu_winchnstr);
   scm_c_define_gsubr ("%winnstr", 2, 0, 0, gucu_winnstr);
-  scm_c_define_gsubr ("wmouse-trafo", 4, 0, 0, gucu_wmouse_trafo);
+  scm_c_define_gsubr ("mouse-trafo", 4, 0, 0, gucu_wmouse_trafo);
   scm_c_define_gsubr ("getbegyx", 1, 0, 0, gucu_getbegyx);
   scm_c_define_gsubr ("getmaxyx", 1, 0, 0, gucu_getmaxyx);
   scm_c_define_gsubr ("getparyx", 1, 0, 0, gucu_getparyx);

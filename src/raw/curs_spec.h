@@ -15,7 +15,6 @@ SCM gucu_delwin (SCM win) API;
 SCM gucu_getmouse (void) API;
 SCM gucu_innwstr (SCM n) API;
 SCM gucu_mousemask (SCM x) API;
-SCM gucu_mouse_trafo (SCM y, SCM x, SCM to) API;
 SCM gucu_mvinnwstr (SCM y, SCM x, SCM n) API;
 SCM gucu_pair_content (SCM s_color) API;
 SCM gucu_ungetmouse (SCM event) API;

@@ -316,7 +316,6 @@
 	    mouse-trafo
 	    pair-content
 	    ungetmouse
-	    wmouse-trafo
 	    getbegyx
 	    getparyx
 	    getsyx
