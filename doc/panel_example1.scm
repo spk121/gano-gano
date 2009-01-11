@@ -6,7 +6,7 @@
              (gucu curses)
              (gucu panel))
 
-(initscr)
+(define stdscr (initscr))
 (cbreak)
 (noecho)
 
@@ -31,7 +31,7 @@
   ;; Show it on the screen
   (update-panels)
   (doupdate)
-  (getch)
+  (getch stdscr)
   (endwin))
 
             

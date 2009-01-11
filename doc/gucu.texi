@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.27 2009/01/11 02:13:43 spike_gran Exp $
+@c $Id: gucu.texi,v 1.28 2009/01/11 03:20:05 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -1738,106 +1738,7 @@ by up and down arrows.
 @subsection A simple key usage example
 
 @example
-(use-modules (gucu curses))
-
-;; Draw the menu
-(define (print-menu win highlight choices)
-  (let ((x 2)
-        (y 2)
-        (n-choices (length choices)))
-
-    ;; The menu border
-    (box win (acs-vline) (acs-hline))
-    
-    ;; The menu entries from CHOICES, with the current entry
-    ;; highlighted
-    (let loop ((i 0)
-               (y y)
-               (n n-choices))
-
-      (cond 
-       ((eqv? highlight i)
-        (begin
-          (attr-on A_REVERSE #:win win)
-          (addstr (list-ref choices i) #:win win #:y y #:x x )
-          (attr-off A_REVERSE #:win win)))
-       (else
-        (addstr (list-ref choices i) #:win win #:y y #:x x)))
-
-      (if (< i (- n-choices 1))
-          (loop (+ 1 i)
-                (+ 1 y)
-                n-choices)
-          (wrefresh win)))))
-
-
-
-;; This loop lets the user select a menu. It returns the number of the
-;; selected item.
-(define (get-selection menu-win highlight choices)
-  (let ((n-choices (length choices)))
-    (let loop ((highlight highlight)
-               (ch (wgetch menu-win)))
-      
-      (cond 
-
-       ((eqv? ch KEY_UP)
-        ((lambda (h)
-           (print-menu menu-win h choices)
-           (loop h (wgetch menu-win)))
-         (if (eqv? highlight 0)
-             (- n-choices 1)
-             (- highlight 1))))
-       
-       ((eqv? ch KEY_DOWN)
-        ((lambda (h)
-           (print-menu menu-win h choices)
-           (loop h (wgetch menu-win)))
-         (if (eqv? highlight (- n-choices 1))
-             0
-             (+ highlight 1))))
-       
-       ;; If enter or return is pressed, return the current selected
-       ;; menu item
-       ((or (eqv? ch (char->integer #\NL)) (eqv? ch KEY_ENTER))
-        highlight)
-       
-       (else
-        (loop highlight (wgetch menu-win)))))))
-
-
-
-(define (main)
-  (initscr)
-  (cbreak)
-  (noecho)
-
-  (let* ((menu-width 30)
-         (menu-height 10)
-         (startx (round (/ (- (cols) menu-width) 2)))
-         (starty (round (/ (- (lines) menu-height) 2)))
-         (menu-win (newwin menu-height menu-width starty startx))
-         (choices '("Choice 1"
-                    "Choice 2"
-                    "Choice 3"
-                    "Choice 4"
-                    "Exit"))
-         (highlight 0))
-    (begin
-      (keypad menu-win #t)
-      (print-menu menu-win 0 choices)
-      (let ((choice (get-selection menu-win highlight choices)))
-             
-        (addstr (format #f "You chose ~s ~%"
-			(list-ref choices choice))
-		#:y 23 #:x 0)
-        (clrtoeol)
-        (refresh)
-        (sleep 2)
-        (endwin)
-        0))))
-
-(main)
+@verbatiminclude ex_menu.scm
 @end example
 
 @node Interfacing with the mouse, Panels Library, Interfacing with the keyboard, Curses Tutorial
@@ -1924,7 +1825,7 @@ Schematically, decoding mouse events could look like this.  (Note that
 I've used some of the srfi-1 list functions in this example.)
 
 @example
-(set! c (getch))
+(set! c (getch win))
 (if (eqv? c KEY_MOUSE)
     (let* ((m (getmouse))
            (mouse-x (second m))
@@ -1942,8 +1843,8 @@ I've used some of the srfi-1 list functions in this example.)
 @node Miscellaneous functions,  , Getting the events, Interfacing with the mouse
 @subsection Miscellaneous functions
 
-The functions @code{mouse-trafo} and @code{wmouse-trafo} can be used
-to convert mouse coordinates to screen relative coordinates.
+The function @code{mouse-trafo} can be used to convert mouse
+coordinates to screen relative coordinates.
 
 The @code{mouseinterval} function sets the maximum time (in
 thousandths of a second) that can elapse between press and release
@@ -2036,15 +1937,18 @@ To use panels library functions, you have to use the module
 @code{(gucu panel)}.
 
 @example
-@include panel_example1.scm
+@include ex_panel.scm
 @end example
 
+As you can see, above program follows a simple flow. The windows are
+created with @code{newwin} and then they are attached to panels with
+@code{new-panel}. As we attach one panel after another, the stack of
+panels gets updated.  To put them on screen @code{update-panels} and
+@code{doupdate} are called.
 
-As you can see, above program follows a simple flow as explained. The
-windows are created with @code{newwin} and then they are attached to
-panels with @code{new-panel}. As we attach one panel after another,
-the stack of panels gets updated.  To put them on screen
-@code{update-panels} and @code{doupdate} are called.
+The panels can be brought to the front with @code{top-panel} or pushed
+to the back with @code{bottom-panel}.  They can be removed with
+@code{hide-panel}, and then unhidden with @code{show-panel}.
 
 @node Moving and Resizing Panels,  , Compiling With the Panels Library, Panels Library
 @subsection Moving and Resizing Panels
@@ -2130,7 +2034,7 @@ To use menu library functions, you have to use the module @code{(gucu
 menu)}.
 
 @example
-@include menu_example1.scm
+@include ex_menu2.scm
 @end example
 
 This program demonstrates the basic concepts involved in creating a
@@ -2138,12 +2042,12 @@ menu using menus library. First we create the items using
 @code{new-item} and then attach them to the menu with @code{new-menu}
 function. After posting the menu and refreshing the screen, the main
 processing loop starts. It reads user input and takes corresponding
-action. The function menu_driver() is the main work horse of the menu
-system. The second parameter to this function tells what's to be done
-with the menu. According to the parameter, @code{menu-driver} does the
-corresponding task. The value can be either a menu navigational
-request, an ascii character, or a @code{KEY_MOUSE} special key
-associated with a mouse event.
+action. The function @code{menu-driver} is the main work horse of the
+menu system. The second parameter to this function tells what's to be
+done with the menu. According to the parameter, @code{menu-driver}
+does the corresponding task. The value can be either a menu
+navigational request, an ascii character, or a @code{KEY_MOUSE}
+special key associated with a mouse event.
 
 The menu_driver accepts following navigational requests.
 @table @code
@@ -2202,7 +2106,7 @@ key. Let's dissect the different navigational requests.
 @table @code
 @item REQ_LEFT_ITEM and REQ_RIGHT_ITEM
    
-A Menu can be displayed with multiple columns for more than one item.
+A menu can be displayed with multiple columns for more than one item.
 This can be done by using the @code{menu-format} function. When a
 multicolumnar menu is displayed these requests cause the menu driver
 to move the current selection to left or right.
