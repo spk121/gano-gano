@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.28 2009/01/11 03:20:05 spike_gran Exp $
+@c $Id: gucu.texi,v 1.29 2009/01/11 17:16:36 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -157,7 +157,6 @@ Attributes
 * The details::                 
 * @code{attr-on} vs @code{attr-set}::  
 * @code{attr-get}::             
-* @code{wattr} functions::      
 * @code{chgat} functions::      
 
 Windows Tutorial
@@ -1334,7 +1333,6 @@ file, parses it, and prints it in different colors.
 * The details::                 
 * @code{attr-on} vs @code{attr-set}::  
 * @code{attr-get}::             
-* @code{wattr} functions::      
 * @code{chgat} functions::      
 @end menu
 
@@ -1403,7 +1401,7 @@ a consistent policy and stick to it.  You can always use
 @code{standend} which is equivalent to @code{(attr-set win A_NORMAL)}
 which turns off all attributes and brings you back to normal mode.
 
-@node @code{attr-get}, @code{wattr} functions, @code{attr-on} vs @code{attr-set}, Attributes
+@node @code{attr-get}, @code{chgat} functions, @code{attr-on} vs @code{attr-set}, Attributes
 @subsection @code{attr-get}
 
 The function @code{attr-get} gets the current attributes and color
@@ -1414,7 +1412,7 @@ what attribute each character is associated with.  Then this function
 can be used with either @code{attr-set} or @code{attr-on} to produce the
 desired effect.
 
-@node @code{chgat} functions,  , @code{wattr} functions, Attributes
+@node @code{chgat} functions,  , @code{attr-get}, Attributes
 @subsection @code{chgat} functions
 
 The function @code{chgat}, which is short for @emph{change
@@ -1962,7 +1960,7 @@ Resizing a panel is slightly complex. There is no straight forward
 function just to resize the window associated with a panel. A solution
 to resize a panel is to create a new window with the desired sizes,
 change the window associated with the panel using
-@code{replace-panel}. Don't forget to delete the old window. The
+@code{replace-panel!}. Don't forget to delete the old window. The
 window associated with a panel can be found by using the function
 @code{panel-window}.
 
@@ -1978,7 +1976,7 @@ colors etc. Let's get into the details.
 A menu is a screen display that assists the user to choose some subset
 of a given set of items. To put it simple, a menu is a collection of
 items from which one or more items can be chosen. Some readers might
-not be aware of multiple item selection capability. Menu library
+not be aware of multiple item selection capability. The menu library
 provides functionality to write menus from which the user can chose
 more than one item as the preferred choice. This is dealt with in a
 later section. Now it is time for some rudiments.
@@ -2005,12 +2003,12 @@ The general flow of control of a menu program looks like this.
 Initialize curses
 
 @item   
-Create items using @code{new-item}. You can specify a name and description
-for the items.
+Create items using @code{new-item}. You can specify a name and
+description for the items.
 
 @item
-Create the menu with @code{new-menu} by specifying the items to be
-attached with.
+Create the menu with @code{new-menu} by specifying the items with
+which it is to be attached.
 
 @item 
 Post the menu with @code{menu-post} and refresh the screen.
@@ -2023,7 +2021,7 @@ with @code{menu-driver}.
 Unpost the menu with @code{menu-unpost}.
    
 @item   
-End curses
+End curses.
 
 @end enumerate
 
@@ -2176,38 +2174,38 @@ several examples whenever appropriate.
 @node Menu Windows, Scrolling Menus, Menu Driver, Menu Library
 @subsection Menu Windows
 
-Every menu created is associated with a window and a sub window. The
+Every menu created is associated with a window and a subwindow. The
 menu window displays any title or border associated with the menu. The
-menu sub window displays the menu items currently available for
+menu subwindow displays the menu items currently available for
 selection. But we didn't specify any window or sub window in the
 simple example. When a window is not specified, @code{stdscr} is taken
-as the main window, and then menu system calculates the sub window
+as the main window, and then menu system calculates the subwindow
 size required for the display of items. Then items are displayed in
 the calculated sub window. So let's play with these windows and
 display a menu with a border and a title.
 
 
 @example
-@include menu_example2.scm
+@include ex_menu3.scm
 @end example
 
 This example creates a menu with a title, border, a fancy line
 separating title and the items. As you can see, in order to attach a
-window to a menu the function @code{set-menu-win} has to be used. Then
+window to a menu the function @code{set-menu-win!} has to be used. Then
 we attach the sub window also. This displays the items in the sub
 window. You can also set the mark string which gets displayed to the
-left of the selected item with @code{set-menu-mark}.
+left of the selected item with @code{set-menu-mark!}.
 -----------------------------------------------------------------------------
 
 @node Scrolling Menus,  , Menu Windows, Menu Library
 @subsection Scrolling Menus
 
-If the sub window given for a window is not big enough to show all the
+If the subwindow given for a window is not big enough to show all the
 items, then the menu will be scrollable. When you are on the last item
 in the present list, if you send @code{REQ_DOWN_ITEM}, it gets
 translated into @code{REQ_SCR_DLINE} and the menu scrolls by one
 item. You can manually give @code{REQ_SCR_} operations to do
-scrolling. Let's see how it can be done.
+scrolling.
 
 
 @node Forms Library,  , Menu Library, Curses Tutorial
@@ -2215,7 +2213,7 @@ scrolling. Let's see how it can be done.
 
 Well, if you have seen those forms on web pages that take input from
 users and do various kinds of things, you might be wondering how one
-would create such form in ta text mode display.  It's quite difficult
+would create such form in a text mode display.  It's quite difficult
 to write those nifty forms in plain ncurses.  The forms library tries
 to privide a basic froamework to build and maintain forms with ease.
 It has lots of features that manage validation, dynamic expression of
@@ -2884,7 +2882,7 @@ similar example.
 			    4))
 (keypad my-form-win #t)
 
-;; Set main window and sub window
+;; Set main window and subwindow
 (set-form-win my-form my-form-win)
 (set-form-sub my-form (derwin my-form-win rows cols 2 2))
 
@@ -6378,7 +6376,7 @@ position of the panel in the stack.  Be sure to use this function, not
 @code{mvwin}, to move a panel window.
 @end deffn
 
-@deffn Procedure replace-panel pan window
+@deffn Procedure replace-panel! pan window
 This procedure replaces the current window of panel with window
 (useful, for example if you want to resize a panel; It does not change
 the position of the panel in the stack.
@@ -6719,13 +6717,13 @@ of the menu in rows and columns
 
 @node Menu mark strings,  , Menu sizes, Menu Procedures
 @subsubsection Menu mark strings
-@deffn Procedure set-menu-mark menu str
+@deffn Procedure set-menu-mark! menu str
 In order to make menu selections visible on older terminals without
 highlighting or color capability, the menu library marks selected
 items in a menu with a prefix string.
 
-The function @code{set-menu-mark} sets the mark string for the given
-menu.  Calling @code{set-menu-mark} with a null menu item will abolish
+The function @code{set-menu-mark!} sets the mark string for the given
+menu.  Calling @code{set-menu-mark!} with a null menu item will abolish
 the mark string.  Note that changing the length of the mark string for
 a menu while the menu is posted is likely to produce unhelpful
 behavior.
@@ -6869,7 +6867,7 @@ menu as a list of three elements: description, row, and column spacing
 
 @node Associate menus with window,  , Control spacing between menu items, Menu options
 @subsubsection Associate menus with window
-@deffn Procedure set-menu-win menu win
+@deffn Procedure set-menu-win! menu win
 @deffnx Procedure set-menu-sub menu subwin
 @deffnx Procedure menu-win menu
 @deffnx Procedure menu-sub menu
@@ -6886,7 +6884,7 @@ necessary to set either window; by default, the driver code uses
 The procedure @code{scale-menu}returns the minimum size required for
 the subwindow of @var{menu}.
 
-@code{set-menu-win} and @code{set-menu-sub} will return one of the
+@code{set-menu-win!} and @code{set-menu-sub} will return one of the
 following, @code{E_OK}, @code{E_SYSTEM_ERROR}, @code{E_BAD_ARGUMENT},
 or @code{E_POSTED} if the menu has already been posted.
 @end deffn
