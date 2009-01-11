@@ -10,7 +10,7 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define stdscr (initscr))
 
 (with-test-prefix 
  "form: field buffer"
@@ -18,15 +18,15 @@
  (pass-if "buffer"
 	  (begin
 	    (let ((field1 (new-field 1 10 0 0 0 0)))
-	      (field-opts-off field1 O_STATIC)
+	      (field-opts-off! field1 O_STATIC)
 	      (let ((form1 (new-form (list field1)))
 		    (str #f))
 		(set-field-buffer field1 0 "Blammo!")
 		(post-form form1)
-		(refresh)
+		(refresh stdscr)
 		(set! str (field-buffer field1 0))
-		(addstr (string-append "\"" str "\"") #:y 5 #:x 0)
-		(refresh)
+		(addstr stdscr (string-append "\"" str "\"") #:y 5 #:x 0)
+		(refresh stdscr)
 		(sleep 1)
 		(string=? (substring str 0 (string-length "Blammo!"))
 			  "Blammo!")))))
@@ -39,7 +39,7 @@
 	      (set-field-buffer field1 0 "Blammo!")
 	      (post-form form1)
 	      (set-field-status field1 #f)
-	      (set! test1 (eqv? (field-status field1) #f))
+	      (set! test1 (eqv? (field-status? field1) #f))
 	      (unpost-form form1)
 	      test1)))
 
@@ -53,7 +53,7 @@
 	      (post-form form1)
 	      (set-field-status field1 #f)
 	      (set-field-buffer field1 0 "Two")
-	      (set! test1 (eqv? (field-status field1) #t))
+	      (set! test1 (eqv? (field-status? field1) #t))
 	      (unpost-form form1)
 	      test1))))
 

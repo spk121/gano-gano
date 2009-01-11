@@ -9,12 +9,12 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define stdscr (initscr))
 
 ;; Should be able to make a form with pages
 (with-test-prefix 
  "form: page"
-		  
+ 
  ;; Check that the form's field can be set by reference
  (pass-if "set-current-field"
 	  (let* ((field1 (new-field 1 10 0 0 0 0))
@@ -22,8 +22,8 @@
 		 (form1 (new-form (list field1 field2))))
 	    (post-form form1)
 	    (set-current-field form1 field2)
-	    (addstr (format #f "~a" (field-index field2)) #:x 0 #:y 5)
-	    (refresh)
+	    (addstr stdscr (format #f "~a" (field-index field2)) #:x 0 #:y 5)
+	    (refresh stdscr)
 	    (eq? (field-index field2) 1)))
  
  ;; Check that the page can be set
@@ -42,7 +42,7 @@
 	      (set-form-page form1 0)
 	      (post-form form1)
 	      ;; Paint it
-	      (refresh)	
+	      (refresh stdscr)	
 	      ;; Get the page number
 	      (set! test1 (form-page form1))
 	      ;;(sleep 1)
@@ -51,11 +51,11 @@
 	      (set-form-page form1 1)
 	      (post-form form1)
 	      ;; Paint it
-	      (refresh)
+	      (refresh stdscr)
 	      ;; Get the page number
 	      (set! test2 (form-page form1))
 	      
-	      (addstr (format #f "~a" (list test1 test2)) #:x 0 #:y 5)
+	      (addstr stdscr (format #f "~a" (list test1 test2)) #:x 0 #:y 5)
 	      ;;(sleep 1)
 	      (and (eq? test1 0)
 		   (eq? test2 1))))))

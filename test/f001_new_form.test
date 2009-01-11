@@ -9,7 +9,7 @@
 
 (define test (curses-test-start))
 
-(initscr)
+(define stdscr (initscr))
 
 ;; Should be able to make a form
 (with-test-prefix "form: new-form"
@@ -17,7 +17,7 @@
 		  (pass-if-exception "no fields" exception:wrong-type-arg
 				     (let ((f (new-form '())))
 				       (form? f)))
-	   
+		  
 		  (pass-if "one field"
 			   (let* ((field (new-field 5 5 0 0 0 0))
 				  (f (new-form (list field))))
