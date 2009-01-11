@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.26 2009/01/10 23:05:37 spike_gran Exp $
+@c $Id: gucu.texi,v 1.27 2009/01/11 02:13:43 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -959,7 +959,7 @@ Now that we've seen how to write a simple curses program, let's get
 into the details.  There are many functions that help customize what
 you see on the screen and many features which can be put to full use.
 
-Here we go...
+Here we go@enddots{}
 
 @node Initialization, A word about windows, The Gory Details, Curses Tutorial
 @section Initialization
@@ -1213,7 +1213,7 @@ The above program demonstrates how easy it is to combine @code{addstr}
 and @code{move} to print at a specific location on the screen.  It
 also shows how to use the equivalent key parameters @code{#:y} and
 @code{#:x}.  They do exactly the same thing.  It also shows how
-@code{(format #f ...)} can be used in conjunction with @code{addstr}
+@code{(format #f @dots{})} can be used in conjunction with @code{addstr}
 to do formatted output.
 
 The example introduces the new function @code{getmaxyx}.  It gives the
@@ -1448,7 +1448,7 @@ cyan.
 This example also introduces us to the color world of curses.  Colors
 will be explained in detail later.  Use 0 for white on black.
 
-Now wait...  Did you try running this little script?  Did it work?
+Now wait@enddots{}  Did you try running this little script?  Did it work?
 Blinking is one of those features that may not be implemented on your
 terminal.  As of the moment of this writing, Gnome terminal doesn't do
 blinking.  The standard xterm does do blinking, but, it doesn't blink
@@ -1458,16 +1458,27 @@ at the location of the cursor.
 @section Windows Tutorial
 
 Windows form the most important concept in curses.  You have seen the
-standard window @code{stdscr} above where all the functions implicitly
-operated on this window.  Now to design even a simplest GUI, you
-need to resort to windows.  The main reason you may want to use windows
-is to manipulate parts of the screen separately, for better
-efficiency, by updating only the windows that need to be changed, and
-for a better design.  I would say the last reason is the most
-important in going for windows.  You should always strive for a better
-and easy-to-manage design in your programs.  If you are writing big,
-complex GUIs, this is of pivotal importance before you start doing
-anything.
+standard window @code{stdscr} used in most of the previous examples.
+Now to design even a simplest GUI, you need to resort to windows.  The
+main reason you may want to use windows is to manipulate parts of the
+screen separately, for better efficiency, by updating only the windows
+that need to be changed, and for a better design.  I would say the
+last reason is the most important in going for windows.  You should
+always strive for a better and easy-to-manage design in your programs.
+If you are writing big, complex GUIs, this is of pivotal importance
+before you start doing anything.
+
+Now, anyone that has worked with a modern GUI has an intuitive
+understanding of what a ``window'' is.  You will need to unlearn this
+knowledge when programming curses windows.  
+
+First off, a curses window doesn't necessarily have any sort of border
+or decoration that separates it from the rest of the terminal.  You
+can make a curses window and then draw a border on it, but, that is up
+to the programmer.
+
+Second, curses windows don't normally overlap.  They are usually
+distinct, non-overlapping regions of the screen.
 
 @menu
 * The basics::                  
@@ -1480,15 +1491,22 @@ anything.
 @subsection The basics
 
 A window can be created by calling the function @code{newwin}. It
-doesn't create anything on the screen initially.  It allocates memory
-for a structure to manipulate the windo and updates the sructure with
-data regarding the window, like it's size, position, etc.  Hence in
-curses, a window is just an abstraction of an imaginary window, which
-can be manipulated independently of other parts of the screen.  The
-function @code{newwin} returns a @code{#window} which can be passed to
-window-related functions like @code{waddstr}.  Finally, the window can
-be destroyed with @code{delwin}.  It will deallocate the memory
-associated with the window structure.
+doesn't draw anything on the screen initially.  It allocates memory
+for a structure to manipulate the window and updates the structure with
+data regarding the window, like it's size, position, etc. 
+
+The function @code{newwin}, like @code{initscr}, returns a
+@code{#<window>}.  Just like the @code{stdscr} created by
+@code{initscr}, the window created by @code{newwin} can be used in any
+procedure that takes a window argument. The window returned by
+@code{newwin} needs to remain in scope for as long as the window is to
+be used.  If it is garbage collected, the memory associated with the
+window will eventually be freed.
+
+The memory associated with a window can be more quickly freed by
+explicitly calling @code{delwin}.  It will deallocate the memory
+associated with the window structure.  Any further attempts to then
+use that window will cause an error.
 
 @node Let there be a window, Other functions, The basics, Windows Tutorial
 @subsection Let there be a window
@@ -1498,83 +1516,11 @@ part begins by displaying the window.  The functions @code{box} and
 @code{border} can be used to draw a border around the window.  Let's
 explore these functions in more detail in this example.
 
+This example isn't meant as a practical example of what windows are
+good for.  It just shows how to make, draw, erase, and destroy them.
+
 @example
-(use-modules (gucu curses))
-
-;; This procedure makes a new window and draws a box
-;; around it
-(define (create-newwin height width starty startx)
-  ((lambda (win)			; Make a lambda proc that...
-     (box win (acs-vline) (acs-hline))	; Makes a box,
-     (wrefresh win)			; Draws the window
-     win)				; Returns the window to the caller
-
-   (newwin height width starty startx))) ; Create a window and apply it
-					; to the lambda function
-
-;; This procedure erases the box around a window and then deletes it
-(define (destroy-win win)
-  (let ((s (char->integer #\sp)))
-    (wborder win s s s s s s s s)	; Draw a box of spaces
-    (wrefresh win)
-    (delwin win)))
-
-;; This prodecure deletes a window than then draw a new one someplace
-;; else
-(define (move-win win height width starty startx)
-  (destroy-win win)
-  (create-newwin height width starty startx))
-
-
-;; Program Begins
-(initscr)				; Start curses
-(cbreak)				; Line buffering disabled
-(keypad (stdscr) #t)			; Check for function keys
-
-
-(let* ((height 3)
-      (width 10)
-      (starty (round (/ (- (lines) height) 2)))
-      (startx (round (/ (- (cols) width) 2))))
-      
-  (addstr "Press F1 to exit")
-  (refresh)
-  (let loop ((starty starty)
-	     (startx startx)
-	     (my-win (create-newwin height width starty startx))
-	     (ch (getch)))
-    (cond
-     ((eqv? ch KEY_LEFT)
-      (loop starty
-	    (- startx 1)
-	    (move-win my-win height width starty (- startx 1))
-	    (getch)))
-     
-     ((eqv? ch KEY_RIGHT)
-      (loop starty
-	    (+ startx 1)
-	    (move-win my-win height width starty (+ startx 1))
-	    (getch)))
-     
-     ((eqv? ch KEY_UP)
-      (loop (- starty 1)
-	    startx
-	    (move-win my-win height width (- starty 1) startx)
-	    (getch)))
-     
-     ((eqv? ch KEY_DOWN)
-      (loop (+ starty 1)
-	    startx
-	    (move-win my-win height width (+ starty 1) startx)
-	    (getch)))
-     
-     ((eqv? ch (key-f 1))
-      #f)
-     
-     (else
-      (loop starty startx my-win (getch)))))
-  
-  (endwin))
+@verbatiminclude ex_window.scm
 @end example
 
 Don't scream.  I know it is a big example.  But there are some
@@ -1602,22 +1548,22 @@ to deallocate memory related to it.  Depending on the key the user
 presses, @code{startx} and @code{starty} are changed, and a new window
 is created.
 
-In the @code{destroy-win}, as you can see, I used @code{wborder}
-instead of @code{box}.  The reason is this:  @code{wborder} draws a
+In the @code{destroy-win}, as you can see, I used @code{border}
+instead of @code{box}.  The reason is this:  @code{border} draws a
 border around the window and the characters given to it as the four
-corners and the four lines.  To put it clearly, if you called wborder
+corners and the four lines.  To put it clearly, if you called border
 as below:
 
 @example
-(wborder win 
-         (char->integer #\|)
-         (char->integer #\|)
-         (char->integer #\-)
-         (char->integer #\-)
-         (char->integer #\+)
-         (char->integer #\+)
-         (char->integer #\+)
-         (char->integer #\+))
+(border win 
+        (char->integer #\|)
+        (char->integer #\|)
+        (char->integer #\-)
+        (char->integer #\-)
+        (char->integer #\+)
+        (char->integer #\+)
+        (char->integer #\+)
+        (char->integer #\+))
 @end example
 it produces something like this
 @verbatim
@@ -1633,49 +1579,29 @@ it produces something like this
 
 You can also see in the above examples that I have used the procedures
 @code{cols}, and @code{lines}.  These procedures return the size of
-the @code{stdscr}.  
+the @code{stdscr}.
 
-The function @code{getch} as usual gets the key
-from the keyboard, and then the @code{cond} expression acts on the
-key pressed.  This type of @code{cond} expression is very common in
-any GUI-based program.
+The function @code{getch} as usual gets the key from the keyboard, and
+then the @code{cond} expression acts on the key pressed.  This type of
+@code{cond} expression is very common in any GUI-based program.
 
 @node Other border functions,  , Other functions, Windows Tutorial
 @subsection Other border functions
 
-The above program is grossly inefficient in that with each press of a
-key, a window is destroyed and another is created.  So let's write
-another program that uses other border-related functions.
+The @code{box} and @code{border} procedures are useful, but, they only
+draw borders around the outside of windows.  If you want to draw lines
+on the screen is other locations than the border of windows, you can
+use the @code{hline} and @code{vline} procedures.
 
-The following program uses @code{mvhline} and @code{mvvline} to
-achieve similar effect.  These two functions are simple.  They create
-a horizontal or vertical line of the specified length at the specified
-position.
+The following little program shows how to draw a box at any location
+using @code{hline} and @code{vline}.  These two functions are simple.
+They create a horizontal or vertical line of the specified length at
+the specified position.  The program uses more of the special drawing
+characters like @code{(acs-urcorer)}, which is the upper-right corner
+of a box.
 
 @example
-(use-modules (gucu curses))
-
-(initscr)
-
-(let* ((height 3)
-      (width 10)
-      (y (round (/ (- (lines) height) 2)))
-      (x (round (/ (- (cols) width) 2)))
-      (plus (char->integer #\+))
-      (dash (char->integer #\-))
-      (bar (char->integer #\|)))
-  (addch plus #:x x #:y y)
-  (addch plus #:y y #:x (+ x width))
-  (addch plus #:y (+ y height) #:x x)
-  (addch plus #:y (+ y height) #:x (+ x width))
-  (mvhline y (+ x 1) dash (- width 1))  
-  (mvhline (+ y height) (+ x 1) dash (- width 1))
-  (mvvline (+ y 1) x bar (- height 1))  
-  (mvvline (+ y 1) (+ x width) bar (- height 1))
-  (refresh))
-
-(sleep 3)
-(endwin)
+@verbatiminclude ex_hline.scm
 @end example
 
 @node Colors, Interfacing with the keyboard, Windows Tutorial, Curses Tutorial
@@ -1693,23 +1619,7 @@ Life seems dull with no colors.  Curses has a nice mechanism to handle
 colors.  Let's get into the thick of things with a small program.
 
 @example
-(use-modules (gucu curses))
-
-(initscr)
-(if (has-colors?)
-    (begin
-      (start-color)
-      (init-pair 1 COLOR_RED COLOR_WHITE)
-      (attr-on (color-pair 1))
-      (addstr "Voila!! In color...")
-      (refresh)
-      (sleep 3)
-      (endwin)
-      0)
-    (begin
-      (endwin)
-      (display "Your terminal does not support color")
-      1))
+@verbatiminclude ex_color.scm
 @end example
 
 As you can see, to start using color, you should first call
@@ -1763,11 +1673,11 @@ to a darker red, you could use this function
 (init-color COLOR_RED 300 0 0)
 @end example
 
-If your terminal cannot change the color definitions, the function
-return @code{ERR}.  The function @code{can-change-color?} can be used
-to find out whether thet terminal has the capability of changing color
-content or not.  The RGB content is scaled from 0 to 1000.  Initially,
-red is likely defined with content 680 (r), 0 (g), 0 (b).
+If your terminal cannot change the color definitions, the procedure
+will throw and error.  The function @code{can-change-color?} can be
+used to find out whether thet terminal has the capability of changing
+color content or not.  The RGB content is scaled from 0 to 1000.
+Initially, red is likely defined with content 680 (r), 0 (g), 0 (b).
 
 The functions @code{color-content} and @code{pair-content} can be used
 to find the color content of a given color and foreground/background
@@ -1803,10 +1713,10 @@ the @code{KEY_} constants.  For example, if the user presses
 @key{F1}, the integer returned is 265.  The procedure @code{(key-f 1)}
 returns 265.  
 
-For example if you call @code{getch} like this
+For example, if you call @code{getch} like this
 @example
-(let ((x (getch)))
-...
+(let ((x (getch win)))
+@dots{}
 @end example
 @code{getch} will wait for the user to press a key, (unless you
 specified a timeout), and when the user presses a key, the
@@ -1816,9 +1726,9 @@ function key procedure @code{key-f}.
 
 The following code piece will do that job
 @example
-(let ((ch (getch)))
+(let ((ch (getch win)))
     (if (eqv? ch KEY_LEFT)
-        (addstr "Left arrow is pressed")))
+        (addstr win "Left arrow is pressed")))
 @end example
 
 Let's write a small program which creates a menu that can be navigated
@@ -7570,7 +7480,7 @@ These functions set a field to be able to contain only a certain type
 of input.  The user will not be avle to move off the field if it
 contains invalid input.
 
-@deffn Procedure set-field-type field type ...
+@deffn Procedure set-field-type field type @dots{}
 @deffnx Procedure field-type field
 The procedure @code{set-field-type} declares a data type for a given
 form field.  The procedure @code{field-type} returns the declared data
