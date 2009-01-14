@@ -23,26 +23,26 @@
 				  (field6 (new-field 1 10 5 0 0 0))
 				  (field7 (new-field 1 10 6 0 0 0)))
 			     
-			     (set-field-fore field1 A_BLINK)	
-			     (set-field-buffer field1 0 "Blink")
+			     (set-field-fore! field1 A_BLINK)	
+			     (set-field-buffer! field1 0 "Blink")
 			     
-			     (set-field-fore field2 A_BOLD)
-			     (set-field-buffer field2 0 "Bold")
+			     (set-field-fore! field2 A_BOLD)
+			     (set-field-buffer! field2 0 "Bold")
 
-			     (set-field-fore field3 A_DIM)
-			     (set-field-buffer field3 0 "Dim")
+			     (set-field-fore! field3 A_DIM)
+			     (set-field-buffer! field3 0 "Dim")
 
-			     (set-field-fore field4 A_INVIS)
-			     (set-field-buffer field4 0 "Invis")
+			     (set-field-fore! field4 A_INVIS)
+			     (set-field-buffer! field4 0 "Invis")
 
-			     (set-field-fore field5 A_NORMAL)
-			     (set-field-buffer field5 0 "Normal")
+			     (set-field-fore! field5 A_NORMAL)
+			     (set-field-buffer! field5 0 "Normal")
 			     
-			     (set-field-fore field6 A_REVERSE)
-			     (set-field-buffer field6 0 "Reverse")
+			     (set-field-fore! field6 A_REVERSE)
+			     (set-field-buffer! field6 0 "Reverse")
 			     
-			     (set-field-fore field7 A_UNDERLINE)
-			     (set-field-buffer field7 0 "Underline")
+			     (set-field-fore! field7 A_UNDERLINE)
+			     (set-field-buffer! field7 0 "Underline")
 			     
 			     (let* (
 				    ;; Post that form
@@ -69,26 +69,26 @@
 				  (field6 (new-field 1 10 5 0 0 0))
 				  (field7 (new-field 1 10 6 0 0 0)))
 			     
-			     (set-field-back field1 A_BLINK)	
-			     (set-field-buffer field1 0 "Blink")
+			     (set-field-back! field1 A_BLINK)	
+			     (set-field-buffer! field1 0 "Blink")
 			     
-			     (set-field-back field2 A_BOLD)
-			     (set-field-buffer field2 0 "Bold")
+			     (set-field-back! field2 A_BOLD)
+			     (set-field-buffer! field2 0 "Bold")
 
-			     (set-field-back field3 A_DIM)
-			     (set-field-buffer field3 0 "Dim")
+			     (set-field-back! field3 A_DIM)
+			     (set-field-buffer! field3 0 "Dim")
 
-			     (set-field-back field4 A_INVIS)
-			     (set-field-buffer field4 0 "Invis")
+			     (set-field-back! field4 A_INVIS)
+			     (set-field-buffer! field4 0 "Invis")
 
-			     (set-field-fore field5 A_NORMAL)
-			     (set-field-buffer field5 0 "Normal")
+			     (set-field-back! field5 A_NORMAL)
+			     (set-field-buffer! field5 0 "Normal")
 
-			     (set-field-back field6 A_REVERSE)
-			     (set-field-buffer field6 0 "Reverse")
+			     (set-field-back! field6 A_REVERSE)
+			     (set-field-buffer! field6 0 "Reverse")
 
-			     (set-field-back field7 A_UNDERLINE)
-			     (set-field-buffer field7 0 "Underline")
+			     (set-field-back! field7 A_UNDERLINE)
+			     (set-field-buffer! field7 0 "Underline")
 			     
 			     (let* (
 				    ;; Post that form
@@ -112,14 +112,14 @@
 				  (field2 (new-field 1 10 1 0 0 0))
 				  (field3 (new-field 1 10 2 0 0 0)))
 	
-			     (set-field-pad field1 (char->integer #\sp))	
-			     (set-field-buffer field1 0 "Space")
+			     (set-field-pad! field1 (char->integer #\sp))	
+			     (set-field-buffer! field1 0 "Space")
 
-			     (set-field-pad field2 (char->integer #\.))
-			     (set-field-buffer field2 0 "Period")
+			     (set-field-pad! field2 (char->integer #\.))
+			     (set-field-buffer! field2 0 "Period")
 			     
-			     (set-field-pad field3 (char->integer #\+))
-			     (set-field-buffer field3 0 "Plus")
+			     (set-field-pad! field3 (char->integer #\+))
+			     (set-field-buffer! field3 0 "Plus")
 			     
 			     (let* (
 				    ;; Post that form

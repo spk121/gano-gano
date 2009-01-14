@@ -50,20 +50,20 @@
  (pass-if "set"
 	  (begin
 	    (let ((field1 (new-field 1 10 0 0 0 0)))
-	      (set-field-opts field1 O_VISIBLE)
+	      (set-field-opts! field1 O_VISIBLE)
 	      (eqv? (field-opts field1) O_VISIBLE))))
 
  (pass-if "off"
 	  (begin
 	    (let ((field1 (new-field 1 10 0 0 0 0)))
-	      (set-field-opts field1 O_VISIBLE)
+	      (set-field-opts! field1 O_VISIBLE)
 	      (field-opts-off! field1 O_VISIBLE)
 	      (eqv? (field-opts field1) 0))))
 
  (pass-if "on"
 	  (begin
 	    (let ((field1 (new-field 1 10 0 0 0 0)))
-	      (set-field-opts field1 O_VISIBLE)
+	      (set-field-opts! field1 O_VISIBLE)
 	      (field-opts-on! field1 O_ACTIVE)
 	      (eqv? (field-opts field1) (logior O_VISIBLE O_ACTIVE))))))
 

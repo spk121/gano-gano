@@ -52,7 +52,7 @@
 		   (ret1 (field-opts-off! field1 O_STATIC))
 		   ;; Add text to the fields.  More
 		   ;; than the screen box can hold
-		   (ret2 (set-field-buffer field1 0 "ABCDEFGHIJLKMNOPQRSTUVWXYZ"))
+		   (ret2 (set-field-buffer! field1 0 "ABCDEFGHIJLKMNOPQRSTUVWXYZ"))
 		   ;; Post that form
 		   (frm (new-form (list field1)))
 		   (ret3 (post-form frm))
@@ -82,7 +82,7 @@
 		   (ret1 (field-opts-off! field1 O_STATIC))
 		   ;; Add text to the fields.  More
 		   ;; than the screen box can hold
-		   (ret2 (set-field-buffer field1 0 "ABCDEFGHIJLKMNOPQRSTUVWXYZ"))
+		   (ret2 (set-field-buffer! field1 0 "ABCDEFGHIJLKMNOPQRSTUVWXYZ"))
 		   
 		   ;; Post that form
 		   (frm (new-form (list field1)))

@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.29 2009/01/11 17:16:36 spike_gran Exp $
+@c $Id: gucu.texi,v 1.30 2009/01/14 05:06:31 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -7465,15 +7465,15 @@ page on its form.
 @subsection Setting and getting form options
 
 @deffn Procedure set-form-opts form opts
-@deffnx Procedure form-opts-on form opts
-@deffnx Procedure form-opts-off form opts
+@deffnx Procedure form-opts-on! form opts
+@deffnx Procedure form-opts-off! form opts
 The function @code{set-form-opts} sets all the given form's option bits (form
 option bits may be logically-OR'ed together).
 
-The function @code{form-opts-on} turns on the given option bits, and leaves
+The function @code{form-opts-on!} turns on the given option bits, and leaves
 others alone.
 
-The function @code{form-opts-off} turns off the given option bits, and	leaves
+The function @code{form-opts-off!} turns off the given option bits, and	leaves
 others alone.
 @end deffn
 

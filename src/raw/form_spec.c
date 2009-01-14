@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <form.h>
 #include "form_type.h"
+#include "form_func.h"
 #include "form_spec.h"
 
 // Create a copy of FIELD with a different TOPROW and LEFTCOL
@@ -27,21 +28,9 @@ gucu_dup_field (SCM field, SCM toprow, SCM leftcol)
   if (c_dup == (FIELD *) NULL) 
     {
       if (errno == E_BAD_ARGUMENT)
-	{
-	  scm_error_scm (SCM_BOOL_F, 
-			 scm_from_locale_string ("dup-field"),
-			 scm_from_locale_string ("bad argument"),
-			 SCM_BOOL_F,
-			 SCM_BOOL_F);
-	}
+	scm_out_of_range ("dup-field", scm_list_2 (toprow, leftcol));
       else if (errno == E_SYSTEM_ERROR)
-	{
-	  scm_error_scm (SCM_BOOL_F,
-			 scm_from_locale_string ("dup-field"),
-			 scm_from_locale_string ("system error"),
-			 SCM_BOOL_F,
-			 SCM_BOOL_F);
-	}
+	scm_syserror ("dup-field");
       else
 	abort ();
     }
@@ -63,29 +52,15 @@ gucu_dynamic_field_info (SCM field)
   ret = dynamic_field_info (c_field, &c_rows, &c_cols, &c_max);
   
   if (ret == E_BAD_ARGUMENT)
-    {
-      scm_error_scm (SCM_BOOL_F, 
-		     scm_from_locale_string ("dynamic-field-info"),
-		     scm_from_locale_string ("bad argument"),
-		     SCM_BOOL_F,
-		     SCM_BOOL_F);
-    }
+    scm_out_of_range ("dynamic-field-info", field);
   else if (ret == E_SYSTEM_ERROR)
-    {
-      scm_error_scm (SCM_BOOL_F,
-		     scm_from_locale_string ("dynamic-field-info"),
-		     scm_from_locale_string ("system error"),
-		     SCM_BOOL_F,
-		     SCM_BOOL_F);
-    }
-  else
-    {
-      return scm_list_3 (scm_from_int (c_rows),
-			 scm_from_int (c_cols),
-			 scm_from_int (c_max));
-    }
-  // Shouldn't get here
-  return SCM_BOOL_F;
+    scm_syserror ("dynamic-field-info");
+  else if (ret != E_OK)
+    abort ();
+
+  return scm_list_3 (scm_from_int (c_rows),
+		     scm_from_int (c_cols),
+		     scm_from_int (c_max));
 }
 
 // Returns the contents of the field buffer BUFFER.  Only buffer 0 is
@@ -112,15 +87,7 @@ gucu_field_buffer (SCM field, SCM buffer)
   if (buf == NULL) 
     {
       if (errno == E_BAD_ARGUMENT)
-	{
-	  scm_error_scm (SCM_BOOL_F, 
-			 scm_from_locale_string ("field-buffer"),
-			 scm_from_locale_string ("bad argument"),
-			 SCM_BOOL_F,
-			 SCM_BOOL_F);
-	}
-      else
-	abort ();
+	scm_out_of_range ("field-buffer", field);
     }
       
   return (scm_from_locale_string (buf));
@@ -137,36 +104,23 @@ gucu_field_info (SCM field)
   int ret;
 
   c_field = _scm_to_field (field);
-  ret = field_info (c_field, &c_rows, &c_cols, &c_frow, &c_fcol, &c_nrow, &c_nbuf);
+  ret = field_info (c_field, &c_rows, &c_cols, 
+		    &c_frow, &c_fcol, &c_nrow, &c_nbuf);
   
   if (ret == E_BAD_ARGUMENT)
-    {
-      scm_error_scm (SCM_BOOL_F, 
-		     scm_from_locale_string ("field-info"),
-		     scm_from_locale_string ("bad argument"),
-		     SCM_BOOL_F,
-		     SCM_BOOL_F);
-    }
+    scm_out_of_range ("field-info", field);
   else if (ret == E_SYSTEM_ERROR)
-    {
-      scm_error_scm (SCM_BOOL_F,
-		     scm_from_locale_string ("field-info"),
-		     scm_from_locale_string ("system error"),
-		     SCM_BOOL_F,
-		     SCM_BOOL_F);
-    }
-  else
-    {
-      return scm_list_n (scm_from_int (c_rows),
-			 scm_from_int (c_cols),
-			 scm_from_int (c_frow),
-			 scm_from_int (c_fcol),
-			 scm_from_int (c_nrow),
-			 scm_from_int (c_nbuf),
-			 SCM_UNDEFINED);
-    }
-  // Shouldn't get here
-  return SCM_BOOL_F;
+    scm_syserror ("field-info");
+  else if (ret != E_OK)
+    abort ();
+
+  return scm_list_n (scm_from_int (c_rows),
+		     scm_from_int (c_cols),
+		     scm_from_int (c_frow),
+		     scm_from_int (c_fcol),
+		     scm_from_int (c_nrow),
+		     scm_from_int (c_nbuf),
+		     SCM_UNDEFINED);
 
 }
 
@@ -230,21 +184,9 @@ gucu_link_field (SCM field, SCM toprow, SCM leftcol)
   if (c_link == (FIELD *) NULL) 
     {
       if (errno == E_BAD_ARGUMENT)
-	{
-	  scm_error_scm (SCM_BOOL_F, 
-			 scm_from_locale_string ("link-field"),
-			 scm_from_locale_string ("bad argument"),
-			 SCM_BOOL_F,
-			 SCM_BOOL_F);
-	}
+	scm_out_of_range ("link-field", scm_list_2 (toprow, leftcol));
       else if (errno == E_SYSTEM_ERROR)
-	{
-	  scm_error_scm (SCM_BOOL_F,
-			 scm_from_locale_string ("link-field"),
-			 scm_from_locale_string ("system error"),
-			 SCM_BOOL_F,
-			 SCM_BOOL_F);
-	}
+	scm_syserror ("link-field");
       else
 	abort ();
     }
@@ -266,44 +208,18 @@ gucu_scale_form (SCM form)
   ret = scale_form (c_form, &c_rows, &c_cols);
   
   if (ret == E_BAD_ARGUMENT)
-    {
-      scm_error_scm (SCM_BOOL_F, 
-		     scm_from_locale_string ("scale-form"),
-		     scm_from_locale_string ("bad argument"),
-		     SCM_BOOL_F,
-		     SCM_BOOL_F);
-    }
+    scm_out_of_range ("scale-form", form);
   else if (ret == E_SYSTEM_ERROR)
-    {
-      scm_error_scm (SCM_BOOL_F,
-		     scm_from_locale_string ("scale-form"),
-		     scm_from_locale_string ("system error"),
-		     SCM_BOOL_F,
-		     SCM_BOOL_F);
-    }
+    scm_syserror ("scale-form");
   else if (ret == E_POSTED)
-    {
-      scm_error_scm (SCM_BOOL_F,
-		     scm_from_locale_string ("scale-form"),
-		     scm_from_locale_string ("posted"),
-		     SCM_BOOL_F,
-		     SCM_BOOL_F);
-    }
+    form_posted_error ("scale-form");
   else if (ret == E_NOT_CONNECTED)
-    {
-      scm_error_scm (SCM_BOOL_F,
-		     scm_from_locale_string ("scale-form"),
-		     scm_from_locale_string ("not connected"),
-		     SCM_BOOL_F,
-		     SCM_BOOL_F);
-    }
-  else
-    {
-      return scm_list_2 (scm_from_int (c_rows),
-			 scm_from_int (c_cols));
-    }
-  // Shouldn't get here
-  return SCM_BOOL_F;
+    form_not_connected_error ("scale-form");
+  else if (ret != E_OK)
+    abort ();
+
+  return scm_list_2 (scm_from_int (c_rows),
+		     scm_from_int (c_cols));
 }
 
 SCM
@@ -349,13 +265,15 @@ gucu_set_field_type (SCM field, SCM type, SCM a, SCM b, SCM c)
       c_str_list = scm_gc_malloc (sizeof (char *) * (len+1), "set-field-type");
       for (i=0; i<len; i++) 
 	{
-	  c_str_list[i] = scm_to_locale_string (scm_list_ref (a, scm_from_int (i)));
+	  c_str_list[i] = (scm_to_locale_string 
+			   (scm_list_ref (a, scm_from_int (i))));
 	}
       c_str_list[len-1] = (char *) 0;
       c_case_sensitivity = scm_to_int (b);
       c_partial = scm_to_int (c);
       
-      ret = set_field_type (c_field, TYPE_ENUM, c_str_list, c_case_sensitivity, c_partial);
+      ret = set_field_type (c_field, TYPE_ENUM, c_str_list, c_case_sensitivity,
+			    c_partial);
 
       for (i=0; i<len; i++)
 	{
@@ -363,7 +281,8 @@ gucu_set_field_type (SCM field, SCM type, SCM a, SCM b, SCM c)
 	}
       free (c_str_list);
     }
-  else if (scm_is_true (scm_eq_p (type, scm_from_locale_symbol ("TYPE_NUMERIC"))))
+  else if (scm_is_true (scm_eq_p (type, 
+				  scm_from_locale_symbol ("TYPE_NUMERIC"))))
     {
       int c_precision;
       double c_min;

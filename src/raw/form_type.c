@@ -10,10 +10,11 @@
 #include <config.h>
 
 #include "type.h"
+#include "form_func.h"
 #include "form_type.h"
 
-static scm_t_bits form_tag;
-static scm_t_bits field_tag;
+scm_t_bits form_tag;
+scm_t_bits field_tag;
 
 SCM equalp_field (SCM x1, SCM x2);
 size_t gc_free_field (SCM x);
@@ -77,7 +78,15 @@ gucu_new_field (SCM height, SCM width, SCM top, SCM left, SCM offscreen, SCM nbu
 int 
 _scm_is_field (SCM x)
 {
-  return SCM_SMOB_PREDICATE (field_tag, x);
+  if (SCM_SMOB_PREDICATE (field_tag, x))
+    {
+      if (SCM_SMOB_DATA (x) != 0)
+	return 1;
+      else
+	return 0;
+    }
+  else
+    return 0;
 }
 
 FIELD *
@@ -135,11 +144,17 @@ gc_free_field (SCM field)
 {
   SCM_ASSERT (_scm_is_field (field), field, SCM_ARG1, "free-field");
 
-  FIELD *m = _scm_to_field (field);
+  FIELD *f = _scm_to_field (field);
 
-  assert (m != NULL);
-
-  free_field (m);
+  if (f != NULL)
+    {
+      int ret = free_field (f);
+      if (ret != E_OK)
+	{
+	  /* ??? --- what should happen when free fails? */
+	}
+      SCM_SET_SMOB_DATA (field, NULL);
+    }
 
   return 0;
 }
@@ -147,17 +162,20 @@ gc_free_field (SCM field)
 int
 print_field (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
 {
-  FIELD *frm = (FIELD *) SCM_SMOB_DATA (x);
+  FIELD *fld = (FIELD *) SCM_SMOB_DATA (x);
   char *str;
-
-  assert (frm != NULL);
 
   scm_puts ("#<field ", port);
 
-  if (asprintf (&str, "%p", frm) < 0)
-    scm_puts ("???", port);
+  if (fld == 0)
+    scm_puts ("(freed)", port);
   else
-    scm_puts (str, port);
+    {
+      if (asprintf (&str, "%p", fld) < 0)
+	scm_puts ("???", port);
+      else
+	scm_puts (str, port);
+    }
 
   scm_puts (">", port);
   
@@ -176,13 +194,6 @@ gucu_is_field_p (SCM x)
 
 // N.B.: form->field must point to a C array containing the FIELD *
 // contained in the SCM fields.
-
-struct gucu_form {
-  // Pointer to the FORM structure
-  FORM *form;
-  // A scheme list containing FIELD SCMs
-  SCM fields;
-};
 
 int 
 _scm_is_form (SCM x)
@@ -386,6 +397,14 @@ gucu_new_form (SCM fields)
     }
 
   gf->fields = fields;
+  gf->fields_guard = scm_make_guardian();
+  scm_call_1 (gf->fields_guard, fields);
+
+  gf->win = SCM_BOOL_F;
+  gf->win_guard = scm_make_guardian();
+
+  gf->sub = SCM_BOOL_F;
+  gf->sub_guard = scm_make_guardian();
 
   return smob;
 }
@@ -402,16 +421,16 @@ gucu_form_fields (SCM form)
 
   // NOTE: the FIELDS is a list of FIELD smobs that were used to
   // initialize the form.  They are held here so that they are not
-  // GC'd.  I belive, but can't yet prove, that this is the same as
-  // constructing new smobs from the form's internal fields structure.
+  // GC'd.  
 
   return gf->fields;
 }
 
 SCM
-gucu_set_form_fields (SCM form, SCM fields)
+gucu_set_form_fields_x (SCM form, SCM fields)
 {
-  SCM_ASSERT (_scm_is_form (form), form, SCM_ARG1, "set-form-fields");
+  SCM_ASSERT (_scm_is_form (form), form, SCM_ARG1, "set-form-fields!");
+  /* FIXME: This isn't a complete type check */
   SCM_ASSERT (scm_is_true (scm_list_p (fields)), fields, SCM_ARG2, "set-form-fields");
   
   struct gucu_form *gf;
@@ -422,6 +441,14 @@ gucu_set_form_fields (SCM form, SCM fields)
   int ret;
 
   gf = (struct gucu_form *) SCM_SMOB_DATA (form);
+
+  /* Release the current fields, if any */
+  if (gf->fields)
+    {
+      while (scm_is_true (scm_call_0 (gf->fields_guard)))
+	;
+      gf->fields = NULL;
+    }
 
   len = scm_to_size_t (scm_length (fields));
   c_fields = scm_gc_malloc (sizeof (FIELD *) * (len + 1), "set-form-fields");
@@ -434,10 +461,19 @@ gucu_set_form_fields (SCM form, SCM fields)
   c_fields[len] = (FIELD *) NULL;
 
   ret = set_form_fields (gf->form, c_fields);
+  if (ret == E_BAD_ARGUMENT)
+    scm_out_of_range ("set-form-fields!", fields);
+  else if (ret == E_CONNECTED)
+    form_connected_error ("set-form-fields!");
+  else if (ret == E_POSTED)
+    form_posted_error ("set-form-fields!");
+  else if (ret == E_SYSTEM_ERROR)
+    scm_syserror ("set-form-fields!");
   
   gf->fields = fields;
-
-  return scm_from_int (ret);
+  scm_call_1 (gf->fields_guard, fields);
+  
+  return SCM_UNSPECIFIED;
 }
 
 
@@ -461,5 +497,5 @@ gucu_form_init_type ()
   scm_c_define_gsubr ("new-field", 6, 0, 0, gucu_new_field);
   scm_c_define_gsubr ("new-form", 1, 0, 0, gucu_new_form);
   scm_c_define_gsubr ("form-fields", 1, 0, 0, gucu_form_fields);
-  scm_c_define_gsubr ("set-form-fields", 2, 0, 0, gucu_set_form_fields);
+  scm_c_define_gsubr ("set-form-fields!", 2, 0, 0, gucu_set_form_fields_x);
 }

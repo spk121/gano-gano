@@ -17,8 +17,8 @@
 		field-status?
 		form-driver
 		form-opts
-		form-opts-on
-		form-opts-off
+		form-opts-on!
+		form-opts-off!
 		form-page
 		form-request-by-name
 		form-request-name
@@ -27,23 +27,23 @@
 		free-field
 		free-form
 		move-field
-		new-page
+		new-page?
 		pos-form-cursor
 		post-form
-		set-current-field
-		set-field-back
-		set-field-buffer
-		set-field-fore
-		set-field-just
-		set-field-opts
-		set-field-pad
-		set-field-status
-		set-form-opts
-		set-form-page
-		set-form-sub
-		set-form-win
-		set-max-field
-		set-new-page
+		set-current-field!
+		set-field-back!
+		set-field-buffer!
+		set-field-fore!
+		set-field-just!
+		set-field-opts!
+		set-field-pad!
+		set-field-status!
+		set-form-opts!
+		set-form-page!
+		set-form-sub!
+		set-form-win!
+		set-max-field!
+		set-new-page!
 		unpost-form
 		NO_JUSTIFICATION
 		JUSTIFY_LEFT
@@ -129,7 +129,7 @@
 		link-field
 		scale-form
 		set-field-type
-		set-form-fields
+		set-form-fields!
 		new-field
 		new-form
 		form?

@@ -21,7 +21,7 @@
 		 (field2 (new-field 1 10 1 0 0 0))
 		 (form1 (new-form (list field1 field2))))
 	    (post-form form1)
-	    (set-current-field form1 field2)
+	    (set-current-field! form1 field2)
 	    (addstr stdscr (format #f "~a" (field-index field2)) #:x 0 #:y 5)
 	    (refresh stdscr)
 	    (eq? (field-index field2) 1)))
@@ -31,15 +31,15 @@
 	  (let* ((field1 (new-field 1 10 0 0 0 0))
 		 (field2 (new-field 1 10 1 0 0 0)))
 	    ;; Put the second field on the second page
-	    (set-new-page field2 #t)
-	    (set-field-buffer field1 0 "Page 1")
-	    (set-field-buffer field2 0 "Page 2")
+	    (set-new-page! field2 #t)
+	    (set-field-buffer! field1 0 "Page 1")
+	    (set-field-buffer! field2 0 "Page 2")
 	    (let* ((form1 (new-form (list field1 field2)))
 		   (test1 #f)
 		   (test2 #f))
 	      
 	      ;; Post the first page
-	      (set-form-page form1 0)
+	      (set-form-page! form1 0)
 	      (post-form form1)
 	      ;; Paint it
 	      (refresh stdscr)	
@@ -48,8 +48,7 @@
 	      ;;(sleep 1)
 	      
 	      ;; Post the second page
-	      (set-form-page form1 1)
-	      (post-form form1)
+	      (set-form-page! form1 1)
 	      ;; Paint it
 	      (refresh stdscr)
 	      ;; Get the page number

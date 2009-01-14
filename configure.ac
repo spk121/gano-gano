@@ -3,7 +3,7 @@
 ##################
 # Package info
 AC_PREREQ(2.61)
-AC_INIT([gucu],[0.2],[spk121@yahoo.com])
+AC_INIT([gucu],[0.3],[spk121@yahoo.com])
 AC_CONFIG_AUX_DIR([build_aux])
 AM_INIT_AUTOMAKE([gnu std-options -Wall])
 AC_CONFIG_SRCDIR([config.h.in])
@@ -111,11 +111,13 @@ AS_IF(
 		    # if ncurses is not ok
                     [AC_MSG_ERROR([ncurses not found])])])
 
-# When WIDE is defined, sub-makefiles should try to build the wide curses library
+# When WIDE is defined, sub-makefiles should try to build the wide
+# curses library
 AM_CONDITIONAL([WIDE], [test "$with_ncursesw" = yes])
 
-# The menu, panel, and form libraries should either use the wide or the narrow
-# forms to match the version of the ncurses library being used.
+# The menu, panel, and form libraries should either use the wide or
+# the narrow forms to match the version of the ncurses library being
+# used.
 LIBMENU=
 AS_IF(
       # if
@@ -189,8 +191,8 @@ AS_IF(
 
 
 #
-# In Cygwin NCurses v5.5.20061104, there is a bug in the acs_map
-# table declaration in <curses.h>.  This enables a workaround
+# In Cygwin NCurses v5.5.20061104, there is a bug in the acs_map table
+# declaration in <curses.h>.  This enables a workaround.
 #
 AC_ARG_ENABLE([acs-map-fix],
               [AS_HELP_STRING([--enable-acs-map-fix],
