@@ -28,7 +28,8 @@
 ;; Leave curses
 (with-test-prefix "endwin"
 		  (pass-if "1"
-			   (equal? #t (endwin))))
+			   (begin (endwin)
+				  #t)))
 
 (with-test-prefix "isendwin"
 		  (pass-if "after endwin"
@@ -44,6 +45,7 @@
 ;; Leave curses again
 (with-test-prefix "endwin"
 		  (pass-if "2"
-			   (equal? #t (endwin))))
+			   (begin (endwin)
+				  #t)))
 
 (curses-test-end test "r000_initscr.out")

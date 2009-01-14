@@ -8,9 +8,9 @@
 	    addchstr
 	    addstr
 	    attr-get
-	    attr-off
-	    attr-on
-	    attr-set
+	    attr-off!
+	    attr-on!
+	    attr-set!
 	    baudrate
 	    beep
 	    bkgd
@@ -77,6 +77,7 @@
 	    is-linetouched?
 	    is-wintouched?
 	    key-f
+	    key-defined
 	    keyname
 	    keypad
 	    killchar
@@ -93,7 +94,7 @@
 	    newwin
 	    nl
 	    nocbreak
-	    nodelay
+	    nodelay!
 	    noecho
 	    nonl
 	    nooutrefresh
@@ -308,7 +309,6 @@
 	    BUTTON_ALT
 	    ALL_MOUSE_EVENTS
 	    REPORT_MOUSE_POSITION
-	    attr-set
 	    color-content
 	    delwin
 	    getmouse
@@ -412,14 +412,10 @@
 			  WA_VERTICAL))
      color)))
 
-(define (attr-off win attr)
-  (%wattr-off win attr))
-	
-(define (attr-on win attr)
-  (%wattr-on win attr))
-
-(define* (attr-set win attr #:key (color 0))
-  (%wattr-set win attr color))
+(define* (attr-set! win attr #:optional color)
+  (if color
+      (%attr-set! win attr color)
+      (%attr-set! win attr (pair-number attr))))
 
 (define (bkgd win ch)
   (%wbkgd win ch))
@@ -541,11 +537,6 @@
        #t))
   (%winsnstr win str n))
 
-;; The window information isn't used in the lower level function, so
-;; it is dropped here
-(define (intrflush flag)
-  (%intrflush (stdscr) flag))
-
 (define (keypad win bf)
   (%keypad win bf))
 
@@ -556,9 +547,6 @@
 
 (define (move win y x)
   (%wmove win y x))
-
-(define (nodelay win flag)
-  (%nodelay win flag))
 
 ;; I hate it when people are 'clever' with dropping letters
 (define (nooutrefresh win)

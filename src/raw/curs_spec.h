@@ -10,6 +10,7 @@
 #define API
 #endif
 
+SCM gucu_attr_set_x (SCM win, SCM attrs, SCM pair) API;
 SCM gucu_color_content (SCM s_color) API;
 SCM gucu_delwin (SCM win) API;
 SCM gucu_getmouse (void) API;
@@ -19,7 +20,6 @@ SCM gucu_mvinnwstr (SCM y, SCM x, SCM n) API;
 SCM gucu_pair_content (SCM s_color) API;
 SCM gucu_ungetmouse (SCM event) API;
 SCM gucu_wattr_get (SCM win) API;
-SCM gucu_wattr_set (SCM win, SCM attrs, SCM pair) API;
 SCM gucu_wgetnstr (SCM win, SCM n) API;
 SCM gucu_winchnstr (SCM win, SCM n) API;
 SCM gucu_winnstr (SCM win, SCM n) API;

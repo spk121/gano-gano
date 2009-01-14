@@ -15,6 +15,11 @@
 
 (with-test-prefix "util"
 		  
+		  (pass-if "delay-output"
+			   (begin
+			     (delay-output 1)
+			     #t))
+
 		  (pass-if "curses-version"
 			   (string? (curses-version)))
 

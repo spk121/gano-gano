@@ -11,6 +11,31 @@
   #define acs_map (_nc_acs_map())
 #endif 
 
+/* Set the attributes and color pair for a given window */
+SCM
+gucu_attr_set_x (SCM win, SCM attrs, SCM pair)
+{
+  WINDOW *c_win;
+  attr_t c_attrs;
+  short c_pair;
+  int ret;
+
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "attr-set!");
+  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG2, "attr-set!");
+  SCM_ASSERT (scm_is_integer (pair), pair, SCM_ARG3, "attr-set!");
+  
+  c_win = _scm_to_window (win);
+  c_attrs = _scm_to_attr (attrs);
+  c_pair = scm_to_short (pair);
+
+  /* wattr_set always returns OK */
+  ret = wattr_set (c_win, c_attrs, c_pair, NULL);
+  if (ret != OK)
+    abort();
+
+  return SCM_UNSPECIFIED;
+}
+
 /* Return a list of three elements containing the RGB of COLOR */
 SCM
 gucu_color_content (SCM s_color)
@@ -157,31 +182,6 @@ gucu_wattr_get (SCM win)
     abort ();
 
   return s_list;
-}
-
-/* Set the attributes and color pair for a given window */
-SCM
-gucu_wattr_set (SCM win, SCM attrs, SCM pair)
-{
-  WINDOW *c_win;
-  attr_t c_attrs;
-  short c_pair;
-  int ret;
-
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wattr-set");
-  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG2, "%wattr-set");
-  SCM_ASSERT (scm_is_integer (pair), pair, SCM_ARG3, "%wattr-set");
-  
-  c_win = _scm_to_window (win);
-  c_attrs = _scm_to_attr (attrs);
-  c_pair = scm_to_short (pair);
-
-  /* wattr_set always returns OK */
-  ret = wattr_set (c_win, c_attrs, c_pair, NULL);
-  if (ret != OK)
-    abort();
-
-  return SCM_UNSPECIFIED;
 }
 
 /* Accept character strings from the curses terminal keyboard */
@@ -726,6 +726,7 @@ gucu_curscr ()
 void
 gucu_init_special ()
 {
+  scm_c_define_gsubr ("%attr-set!", 3, 0, 0, gucu_attr_set_x);
   scm_c_define_gsubr ("color-content", 1, 0, 0, gucu_color_content);
   scm_c_define_gsubr ("delwin", 1, 0, 0, gucu_delwin);
   scm_c_define_gsubr ("getmouse", 0, 0, 0, gucu_getmouse);
@@ -733,7 +734,6 @@ gucu_init_special ()
   scm_c_define_gsubr ("pair-content", 1, 0, 0, gucu_pair_content);
   scm_c_define_gsubr ("ungetmouse", 1, 0, 0, gucu_ungetmouse);
   scm_c_define_gsubr ("%wattr-get", 1, 0, 0, gucu_wattr_get);
-  scm_c_define_gsubr ("%wattr-set", 3, 0, 0, gucu_wattr_set);
   scm_c_define_gsubr ("%wgetnstr", 2, 0, 0, gucu_wgetnstr);
   scm_c_define_gsubr ("%winchnstr", 2, 0, 0, gucu_winchnstr);
   scm_c_define_gsubr ("%winnstr", 2, 0, 0, gucu_winnstr);

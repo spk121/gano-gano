@@ -10,6 +10,11 @@
   else \
     return SCM_BOOL_T
 
+static void curs_bad_state_error (const char *funcname)
+{
+  scm_misc_error (funcname, "Bad curses internal state", SCM_BOOL_F);
+}
+
 /* Assign the colors to color pair zero */
 SCM
 gucu_assume_default_colors (SCM fg, SCM bg)
@@ -24,6 +29,49 @@ gucu_assume_default_colors (SCM fg, SCM bg)
 
   ret = assume_default_colors (c_fg, c_bg);
   RETURNTF(ret);
+}
+
+/* Turn attributes off on a given window */
+SCM
+gucu_attr_off_x (SCM win, SCM attrs)
+{
+  WINDOW *c_win;
+  attr_t c_attrs;
+  int ret;
+  
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "attr-off!");
+  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG2, "attr-off!");
+
+  c_win = _scm_to_window (win);
+  c_attrs = _scm_to_attr (attrs);
+
+  ret = wattr_off (c_win, c_attrs, (void *)0);
+  if (ret == ERR)
+    curs_bad_state_error ("attr-off!");
+  
+
+  return SCM_UNSPECIFIED;
+}
+
+/* Turn on window attributes */
+SCM
+gucu_attr_on_x (SCM win, SCM attrs)
+{
+  WINDOW *c_win;
+  attr_t c_attrs;
+  int ret;
+
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "attr-on!");
+  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG2, "attr-on!");
+
+  c_win = _scm_to_window (win);
+  c_attrs = _scm_to_attr (attrs);
+
+  ret = wattr_on (c_win, c_attrs, (void *)0);
+  if (ret == ERR)
+    curs_bad_state_error ("attr-on!");
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Return the output speed of the terminal as an integer */
@@ -57,7 +105,11 @@ gucu_can_change_color_p ()
 SCM
 gucu_cbreak ()
 {
-  RETURNTF(cbreak ());
+  int ret = cbreak ();
+  if (ret == ERR)
+    curs_bad_state_error ("cbreak");
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Enable or disable if the next call to wrefresh will completely
@@ -198,7 +250,10 @@ gucu_define_key (SCM defn, SCM keycode)
       ret = define_key (c_defn, c_keycode);
     }
 
-  RETURNTF(ret);
+  if (ret == ERR)
+    curs_bad_state_error ("define-key");
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Inserts a pause in between outputs, possibly with padding
@@ -206,14 +261,17 @@ gucu_define_key (SCM defn, SCM keycode)
 SCM
 gucu_delay_output (SCM ms)
 {
-  int c_ms, ret;
+  int c_ms;
   
   SCM_ASSERT (scm_is_integer (ms), ms, SCM_ARG1, "delay-output");
 
   c_ms = scm_to_int (ms);
+  if (c_ms < 0)
+    scm_out_of_range ("delay-output", ms);
 
-  ret = delay_output (c_ms);
-  RETURNTF(ret);
+  delay_output (c_ms);
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Free a screen created by newterm.  Should be called after endwin */
@@ -288,15 +346,23 @@ gucu_dupwin (SCM win)
 SCM
 gucu_echo ()
 {
-  RETURNTF(echo ());
+  echo ();
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Exit curses mode for this screen */
 SCM
 gucu_endwin ()
 {
-  RETURNTF(endwin ());
+  int ret = endwin ();
+
+  if (ret == ERR)
+    curs_bad_state_error  ("endwin");
+
+  return SCM_UNSPECIFIED;
 }
+
 
 /* Return the current character used to erase */
 SCM
@@ -520,20 +586,21 @@ gucu_init_pair (SCM pair, SCM fore, SCM back)
 }
 
 SCM
-gucu_intrflush (SCM win, SCM bf)
+gucu_intrflush (SCM bf)
 {
-  WINDOW *c_win;
   bool c_bf;
   int ret;
 
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%intrflush");
-  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "%intrflush");
+  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "intrflush");
 
-  c_win = _scm_to_window (win);
   c_bf = scm_to_bool (bf);
 
-  ret = intrflush (c_win, c_bf);
-  RETURNTF(ret);
+  ret = intrflush (stdscr, c_bf);
+
+  if (ret == ERR)
+    curs_bad_state_error  ("intrflush");
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Return true if we are not in curses mode (endwin has been called) */
@@ -597,6 +664,21 @@ gucu_KEY_F (SCM n)
   ret = KEY_F (c_n);
 
   return scm_from_int (ret);
+}
+
+/* Returns the keycode bound to STR, or #f on failure */
+SCM
+gucu_key_defined (SCM str)
+{
+  SCM_ASSERT (scm_is_string (str), str, SCM_ARG1, "key-defined");
+  
+  char *c_str = scm_to_locale_string (str);
+  int key = key_defined (c_str);
+  free (c_str);
+  if (key == 0)
+    return SCM_BOOL_F;
+  
+  return scm_from_int (key);
 }
 
 /* Returns a character string corresponding to the short key name */
@@ -823,47 +905,61 @@ gucu_newwin (SCM nlines, SCM ncols, SCM begin_y, SCM begin_x)
 SCM
 gucu_nl ()
 {
-  RETURNTF(nl ());
+  nl ();
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Enable line buffering and erase/kill character processing */
 SCM
 gucu_nocbreak ()
 {
-  RETURNTF(nocbreak ());
+  int ret = nocbreak ();
+
+  if (ret == ERR)
+    curs_bad_state_error ("nocbreak");
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Causes getch() to be non-blocking, so that it returns #f if no
    character is ready */
 SCM
-gucu_nodelay (SCM win, SCM bf)
+gucu_nodelay_x (SCM win, SCM bf)
 {
   WINDOW *c_win;
   bool c_bf;
   int ret;
 
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%nodelay");
-  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "%nodelay");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "nodelay!");
+  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "nodelay!");
 
   c_win = _scm_to_window (win);
   c_bf = scm_to_bool (bf);
 
   ret = nodelay (c_win, c_bf);
-  RETURNTF(ret);
+  if (ret == ERR)
+    curs_bad_state_error ("nodelay!");
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Disable echoing of user-type characters */
 SCM
 gucu_noecho ()
 {
-  RETURNTF(noecho ());
+  noecho ();
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Do not translate the return key to newline on input */
 SCM
 gucu_nonl ()
 {
-  RETURNTF(nonl ());
+  nonl ();
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Do no flush i/o queues on interrupts */
@@ -1429,52 +1525,6 @@ gucu_waddnstr (SCM win, SCM str, SCM n)
   free (c_str);
   
   RETURNTF(ret);
-}
-
-/* Turn attributes off on a given window */
-SCM
-gucu_wattr_off (SCM win, SCM attrs)
-{
-  WINDOW *c_win;
-  attr_t c_attrs;
-  int ret;
-  
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "wattr-off");
-  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG2, "wattr-off");
-
-  c_win = _scm_to_window (win);
-  c_attrs = _scm_to_attr (attrs);
-
-  ret = wattr_off (c_win, c_attrs, (void *)0);
-  if (ret == ERR)
-    {
-      scm_misc_error ("%wattr-off", "Bad window: ~S", win);
-    }
-
-  return SCM_UNSPECIFIED;
-}
-
-/* Turn on window attributes */
-SCM
-gucu_wattr_on (SCM win, SCM attrs)
-{
-  WINDOW *c_win;
-  attr_t c_attrs;
-  int ret;
-
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%wattr-on");
-  SCM_ASSERT (_scm_is_attr (attrs), attrs, SCM_ARG2, "%wattr-on");
-
-  c_win = _scm_to_window (win);
-  c_attrs = _scm_to_attr (attrs);
-
-  ret = wattr_on (c_win, c_attrs, (void *)0);
-  if (ret == ERR)
-    {
-      scm_misc_error ("%wattr-on", "Bad window: ~S", win);
-    }
-
-  return SCM_UNSPECIFIED;
 }
 
 /* Set the background property and apply it to every possible location */
@@ -2075,6 +2125,8 @@ gucu_init_function ()
 {
   scm_c_define_gsubr ("assume-default-colors", 2, 0, 0, 
 		      gucu_assume_default_colors);
+  scm_c_define_gsubr ("attr-off!", 2, 0, 0, gucu_attr_off_x);
+  scm_c_define_gsubr ("attr-on!", 2, 0, 0, gucu_attr_on_x);
   scm_c_define_gsubr ("baudrate", 0, 0, 0, gucu_baudrate);
   scm_c_define_gsubr ("beep", 0, 0, 0, gucu_beep);
   scm_c_define_gsubr ("can-change-color?", 0, 0, 0, 
@@ -2111,11 +2163,12 @@ gucu_init_function ()
   scm_c_define_gsubr ("initscr", 0, 0, 0, gucu_initscr);
   scm_c_define_gsubr ("init-color", 4, 0, 0, gucu_init_color);
   scm_c_define_gsubr ("init-pair", 3, 0, 0, gucu_init_pair);
-  scm_c_define_gsubr ("%intrflush", 2, 0, 0, gucu_intrflush);
+  scm_c_define_gsubr ("intrflush", 2, 0, 0, gucu_intrflush);
   scm_c_define_gsubr ("isendwin", 0, 0, 0, gucu_isendwin);
   scm_c_define_gsubr ("is-linetouched?", 2, 0, 0, gucu_is_linetouched_p);
   scm_c_define_gsubr ("is-wintouched?", 1, 0, 0, gucu_is_wintouched_p);
   scm_c_define_gsubr ("key-f", 1, 0, 0, gucu_KEY_F);
+  scm_c_define_gsubr ("key-defined", 1, 0, 0, gucu_key_defined);
   scm_c_define_gsubr ("keyname", 1, 0, 0, gucu_keyname);
   scm_c_define_gsubr ("%keypad", 2, 0, 0, gucu_keypad);
   scm_c_define_gsubr ("killchar", 0, 0, 0, gucu_killchar);
@@ -2131,7 +2184,7 @@ gucu_init_function ()
   scm_c_define_gsubr ("newwin", 4, 0, 0, gucu_newwin);
   scm_c_define_gsubr ("nl", 0, 0, 0, gucu_nl);
   scm_c_define_gsubr ("nocbreak", 0, 0, 0, gucu_nocbreak);
-  scm_c_define_gsubr ("%nodelay", 2, 0, 0, gucu_nodelay);
+  scm_c_define_gsubr ("nodelay!", 2, 0, 0, gucu_nodelay_x);
   scm_c_define_gsubr ("noecho", 0, 0, 0, gucu_noecho);
   scm_c_define_gsubr ("nonl", 0, 0, 0, gucu_nonl);
   scm_c_define_gsubr ("noqiflush", 0, 0, 0, gucu_noqiflush);
@@ -2173,8 +2226,6 @@ gucu_init_function ()
   scm_c_define_gsubr ("%waddch", 2, 0, 0, gucu_waddch);
   scm_c_define_gsubr ("%waddchnstr", 3, 0, 0, gucu_waddchnstr);
   scm_c_define_gsubr ("%waddnstr", 3, 0, 0, gucu_waddnstr);
-  scm_c_define_gsubr ("%wattr-off", 2, 0, 0, gucu_wattr_off);
-  scm_c_define_gsubr ("%wattr-on", 2, 0, 0, gucu_wattr_on);
   scm_c_define_gsubr ("%wbkgd", 2, 0, 0, gucu_wbkgd);
   scm_c_define_gsubr ("%wbkgdset", 2, 0, 0, gucu_wbkgdset);
   scm_c_define_gsubr ("%wborder", 9, 0, 0, gucu_wborder);

@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.31 2009/01/14 07:05:17 spike_gran Exp $
+@c $Id: gucu.texi,v 1.32 2009/01/14 17:13:12 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -155,7 +155,7 @@ Input functions
 Attributes
 
 * The details::                 
-* @code{attr-on} vs @code{attr-set}::  
+* @code{attr-on!} vs @code{attr-set!}::  
 * @code{attr-get}::             
 * @code{chgat} functions::      
 
@@ -1138,7 +1138,7 @@ a single character with the desired attribute.
 @end example
 
 @item
-By using functions like @code{attr-set}, @code{attr-on}, @code{attr-off},
+By using functions like @code{attr-set!}, @code{attr-on!}, @code{attr-off!},
 you can manipulate the current attributes of the given window.  Once
 set, the characters printed in the window are associated with the
 attributes until it is turned off.
@@ -1313,8 +1313,8 @@ understandable manner.
 
 The following program takes a scheme file as input and prints the file
 with comments in bold.  It does so by turning on the @code{A_BOLD}
-attribute using @code{attr-on} when a semicolon is detected, and then
-turning of the @code{A_BOLD} attribute using @code{attr-off} when a
+attribute using @code{attr-on!} when a semicolon is detected, and then
+turning of the @code{A_BOLD} attribute using @code{attr-off!} when a
 newline is detected.  Have a look.
 
 @example
@@ -1331,20 +1331,20 @@ file, parses it, and prints it in different colors.
 
 @menu
 * The details::                 
-* @code{attr-on} vs @code{attr-set}::  
+* @code{attr-on!} vs @code{attr-set!}::  
 * @code{attr-get}::             
 * @code{chgat} functions::      
 @end menu
 
-@node The details, @code{attr-on} vs @code{attr-set}, Attributes, Attributes
+@node The details, @code{attr-on!} vs @code{attr-set!}, Attributes, Attributes
 @subsection The details
 
 Let's get into more details of attributes.  The functions
-@code{attr-on}, @code{attr-off}, @code{attr-set}, and their sister
+@code{attr-on!}, @code{attr-off!}, @code{attr-set!}, and their sister
 functions @code{attr-get} etc., can be used to switch attributes on
 and off, get attributes, and produce a colorful display.
 
-The functions @code{attr-on} and @code{attr-off} take a bit-mask of
+The functions @code{attr-on!} and @code{attr-off!} take a bit-mask of
 attributes and switch them on or off respectively.  The following
 video attributes can be passed to these functions.
 
@@ -1381,27 +1381,27 @@ We can @code{logior} any number of attributes to get a combined
 effect.  If you wanted the character in window @code{win} to have
 reverse video with blinking characters, you can use
 @example
-(attr-on win (logior A_REVERSE A_BLINK))
+(attr-on! win (logior A_REVERSE A_BLINK))
 @end example
 
-@node @code{attr-on} vs @code{attr-set}, @code{attr-get}, The details, Attributes
-@subsection @code{attr-on} vs @code{attr-set}
+@node @code{attr-on!} vs @code{attr-set!}, @code{attr-get}, The details, Attributes
+@subsection @code{attr-on!} vs @code{attr-set!}
 
-Then what is the difference between @code{attr-on} and
-@code{attr-set}?  @code{attr-set} sets the attributes of a window
-whereas @code{attr-on} just switches on the attribute given to it.  So
-@code{attr-set} fully overrides whatever attributes the window
+Then what is the difference between @code{attr-on!} and
+@code{attr-set!}?  @code{attr-set!} sets the attributes of a window
+whereas @code{attr-on!} just switches on the attribute given to it.  So
+@code{attr-set!} fully overrides whatever attributes the window
 previously had and sets it to the new attribute(s).  Similarly,
-@code{attr-off} just switches off the attributes(s) given to it as an
+@code{attr-off!} just switches off the attributes(s) given to it as an
 argument.  This gives us the flexibility of managing attributes
 easily.  But, if you use them carelessly, you may lose track of what
 attributes the window has and garble the display.  This is especially
 true while managing menus with colors and highlighting.  So decide on
 a consistent policy and stick to it.  You can always use
-@code{standend} which is equivalent to @code{(attr-set win A_NORMAL)}
+@code{standend} which is equivalent to @code{(attr-set! win A_NORMAL)}
 which turns off all attributes and brings you back to normal mode.
 
-@node @code{attr-get}, @code{chgat} functions, @code{attr-on} vs @code{attr-set}, Attributes
+@node @code{attr-get}, @code{chgat} functions, @code{attr-on!} vs @code{attr-set!}, Attributes
 @subsection @code{attr-get}
 
 The function @code{attr-get} gets the current attributes and color
@@ -1409,7 +1409,7 @@ pair of the window.  Though we might not use this as often as the
 above runctions, this is useful in scanning areas of a screen.  Say we
 wanted to do some complex update on the screen and we are not sure
 what attribute each character is associated with.  Then this function
-can be used with either @code{attr-set} or @code{attr-on} to produce the
+can be used with either @code{attr-set!} or @code{attr-on!} to produce the
 desired effect.
 
 @node @code{chgat} functions,  , @code{attr-get}, Attributes
@@ -2840,12 +2840,12 @@ similar example.
 (define (print-in-middle win starty startx width str color)
   (let ((length (string-length str)))
 
-    (attr-on color #:win win)
-    (addstr str #:win win 
+    (attr-on! win color)
+    (addstr win str 
 	    #:y starty 
 	    #:x (+ startx (/ (- width length) 2)))
 
-    (attr-off color #:win win)
+    (attr-off! win color)
     (refresh)))
     
 
@@ -3225,7 +3225,7 @@ Most programs would additionally use the sequence:
 @example
 (begin
   (nonl)
-  (intrflush (stdscr) #f)
+  (intrflush #f)
   (keypad (stdscr) #t))
 @end example
 
@@ -3415,6 +3415,9 @@ for which @code{endwin} is called.
 @findex refresh
 
 @deffn Procedure endwin
+@cindex Curses mode, exiting
+@cindex Exiting curses mode
+
 A program should always call @code{endwin} before exiting or escaping
 from curses mode temporarily.  This routine restores tty modes, moves
 the cursor to the lower left-hand corner of the screen and resets the
@@ -3422,10 +3425,10 @@ terminal into the proper non-visual mode.  Calling @code{refresh} or
 @code{doupdate} after a temporary escape causes the program to resume
 visual mode.
 
-@findex endwin
+This function could throw a ``bad state'' error if the underlying data
+structures are invalid, which shouldn't happen.  The return value
+is unspecified.
 
-@code{endwin} returns the integer @code{ERR} if the current terminal
-has not yet been initialized and @code{OK} upon successful completion.
 @end deffn
 
 @deffn Procedure isendwin
@@ -3708,24 +3711,35 @@ operations.  To the extent possible, they are displayed as appropriate
 modifications to the graphic rendition of characters put on the 
 screen.
 
-@deffn Procedure attr-set attrs #:key win
-@deffnx Procedure attr-on attrs #:key win
-@deffnx Procedure attr-off attrs #:key win
+@deffn Procedure attr-set! win attrs #:optional color
+@deffnx Procedure attr-on! attrs #:key win
+@deffnx Procedure attr-off! attrs #:key win
 @deffnx Procedure standend #:key win
 @deffnx Procedure standout #:key win
 
-The routine @code{attr-set} sets the current attributes of the given
-window to @var{attrs}.  The routine @code{attr-off} turns off the named
+The routine @code{attr-set!} sets the current rendition (attributes
+and color pair) of the given window to @var{attrs}.  Optionally, you
+may split the color-pair information as a third parameter.
+
+@example
+(attr-set! win (logior A_BOLD (color-pair 1)))
+@end example
+or
+@example
+(attr-set! win A_BOLD (color-pair 1))
+@end example
+
+The routine @code{attr-off!} turns off the named
 attributes without turning any other attributes on or off.  The
-routine @code{attr-on} turns on the named attributes without affecting
-any others.  The routine @code{standout} is the same as @code{(attr-on
+routine @code{attr-on!} turns on the named attributes without affecting
+any others.  The routine @code{standout} is the same as @code{(attr-on!
 A_STANDOUT)}.  The routine @code{standend} is the same as
-@code{(attr-set A_NORMAL)} or @code{(attr-set 0)}, that is, it turns off
+@code{(attr-set! A_NORMAL)} or @code{(attr-set! 0)}, that is, it turns off
 all attributes.
 
 @end deffn
 
-The @code{attr-set} and related routines do not affect the attributes
+The @code{attr-set!} and related routines do not affect the attributes
 used when erasing portions of the window. For functions which modify
 the attributes used for erasing and clearing @xref{Window background
 manipulation routines}.
@@ -3767,7 +3781,7 @@ function does a cursor move before acting.  In these functions, the
 @end deffn
 
 The attributes can be passed to the routines
-@code{attr-on}, @code{attr-off}, and @code{attr-set}, or @code{logior}'d
+@code{attr-on!}, @code{attr-off!}, and @code{attr-set!}, or @code{logior}'d
 with the characters passed to @code{addch}.  For the color part of the
 rendition, use @code{color-pair}.  @xref{tab:a}.
 
@@ -4348,8 +4362,12 @@ This procedure returns the keycode for function key @var{n}.
 @deffn Procedure define-key defn keycode
 @cindex Keycodes, customizing
 This procedure defines a new, custom @var{keycode}.  When the string
-in @code{defn} is encountered, the keycode will be returned instead.
+in @code{defn} is input, the keycode will be returned instead.
 
+If @var{keycode} is an existing keycode, its @var{defn} replaces its
+previous definition.
+
+Returns @code{#f} on catastrophically bad internal state.
 @end deffn
 
 
@@ -4601,6 +4619,7 @@ margin of the window or until @var{n} characters have been found.
 
 @deffn Procedure cbreak
 @deffnx Procedure nocbreak
+@cindex Line buffering
 
 Normally, the tty driver buffers typed characters until a @key{NL} or
 @key{RET} is typed.  The @code{cbreak} routine disables line buffering
@@ -4610,6 +4629,9 @@ immediately available to the program.
 
 The @code{nocbreak} routine returns the terminal to normal (cooked)
 mode.
+
+The return value is unspecified.  The routines will throw a ``bad
+state'' error if the underlying screen data is invalid.
 
 @findex raw
 @findex getch
@@ -4624,6 +4646,7 @@ set the @code{cbreak} mode.  Note that @code{cbreak} overrides
 
 @deffn Procedure echo
 @deffnx Procedure noecho
+@cindex Echoing
 
 The @code{echo} and @code{noecho} routines control whether characters
 typed by the user are echoed by getch as they are typed.  Echoing by
@@ -4635,9 +4658,7 @@ calling noecho.  See @ref{Getting characters from the keyboard} for a
 discussion of how these routines interact with @code{echo} and
 @code{noecho}.
 
-Normally, these routines should always return @code{#t}.  They could
-return @code{#f} if vital screen information has already been garbage
-collected.
+The return values are unspecified.
 
 @end deffn
 
@@ -4656,15 +4677,20 @@ half-delay mode.
 
 @end deffn
 
-@deffn Procedure intrflush win bf
+@deffn Procedure intrflush bf
 
-If the intrflush option is enabled, (@var{bf} is @code{#t}, when an interrupt
-key is pressed on the keyboard (interrupt, break, quit) all output in
-the tty driver queue will be flushed, giving the effect of faster
-response to the interrupt, but causing curses to have the wrong idea
-of what is on the screen.  Disabling (@var{bf} is @code{#f}), the option
-prevents the flush.  The default for the option is inherited from the
-tty driver settings.  The window @var{win} argument is ignored.
+If the intrflush option is enabled, (@var{bf} is @code{#t}, when an
+interrupt key is pressed on the keyboard (interrupt, break, quit) all
+output in the tty driver queue will be flushed, giving the effect of
+faster response to the interrupt, but causing curses to have the wrong
+idea of what is on the screen.  Disabling (@var{bf} is @code{#f}), the
+option prevents the flush.  The default for the option is inherited
+from the tty driver settings.  
+
+This function could throw a ``bad state'' error if the underlying data
+structures become corrupt, which shouldn't happen.  The return value
+is unspecified.
+
 @end deffn
 
 
@@ -4701,7 +4727,7 @@ terminal when @code{(meta win #t)} is called and @code{rmm} is sent
 when @code{(meta win #f)} is called.
 @end deffn
 
-@deffn Procedure nodelay win bf
+@deffn Procedure nodelay! win bf
 @findex getch
 The @code{nodelay} option causes @code{getch} to be a non-blocking
 call.  If no input is ready, getch returns @code{ERR}.  If disabled
@@ -5192,6 +5218,8 @@ Returns @code{OK}.
 
 @deffn Procedure nl
 @deffnx Procedure nonl
+@cindex Carriage return
+@cindex Line feed
 
 The @code{nl} and @code{nonl} routines control whether the underlying
 display device translates @key{RET} (return) into @key{NL} (newline)
@@ -5202,6 +5230,8 @@ the virtual screen).  Initially, these translations do occur.  If you
 disable them using @code{nonl}, curses will be able to make better use
 of the line-feed capability, resulting in faster cursor motion.  Also,
 curses will then be able to detect the return key.
+
+The return values are unspecified;
 
 @end deffn
 
@@ -5583,8 +5613,8 @@ This routine forces all the soft labels to be output next time
 @deffnx Procedure slk-attr
 
 The @code{slk-attron}, @code{slk-attrset}, @code{slk-attroff} and
-@code{slk-attr} routines correspond to @code{attr-on}, @code{attr-set},
-@code{attr-off} and @code{attr-get}.  They have an effect only if soft
+@code{slk-attr} routines correspond to @code{attr-on!}, @code{attr-set!},
+@code{attr-off!} and @code{attr-get}.  They have an effect only if soft
 labels are simulated on the bottom line of the screen.  The default
 highlight for soft keys is @code{A_STANDOUT}.
 
@@ -5769,11 +5799,15 @@ window using that data.  It returns a new @code{#<window>}
 @end deffn
 
 @deffn Procedure delay-output ms
+@cindex Delaying output
+@cindex Output, delaying
 
 The @code{delay-output} routine inserts an @var{ms} millisecond pause
 in output.  This routine should not be used extensively because
 padding characters are used rather than a CPU pause. 
- 
+
+The return value is unspecified; 
+
 @end deffn
  
 @deffn Procedure flushinp

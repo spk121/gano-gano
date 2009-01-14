@@ -26,17 +26,17 @@
 	    (let ((x2 (inch win #:y 0 #:x 0)))
 	      (equal? 0 (logand A_ATTRIBUTES x2)))))
  ;; add them one by one
- (pass-if "attr-on A_BLINK"
+ (pass-if "attr-on! A_BLINK"
 	  (begin
-	    (attr-on win A_BLINK)
+	    (attr-on! win A_BLINK)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))
 	      (equal? A_BLINK (logand A_ATTRIBUTES x2)))))
  
- (pass-if "attr-on A_BOLD"
+ (pass-if "attr-on! A_BOLD"
 	  (begin
-	    (attr-on win A_BOLD)
+	    (attr-on! win A_BOLD)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -44,9 +44,9 @@
 			      A_BOLD)
 		      (logand A_ATTRIBUTES x2)))))
  
- (pass-if "attr-on A_DIM"
+ (pass-if "attr-on! A_DIM"
 	  (begin
-	    (attr-on win A_DIM)
+	    (attr-on! win A_DIM)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -55,9 +55,9 @@
 			      A_DIM)
 		      (logand A_ATTRIBUTES x2)))))
  
- (pass-if "attr-on A_INVIS"
+ (pass-if "attr-on! A_INVIS"
 	  (begin
-	    (attr-on win A_INVIS)
+	    (attr-on! win A_INVIS)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win )
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -67,9 +67,9 @@
 			      A_INVIS)
 		      (logand A_ATTRIBUTES x2)))))
  
- (pass-if "attr-on A_PROTECT"
+ (pass-if "attr-on! A_PROTECT"
 	  (begin
-	    (attr-on win A_PROTECT)
+	    (attr-on! win A_PROTECT)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win )
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -80,9 +80,9 @@
 			      A_PROTECT)
 		      (logand A_ATTRIBUTES x2)))))
  
- (pass-if "attr-on A_REVERSE"
+ (pass-if "attr-on! A_REVERSE"
 	  (begin
-	    (attr-on win A_REVERSE)
+	    (attr-on! win A_REVERSE)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win )
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -94,9 +94,9 @@
 			      A_REVERSE)
 		      (logand A_ATTRIBUTES x2)))))
  
- (pass-if "attr-on A_STANDOUT"
+ (pass-if "attr-on! A_STANDOUT"
 	  (begin
-	    (attr-on win A_STANDOUT)
+	    (attr-on! win A_STANDOUT)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -109,9 +109,9 @@
 			      A_STANDOUT)
 		      (logand A_ATTRIBUTES x2)))))
  
- (pass-if "attr-on A_UNDERLINE"
+ (pass-if "attr-on! A_UNDERLINE"
 	  (begin
-	    (attr-on win A_UNDERLINE)
+	    (attr-on! win A_UNDERLINE)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win )
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -125,9 +125,9 @@
 			      A_UNDERLINE)
 		      (logand A_ATTRIBUTES x2)))))
  ;; take one away
- (pass-if "attr-off A_UNDERLINE"
+ (pass-if "attr-off! A_UNDERLINE"
 	  (begin
-	    (attr-off win A_UNDERLINE)
+	    (attr-off! win A_UNDERLINE)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -141,9 +141,9 @@
 		      (logand A_ATTRIBUTES x2)))))
 
  ;; set the attribute to be blink alone
- (pass-if "attr-set A_BLINK"
+ (pass-if "attr-set! A_BLINK"
 	  (begin
-	    (attr-set win A_BLINK)
+	    (attr-set! win A_BLINK)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -160,10 +160,10 @@
 	      (equal? A_STANDOUT (logand A_ATTRIBUTES x2)))))
  
  ;; reset via A_NORMAL
- (pass-if "attr-set A_NORMAL"
+ (pass-if "attr-set! A_NORMAL"
 	  (begin
 	    (clear win)
-	    (attr-set win A_NORMAL)
+	    (attr-set! win A_NORMAL)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -189,28 +189,28 @@
 	    (let ((x2 (inch win #:y 0 #:x 0)))
 	      (equal? 0 (logand A_ATTRIBUTES x2)))))
  
- (pass-if "attr-on A_BOLD"
+ (pass-if "attr-on! A_BOLD"
 	  (begin
 	    (clear win)
-	    (attr-on win A_BOLD)
+	    (attr-on! win A_BOLD)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win )
 	    (let ((x2 (inch win #:y 0 #:x 0)))
 	      (equal? A_BOLD (logand A_ATTRIBUTES x2)))))
  
- (pass-if "attr-off A_BOLD"
+ (pass-if "attr-off! A_BOLD"
 	  (begin
 	    (clear win )
-	    (attr-off win A_BOLD)
+	    (attr-off! win A_BOLD)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))
 	      (equal? 0 (logand A_ATTRIBUTES x2)))))
  
- (pass-if "attr-set and attr-get A_UNDERLINE color-pair1"
+ (pass-if "attr-set! and attr-get A_UNDERLINE color-pair1"
 	  (begin
 	    (clear win)
-	    (attr-set win A_UNDERLINE #:color 1)
+	    (attr-set! win A_UNDERLINE 1)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (attr-get win)))
@@ -224,7 +224,7 @@
  (pass-if "chgat"
 	  (begin
 	    (clear win)
-	    (attr-set win A_NORMAL)
+	    (attr-set! win A_NORMAL)
 	    (addstr win "xx" #:y 0 #:x 0)
 	    (refresh win)
 	    (move win 0 0)
@@ -240,7 +240,7 @@
  (pass-if "chgat #:y #:x"
 	  (begin
 	    (clear win)
-	    (attr-set win A_NORMAL)
+	    (attr-set! win A_NORMAL)
 	    (addstr win "xx" #:y 0 #:x 0)
 	    (refresh win)
 	    (chgat win 2 A_BOLD 1 #:y 0 #:x 0)

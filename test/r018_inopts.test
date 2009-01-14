@@ -19,7 +19,7 @@
 			     (clear win)
 			     (refresh win)
 			     (cbreak)
-			     (nodelay win #t)
+			     (nodelay! win #t)
 			     (equal? #f (getch win))))
 
 		  (pass-if "halfdelay"
@@ -31,7 +31,7 @@
 		  ;; truncated when meta is true
  		  (pass-if "meta"
  			   (begin
- 			     (nodelay win #t)
+ 			     (nodelay! win #t)
  			     (meta #t)
  			     (ungetch (+ 128 (char->integer #\A)))
  			     (let ((k1 (getch win)))
