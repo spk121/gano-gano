@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.30 2009/01/14 05:06:31 spike_gran Exp $
+@c $Id: gucu.texi,v 1.31 2009/01/14 07:05:17 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -1626,6 +1626,8 @@ terminal.  To find out whether a terminal has color capabilities or
 not, you can use @code{has-colors?}, which returns @code{#f} if the
 terminal does not support color.
 
+@findex color-pair
+
 Curses initializes all the color support for the terminal when
 @code{start-color} is called.  Usually, a color terminal will have at
 least eight colors available that can be accessed by constants like
@@ -1659,6 +1661,7 @@ COLOR_WHITE
 
 @node Changing color definitions,  , The basics of color, Colors
 @subsection Changing color definitions
+@cindex Colors, modifying
 
 Most terminals don't support defining new colors or changing the
 colors that already exist.  For those terminals that do, the function
@@ -3769,6 +3772,7 @@ with the characters passed to @code{addch}.  For the color part of the
 rendition, use @code{color-pair}.  @xref{tab:a}.
 
 @deffn Procedure color-pair n
+@cindex Color pairs
 
 Returns a bit mask to apply the color pair @var{n} to a rendition.
 @code{color-pair} values can only be @code{logior}'ed with attributes
@@ -3826,6 +3830,9 @@ Returns the pair number number associated with attribute @var{attrs}.
 
 @deffn Procedure beep
 @deffnx Procedure flash
+
+@cindex Beeping
+@cindex Flashing the screen
 
 The @code{beep} and @code{flash} routines are used to alert the
 terminal user.  The routine beep sounds an audible alarm on the
@@ -3975,14 +3982,12 @@ Otherwise they return @code{OK}.
 @deffnx Procedure wclear win
 
 @findex erase
-@findex werase
-@findex clearok
-@findex wrefresh
+@findex clearok!
+@findex refresh
 
-The @code{clear} and @code{wclear} routines are like @code{erase} and
-@code{werase}, but they also call @code{clearok}, so that the screen
-is cleared completely on the next call to @code{wrefresh} for that window and
-repainted from scratch.
+The @code{clear} routine is like @code{erase}, but they also call
+@code{clearok!}, so that the screen is cleared completely on the next
+call to @code{wrefresh} for that window and repainted from scratch.
 
 @end deffn
 
@@ -4010,7 +4015,7 @@ Otherwise they return @code{OK}.
 
 @node Color manipulation routines, Deleting the character under the cursor, Clearing windows and parts of window, The basic curses library
 @subsection Color manipulation routines
-
+@cindex Color manipulation
 @findex initscr
 @findex init-pair
 @findex color-pair
@@ -4134,6 +4139,7 @@ video attribute.
 @end deffn
 
 @deffn Procedure can-change-color?
+
 The @code{can-change-color?} routine returns @code{#t}
 if the terminal supports colors and can change their definitions;
 otherwise, it returns @code{#f}.
@@ -4173,12 +4179,22 @@ indicated the default foreground color.  When -1 is used as the
 background color, it indicated the default background color.  Thus, it
 has different meanings depending on the context.
 
+It returns @code{#t} if successful or @code{#f} is the terminal lacks
+the capability to set color pair 0.
+
 @end deffn
 
 @deffn Procedure assume-default-colors fg bg
 
+@cindex Default colors
+@cindex Color, default
+@findex init-pair
+
 This procedure allow the modification of special color pair 0, which
-cannot be modified by @code{init-pair}.
+cannot be modified by @code{init-pair}.  
+
+It returns @code{#t} if successful or @code{#f} is the terminal lacks
+the capability to set color pair 0.
 
 @end deffn
 
@@ -4328,6 +4344,14 @@ when the @key{RET} key is pressed.
 @deffn Procedure key-f n
 This procedure returns the keycode for function key @var{n}.
 @end deffn
+
+@deffn Procedure define-key defn keycode
+@cindex Keycodes, customizing
+This procedure defines a new, custom @var{keycode}.  When the string
+in @code{defn} is encountered, the keycode will be returned instead.
+
+@end deffn
+
 
 @float Table,tab:key
 @multitable {@code{KEY_BACKSPACE} xx} {Home down or bottom (lower left) xxxx}
@@ -4611,6 +4635,10 @@ calling noecho.  See @ref{Getting characters from the keyboard} for a
 discussion of how these routines interact with @code{echo} and
 @code{noecho}.
 
+Normally, these routines should always return @code{#t}.  They could
+return @code{#f} if vital screen information has already been garbage
+collected.
+
 @end deffn
 
 
@@ -4836,7 +4864,7 @@ curses) state for use by the @code{reset-prog-mode} and
 @code{initscr}.  There is one such save area for each screen context
 allocated by @code{newterm}.
 
-@code{OK} is always returned.
+The return value is unspecified.
 
 @end deffn
 
@@ -4866,12 +4894,14 @@ the last call to @code{savetty}.
 @end deffn
 
 @deffn Procedure curs-set visibility
+@cindex Cursor, hiding
+@cindex Cursor, visiblity
 
 The @code{curs-set} routine sets the cursor state is set to invisible,
 normal, or very visible for @var{visibility} equal to 0, 1, or 2
 respectively.  If the terminal supports the visibility requested, the
-previous cursor state is returned; otherwise, @code{ERR} is
-returned. FIXME: test this.
+previous cursor state is returned; otherwise, @code{#f} is
+returned.
 
 @end deffn
 
@@ -5047,20 +5077,25 @@ These routines set options that change the style of output within
 curses.  All options are initially @code{#f}, unless otherwise stated.  It
 is not necessary to turn these options off before calling @code{endwin}.
 
-@deffn Procedure clearok win bf
+@deffn Procedure clearok! win bf
+@cindex Erasing the screen
+@cindex Clearing the screen
+@cindex Screen, clearing
+@cindex Screen, erasing
+@findex refresh
 
-@findex wrefresh
-
-If @code{clearok} is called with @var{bf} as @code{#t},
-the next call to @code{wrefresh} with this window will clear the
+If @code{clearok!} is called with @var{bf} as @code{#t},
+the next call to @code{refresh} with this window will clear the
 screen completely and redraw the entire screen from scratch.  This is
 useful when the contents of the screen are uncertain, or in some cases
-for a more pleasing visual effect.  If the @var{win} argument to
-@code{clearok} is the global variable @code{curscr}, the next call to
-@code{wrefresh} with any window causes the screen to be cleared and
-repainted from scratch.
+for a more pleasing visual effect.  
 
-Returns @code{OK}.
+@c If the @var{win} argument to
+@c @code{clearok} is the global variable @code{curscr}, the next call to
+@c @code{wrefresh} with any window causes the screen to be cleared and
+@c repainted from scratch.
+
+The return value is unspecified.
 
 @end deffn
 
@@ -5190,7 +5225,10 @@ could indicate that the windows are freed.
 @end deffn
 
 @deffn Procedure copywin srcwin dstwin sminrow smincol dminrow dmincol dmaxrow dmaxcol overlay
-
+@cindex Copying windows
+@cindex Overlaying windows
+@cindex Windows, copying
+@cindex Windows, overlaying
 @findex overlay 
 @findex overwrite
 @findex prefresh
@@ -5203,7 +5241,7 @@ window, (@var{dminrow}, @var{dmincol}) and (@var{dmaxrow},
 window, (@var{sminrow}, @var{smincol}).  If the argument @var{overlay}
 is @code{#t}, then copying is non-destructive, as in overlay.
 
-Returns @code{OK} on success or @code{ERR} on failure.  @code{ERR}
+Returns @code{#t} on success or @code{#f} on failure.  @code{#f}
 could indicate that the windows are freed or if some part of the
 window would be placed offscreen.
 @end deffn
@@ -5742,6 +5780,14 @@ padding characters are used rather than a CPU pause.
 
 The @code{flushinp} routine throws away any typeahead that has been
 typed by the user and has not yet been read by the program.
+
+@end deffn
+
+@deffn curses-version
+@cindex Ncurses, version information
+@cindex Version information 
+
+Returns a string that indicates the version of ncurses being used.
 
 @end deffn
 

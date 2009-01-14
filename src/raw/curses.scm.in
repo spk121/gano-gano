@@ -20,7 +20,7 @@
 	    can-change-color?
 	    cbreak
 	    chgat
-	    clearok
+	    clearok!
 	    clear
 	    clrtobot
 	    clrtoeol
@@ -59,8 +59,8 @@
 	    has-il?
 	    has-key?
 	    hline
-	    idcok
-	    idlok
+	    idcok!
+	    idlok!
 	    immedok
 	    inch
 	    inchstr

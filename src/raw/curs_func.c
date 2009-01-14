@@ -67,16 +67,16 @@ gucu_clearok (SCM win, SCM bf)
 {
   WINDOW *c_win;
   bool c_bf;
-  int ret;
 
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "clearok");
-  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "clearok");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "clearok!");
+  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "clearok!");
 
   c_win = _scm_to_window (win);
   c_bf = scm_to_bool (bf);
 
-  ret = clearok (c_win, c_bf);
-  RETURNTF(ret);
+  clearok (c_win, c_bf);
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Returns the attribute that corresponds to a given color pair */
@@ -139,7 +139,10 @@ gucu_curs_set (SCM visibility)
   c_visibility = scm_to_int (visibility);
 
   ret = curs_set (c_visibility);
-  RETURNTF(ret);
+  if (ret == ERR)
+    return SCM_BOOL_F;
+
+  return scm_from_int (ret);
 }
 
 /* Return a string giving the version number of the underlying ncurses
@@ -155,7 +158,9 @@ gucu_curses_version ()
 SCM
 gucu_def_prog_mode ()
 {
-  RETURNTF(def_prog_mode ());
+  def_prog_mode ();
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Save the current terminal mode, so that it can be returned later by
@@ -163,7 +168,9 @@ gucu_def_prog_mode ()
 SCM
 gucu_def_shell_mode ()
 {
-  RETURNTF(def_shell_mode ());
+  def_shell_mode ();
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Define a keycode and its corresponding control string */
@@ -177,6 +184,9 @@ gucu_define_key (SCM defn, SCM keycode)
   SCM_ASSERT (scm_is_integer (keycode), keycode, SCM_ARG2, "define-key");
 
   c_keycode = scm_to_int (keycode);
+
+  if (c_keycode <= 0)
+    scm_out_of_range ("define-key", keycode);
   
   if (scm_c_string_length (defn) == 0)
     {
@@ -396,8 +406,8 @@ gucu_idcok (SCM win, SCM bf)
   WINDOW *c_win;
   bool c_bf;
 
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "idcok");
-  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "idcok");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "idcok!");
+  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "idcok!");
 
   c_win = _scm_to_window (win);
   c_bf = scm_to_bool (bf);
@@ -413,16 +423,16 @@ gucu_idlok (SCM win, SCM bf)
 {
   WINDOW *c_win;
   bool c_bf;
-  int ret;
 
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "idlok");
-  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "idlok");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "idlok!");
+  SCM_ASSERT (scm_is_bool (bf), bf, SCM_ARG2, "idlok!");
 
   c_win = _scm_to_window (win);
   c_bf = scm_to_bool (bf);
 
-  ret = idlok (c_win, c_bf);
-  RETURNTF(ret);
+  idlok (c_win, c_bf);
+
+  return SCM_UNSPECIFIED;
 }
 
 /* When true, any change to the window will cause an immediate refresh */
@@ -2070,7 +2080,7 @@ gucu_init_function ()
   scm_c_define_gsubr ("can-change-color?", 0, 0, 0, 
 		      gucu_can_change_color_p);
   scm_c_define_gsubr ("cbreak", 0, 0, 0, gucu_cbreak);
-  scm_c_define_gsubr ("clearok", 2, 0, 0, gucu_clearok);
+  scm_c_define_gsubr ("clearok!", 2, 0, 0, gucu_clearok);
   scm_c_define_gsubr ("color-pair", 1, 0, 0, gucu_COLOR_PAIR);
   scm_c_define_gsubr ("copywin", 9, 0, 0, gucu_copywin);
   scm_c_define_gsubr ("curs-set", 1, 0, 0, gucu_curs_set);
@@ -2095,8 +2105,8 @@ gucu_init_function ()
   scm_c_define_gsubr ("has-ic?", 0, 0, 0, gucu_has_ic_p);
   scm_c_define_gsubr ("has-il?", 0, 0, 0, gucu_has_il_p);
   scm_c_define_gsubr ("has-key?", 1, 0, 0, gucu_has_key_p);
-  scm_c_define_gsubr ("idcok", 2, 0, 0, gucu_idcok);
-  scm_c_define_gsubr ("idlok", 2, 0, 0, gucu_idlok);
+  scm_c_define_gsubr ("idcok!", 2, 0, 0, gucu_idcok);
+  scm_c_define_gsubr ("idlok!", 2, 0, 0, gucu_idlok);
   scm_c_define_gsubr ("immedok", 2, 0, 0, gucu_immedok);
   scm_c_define_gsubr ("initscr", 0, 0, 0, gucu_initscr);
   scm_c_define_gsubr ("init-color", 4, 0, 0, gucu_init_color);
