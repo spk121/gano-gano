@@ -290,6 +290,7 @@ gucu_delscreen (SCM scr)
 		    scr);
 
   delscreen (c_scr);
+  SCM_SET_SMOB_DATA (scr, NULL);
 
   return SCM_UNSPECIFIED;
 }
@@ -324,7 +325,11 @@ gucu_derwin (SCM orig, SCM nlines, SCM ncols, SCM begin_y, SCM begin_x)
 SCM
 gucu_doupdate ()
 {
-  RETURNTF(doupdate ());
+  int ret = doupdate ();
+  if (ret == ERR)
+    curs_bad_state_error  ("doupdate");
+
+  return SCM_UNSPECIFIED;
 }
 
 /* Create an exact duplicate of a window */
@@ -356,11 +361,7 @@ SCM
 gucu_endwin ()
 {
   int ret = endwin ();
-
-  if (ret == ERR)
-    curs_bad_state_error  ("endwin");
-
-  return SCM_UNSPECIFIED;
+  RETURNTF (ret);
 }
 
 
@@ -390,7 +391,13 @@ gucu_flash ()
 SCM
 gucu_flushinp ()
 {
-  RETURNTF(flushinp ());
+  int ret = flushinp ();
+
+  if (ret == ERR)
+    curs_bad_state_error  ("flushinp");
+
+  return SCM_UNSPECIFIED;
+  
 }
 
 /* Return the background rendered character of the given window */

@@ -362,11 +362,12 @@
 	    curscr
 	    window?
 	    open-curses-port
+	    newterm
 ))
 
 ;; These functions may not exist depending on the 
 ;; compile time options
-(if (defined? 'netwerm)
+(if (defined? 'newterm)
     (export newterm))
 
 

@@ -21,12 +21,15 @@ int port_close (void *cookie);
 #define PORT_OK (0)
 
 cookie_io_functions_t port_func 
-= {port_read, port_write, port_seek, port_close};
+= {.read = port_read, 
+   .write = port_write, 
+   .seek = port_seek, 
+   .close = port_close};
 
 ssize_t 
 port_read (void *cookie, char *buf, size_t siz)
 {
-  SCM port = *(SCM *)cookie;
+  SCM port = PTR2SCM(cookie);
 
 #if 0
   size_t bytes_read;
@@ -58,7 +61,7 @@ port_read (void *cookie, char *buf, size_t siz)
 ssize_t 
 port_write (void *cookie, const char *buf, size_t siz)
 {
-  SCM port = *((SCM *)cookie);
+  SCM port = PTR2SCM(cookie);
 
 #if 0
   if (siz > SSIZE_MAX)
@@ -72,21 +75,20 @@ port_write (void *cookie, const char *buf, size_t siz)
       return siz;
     }
 #else
-  if (siz >= 1)
+  for (size_t i=0; i < siz; i++)
     {
-      scm_write_char (scm_integer_to_char (scm_from_char (buf[0])), 
+      scm_write_char (scm_integer_to_char (scm_from_char (buf[i])), 
 		      port);
-      return 1;
     }
-  else
-    return PORT_ERR;
+
+  return siz;
 #endif
 }
 
 int 
 port_seek (void *cookie, off64_t *pos, int whence)
 {
-  SCM port = *(SCM *)cookie;
+  SCM port = PTR2SCM(cookie);
   SCM new_pos;
 
   new_pos = scm_seek (port, scm_from_int64 (*pos), scm_from_int (whence));
@@ -98,7 +100,7 @@ port_seek (void *cookie, off64_t *pos, int whence)
 int
 port_close (void *cookie)
 {
-  SCM port = *(SCM *)cookie;
+  SCM port = PTR2SCM(cookie);
 
   scm_close_port (port);
 
@@ -108,23 +110,33 @@ port_close (void *cookie)
 
 /* Create a new terminal whose inputs and output are Guile ports */
 SCM
-gucu_newterm (SCM type, SCM inp, SCM outp)
+gucu_newterm (SCM type, SCM outp, SCM inp)
 {
   char *c_type;
   FILE *c_inp, *c_outp;
   SCREEN *ret;
 
   SCM_ASSERT (scm_is_string (type), type, SCM_ARG1, "newterm");
-  SCM_ASSERT (scm_is_true (scm_input_port_p (inp)), inp, SCM_ARG2, "newterm");
-  SCM_ASSERT (scm_is_true (scm_output_port_p (outp)), outp, SCM_ARG3, 
+  SCM_ASSERT (scm_is_true (scm_output_port_p (outp)), outp, SCM_ARG2, 
 	      "newterm");
+  SCM_ASSERT (scm_is_true (scm_input_port_p (inp)), inp, SCM_ARG3, "newterm");
 
-  /* FIXME: what if inp == outp?  Do I open both "rw"? */
+  /* Convert the input port to a new stream */
+  SCM infd = scm_fileno (inp);
+  int c_infd = scm_to_int (infd);
+  c_inp = fdopen (c_infd, "rb");
+  if (c_inp == NULL)
+    scm_syserror ("newterm");
+
+
+  /* Convert the output port to a special stream */
+  c_outp = fopencookie (SCM2PTR(outp), "w", port_func);
+  if (c_outp == NULL)
+    scm_out_of_range ("newterm", outp);
+
   c_type = scm_to_locale_string (type);
-  c_inp = fopencookie (&inp, "r", port_func);
-  c_outp = fopencookie (&outp, "w", port_func);
-
-  ret = newterm (c_type, c_inp, c_outp);
+  ret = newterm (c_type, c_outp, c_inp);
+  free (c_type);
   if (ret == NULL)
     {
       scm_error_scm (SCM_BOOL_F,

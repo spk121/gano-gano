@@ -217,7 +217,15 @@ _scm_from_mevent (MEVENT *me)
 int 
 _scm_is_screen (SCM x)
 {
-  return SCM_SMOB_PREDICATE (screen_tag, x);
+  if (SCM_SMOB_PREDICATE (screen_tag, x))
+    {
+      if (SCM_SMOB_DATA (x) != 0)
+	return 1;
+      else
+	return 0;
+    }
+  else
+    return 0;
 }
 
 SCREEN *
@@ -243,14 +251,20 @@ print_screen (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
   SCREEN *screen = (SCREEN *) SCM_SMOB_DATA (x);
   char *str;
 
-  assert (screen != NULL);
 
   scm_puts ("#<screen ", port);
 
-  if (asprintf (&str, "%p", screen) < 0)
-    scm_puts ("???", port);
+  if (screen == NULL)
+    {
+      scm_puts ("(freed)", port);
+    }
   else
-    scm_puts (str, port);
+    {
+      if (asprintf (&str, "%p", screen) < 0)
+	scm_puts ("???", port);
+      else
+	scm_puts (str, port);
+    }
 
   scm_puts (">", port);
   

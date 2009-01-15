@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.32 2009/01/14 17:13:12 spike_gran Exp $
+@c $Id: gucu.texi,v 1.33 2009/01/15 17:08:25 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -1019,6 +1019,7 @@ you used to hold the output of @code{initscr}.)
 @subsubsection halfdelay
 
 @cindex Half-delay mode
+@cindex Line buffering
 
 This function is useful when you want to ask the user for input, and
 if he doesn't respond within a certain time, do something else.  One
@@ -1272,6 +1273,7 @@ which allow us to get input from the user.
 
 @node @code{getch} class of functions, @code{getnstr} class of functions, Input functions, Input functions
 @subsection @code{getch} 
+@cindex Inputting characters
 
 The procedure @code{getch} reads a single character from the terminal.
 But there are several subtle facts to consider.  For example, if you
@@ -1306,6 +1308,7 @@ of string that it will allow to be input.
 
 @node Attributes, Windows Tutorial, Input functions, Curses Tutorial
 @section Attributes
+@cindex Attributes
 
 Attributes can be used to print characters with some special effects.
 Attributes, when set prudently, can present information in an easy,
@@ -1338,6 +1341,7 @@ file, parses it, and prints it in different colors.
 
 @node The details, @code{attr-on!} vs @code{attr-set!}, Attributes, Attributes
 @subsection The details
+@cindex Attributes
 
 Let's get into more details of attributes.  The functions
 @code{attr-on!}, @code{attr-off!}, @code{attr-set!}, and their sister
@@ -1386,6 +1390,7 @@ reverse video with blinking characters, you can use
 
 @node @code{attr-on!} vs @code{attr-set!}, @code{attr-get}, The details, Attributes
 @subsection @code{attr-on!} vs @code{attr-set!}
+@cindex Attributes, setting
 
 Then what is the difference between @code{attr-on!} and
 @code{attr-set!}?  @code{attr-set!} sets the attributes of a window
@@ -1403,6 +1408,7 @@ which turns off all attributes and brings you back to normal mode.
 
 @node @code{attr-get}, @code{chgat} functions, @code{attr-on!} vs @code{attr-set!}, Attributes
 @subsection @code{attr-get}
+@cindex Attributes, querying
 
 The function @code{attr-get} gets the current attributes and color
 pair of the window.  Though we might not use this as often as the
@@ -1627,6 +1633,7 @@ not, you can use @code{has-colors?}, which returns @code{#f} if the
 terminal does not support color.
 
 @findex color-pair
+@cindex Color pairs
 
 Curses initializes all the color support for the terminal when
 @code{start-color} is called.  Usually, a color terminal will have at
@@ -1661,7 +1668,8 @@ COLOR_WHITE
 
 @node Changing color definitions,  , The basics of color, Colors
 @subsection Changing color definitions
-@cindex Colors, modifying
+@cindex Color, modifying
+@cindex Terminal capabilities, color
 
 Most terminals don't support defining new colors or changing the
 colors that already exist.  For those terminals that do, the function
@@ -1694,6 +1702,7 @@ combination of a color pair.
 
 @node The basics of keys, A simple key usage example, Interfacing with the keyboard, Interfacing with the keyboard
 @subsection The basics of keys
+@cindex Function keys
 
 No GUI is complete without a strong user interface and to interact
 with the user, a curses program should be sensitive to key presses or
@@ -3384,15 +3393,20 @@ otherwise, a @code{#<window>} referencing @code{stdscr} is returned.
 @tindex #<file>
 @findex fopen
 
-@deffn Procedure newterm type infile outfile
+@deffn Procedure newterm type outport inport
 @findex newterm
 The routine @code{newterm} should be called once for each terminal.
 It returns a variable of type @code{#<screen>} which should be saved
 as a reference to that terminal.  @var{type} is the type of the
-terminal to be used in place of @env{$TERM}.  @var{infile} is a
-@code{#<file>} for output to the terminal, and @var{outfile} is
-@code{#<file>} for input from the terminal.  These arguments
-@var{infile} and @var{outfile} can be created by calling @code{fopen}.
+terminal to be used in place of @env{$TERM}.  @var{outport} is a port
+that will receive the output to the terminal.  It can be a port of any
+type (file, string, etc.). @var{inport} is a port that will hold the
+input to the terminal.  It must be a file port, and cannot be a string
+port.
+
+@code{newterm} will internally use a duplicate port to the file
+pointed to by @var{inport}.  @var{inport} won't be used except to get a 
+file descriptor for the underlying file.
 
 This routine will throw an error if the terminal could not be created.
 @end deffn
@@ -3425,9 +3439,10 @@ terminal into the proper non-visual mode.  Calling @code{refresh} or
 @code{doupdate} after a temporary escape causes the program to resume
 visual mode.
 
-This function could throw a ``bad state'' error if the underlying data
-structures are invalid, which shouldn't happen.  The return value
-is unspecified.
+Its return value is @code{#t} if the terminal can be restored to its
+behavior (as in @code{reset-shell-mode}), or @code{#f} otherwise.  If
+the terminal was created by @code{newterm}, then this will usually
+return @code{#f} since input file had no previous mode.
 
 @end deffn
 
@@ -3453,16 +3468,17 @@ If this routine fails, it will throw an error.
 @findex endwin
 
 @deffn Procedure delscreen screen
+@cindex Screen, freeing
 
 The delscreen routine frees storage associated with the @var{screen}
 data structure.  The @code{endwin} routine does not do this, so
 @code{delscreen} should be called after @code{endwin} if a particular
-@var{screen} is no longer needed. 
+@var{screen} is no longer needed.  Trying to use a screen after it has
+been freed will likely result in ``bad state'' errors.
 
 @c The routine is called automatically when a screen is garbage
 @c collected.
 
-Its return value is @code{*unspecified*}.
 @end deffn
 
 @node Adding characters, Adding strings of characters and attributes, Curses screen initialization and manipulation routines, The basic curses library
@@ -3712,10 +3728,11 @@ modifications to the graphic rendition of characters put on the
 screen.
 
 @deffn Procedure attr-set! win attrs #:optional color
-@deffnx Procedure attr-on! attrs #:key win
-@deffnx Procedure attr-off! attrs #:key win
-@deffnx Procedure standend #:key win
-@deffnx Procedure standout #:key win
+@deffnx Procedure attr-on! win attrs
+@deffnx Procedure attr-off! win attrs
+@deffnx Procedure standend win
+@deffnx Procedure standout win
+@cindex Attributes
 
 The routine @code{attr-set!} sets the current rendition (attributes
 and color pair) of the given window to @var{attrs}.  Optionally, you
@@ -3726,7 +3743,7 @@ may split the color-pair information as a third parameter.
 @end example
 or
 @example
-(attr-set! win A_BOLD (color-pair 1))
+(attr-set! win A_BOLD 1)
 @end example
 
 The routine @code{attr-off!} turns off the named
@@ -3736,6 +3753,9 @@ any others.  The routine @code{standout} is the same as @code{(attr-on!
 A_STANDOUT)}.  The routine @code{standend} is the same as
 @code{(attr-set! A_NORMAL)} or @code{(attr-set! 0)}, that is, it turns off
 all attributes.
+
+The return value of these routines are undefined.  They can throw an
+exception if curses is in a bad state.
 
 @end deffn
 
@@ -3998,6 +4018,10 @@ Otherwise they return @code{OK}.
 @findex erase
 @findex clearok!
 @findex refresh
+@cindex Erasing the screen
+@cindex Clearing the screen
+@cindex Screen, clearing
+@cindex Screen, erasing
 
 The @code{clear} routine is like @code{erase}, but they also call
 @code{clearok!}, so that the screen is cleared completely on the next
@@ -4130,6 +4154,7 @@ and all occurrences of that color-pair are changed to the new definition.
 
 @findex assume-default-colors
 @findex use-default-colors
+@cindex Color, default
 
 Color pair 0 is set via the @code{assume-default-colors} routine.
 After @w{@code{use-default-colors}} has been called, the special color
@@ -4153,6 +4178,8 @@ video attribute.
 @end deffn
 
 @deffn Procedure can-change-color?
+@cindex Color capabilities
+@cindex Terminal capabilities, color
 
 The @code{can-change-color?} routine returns @code{#t}
 if the terminal supports colors and can change their definitions;
@@ -4278,6 +4305,7 @@ Returns @code{OK} on success or @code{ERR} on failure.
 
 @findex cbreak
 @findex nocbreak
+@cindex Inputing characters
 
 The @code{getch}, @code{wgetch}, @code{mvgetch} and @code{mvwgetch},
 routines read a character from the terminal associated with the given
@@ -4341,19 +4369,18 @@ It returns @code{ERR} if there is no more space in the buffer, or
 @findex keypad
 
 The following function keys, might be returned by @code{getch} if
-@code{keypad} has been enabled.  
+@code{keypad} has been enabled.
 
 Note that almost all of these function keys do not exist on modern
 keyboards.  The standard PC keyboard cannot be depended upon to have
-more than @code{(key-f 1)} through @code{(key-f 12)},
-@code{KEY_PPAGE} (Page Up), @code{KEY_NPAGE}
-(Page Down), @code{KEY_HOME}, @code{KEY_END}, @code{KEY_IC}
-(Insert), @code{KEY_DC} (Delete), @code{KEY_BACKSPACE},
-@code{KEY_DC} (Delete), @code{KEY_UP}, @code{KEY_DOWN}, @code{KEY_LEFT}, and
-@code{KEY_RIGHT}.
+more than @code{(key-f 1)} through @code{(key-f 12)}, @code{KEY_PPAGE}
+(Page Up), @code{KEY_NPAGE} (Page Down), @code{KEY_HOME},
+@code{KEY_END}, @code{KEY_IC} (Insert), @code{KEY_DC} (Delete),
+@code{KEY_BACKSPACE}, @code{KEY_DC} (Delete), @code{KEY_UP},
+@code{KEY_DOWN}, @code{KEY_LEFT}, and @code{KEY_RIGHT}.
 
-Also, a common terminal is more likely to return @kbd{C-M} than @code{KEY_ENTER}
-when the @key{RET} key is pressed.
+Also, a common terminal is more likely to return @kbd{C-M} than
+@code{KEY_ENTER} when the @key{RET} key is pressed.
 
 @deffn Procedure key-f n
 This procedure returns the keycode for function key @var{n}.
@@ -4362,12 +4389,14 @@ This procedure returns the keycode for function key @var{n}.
 @deffn Procedure define-key defn keycode
 @cindex Keycodes, customizing
 This procedure defines a new, custom @var{keycode}.  When the string
-in @code{defn} is input, the keycode will be returned instead.
+in @code{defn} is input, routines like @code{getch} will return the
+keycode instead, if the keypad is on.
 
 If @var{keycode} is an existing keycode, its @var{defn} replaces its
 previous definition.
 
-Returns @code{#f} on catastrophically bad internal state.
+The return value is unspecified.  An exception could be thrown if
+curses is in a bad state.
 @end deffn
 
 
@@ -4631,7 +4660,10 @@ The @code{nocbreak} routine returns the terminal to normal (cooked)
 mode.
 
 The return value is unspecified.  The routines will throw a ``bad
-state'' error if the underlying screen data is invalid.
+state'' error if the underlying screen data is invalid.  The routine
+will also throw a ``bad state'' error if @code{cbreak} was called on
+an ordinary file (such as might be used with @code{newterm}) instead
+of a TTY.
 
 @findex raw
 @findex getch
@@ -4883,6 +4915,8 @@ routines.
 
 @findex initscr
 @findex newterm
+@cindex Terminal modes, saving
+
 The @code{def-prog-mode} and @code{def-shell-mode} routines save the
 current terminal modes as the "program" (in curses) or "shell" (not in
 curses) state for use by the @code{reset-prog-mode} and
@@ -5271,9 +5305,8 @@ window, (@var{dminrow}, @var{dmincol}) and (@var{dmaxrow},
 window, (@var{sminrow}, @var{smincol}).  If the argument @var{overlay}
 is @code{#t}, then copying is non-destructive, as in overlay.
 
-Returns @code{#t} on success or @code{#f} on failure.  @code{#f}
-could indicate that the windows are freed or if some part of the
-window would be placed offscreen.
+Returns @code{#t} on success or @code{#f} on failure.  @code{#f} could
+indicate that some part of the window would be placed offscreen.
 @end deffn
 
 @node Create and display pads, Refresh windows and lines, Overlay and manipulate overlapped windows, The basic curses library
@@ -5629,6 +5662,8 @@ screen.
 
 
 @deffn Procedure baudrate
+@cindex Terminal, baudrate
+@cindex Baudrate
 
 The @code{baudrate} routine returns the output speed of the terminal.
 The number returned is in bits per second, for example 9600, and is an
@@ -5806,14 +5841,19 @@ The @code{delay-output} routine inserts an @var{ms} millisecond pause
 in output.  This routine should not be used extensively because
 padding characters are used rather than a CPU pause. 
 
-The return value is unspecified; 
+The return value is unspecified.
 
 @end deffn
  
 @deffn Procedure flushinp
+@cindex Flushing input
+@cindex Input, flushing
+@cindex Typeahead
 
 The @code{flushinp} routine throws away any typeahead that has been
 typed by the user and has not yet been read by the program.
+
+The return value is unspecified.
 
 @end deffn
 
@@ -5886,6 +5926,8 @@ Calling @code{derwin} is the same as calling @code{subwin}, except
 that @var{begin-y} and @var{begin-x} are relative to the origin of the
 window @var{orig} rather than the screen. There is no difference
 between the subwindows and the derived windows.
+
+
 
 @end deffn
 
