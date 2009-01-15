@@ -1,0 +1,31 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r041-ports.test --- test suite for newterm
+
+(use-modules (test lib)
+	     (test lib2)
+	     (gucu curses-wide)
+	     (gucu curses)
+	     (ice-9 format)
+	     (srfi srfi-1))
+
+(define test (curses-test-start))
+
+;;(define input-port (open-input-file "/dev/pts/1"))
+(define str "hi mom!")
+(define input-port (open-input-string str))
+(define output-port (open-output-string))
+(define scr (newterm "xterm" output-port input-port))
+(define stdscr (stdscr))
+
+(addstr stdscr "Blammo!")
+(refresh stdscr)
+(getch stdscr)
+(getch stdscr)
+(getch stdscr)
+(getch stdscr)
+
+(display (map char->integer 
+	      (string->list (get-output-string output-port))))
+(endwin)
+(delscreen scr)
+(curses-test-end test "r041_ports.out")
