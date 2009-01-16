@@ -361,6 +361,7 @@
 	    stdscr
 	    curscr
 	    window?
+	    screen?
 	    open-curses-port
 	    newterm
 ))
@@ -468,9 +469,6 @@
 
 (define (erase win)
   (%werase win))
-
-(define (getbkgd win)
-  (%getbkgd win))
 
 (define* (getch win #:key y x)
   (and (if (and y x)

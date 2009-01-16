@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.33 2009/01/15 17:08:25 spike_gran Exp $
+@c $Id: gucu.texi,v 1.34 2009/01/16 16:26:10 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -502,7 +502,7 @@ its @dfn{rendition}.
 @node Windows,  , Characters, Components of a Curses Interface
 @section Windows
 
-@cindex Window
+@cindex Windows
 
 Curses uses the concept of a @dfn{window} to visually organize the
 terminal.  A window is a rectangular area on the terminal.  A terminal
@@ -888,8 +888,8 @@ customize our curses settings
 
 @subsubsection The mysterious @code{refresh}
 
-@cindex Refreshing the window
-@cindex Redrawing the window
+@cindex Refreshing windows
+@cindex Redrawing windows
 
 The next line @code{addstr} prints the string ``Hello World!!!'' on to
 the screen.  This function prints the data on a window called
@@ -1618,7 +1618,7 @@ of a box.
 
 @node The basics of color, Changing color definitions, Colors, Colors
 @subsection The basics of color
-
+@cindex Colors
 Life seems dull with no colors.  Curses has a nice mechanism to handle
 colors.  Let's get into the thick of things with a small program.
 
@@ -1668,7 +1668,7 @@ COLOR_WHITE
 
 @node Changing color definitions,  , The basics of color, Colors
 @subsection Changing color definitions
-@cindex Color, modifying
+@cindex Colors, modifying
 @cindex Terminal capabilities, color
 
 Most terminals don't support defining new colors or changing the
@@ -3362,14 +3362,14 @@ specified before the coordinates.
 
 @findex initscr
 @findex slk-init
-@findex filter
+@findex %filter
 @findex ripoffline
 @findex use-env
 @findex newterm
 
 @code{initscr} is normally the first curses routine to call when
 initializing a program.  A few special routines sometimes need to be
-called before it; these are @code{slk-init}, @code{filter},
+called before it; these are @code{slk-init}, @code{%filter},
 @code{ripoffline}, @code{use-env}.  For multiple-terminal
 applications, @code{newterm} may be called before @code{initscr}.
 
@@ -3407,6 +3407,14 @@ port.
 @code{newterm} will internally use a duplicate port to the file
 pointed to by @var{inport}.  @var{inport} won't be used except to get a 
 file descriptor for the underlying file.
+
+Immediately following the call to newterm, one should create a window
+for the terminal by using the @code{stdscr} procedure.  So the standard way 
+to initialize it would be something like.
+@example
+(newterm "vt220" outport inport)
+(define stdscr (stdscr))
+@end example
 
 This routine will throw an error if the terminal could not be created.
 @end deffn
@@ -3468,7 +3476,7 @@ If this routine fails, it will throw an error.
 @findex endwin
 
 @deffn Procedure delscreen screen
-@cindex Screen, freeing
+@cindex Screens, freeing
 
 The delscreen routine frees storage associated with the @var{screen}
 data structure.  The @code{endwin} routine does not do this, so
@@ -3478,6 +3486,8 @@ been freed will likely result in ``bad state'' errors.
 
 @c The routine is called automatically when a screen is garbage
 @c collected.
+
+The return value is unspecified.
 
 @end deffn
 
@@ -3918,7 +3928,9 @@ new background character.
 It always returns @code{#t}.
 @end deffn
 
-@deffn Procedure getbkgd #:key win
+@deffn Procedure getbkgd 
+@cindex Windows, background
+@cindex Background rendition
 
 The @code{getbkgd} function returns the given window's current background
 character/attribute pair.
@@ -4020,8 +4032,8 @@ Otherwise they return @code{OK}.
 @findex refresh
 @cindex Erasing the screen
 @cindex Clearing the screen
-@cindex Screen, clearing
-@cindex Screen, erasing
+@cindex Screens, clearing
+@cindex Screens, erasing
 
 The @code{clear} routine is like @code{erase}, but they also call
 @code{clearok!}, so that the screen is cleared completely on the next
@@ -4053,7 +4065,7 @@ Otherwise they return @code{OK}.
 
 @node Color manipulation routines, Deleting the character under the cursor, Clearing windows and parts of window, The basic curses library
 @subsection Color manipulation routines
-@cindex Color manipulation
+@cindex Colors, manipulation
 @findex initscr
 @findex init-pair
 @findex color-pair
@@ -4168,6 +4180,8 @@ Returns @code{OK} on success and @code{ERR} on failure.
 
 
 @deffn Procedure has-colors?
+@cindex Color capability
+@cindex Terminal capabilities, color
 
 The @code{has-colors?} routine returns @code{#t} if the terminal can
 manipulate colors; otherwise, it returns @code{#f}.  This routine
@@ -4228,7 +4242,7 @@ the capability to set color pair 0.
 @deffn Procedure assume-default-colors fg bg
 
 @cindex Default colors
-@cindex Color, default
+@cindex Colors, default
 @findex init-pair
 
 This procedure allow the modification of special color pair 0, which
@@ -4508,15 +4522,19 @@ curses is in a bad state.
 
 
 
-@deffn Procedure has-key ch
+@deffn Procedure has-key? ch
+@cindex Terminal capabilities, keys
+@cindex Keys
 @findex resizeterm
-The @code{has-key} routine takes a key value @var{ch} from the above
+
+The @code{has-key?} routine takes a key value @var{ch} from the above
 list, and returns @code{#t} or @code{#f} according to whether the
 current terminal type recognizes a key with that value.  Note that a
 few values do not correspond to a real key, e.g., @code{KEY_RESIZE}
 and @code{KEY_MOUSE}.  See @code{resizeterm} for more details about
 @code{KEY_RESIZE}.  For a discussion of @code{KEY_MOUSE} see
 @ref{Mouse handling}.
+
 @end deffn
 
 
@@ -4696,6 +4714,8 @@ The return values are unspecified.
 
 
 @deffn Procedure halfdelay tenths
+@cindex Half-delay mode
+@cindex Line buffering
 
 @findex cbreak
 @findex nocbreak
@@ -4706,6 +4726,8 @@ available to the program.  However, after blocking for @var{tenths} tenths
 of seconds, @code{ERR} is returned if nothing has been typed.  The value of
 tenths must be a number between 1 and 255.  Use @code{nocbreak} to leave
 half-delay mode.
+
+The return value is unspecified.
 
 @end deffn
 
@@ -5140,8 +5162,8 @@ is not necessary to turn these options off before calling @code{endwin}.
 @deffn Procedure clearok! win bf
 @cindex Erasing the screen
 @cindex Clearing the screen
-@cindex Screen, clearing
-@cindex Screen, erasing
+@cindex Screens, clearing
+@cindex Screens, erasing
 @findex refresh
 
 If @code{clearok!} is called with @var{bf} as @code{#t},
@@ -5427,7 +5449,7 @@ Copies the named window @var{win} to the virtual screen
 
 @deffn Procedure doupdate
 
-Compared the virtual screen to the physical screen and updates it
+Compares the virtual screen to the physical screen and updates it
 where necessary.
 
 @end deffn
@@ -5677,19 +5699,22 @@ The erasechar routine returns the user's current erase character.
 
 @end deffn
 
-@deffn Procedure has-ic
+@deffn Procedure has-ic?
+@cindex Insert character
+@cindex Terminal capabilities, insert
 
 The has-ic routine is true if the terminal has insert- and delete-
 character capabilities.
 
 @end deffn
 
-
-@deffn Procedure has-il
+@deffn Procedure has-il?
+@cindex Insert lines
+@cindex Terminal capabilities, insert
 
 @findex scrollok
 
-The @code{has-il} routine is true if the terminal has insert- and
+The @code{has-il?} routine is true if the terminal has insert- and
 delete-line capabilities, or can simulate them using scrolling
 regions.  This might be used to determine if it would be appropriate
 to turn on physical scrolling using @code{scrollok}.
@@ -5857,13 +5882,18 @@ The return value is unspecified.
 
 @end deffn
 
-@deffn curses-version
+@deffn Procedure curses-version
 @cindex Ncurses, version information
 @cindex Version information 
 
 Returns a string that indicates the version of ncurses being used.
 
 @end deffn
+
+@deffn Procedure %filter
+
+This procedure, when called before initscr, restricts the activity of
+curses to a single line, instead of the to the entire screen.
 
 @node Window creation,  , Miscellaneous utilities, The basic curses library
 @subsection Window creation
@@ -5902,6 +5932,8 @@ moved.  Moving subwindows is allowed, but should be avoided.
 
 
 @deffn Procedure subwin orig nlines ncols begin-y begin-x
+@cindex Windows, derived
+@cindex Subwindows
 
 @findex touchwin
 @findex touchline
@@ -5915,19 +5947,22 @@ the window orig.)  The window is made in the middle of the window
 @var{orig}, so that changes made to one window will affect both
 windows.  The subwindow shares memory with the window @var{orig}.
 When using this routine, it is necessary to call @code{touchwin} or
-@code{touchline} on @var{orig} before calling @code{wrefresh} on the
+@code{touchline} on @var{orig} before calling @code{refresh} on the
 subwindow.
 
 @end deffn
 
-@deffn Procedure derwin orign nlines ncols begin-y begin-x
+@deffn Procedure derwin orig nlines ncols begin-y begin-x
+@cindex Windows, derived
+@cindex Subwindows
 
 Calling @code{derwin} is the same as calling @code{subwin}, except
 that @var{begin-y} and @var{begin-x} are relative to the origin of the
 window @var{orig} rather than the screen. There is no difference
 between the subwindows and the derived windows.
 
-
+It returns a window that shares memory with @var{orig}, or @code{#f} 
+if the window could not be created.
 
 @end deffn
 
@@ -5943,6 +5978,7 @@ parent window at the same physical position on the screen.
 
 
 @deffn Procedure dupwin win 
+@cindex Windows, duplication
 
 Calling @code{dupwin} creates an exact duplicate of the window @var{win}.
 

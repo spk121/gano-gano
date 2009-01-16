@@ -315,8 +315,24 @@ gucu_derwin (SCM orig, SCM nlines, SCM ncols, SCM begin_y, SCM begin_x)
   c_begin_y = scm_to_int (begin_y);
   c_begin_x = scm_to_int (begin_x);
 
+  /* Necessary but not complete set of range checks */
+  if (c_begin_y < 0)
+    scm_out_of_range ("derwin", begin_y);
+  if (c_begin_x < 0)
+    scm_out_of_range ("derwin", begin_x);
+  if (c_nlines < 0)
+    scm_out_of_range ("derwin", nlines);
+  if (c_begin_y + c_nlines > c_orig->_maxy + 1)
+    scm_out_of_range ("derwin", nlines);
+  if (c_ncols < 0)
+    scm_out_of_range ("derwin", ncols);
+  if (c_begin_x + c_ncols > c_orig->_maxx + 1)
+    scm_out_of_range ("derwin", ncols);
+
   ret = derwin (c_orig, c_nlines, c_ncols, c_begin_y, c_begin_x);
-  
+  if (ret == 0)
+    return SCM_BOOL_F;
+
   return _scm_from_window (ret);
 }
 
@@ -407,7 +423,7 @@ gucu_getbkgd (SCM win)
   WINDOW *c_win;
   chtype ret;
 
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%getbkgd");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "getbkgd");
 
   c_win = _scm_to_window (win);
 
@@ -425,8 +441,12 @@ gucu_halfdelay (SCM tenths)
   SCM_ASSERT (scm_is_integer (tenths), tenths, SCM_ARG1, "halfdelay");
 
   c_tenths = scm_to_int (tenths);
+  if (c_tenths < 1 || c_tenths > 255)
+    scm_out_of_range ("halfdelay", tenths);
   
-  RETURNTF(halfdelay (c_tenths));
+  halfdelay (c_tenths);
+  
+  return SCM_UNSPECIFIED;
 }
 
 /* Check if this screen has colors */
@@ -2158,7 +2178,7 @@ gucu_init_function ()
   scm_c_define_gsubr ("%filter", 0, 0, 0, gucu_filter);
   scm_c_define_gsubr ("flash", 0, 0, 0, gucu_flash);
   scm_c_define_gsubr ("flushinp", 0, 0, 0, gucu_flushinp);
-  scm_c_define_gsubr ("%getbkgd", 1, 0, 0, gucu_getbkgd);
+  scm_c_define_gsubr ("getbkgd", 1, 0, 0, gucu_getbkgd);
   scm_c_define_gsubr ("halfdelay", 1, 0, 0, gucu_halfdelay);
   scm_c_define_gsubr ("has-colors?", 0, 0, 0, gucu_has_colors_p);
   scm_c_define_gsubr ("has-ic?", 0, 0, 0, gucu_has_ic_p);

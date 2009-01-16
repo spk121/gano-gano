@@ -10,22 +10,48 @@
 
 (define test (curses-test-start))
 
-;;(define input-port (open-input-file "/dev/pts/1"))
-(define str "hi mom!")
-(define input-port (open-input-string str))
+(define input-port (open-input-file "r041_ports.test"))
 (define output-port (open-output-string))
-(define scr (newterm "xterm" output-port input-port))
-(define stdscr (stdscr))
 
-(addstr stdscr "Blammo!")
-(refresh stdscr)
-(getch stdscr)
-(getch stdscr)
-(getch stdscr)
-(getch stdscr)
+(define scr #f)
+(define win #f)
 
-(display (map char->integer 
-	      (string->list (get-output-string output-port))))
-(endwin)
-(delscreen scr)
+(with-test-prefix 
+ "newterm"
+ (pass-if "create"
+	  (begin
+	    (set! scr (newterm "xterm" output-port input-port))
+	    (screen? scr)))
+
+ (pass-if "stdscr"
+	  (begin
+	    (set! win (stdscr))
+	    (window? win)))
+
+ (pass-if "addstr"
+	  (begin
+	    (addstr win "Blammo!")
+	    #t))
+
+ (pass-if "refresh"
+	  (begin
+	    (refresh win)
+	    #t))
+
+ (pass-if "nodelay"
+	  (begin
+	    (nodelay! win #t)
+	    #t))
+
+ (pass-if "getch"
+	  (getch win))
+
+ ;; Should be false because it should not be possible to restore
+ ;; the "shell mode" of a port
+ (pass-if "endwin"
+	  (eqv? (endwin) #f))
+ 
+ (pass-if "delscreen"
+	  (false-if-exception (delscreen scr))))
+
 (curses-test-end test "r041_ports.out")

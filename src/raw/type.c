@@ -272,6 +272,13 @@ print_screen (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
   return 1;
 }
 
+SCM
+gucu_is_screen_p (SCM x)
+{
+  return scm_from_bool (_scm_is_screen (x));
+}
+
+
 
 // voidstring -- In C, (void *)NULL.  In Scheme, doesn't matter.  This
 // is because all of the (void *) arguments in the directly wrapped
@@ -425,6 +432,7 @@ gucu_init_type ()
     {
       screen_tag = scm_make_smob_type ("screen", sizeof (SCREEN *));
       scm_set_smob_print (screen_tag, print_screen);
+      scm_c_define_gsubr ("screen?", 1, 0, 0, gucu_is_screen_p);
       
       window_tag = scm_make_smob_type ("window", sizeof (WINDOW *));
       scm_set_smob_mark (window_tag, mark_window);

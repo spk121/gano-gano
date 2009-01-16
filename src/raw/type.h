@@ -37,6 +37,7 @@ SCM _scm_from_mevent (MEVENT *);
 int  _scm_is_screen (SCM x);
 SCREEN *_scm_to_screen (SCM x);
 SCM _scm_from_screen (SCREEN *x);
+SCM gucu_is_screen_p (SCM x) API;
 
 int _scm_is_voidstring (SCM x);
 void *_scm_to_voidstring (SCM x);
