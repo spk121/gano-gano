@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.10 2008/12/21 20:08:16 spike_gran Exp $
+## $Id: Makefile.am,v 1.11 2009/01/17 23:06:24 spike_gran Exp $
 
 all-local:
 	-ln -s ../src/raw @PACKAGE@
@@ -42,6 +42,8 @@ NARROWTESTS = r000_test.test \
 	r030_termattrs.test \
 	r031_touch.test \
 	r032_util.test \
+	r041_ports.test \
+	r042_mouse.test \
 	p001_panel.test \
 	f001_new_form.test \
 	f002_data.test \

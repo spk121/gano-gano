@@ -211,7 +211,9 @@ gucu_TEXINFOS = \
 	ex_menu2.scm \
 	ex_menu3.scm \
 	ex_panel.scm \
-	ex_window.scm
+	ex_window.scm \
+	ex_form.scm \
+	ex_form2.scm
 
 all: all-am
 

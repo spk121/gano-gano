@@ -21,11 +21,11 @@
 	    (clearok! win #f)
 	    #t))
 		  
- (pass-if "setscrreg #t"
+ (pass-if "setscrreg! #t"
 	  (begin
 	    (clear win)
-	    (setscrreg win 0 3)
-	    (scrollok win #t)
+	    (setscrreg! win 0 3)
+	    (scrollok! win #t)
 	    (move win 0 0)
 	    (addstr win "aaa\n")
 	    (addstr win "bbb\n")
@@ -41,11 +41,11 @@
 	       (string=? x2 "ddd")
 	       (string=? x3 "eee")))))
 		  
- (pass-if "setscrreg #f"
+ (pass-if "setscrreg! #f"
 	  (begin
 	    (clear win)
-	    (setscrreg win 0 3)
-	    (scrollok win #f)
+	    (setscrreg! win 0 3)
+	    (scrollok! win #f)
 	    (move win 0 0)
 	    (addstr win "aaa\n")
 	    (addstr win "bbb\n")
@@ -61,7 +61,7 @@
 	       (string=? x2 "bbb")
 	       (string=? x3 "ccc"))))))
 
-(setscrreg win 0 (- (lines) 1))
+(setscrreg! win 0 (- (lines) 1))
 
 (endwin)
 

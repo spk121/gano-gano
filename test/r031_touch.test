@@ -20,7 +20,7 @@
 	    (refresh win)
 	    (not (is-linetouched? win 0))))
 
- (pass-if "touchline / is-linetouched"
+ (pass-if "touchline / is-linetouched?"
 	  (begin
 	    (clear win)
 	    (refresh win)
@@ -28,7 +28,7 @@
 	    (is-linetouched? win 0)))
 
 
- (pass-if "touchline / is-linetouched"
+ (pass-if "touchline / is-linetouched?"
 	  (begin
 	    (clear win)
 	    (refresh win)
@@ -36,13 +36,13 @@
 	    (is-linetouched? win 0)))
 
 
- (pass-if "is-wintouched #f"
+ (pass-if "is-wintouched? #f"
 	  (begin
 	    (clear win)
 	    (refresh win)
 	    (not (is-wintouched? win))))
 
- (pass-if "touchline / is-linetouched"
+ (pass-if "touchwin / is-wintouched?"
 	  (begin
 	    (clear win)
 	    (refresh win)
@@ -50,7 +50,7 @@
 	    (is-wintouched? win)))
 
 
- (pass-if "untouchwin / is-linetouched"
+ (pass-if "untouchwin / is-linetouched?"
 	  (begin
 	    (clear win)
 	    (refresh win)

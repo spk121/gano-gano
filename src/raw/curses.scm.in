@@ -25,7 +25,7 @@
 	    clrtobot
 	    clrtoeol
 	    color-pair
-	    color-set
+	    color-set!
 	    copywin
 	    curs-set
 	    curses-version
@@ -61,7 +61,7 @@
 	    hline
 	    idcok!
 	    idlok!
-	    immedok
+	    immedok!
 	    inch
 	    inchstr
 	    initscr
@@ -73,15 +73,15 @@
 	    insstr
 	    instr
 	    intrflush
-	    isendwin
+	    isendwin?
 	    is-linetouched?
 	    is-wintouched?
 	    key-f
 	    key-defined
 	    keyname
-	    keypad
+	    keypad!
 	    killchar
-	    leaveok
+	    leaveok!
 	    longname
 	    meta
 	    mouseinterval
@@ -101,7 +101,7 @@
 	    noutrefresh
 	    noqiflush
 	    noraw
-	    notimeout
+	    notimeout!
 	    overlay
 	    overwrite
 	    pair-number
@@ -122,21 +122,21 @@
 	    scr-init
 	    scrl
 	    scroll
-	    scrollok
+	    scrollok!
 	    scr-restore
 	    scr-set
-	    setscrreg
+	    setscrreg!
 	    set-term
 	    setsyx
-	    standend
-	    standout
+	    standend!
+	    standout!
 	    start-color
 	    subpad
 	    subwin
-	    syncok
+	    syncok!
 	    termattrs
 	    termname
-	    timeout
+	    timeout!
 	    touchline
 	    touchwin
 	    typeahead
@@ -147,7 +147,7 @@
 	    use-env
 	    vline
 	    wcursyncup
-	    wenclose
+	    wenclose?
 	    wsyncup
 	    wsyncdown
 	    EOF
@@ -419,17 +419,8 @@
       (%attr-set! win attr color)
       (%attr-set! win attr (pair-number attr))))
 
-(define (bkgd win ch)
-  (%wbkgd win ch))
-
-(define (bkgdset win ch)
-  (%wbkgdset win ch))
-
-(define (border win left right top bottom tl tr bl br)
-  (%wborder win left right top bottom tl tr bl br))
-
 (define (box win v h)
-  (%wborder win v v h h 0 0 0 0))
+  (border win v v h h 0 0 0 0))
 
 (define* (chgat win n attr color #:key y x)
   (and
@@ -437,18 +428,6 @@
        (%wmove win y x)
        #t)
    (%wchgat win n attr color)))
-
-(define (clear win)
-  (%wclear win))
-
-(define (clrtobot win)
-  (%wclrtobot win))
-
-(define (clrtoeol win)
-  (%wclrtoeol win))
-
-(define (color-set win pair)
-  (%wcolor-set win pair))
 
 (define* (delch win #:key y x)
   (and
@@ -463,12 +442,6 @@
        (%wmove win y x)
        #t)
    (%winsdelln win -1)))
-
-(define (echochar win ch)
-  (%wechochar win ch))
-
-(define (erase win)
-  (%werase win))
 
 (define* (getch win #:key y x)
   (and (if (and y x)
@@ -536,50 +509,18 @@
        #t))
   (%winsnstr win str n))
 
-(define (keypad win bf)
-  (%keypad win bf))
-
-;; The window information isn't used in the lower level function, so
-;; it is dropped here.
-(define (meta bf)
-  (%meta bf))
-
 (define (move win y x)
   (%wmove win y x))
 
 ;; I hate it when people are 'clever' with dropping letters
 (define (nooutrefresh win)
-  (%wnoutrefresh win))
-
-(define (noutrefresh win)
-  (%wnoutrefresh win))
-
-(define (notimeout win flag)
-  (%notimeout win flag))
+  (noutrefresh win))
 
 (define (redrawln win beg_line end_line)
   (%wredrawln win beg_line end_line))
   
-(define (refresh win)
-  (%wrefresh win))
-
 (define (scroll win)
-  (%wscrl win 1))
-
-(define (scrl win n)
-  (%wscrl win n))
-
-(define (setscrreg win top bot)
-  (%wsetscrreg win top bot))
-
-(define (standend win)
-  (%wstandend win))
-
-(define (standout win)
-  (%wstandout win))
-
-(define (timeout win bf)
-  (%wtimeout win bf))
+  (scrl win 1))
 
 (define (touchwin win)
   (%wtouchln win 0 (getmaxy win) #t))

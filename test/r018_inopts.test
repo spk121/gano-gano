@@ -52,10 +52,10 @@
  			       (equal? k1 (char->integer #\A))
 			       *unspecified*)))
 
-; 		  (pass-if "keypad"
+; 		  (pass-if "keypad!"
 ; 			   (begin
 ; 			     (cbreak)
-; 			     (keypad (stdscr) #t)
+; 			     (keypad! (stdscr) #t)
 ; 			     (ungetch (char->integer #\A))
 ; 			     (ungetch (char->integer #\[))
 ; 			     (ungetch (char->integer #\esc))

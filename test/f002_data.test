@@ -71,7 +71,7 @@
 				     ret1 ret2 ret3 ret4 ret5 ret6 ret7 ret8)
 		      #:y 3 #:x 0)
 	      (refresh stdscr)
-	      (sleep 1)
+	      ;;(sleep 1)
 	      ;; pass if data-behind returned true and data-ahead is false
 	      (and ret7 (not ret8)))))
  
@@ -97,7 +97,7 @@
 				     ret1 ret2 ret3 ret4 ret5 ret6)
 		      #:y 3 #:x 0)
 	      (refresh stdscr)
-	      (sleep 1)
+	      ;;(sleep 1)
 	      ;; pass if data-ahead returned true
 	      (and (not ret5) ret6)))))
 

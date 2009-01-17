@@ -87,7 +87,7 @@
 		      "Exit"))
 	   (highlight 0))
       (begin
-	(keypad menu-win #t)
+	(keypad! menu-win #t)
 	(print-menu menu-win 0 choices)
 	(let ((choice (get-selection menu-win highlight choices)))
 	  (move stdscr 23 0)

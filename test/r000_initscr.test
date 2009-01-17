@@ -14,16 +14,16 @@
 
 (define mainwin #f)
 
-;; Pass if OK
+
 (with-test-prefix "initscr"
 		  
 		  (pass-if "(default)"
 			   (set! mainwin (initscr))
 			   (window? mainwin)))
 
-(with-test-prefix "isendwin"
+(with-test-prefix "isendwin?"
 		  (pass-if "before endwin"
-			   (equal? #f (isendwin))))
+			   (equal? #f (isendwin?))))
 
 ;; Leave curses
 (with-test-prefix "endwin"
@@ -31,16 +31,16 @@
 			   (begin (endwin)
 				  #t)))
 
-(with-test-prefix "isendwin"
+(with-test-prefix "isendwin?"
 		  (pass-if "after endwin"
-			   (equal? #t (isendwin))))
+			   (equal? #t (isendwin?))))
 
 ;; Reenter curses
 (refresh mainwin)
 
-(with-test-prefix "isendwin"
+(with-test-prefix "isendwin?"
 		  (pass-if "after refresh"
-			   (equal? #f (isendwin))))
+			   (equal? #f (isendwin?))))
 
 ;; Leave curses again
 (with-test-prefix "endwin"

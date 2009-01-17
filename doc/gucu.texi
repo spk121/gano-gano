@@ -1,5 +1,5 @@
 \input texinfo @c -*- Mode: texinfo; Fill-column: 70; -*-
-@c $Id: gucu.texi,v 1.34 2009/01/16 16:26:10 spike_gran Exp $
+@c $Id: gucu.texi,v 1.35 2009/01/17 23:06:24 spike_gran Exp $
 @c %**start of header
 @setfilename gucu.info
 @include version.texi
@@ -750,6 +750,7 @@ by the function @code{newwin} and is used and most curses functions.
 
 @tindex #<screen>
 @findex newterm
+@findex set-term
 
 The @code{#<screen>} type is an opaque types that contain information
 about the physical terminal.  Variables of type @code{#<screen>} are
@@ -861,10 +862,11 @@ Let's dissect it line by line.
 
 @subsubsection About @code{initscr}
 
-@findex initscr
 @cindex Initializing the terminal
 @cindex Terminal initialization
 @cindex Initialization
+
+@findex initscr
 
 The procedure @code{initscr} initializes the terminal in curses mode.
 It clears the screen and presents a blank screen.  To do any screen
@@ -963,6 +965,9 @@ Here we go@enddots{}
 @node Initialization, A word about windows, The Gory Details, Curses Tutorial
 @section Initialization
 
+@cindex Initialization
+@findex initscr
+
 We now know that to initialize curses the function @code{initscr} has
 to be called.  There are functions which can be called after this
 initialization to customize our curses session.  We may ask the curses
@@ -1005,14 +1010,14 @@ These functions control the echoing of characters typed by the user to
 the terminal.  @code{noecho} switches off echoing. With echoing off,
 when a user presses a character, it is not displayed on the screen.
 
-@subsubsection keypad
+@subsubsection keypad!
 
 @cindex Function keys
 
 This function enables the reading of function keys like @key{F1},
 @key{F2}, arrow keys, etc.  Almost every interactive program enables
 this, as arrow keys are a major part of any user interface.  Do
-@code{(keypad stdscr #t)} to enable this feature for the regular
+@code{(keypad! stdscr #t)} to enable this feature for the regular
 screen @code{stdscr} (assuming that @code{stdscr} is the variable
 you used to hold the output of @code{initscr}.)
 
@@ -1243,6 +1248,8 @@ you.
 @node Adding wide strings (tutorial),  , A word of caution, Output functions
 @subsection Adding wide strings
 
+@cindex Wide strings
+
 The @code{addstr} functions print unrendered, narrow strings, which
 are the same as standard Guile strings.  For unrendered, wide strings
 use the @code{add-wstr} procedure.  Unrendered, wide strings are lists
@@ -1274,6 +1281,7 @@ which allow us to get input from the user.
 @node @code{getch} class of functions, @code{getnstr} class of functions, Input functions, Input functions
 @subsection @code{getch} 
 @cindex Inputting characters
+@cindex Echoing
 
 The procedure @code{getch} reads a single character from the terminal.
 But there are several subtle facts to consider.  For example, if you
@@ -1403,7 +1411,7 @@ easily.  But, if you use them carelessly, you may lose track of what
 attributes the window has and garble the display.  This is especially
 true while managing menus with colors and highlighting.  So decide on
 a consistent policy and stick to it.  You can always use
-@code{standend} which is equivalent to @code{(attr-set! win A_NORMAL)}
+@code{standend!} which is equivalent to @code{(attr-set! win A_NORMAL)}
 which turns off all attributes and brings you back to normal mode.
 
 @node @code{attr-get}, @code{chgat} functions, @code{attr-on!} vs @code{attr-set!}, Attributes
@@ -1493,6 +1501,7 @@ distinct, non-overlapping regions of the screen.
 
 @node The basics, Let there be a window, Windows Tutorial, Windows Tutorial
 @subsection The basics
+@cindex Windows, creation
 
 A window can be created by calling the function @code{newwin}. It
 doesn't draw anything on the screen initially.  It allocates memory
@@ -1619,6 +1628,7 @@ of a box.
 @node The basics of color, Changing color definitions, Colors, Colors
 @subsection The basics of color
 @cindex Colors
+@cindex Colors, initialization
 Life seems dull with no colors.  Curses has a nice mechanism to handle
 colors.  Let's get into the thick of things with a small program.
 
@@ -1713,7 +1723,7 @@ to get key input from the user.  A simple way of getting key presses
 is the @code{getch} procedure.  The @code{cbreak} mode should be
 enabled to read keys when you are interested in reading individual key
 hits rather than complete lines of text (which usually end with a
-@key{CR}).  @code{keypad} should be enabled to get the function
+@key{CR}).  @code{keypad!} should be enabled to get the function
 keys, arrow keys and so on.
 
 @code{getch} returns an integer corresponding to the key pressed.  If
@@ -1962,6 +1972,7 @@ to the back with @code{bottom-panel}.  They can be removed with
 
 @node Moving and Resizing Panels,  , Compiling With the Panels Library, Panels Library
 @subsection Moving and Resizing Panels
+@cindex Windows, moving
 
 The procedure @code{move-panel} can be used to move a panel to the
 desired location. It does not change the position of the panel in the
@@ -2303,68 +2314,7 @@ To use form library functions, you have to include @code{(gucu
 form)}.
 
 @example
-#!/usr/local/bin/guile
-!#
-
-(use-modules (srfi srfi-1)
-	     (gucu curses)
-	     (gucu form))
-
-;; Initialize curses
-(initscr)
-(cbreak)
-(noecho)
-(keypad (stdscr) #t)
-
-;; Initialize the fields
-(define field (list
-	       (new-field 1 10 4 18 0 0)
-	       (new-field 1 10 6 18 0 0)))
-
-;; Set field options
-;; Print a line for the options
-(set-field-back (first field) A_UNDERLINE) 
-;; Don't go to the next field when this field is filled up
-(field-opts-off (first field) O_AUTOSKIP)
-(set-field-back (second field) A_UNDERLINE)
-(field-opts-off (second field) O_AUTOSKIP)
-
-;; Create the new form and post it
-(define my-form (new-form field))
-(post-form my-form)
-(refresh)
-
-(addstr "Value 1:" #:y 4 #:x 10)
-(addstr "Value 2:" #:y 4 #:x 10)
-(refresh)
-
-;; Loop through to get user requests
-(let loop ((ch (getch)))
-  (if (not (eqv? ch (key-f 1)))
-      (cond
-       ((eqv? ch KEY_DOWN)
-	(begin
-	  ;; Go to the end of the next field
-	  (form-driver my-form REQ_NEXT_FIELD)
-	  (form-driver my-form REQ_END_LINE)
-	  (loop (getch))))
-       ((eqv? ch KEY_UP)
-	(begin
-	  ;; Go to the end of the previous field
-	  (form-driver my-form REQ_PREV_FIELD)
-	  (form-driver my-form REQ_END_LINE)
-	  (loop (getch))))
-       (else
-	(begin
-	  ;; Print any normal character
-	  (form-driver my-form ch)
-	  (loop (getch)))))))
-
-;; Unpost the form 
-(unpost-form my-form)
-
-(endwin)
-
+@verbatiminclude ex_form.scm
 @end example
 
 The above example is pretty straightformward.  It creates two fields
@@ -2380,8 +2330,8 @@ specify it to allocate some additional buffers.  These can be used for
 any purpose you like.
 
 After creating the fields, the background attribute of both of them is
-set to an underscore with @code{set-field-back}.  The @code{AUTOSKIP}
-option is turned off using @code{field-opts-off}.  If this option is
+set to an underscore with @code{set-field-back!}.  The @code{AUTOSKIP}
+option is turned off using @code{field-opts-off!}.  If this option is
 turned of, focus will move to the next field in the form once the
 active field is filled up completely.
 
@@ -2407,7 +2357,7 @@ a form application.
 A more complete editing loop might look like this
 @example
 ;; Loop through to get user requests
-(let loop ((ch (getch)))
+(let loop ((ch (getch win)))
   (if (not (eqv? ch (key-f 1)))
       (begin
 	(cond
@@ -2431,7 +2381,7 @@ A more complete editing loop might look like this
 	  (form-driver my-form REQ_DEL_PREV))
 	 (else
 	  (form-driver my-form ch)))
-	(loop (getch)))))
+	(loop (getch win)))))
 @end example
 
 And, gathering the contents of the form can be accomplished like this:
@@ -2515,72 +2465,7 @@ what is the right way to display colored fields?  Here's an example
 clarifying color attributes.
 
 @example
-#!/usr/local/bin/guile
-!#
-
-(use-modules (srfi srfi-1)
-	     (gucu curses)
-	     (gucu form))
-
-;; Initialize curses
-(initscr)
-(start-color)
-(cbreak)
-(noecho)
-(keypad (stdscr) #t)
-
-;; Initialize the color pairs
-(init-pair 1 COLOR_WHITE COLOR_BLUE)
-(init-pair 2 COLOR_WHITE COLOR_BLUE)
-
-;; Initialize the fields
-(define field (list
-	       (new-field 1 10 4 18 0 0)
-	       (new-field 1 10 6 18 0 0)))
-
-;; Set field options
-(set-field-fore (first field) (color-pair 1))
-(set-field-back (first field) (color-pair 2)) 
-(field-opts-off (first field) O_AUTOSKIP)
-
-(set-field-back (second field) A_UNDERLINE)
-(field-opts-off (second field) O_AUTOSKIP)
-
-;; Create the new form and post it
-(define my-form (new-form field))
-(post-form my-form)
-(refresh)
-
-(addstr "Value 1:" #:y 4 #:x 10)
-(addstr "Value 2:" #:y 6 #:x 10)
-(refresh)
-
-;; Loop through to get user requests
-(let loop ((ch (getch)))
-  (if (not (eqv? ch (key-f 1)))
-      (cond
-       ((eqv? ch KEY_DOWN)
-	(begin
-	  ;; Go to the end of the next field
-	  (form-driver my-form REQ_NEXT_FIELD)
-	  (form-driver my-form REQ_END_LINE)
-	  (loop (getch))))
-       ((eqv? ch KEY_UP)
-	(begin
-	  ;; Go to the end of the previous field
-	  (form-driver my-form REQ_PREV_FIELD)
-	  (form-driver my-form REQ_END_LINE)
-	  (loop (getch))))
-       (else
-	(begin
-	  ;; Print any normal character
-	  (form-driver my-form ch)
-	  (loop (getch)))))))
-
-;; Unpost the form 
-(unpost-form my-form)
-
-(endwin)
+@verbatiminclude ex_form2.scm
 @end example
 
 Play with the color pairs and try to understand the foreground and
@@ -2703,10 +2588,10 @@ password-like field where the characters are hidden from view.
 (define N_FIELDS 2)
 
 ;; Initialize curses
-(initscr)
+(define stdscr (initscr))
 (cbreak)
 (noecho)
-(keypad (stdscr) #t)
+(keypad! stdscr #t)
 
 ;; Initialize the fields
 (define field (map-in-order 
@@ -2859,11 +2744,11 @@ similar example.
     
 
 ;; Initialize curses
-(initscr)
+(define stdscr (initscr))
 (start-color)
 (cbreak)
 (noecho)
-(keypad (stdscr) #t)
+(keypad! stdscr #t)
 
 ;;Initialize a few color pairs
 (init-pair 1 COLOR_RED COLOR_BLACK)
@@ -2873,11 +2758,11 @@ similar example.
 	       (new-field 1 10 8 1 0 0)))
 
 ;; Set field options
-(set-field-back (first field) A_UNDERLINE)
-(field-opts-off (first field) O_AUTOSKIP)
+(set-field-back! (first field) A_UNDERLINE)
+(field-opts-off! (first field) O_AUTOSKIP)
 
-(set-field-back (second field) A_UNDERLINE)
-(field-opts-off (second field) O_AUTOSKIP)
+(set-field-back! (second field) A_UNDERLINE)
+(field-opts-off! (second field) O_AUTOSKIP)
 
 ;; Create a new form
 (define my-form (new-form field))
@@ -2892,25 +2777,25 @@ similar example.
 			    (+ 4 cols)
 			    4
 			    4))
-(keypad my-form-win #t)
+(keypad! my-form-win #t)
 
 ;; Set main window and subwindow
-(set-form-win my-form my-form-win)
-(set-form-sub my-form (derwin my-form-win rows cols 2 2))
+(set-form-win! my-form my-form-win)
+(set-form-sub! my-form (derwin my-form-win rows cols 2 2))
 
 ;; Print a border around the main window and print a title
 (box my-form-win 0 0)
 (print-in-middle my-form-win 1 0 (+ cols 4) "My Form" (color-pair 1))
 
 (post-form my-form)
-(wrefresh my-form-win)
+(refresh my-form-win)
 
-(addstr "Use UP, DOWN arrow keys to switch between fields" 
+(addstr stdscr "Use UP, DOWN arrow keys to switch between fields" 
 	#:y (- (lines) 2) #:x 0)
-(refresh)
+(refresh stdscr)
 
 ;; Loop through to get user requests
-(let loop ((ch (wgetch my-form-win)))
+(let loop ((ch (getch my-form-win)))
   (if (not (eqv? ch (key-f 1)))
       (cond
        ((eqv? ch KEY_DOWN)
@@ -2918,18 +2803,18 @@ similar example.
 	  ;; Go to the end of the next field
 	  (form-driver my-form REQ_NEXT_FIELD)
 	  (form-driver my-form REQ_END_LINE)
-	  (loop (wgetch my-form-win))))
+	  (loop (getch my-form-win))))
        ((eqv? ch KEY_UP)
 	(begin
 	  ;; Go to the end of the previous field
 	  (form-driver my-form REQ_PREV_FIELD)
 	  (form-driver my-form REQ_END_LINE)
-	  (loop (wgetch my-form-win))))
+	  (loop (getch my-form-win))))
        (else
 	(begin
 	  ;; Print any normal character
 	  (form-driver my-form ch)
-	  (loop (wgetch my-form-win)))))))
+	  (loop (getch my-form-win)))))))
 
 ;; Unpost the form 
 (unpost-form my-form)
@@ -3219,23 +3104,20 @@ following sequence should be used:
 @findex noecho
 
 @example
-(begin
-  (initscr)
-  (cbreak)
-  (noecho))
+(cbreak)
+(noecho)
 @end example
 
 Most programs would additionally use the sequence:
 
 @findex nonl
 @findex intrflush
-@findex keypad
+@findex keypad!
 
 @example
-(begin
-  (nonl)
-  (intrflush #f)
-  (keypad (stdscr) #t))
+(nonl)
+(intrflush #f)
+(keypad! stdscr #t))
 @end example
 
 @findex tset
@@ -3377,15 +3259,17 @@ applications, @code{newterm} may be called before @code{initscr}.
 @vindex stdscr
 
 @deffn Procedure initscr
-
+@cindex Curses, Initialization
+@cindex Initialization
 @findex refresh
 @vindex stdscr
 
 The @code{initscr} code determines the terminal type and initializes
 all curses data structures.  @code{initscr} also causes the first call
-to @code{refresh} to clear the screen.  If errors occur, @code{initscr}
-writes an appropriate error message to standard error and exits;
-otherwise, a @code{#<window>} referencing @code{stdscr} is returned.
+to @code{refresh} to clear the screen.  
+
+If errors occur, @code{initscr} throws and error and exits; otherwise,
+a @code{#<window>} referencing @code{stdscr} is returned.
 @end deffn
 
 @tindex #<screen>
@@ -3454,22 +3338,25 @@ return @code{#f} since input file had no previous mode.
 
 @end deffn
 
-@deffn Procedure isendwin
-The @code{isendwin} routine returns @code{#t} if @code{endwin} has
-been called without any subsequent calls to @code{wrefresh}, and
+@deffn Procedure isendwin?
+The @code{isendwin?} routine returns @code{#t} if @code{endwin} has
+been called without any subsequent calls to @code{refresh}, and
 @code{#f} otherwise.
 @end deffn
 
 @tindex #<screen>
 
 @deffn Procedure set-term new
+@cindex Terminals, switching
+@cindex Screens, switching
+@cindex Switching terminals
+
 The @code{set-term} routine is used to switch between different
 terminals.  The screen reference @var{new} becomes the new current
-terminal.  The previous terminal is returned by the routine.  This is
-the only routine which manipulates @code{#<screen>} types; all other
-routines affect only the current terminal.
+terminal.  This is the only routine which manipulates @code{#<screen>}
+types; all other routines affect only the current terminal.
 
-If this routine fails, it will throw an error.
+The return value is unspecified.
 @end deffn
 
 @findex delscreen
@@ -3497,14 +3384,14 @@ The return value is unspecified.
 There is a family of functions that add a rendered, narrow character
 to a curses window, and then advance the cursor.
 
-@deffn Procedure addch ch #:key win y x
-@findex scrollok 
+@deffn Procedure win addch ch #:key y x
+@findex scrollok! 
 
 The @code{addch} routine puts the rendered, narrow character @var{ch}
 into the given window at its current window position, which is then
 advanced.  If the advance is at the right margin, the cursor
 automatically wraps to the beginning of the next line.  At the bottom
-of the current scrolling region, if @code{scrollok} is enabled, the
+of the current scrolling region, if @code{scrollok!} is enabled, the
 scrolling region is scrolled up one line.
 
 @findex set-tabsize
@@ -3532,12 +3419,10 @@ to the character when it is put on the screen.
 This function returns @code{#t} on success and @code{#f} otherwise.
 @end deffn
 
-@deffn Procedure echochar ch
-@deffnx Prodecure wechochar win ch
+@deffn Procedure echochar win ch
 
 @findex addch
 @findex refresh
-@findex wrefresh
 
 The @code{echochar} routine is equivalent to a call to @code{addch}
 followed by a call to @code{refresh}.  The knowledge that only a
@@ -3740,8 +3625,8 @@ screen.
 @deffn Procedure attr-set! win attrs #:optional color
 @deffnx Procedure attr-on! win attrs
 @deffnx Procedure attr-off! win attrs
-@deffnx Procedure standend win
-@deffnx Procedure standout win
+@deffnx Procedure standend! win
+@deffnx Procedure standout! win
 @cindex Attributes
 
 The routine @code{attr-set!} sets the current rendition (attributes
@@ -3759,8 +3644,8 @@ or
 The routine @code{attr-off!} turns off the named
 attributes without turning any other attributes on or off.  The
 routine @code{attr-on!} turns on the named attributes without affecting
-any others.  The routine @code{standout} is the same as @code{(attr-on!
-A_STANDOUT)}.  The routine @code{standend} is the same as
+any others.  The routine @code{standout!} is the same as @code{(attr-on!
+A_STANDOUT)}.  The routine @code{standend!} is the same as
 @code{(attr-set! A_NORMAL)} or @code{(attr-set! 0)}, that is, it turns off
 all attributes.
 
@@ -3774,23 +3659,21 @@ used when erasing portions of the window. For functions which modify
 the attributes used for erasing and clearing @xref{Window background
 manipulation routines}.
 
-@deffn Procedure color-set color-pair-number #:key win
+@deffn Procedure color-set! win color-pair-number
 
-The routine @code{color-set} sets the current color of the given window to
+The routine @code{color-set!} sets the current color of the given window to
 the foreground/background combination described by the
 @var{color-pair-number}.  
 
 @end deffn
 
 @deffn Procedure attr-get
-@deffnx Procedure wattr-get win
  
-The routine @code{wattr-get} returns the current attribute and color
-pair for the given window; @code{attr-get} returns the current
-attribute and color pair for @code{stdscr}.  They are returned as a
-list containing two elements.  The first element is the rendition: a
-bitmap containing all the attributes and the color pair value under
-256.  The second element is the color pair alone.
+The routine @code{attr-get} returns the current attribute and color
+pair for the given window.  They are returned as a list containing two
+elements.  The first element is the rendition: a bitmap containing all
+the attributes and the color pair value under 256.  The second element
+is the color pair alone.
 
 @end deffn
 
@@ -3825,7 +3708,11 @@ if the pair number is less than 256.  The alternate functions such as
 @end deffn
 
 @deffn Procedure pair-number attrs
-Returns the pair number number associated with attribute @var{attrs}.
+@cindex Color pairs
+
+Returns the color pair number number associated with attribute
+@var{attrs}.
+
 @end deffn
 
 @float Table,tab:a
@@ -3941,11 +3828,10 @@ character/attribute pair.
 @subsection Borders and lines
 
 
-@deffn Procedure border ls rs ts bs tl tr bl br
-@deffnx Procedure wborder win ls rs ts bs tl tr bl br
+@deffn Procedure border win ls rs ts bs tl tr bl br
 
-The @code{border} and @code{wborder} routines draw a box around the edges of a
-window. Other than the window, each argument is a character with
+The @code{border} routine draws a box around the edges of a
+window. Other than @var{win}, each argument is a character with
 attributes, representing a side or a corner of the border.  The
 arguments are @var{ls} - left side, @var{rs} - right side, @var{ts} -
 top side, @var{bs} - bottom side, @var{tl} - top left-hand corner,
@@ -3965,7 +3851,7 @@ characters that create a box, and they would be @var{ls} =
 @deffn Procedure box win verch horch
 @code{box} is a shorthand for the following call:	 
 @example
-(wborder win verch verch horch horch 0 0 0 0)
+(border win verch verch horch horch 0 0 0 0)
 @end example
 @end deffn
 
@@ -4015,17 +3901,14 @@ The following family of functions @dfn{clear} all or part of a window.
 When clearing a window, the blanks created by erasure have the current
 background rendition (as set by @code{bkgdset}) merged into them.
 
-@deffn Procedure erase
-@deffnx Procedure werase win
-The @code{erase} and @code{werase} routines copy blanks to every
+@deffn Procedure erase win
+
+The @code{erase} routine copies blanks to every
 position in the window, clearing the screen.
 
-These functions return @code{ERR} if the window does not exist.
-Otherwise they return @code{OK}.
 @end deffn
 
-@deffn Procedure clear
-@deffnx Procedure wclear win
+@deffn Procedure clear win
 
 @findex erase
 @findex clearok!
@@ -4037,30 +3920,23 @@ Otherwise they return @code{OK}.
 
 The @code{clear} routine is like @code{erase}, but they also call
 @code{clearok!}, so that the screen is cleared completely on the next
-call to @code{wrefresh} for that window and repainted from scratch.
+call to @code{refresh} for that window and repainted from scratch.
 
 @end deffn
 
-@deffn Procedure clrtobot
-@deffnx Procedure wclrtobot win
+@deffn Procedure clrtobot win
 
-The @code{clrtobot} and @code{wclrtobot} routines erase from the
-cursor to the end of screen. That is, they erase all lines below the
-cursor in the window.  Also, the current line to the right of the
-cursor, inclusive, is erased.
+The @code{clrtobot} routine erase from the cursor to the end of
+screen. That is, they erase all lines below the cursor in the window.
+Also, the current line to the right of the cursor, inclusive, is
+erased.
 
-These functions return @code{ERR} if the window does not exist.
-Otherwise they return @code{OK}.
 @end deffn
 
-@deffn Procedure clrtoeol
-@deffnx Procedure wclrtoeol win
+@deffn Procedure clrtoeol win
 
-The @code{clrtoeol} and @code{wclrtoeol} routines erase the current line to the right
+The @code{clrtoeol} routine erase the current line to the right
 of the cursor, inclusive, to the end of the current line.
-
-These functions return @code{ERR} if the window does not exist.
-Otherwise they return @code{OK}.
 @end deffn
 
 @node Color manipulation routines, Deleting the character under the cursor, Clearing windows and parts of window, The basic curses library
@@ -4090,7 +3966,7 @@ The routine @code{pair-content} allows a programmer to find out how a
 given color-pair is currently defined.
 
 @deffn Procedure start-color
-
+@cindex Colors, initialization
 @findex initscr
 @findex colors
 @findex color-pairs
@@ -4132,6 +4008,7 @@ as would be used in the procedure @code{init-pair}.
 
 
 @deffn Procedure init-color color red green blue
+@cindex Colors, defining
 
 The @code{init-color} routine changes the definition of a color.  It
 takes four arguments: the number of the color to be changed followed
@@ -4344,9 +4221,9 @@ character value is any other @code{KEY_} define, the user is alerted with a
 @code{beep} call.  Otherwise the character is simply output to the
 screen.
 
-@findex keypad
+@findex keypad!
 
-If @code{keypad} is @code{#t}, and a function key is pressed, the token for that
+If @code{keypad!} is @code{#t}, and a function key is pressed, the token for that
 function key is returned instead of the raw characters. There is a
 list of possible function keys.  @xref{tab:key}.
 
@@ -4358,10 +4235,10 @@ otherwise, the function key value is returned.  For this reason, many
 terminals experience a delay between the time a user presses the
 escape key and the escape is returned to the program.
 
-@findex wrefresh
+@findex refresh
 
 If the window is not a pad, and it has been moved or modified since
-the last call to @code{wrefresh}, @code{wrefresh} will be called
+the last call to @code{refresh}, @code{refresh} will be called
 before another character is read.
 
 @end deffn
@@ -4380,10 +4257,10 @@ It returns @code{ERR} if there is no more space in the buffer, or
 @end deffn
 
 @findex getch
-@findex keypad
+@findex keypad!
 
 The following function keys, might be returned by @code{getch} if
-@code{keypad} has been enabled.
+@code{keypad!} has been enabled.
 
 Note that almost all of these function keys do not exist on modern
 keyboards.  The standard PC keyboard cannot be depended upon to have
@@ -4413,6 +4290,15 @@ The return value is unspecified.  An exception could be thrown if
 curses is in a bad state.
 @end deffn
 
+@deffn Procedure key-defined defn
+@cindex Keycodes, lookup
+
+If the string @var{defn} is a character sequence that is bound to a keycode,
+that keycode is returned.  Otherwise @code{#f} is returned.
+
+@end deffn
+
+@cindex Keycodes
 
 @float Table,tab:key
 @multitable {@code{KEY_BACKSPACE} xx} {Home down or bottom (lower left) xxxx}
@@ -4667,6 +4553,7 @@ margin of the window or until @var{n} characters have been found.
 @deffn Procedure cbreak
 @deffnx Procedure nocbreak
 @cindex Line buffering
+@cindex Control character processing
 
 Normally, the tty driver buffers typed characters until a @key{NL} or
 @key{RET} is typed.  The @code{cbreak} routine disables line buffering
@@ -4748,25 +4635,30 @@ is unspecified.
 @end deffn
 
 
-@deffn Procedure keypad win bf
+@deffn Procedure keypad! win bf
 
 @findex wgetch
 
-The keypad option enables the keypad of the user's terminal.  If en-
+The keypad! option enables the keypad of the user's terminal.  If en-
 abled (@var{bf} is @code{#t}, the user can press a function key (such
-as an arrow key) and @code{wgetch} returns a single value representing
+as an arrow key) and @code{getch} returns a single value representing
 the function key, as in @code{KEY_LEFT}. If disabled (@var{bf} is
 @code{#f}, curses does not treat function keys specially and the
 program has to interpret the escape sequences itself.  If the keypad
 in the terminal can be turned on (made to transmit) and off (made to
 work locally), turning on this option causes the terminal keypad to be
-turned on when @code{wgetch} is called.  The default value for keypad
+turned on when @code{getch} is called.  The default value for keypad
 is @code{#f}.
+
+The return value is unspecified.  This procedure could throw a ``bad
+state'' error.
 
 @end deffn
 
 
 @deffn Procedure meta win bf
+@cindex 7-bit characters
+@cindex 8-bit characters
 
 Initially, whether the terminal returns 7 or 8 significant bits on
 input depends on the control mode of the tty driver.  To force 8 bits
@@ -4782,26 +4674,31 @@ when @code{(meta win #f)} is called.
 @end deffn
 
 @deffn Procedure nodelay! win bf
+@cindex Blocking
+@cindex Input, blocking
 @findex getch
-The @code{nodelay} option causes @code{getch} to be a non-blocking
+
+The @code{nodelay!} option causes @code{getch} to be a non-blocking
 call.  If no input is ready, getch returns @code{ERR}.  If disabled
 (@var{bf} is @code{#f}), @code{getch} waits until a key is pressed.
 
 @end deffn
 
-@deffn Procedure notimeout win bf
+@deffn Procedure notimeout! win bf
 
-@findex wgetch
-While interpreting an input escape sequence, @code{wgetch} sets a timer while
-waiting for the next character. If @code{(notimeout win #t)} is called,
-then @code{wgetch} does not set a timer.  The purpose of the timeout is to
-differentiate between sequences received from a function key and those
-typed by a user.
+@findex getch
+While interpreting an input escape sequence, @code{getch} sets a timer
+while waiting for the next character. If @code{(notimeout! win #t)} is
+called, then @code{getch} does not set a timer.  The purpose of the
+timeout is to differentiate between sequences received from a function
+key and those typed by a user.
 
 @end deffn
 
 @deffn Procedure raw
 @deffnx Procedure noraw
+@cindex Control character processing
+@cindex Line buffering
 
 The @code{raw} and @code{noraw} routines place the terminal into or
 out of raw mode.  Raw mode is similar to @code{cbreak} mode, in that
@@ -4811,9 +4708,15 @@ and flow control characters are all passed through uninterpreted,
 instead of generating a signal.  The behavior of the @key{BREAK} key depends
 on other bits in the tty driver that are not set by curses.
 
+The return value is unspecified;
+
 @end deffn
 
 @deffn Procedure noqiflush
+@deffnx Procedure qiflush
+@cindex Flushing
+@cindex Input, flushing
+@cindex Output, flushing
 
 When the @code{noqiflush} routine is used, normal flush of input and
 output queues associated with the INTR, QUIT and SUSP characters will
@@ -4824,19 +4727,19 @@ though the interrupt had not occurred, after the handler exits.
 
 @end deffn
 
-@deffn Procedure timeout delay
-@deffnx Procedure wtimeout win delay
+@deffn Procedure timeout! win delay
+@cindex Blockin
+@cindex Input, blocking
+@findex nodelay!
 
-@findex nodelay
-
-The @code{timeout} and @code{wtimeout} routines set blocking or
+The @code{timeout!} routine sets blocking or
 non-blocking read for a given window.  If @var{delay} is negative,
 blocking read is used (i.e., waits indefinitely for input).  If
 @var{delay} is zero, then non-blocking read is used (i.e., read
 returns @code{ERR} if no input is waiting).  If @var{delay} is
 positive, then read blocks for delay milliseconds, and returns
 @code{ERR} if there is still no input. Hence, these routines provide
-the same functionality as @code{nodelay}, plus the additional
+the same functionality as @code{nodelay!}, plus the additional
 capability of being able to block for only @var{delay} milliseconds
 (where @var{delay} is positive).
 
@@ -4849,8 +4752,8 @@ The curses library does ``line-breakout optimization'' by looking for
 typeahead periodically while updating the screen.  If input is found,
 and it is coming from a tty, the current update is postponed until
 refresh or doupdate is called again.  This allows faster response to
-commands typed in advance.  Normally, the input @code{#<file>} passed
-to newterm, or @code{stdin} in the case that initscr was used, will be
+commands typed in advance.  Normally, the input file port passed to
+newterm, or @code{stdin} in the case that initscr was used, will be
 used to do this typeahead checking.  The typeahead routine specifies
 that the (integer) file descriptor @var{fd} is to be used to check for
 typeahead instead.  If @var{fd} is -1, then no typeahead checking is
@@ -4953,7 +4856,8 @@ The return value is unspecified.
 
 @deffn Procedure reset-prog-mode
 @deffnx Procedure reset-shell-mode
-
+@cindex Curses, ending
+@cindex Terminal modes
 @findex endwin
 @findex doupdate
 
@@ -4963,16 +4867,24 @@ curses) state.  These are done automatically by @code{endwin} and,
 after an @code{endwin}, by @code{doupdate}, so they normally are not
 called.
 
+Returns @code{#t} on success or @code{#f} on failure.  Failure could
+indicate that this terminal was created with @code{newterm} and thus
+doesn't have a previous state.
+
 @end deffn
 
 @deffn Procedure resetty
 @deffnx Procedure savetty
+@cindex Terminal modes
 
 The @code{resetty} and @code{savetty} routines save and restore the
 state of the terminal modes.  @code{savetty} saves the current state
 in a buffer and @code{resetty} restores the state to what it was at
 the last call to @code{savetty}.
 
+Returns @code{#t} on success or @code{#f} on failure.  Failure could
+indicate that this terminal was created with @code{newterm} and thus
+doesn't have a previous state.
 @end deffn
 
 @deffn Procedure curs-set visibility
@@ -4984,6 +4896,12 @@ normal, or very visible for @var{visibility} equal to 0, 1, or 2
 respectively.  If the terminal supports the visibility requested, the
 previous cursor state is returned; otherwise, @code{#f} is
 returned.
+
+@end deffn
+
+@deffn Procedure napms ms
+
+The procedure is used to sleep for @var{ms} milliseconds.
 
 @end deffn
 
@@ -5112,9 +5030,9 @@ The @code{mouse-trafo} procedure performs the same translation as
 @code{wmouse-trafo}, using @code{stdscr} for @var{win}.
 @end deffn
 
-@deffn Procedure wenclose win y x
+@deffn Procedure wenclose? win y x
 
-The @code{wenclose} function tests whether a given pair of
+The @code{wenclose?} function tests whether a given pair of
 screen-relative character-cell coordinates is enclosed by the given
 window @var{win}, returning @code{#t} if it is and @code{#f}
 otherwise.  It is useful for determining what subset of the screen
@@ -5174,102 +5092,100 @@ for a more pleasing visual effect.
 
 @c If the @var{win} argument to
 @c @code{clearok} is the global variable @code{curscr}, the next call to
-@c @code{wrefresh} with any window causes the screen to be cleared and
+@c @code{refresh} with any window causes the screen to be cleared and
 @c repainted from scratch.
 
 The return value is unspecified.
 
 @end deffn
 
-@deffn Procedure idlok win bf
+@deffn Procedure idlok! win bf
 
-If @code{idlok} is called with @code{#t} as second argument, curses considers
-using the hardware insert/delete line feature of terminals so
-equipped.  Calling @code{idlok} with @var{bf} as @code{#f} disables use of
-line insertion and deletion.  This option should be enabled only if
-the application needs insert/delete line, for example, for a screen
-editor.  It is disabled by default because insert/delete line tends to
-be visually annoying when used in applications where it isn't really
-needed.  If insert/delete line cannot be used, curses redraws the
-changed portions of all lines.
+If @code{idlok!} is called with @code{#t} as second argument, curses
+considers using the hardware insert/delete line feature of terminals
+so equipped.  Calling @code{idlok!} with @var{bf} as @code{#f}
+disables use of line insertion and deletion.  This option should be
+enabled only if the application needs insert/delete line, for example,
+for a screen editor.  It is disabled by default because insert/delete
+line tends to be visually annoying when used in applications where it
+isn't really needed.  If insert/delete line cannot be used, curses
+redraws the changed portions of all lines.
 
-Returns @code{OK}.
+The return value is unspecified.
 @end deffn
 
-@deffn Procedure idcok win bf
+@deffn Procedure idcok! win bf
 
-If @code{idcok} is called with @var{bf} as @code{#f}, curses no longer
-considers using the hardware insert/delete character feature of
+If @code{idcok!} is called with @var{bf} as @code{#f}, curses no
+longer considers using the hardware insert/delete character feature of
 terminals so equipped.  Use of character insert/delete is enabled by
-default.  Calling @code{idcok} with @code{#t} as second argument
+default.  Calling @code{idcok!} with @code{#t} as second argument
 re-enables use of character insertion and deletion.
 
-Returns @code{OK}.
+The return value is unspecified.
 @end deffn
 
 
-@deffn Procedure immedok win bf
-
+@deffn Procedure immedok! win bf
+@cindex Updating automatically
 @findex addch
-@findex wclrtobot
+@findex clrtobot
 @findex wscrl
-@findex wrefresh
+@findex refresh
 
-If @code{immedok} is called with @code{#t} as argument, any change in
+If @code{immedok!} is called with @code{#t} as argument, any change in
 the window image, such as the ones caused by @code{addch},
-@code{wclrtobot}, @code{wscrl}, etc., automatically cause a call to
-@code{wrefresh}.  However, it may degrade performance considerably,
-due to repeated calls to @code{wrefresh}. It is disabled by default.
+@code{clrtobot}, @code{scrl}, etc., automatically cause a call to
+@code{refresh}.  However, it may degrade performance considerably,
+due to repeated calls to @code{refresh}. It is disabled by default.
 
-Returns @code{OK}.
+The return value is unspecified.
 @end deffn
 
-@deffn Procedure leavok win bf
+@deffn Procedure leaveok! win bf
+@cindex Cursor, positioning
 
 Normally, the hardware cursor is left at the location of the window
-cursor being refreshed.  The @code{leaveok} option allows the cursor
+cursor being refreshed.  The @code{leaveok!} option allows the cursor
 to be left wherever the update happens to leave it.  It is useful for
 applications where the cursor is not used, since it reduces the need
 for cursor motions.
 
 @end deffn
 
-@deffn Procedure setscrreg top bot
-@deffnx Procedure wsetscrreg win top bot
+@deffn Procedure setscrreg! win top bot
+@cindex Scrolling
+@findex scrollok!
+@findex idlok!
 
-@findex scrollok
-@findex idlok
-
-The @code{setscrreg} and @code{wsetscrreg} routines allow the
-application programmer to set a software scrolling region in a window.
-@var{top} and @var{bot} are the line numbers of the top and bottom
-margin of the scrolling region.  (Line 0 is the top line of the
-window.)  If this option and @code{scrollok} are enabled, an attempt to move
-off the bottom margin line causes all lines in the scrolling region to
-scroll one line in the direction of the first line. Only the text of
-the window is scrolled.  (Note that this has nothing to do with the
-use of a physical scrolling region capability in the terminal, like
-that in the VT100.  If @code{idlok} is enabled and the terminal has either a
+The @code{setscrreg!} routine allows the application programmer to set
+a software scrolling region in a window.  @var{top} and @var{bot} are
+the line numbers of the top and bottom margin of the scrolling region.
+(Line 0 is the top line of the window.)  If this option and
+@code{scrollok!} are enabled, an attempt to move off the bottom margin
+line causes all lines in the scrolling region to scroll one line in
+the direction of the first line. Only the text of the window is
+scrolled.  (Note that this has nothing to do with the use of a
+physical scrolling region capability in the terminal, like that in the
+VT100.  If @code{idlok!} is enabled and the terminal has either a
 scrolling region or insert/delete line capability, they will probably
 be used by the output routines.)
-
-Returns @code{OK} on success and @code{ERR} on failure.
 @end deffn
 
 
-@deffn Procedure scrollok win bf
+@deffn Procedure scrollok! win bf
+@cindex Scrolling
+@findex idlok!
 
-@findex idlok
-
-The @code{scrollok} option controls what happens when the cursor of a window
+The @code{scrollok!} option controls what happens when the cursor of a window
 is moved off the edge of the window or scrolling region, either as a
 result of a newline action on the bottom line, or typing the last
 character of the last line. If disabled, (@var{bf} is @code{#f}), the cursor
 is left on the bottom line.  If enabled, (@var{bf} is @code{#t}), the window is
 scrolled up one line (Note that to get the physical scrolling effect
-on the terminal, it is also necessary to call @code{idlok}).
+on the terminal, it is also necessary to call @code{idlok!}).
 
-Returns @code{OK}.
+The return value is unspecified.
 @end deffn
 
 @deffn Procedure nl
@@ -5298,6 +5214,9 @@ The return values are unspecified;
 
 @deffn Procedure overlay srcwin dstwin
 @deffnx Procedure overwrite srcwin dstwin
+@cindex Overlaying
+@cindex Windows, overlaying
+
 
 The @code{overlay} and @code{overwrite} routines overlay @var{srcwin}
 on top of @var{dstwin}.  @var{scrwin} and @var{dstwin} are not
@@ -5305,9 +5224,7 @@ required to be the same size; only text where the two windows overlap
 is copied.  The difference is that overlay is non-destructive (blanks
 are not copied) whereas overwrite is destructive.
 
-Returns @code{OK} on success or @code{ERR} on failure.  @code{ERR}
-could indicate that the windows are freed.
-
+The return values are unspecified;
 @end deffn
 
 @deffn Procedure copywin srcwin dstwin sminrow smincol dminrow dmincol dmaxrow dmaxcol overlay
@@ -5333,19 +5250,25 @@ indicate that some part of the window would be placed offscreen.
 
 @node Create and display pads, Refresh windows and lines, Overlay and manipulate overlapped windows, The basic curses library
 @subsection Create and display pads
+@cindex Pads
+@cindex Pads, creating
+@findex pnoutrefresh
+@findex refresh
+@findex prefresh
 
 A pad is like a window, except that it is not restricted by the screen
 size, and is not necessarily associated with a particular part of the
 screen. Pads can be used when a large window is needed, and only a
 part of the window will be on the screen at one time.  Automatic
 refreshes of pads (e.g., from scrolling or echoing of input) do not
-occur.  It is not legal to call wrefresh with a pad as an argument;
-the routines prefresh or pnoutrefresh should be called instead.  Note
-that these routines require additional parameters to specify the part
-of the pad to be displayed and the location on the screen to be used
-for the display.
+occur.  It is not legal to call @code{refresh} with a pad as an
+argument; the routines @code{prefresh} or @code{pnoutrefresh} should
+be called instead.  Note that these routines require additional
+parameters to specify the part of the pad to be displayed and the
+location on the screen to be used for the display.
 
 @deffn Procedure newpad nlines ncols
+@cindex Pads, creating
 
 The newpad routine creates and returns @code{#<window>} pad with the
 given number of lines, @var{nlines}, and columns, @var{ncols}.
@@ -5353,7 +5276,7 @@ given number of lines, @var{nlines}, and columns, @var{ncols}.
 @end deffn
 
 @deffn Procedure subpad orig nlines ncols begin-y begin-x
-
+@cindex Pads
 @findex subwin
 @findex touchwin
 @findex touchline
@@ -5374,38 +5297,37 @@ of this routine, it will often be necessary to call @code{touchwin} or
 
 @deffn Procedure prefresh pad pminrow pmincol sminrow simincol smaxrow smaxcol
 @deffnx Procedure pnoutrefresh pad pminrow pmincol sminrow smincol smaxrow smaxcol
-
-@findex wrefresh
-@findex wnoutrefresh
+@cindex Pads, refreshing
+@findex refresh
+@findex noutrefresh
 
 The @code{prefresh} and @code{pnoutrefresh} routines are analogous to
-@code{wrefresh} and @code{wnoutrefresh} except that they relate to
-pads instead of windows.  The additional parameters are needed to
-indicate what part of the pad and screen are involved.  @var{pminrow}
-and @code{pmincol} specify the upper left-hand corner of the rectangle
-to be displayed in the pad.  @var{sminrow}, @var{smincol},
-@var{smaxrow}, and @var{smaxcol} specify the edges of the rectangle to
-be displayed on the screen.  The lower right-hand corner of the
-rectangle to be displayed in the pad is calculated from the screen
-coordinates, since the rectangles must be the same size.  Both
-rectangles must be entirely contained within their respective
-structures.  Negative values of @var{pminrow}, @var{pmincol},
-@var{sminrow}, or @var{smincol} are treated as if they were zero.
+@code{refresh} and @code{noutrefresh} except that they relate to pads
+instead of windows.  The additional parameters are needed to indicate
+what part of the pad and screen are involved.  @var{pminrow} and
+@code{pmincol} specify the upper left-hand corner of the rectangle to
+be displayed in the pad.  @var{sminrow}, @var{smincol}, @var{smaxrow},
+and @var{smaxcol} specify the edges of the rectangle to be displayed
+on the screen.  The lower right-hand corner of the rectangle to be
+displayed in the pad is calculated from the screen coordinates, since
+the rectangles must be the same size.  Both rectangles must be
+entirely contained within their respective structures.  Negative
+values of @var{pminrow}, @var{pmincol}, @var{sminrow}, or
+@var{smincol} are treated as if they were zero.
 
-Returns @code{ERR} upon failure and @code{OK} upon successful
+Returns @code{#f} upon failure and @code{#t} upon successful
 @end deffn
 
 
 @deffn Procedure pechochar pad ch
-
+@cindex Outputting characters
 @findex addch
 @findex refresh
-@findex wrefresh
 @findex prefresh
 
 The @code{pechochar} routine is functionally equivalent to a call to
 @code{addch} followed by a call to @code{refresh} or a call to
-@code{waddch} followed by a call to @code{prefresh}.  The knowledge
+@code{addch} followed by a call to @code{prefresh}.  The knowledge
 that only a single character is being output is taken into
 consideration and, for non-control characters, a considerable
 performance gain might be seen by using these routines instead of
@@ -5413,7 +5335,7 @@ their equivalents.  In the case of @code{pechochar}, the last location
 of the pad on the screen is reused for the arguments to
 @code{prefresh}.
 
-Returns @code{ERR} upon failure and @code{OK} upon successful
+Returns @code{#f} upon failure and @code{#t} upon successful
 completion.
 @end deffn
 
@@ -5421,22 +5343,21 @@ completion.
 @node Refresh windows and lines, Reading and writing a curses screen to a file, Create and display pads, The basic curses library
 @subsection Refresh windows and lines
 
-@deffn Procedure refresh
-@deffnx Procedure wrefresh win
+@deffn Procedure refresh win
 
 @findex wnoutrefresh
 @findex doupdate
-@findex leaveok
+@findex leaveok!
 
-The @code{refresh} and @code{wrefresh} routines (or
-@code{wnoutrefresh} and @code{doupdate}) must be called to get actual
-output to the terminal, as other routines merely manipulate data
-structures.  The routine @code{wrefresh} copies the named window to
-the physical terminal screen, taking into account what is already
-there to do optimizations.  The @code{refresh} routine is the same,
-using @code{stdscr} as the default window.  Unless @code{leaveok} has
-been enabled, the physical cursor of the terminal is left at the
-location of the cursor for that window.
+The @code{refresh} routine (or @code{wnoutrefresh} and
+@code{doupdate}) must be called to get actual output to the terminal,
+as other routines merely manipulate data structures.  The routine
+@code{refresh} copies the named window to the physical terminal
+screen, taking into account what is already there to do optimizations.
+The @code{refresh} routine is the same, using @code{stdscr} as the
+default window.  Unless @code{leaveok!} has been enabled, the physical
+cursor of the terminal is left at the location of the cursor for that
+window.
 
 @end deffn
 
@@ -5455,23 +5376,23 @@ where necessary.
 @end deffn
 
 The @code{wnoutrefresh} and @code{doupdate} routines allow multiple
-updates with more efficiency than @code{wrefresh} alone. In addition
+updates with more efficiency than @code{refresh} alone. In addition
 to all the window structures, curses keeps two data structures
 representing the terminal screen: a physical screen, describing what
 is actually on the screen, and a virtual screen, describing what the
 programmer wants to have on the screen.
 
-The routine @code{wrefresh} works by first calling
+The routine @code{refresh} works by first calling
 @code{wnoutrefresh}, which copies the named window to the virtual
 screen, and then calling @code{doupdate}, which compares the virtual
 screen to the physical screen and does the actual update.  If the
 programmer wishes to output several windows at once, a series of calls
-to @code{wrefresh} results in alternating calls to @code{wnoutrefresh}
+to @code{refresh} results in alternating calls to @code{wnoutrefresh}
 and @code{doupdate}, causing several bursts of output to the
 screen. By first calling @code{wnoutrefresh} for each window, it is
 then possible to call @code{doupdate} once, resulting in only one
 burst of output, with fewer total characters transmitted and less CPU
-time used. If the @var{win} argument to @code{wrefresh} is the global
+time used. If the @var{win} argument to @code{refresh} is the global
 variable @code{curscr}, the screen is immediately cleared and
 repainted from scratch.
 
@@ -5484,11 +5405,15 @@ modified only when it is explicitly changed.
 
 @deffn Procedure redrawwin win
 @deffnx Procedure wredrawln win beg-line num-lines
+@cindex Redrawing
+@cindex Windows, redrawing
 
 The @code{wredrawln} routine indicates to curses that some screen
 lines are corrupted and should be thrown away before anything is
 written over them.  It touches the indicated lines (marking them
 changed).  The routine @code{redrawwin} touches the entire window.
+
+Returns @code{#t} on success and @code{#f} on failure.
 
 @end deffn
 
@@ -5496,7 +5421,8 @@ changed).  The routine @code{redrawwin} touches the entire window.
 @subsection Reading and writing a curses screen to a file
 
 @deffn Procedure scr-dump filename
-
+@cindex Curses, dumping to disk
+@cindex Dumping to disk
 The @code{scr-dump} routine dumps the current contents of the virtual screen
 to the file @var{filename}.
 
@@ -5504,6 +5430,7 @@ to the file @var{filename}.
 
 
 @deffn Procedure scr-restore filename
+@cindex Writing to disk
 
 @findex doupdate
 
@@ -5547,10 +5474,13 @@ inheritance function.
 
 @end deffn
 
-To read (write) a window from (to) a file, use the getwin and putwin
-routines [see FIXME.
+@findex getwin
+@findex putwin
 
-All routines return the integer @code{ERR} upon failure and @code{OK}
+To read (write) a window from (to) a file, use the @code{getwin} and
+@code{putwin} routines.
+
+All routines return the integer @code{#f} upon failure and @code{#t}
 upon success.
 
 @node Scroll a window, Function key labels, Reading and writing a curses screen to a file, The basic curses library
@@ -5568,6 +5498,8 @@ screen, the physical screen may be scrolled at the same time.
 
 @deffn Procedure scrl n
 @deffnx Procedure wscrl win n
+@cindex Scrolling
+@findex scrollok!
 
 For positive @var{n}, the @code{scrl} and @code{wscrl} routines scroll
 the window up @code{n} lines (line i+n becomes i); otherwise scroll
@@ -5576,7 +5508,7 @@ window character image structure.  The current cursor position is not
 changed.
 
 For these functions to work, scrolling must be enabled via
-@code{scrollok}.
+@code{scrollok!}.
 
 These routines return @code{ERR} upon failure, and @code{OK} upon
 successful completion.
@@ -5712,12 +5644,12 @@ character capabilities.
 @cindex Insert lines
 @cindex Terminal capabilities, insert
 
-@findex scrollok
+@findex scrollok!
 
 The @code{has-il?} routine is true if the terminal has insert- and
 delete-line capabilities, or can simulate them using scrolling
 regions.  This might be used to determine if it would be appropriate
-to turn on physical scrolling using @code{scrollok}.
+to turn on physical scrolling using @code{scrollok!}.
 
 @end deffn
 
@@ -5768,33 +5700,47 @@ been changed, beginning with line @var{start}.
 
 @end deffn
 
+@deffn Procedure is-linetouched? win line
+
+Returns @code{#t} if the specified window and line was modified since the 
+last call to @code{refresh}.
+
+@end deffn
+
+@deffn Procedure is-wintouched? win
+
+Returns @code{#t} if the specified window was modified since the last call
+to @code{refresh}>
+
+@end deffn
+
 @deffn Procedure untouchwin win 
 
-@findex wrefresh
+@findex refresh
 
 The @code{untouchwin} routine marks all lines in the window as
-unchanged since the last call to @code{wrefresh}.
+unchanged since the last call to @code{refresh}.
 
 @end deffn
 
 
 @deffn Procedure wtouchln win y n changed
 
-@findex wrefresh
+@findex refresh
 
 The @code{wtouchln} routine makes @var{n} lines in the window,
 starting at line @var{y}, look as if they have (@var{changed}=1) or have not
-(@var{changed}=0) been changed since the last call to @code{wrefresh}.
+(@var{changed}=0) been changed since the last call to @code{refresh}.
 
 @end deffn
 
 @deffn Procedure is-linetouched win line
 @deffnx Procedure is-wintouched win 
-@findex wrefresh
+@findex refresh
 
 The @code{is-linetouched} and @code{is-wintouched} routines return
 @code{#t} if the specified line/window was modified since the last
-call to @code{wrefresh}; otherwise they return @code{#f}. In addition,
+call to @code{refresh}; otherwise they return @code{#f}. In addition,
 @code{is-linetouched} returns @code{ERR} if line is not valid for the given
 window. FIXME: the code doesn't do this.
 
@@ -5813,6 +5759,7 @@ Printing characters are displayed as is.
 @end deffn
 
 @deffn Procedure keyname ch
+@cindex Key names
 
 The @code{keyname} routine returns a character string corresponding to
 the key @var{ch}.  Control characters are displayed in the @code{^X}
@@ -5895,11 +5842,14 @@ Returns a string that indicates the version of ncurses being used.
 This procedure, when called before initscr, restricts the activity of
 curses to a single line, instead of the to the entire screen.
 
+@end deffn
+
 @node Window creation,  , Miscellaneous utilities, The basic curses library
 @subsection Window creation
 
 
 @deffn Procedure newwin nlines ncols begin-y begin-x
+@cindex Windows, creation
 
 Calling @code{newwin} creates and returns a pointer to a new window
 with the given number of lines and columns.  The upper left-hand
@@ -5922,11 +5872,14 @@ This function is called implicitly if a window is garbage collected.
 
 
 @deffn Procedure mvwin win y x
+@cindex Windows, moving
 
 Calling @code{mvwin} moves the window so that the upper left-hand
 corner is at position @var{x}, @var{y}.  If the move would cause the
 window to be off the screen, it is an error and the window is not
 moved.  Moving subwindows is allowed, but should be avoided.
+
+The return value is unspecified;
 
 @end deffn
 
@@ -5937,7 +5890,7 @@ moved.  Moving subwindows is allowed, but should be avoided.
 
 @findex touchwin
 @findex touchline
-@findex wrefresh
+@findex refresh
 
 Calling @code{subwin} creates and returns a pointer to a new window
 with the given number of lines, @var{nlines}, and columns,
@@ -5974,6 +5927,8 @@ its parent window.  The screen-relative parameters of the window are
 not changed.  This routine is used to display different parts of the
 parent window at the same physical position on the screen.
 
+The return value is unspecified.
+
 @end deffn
 
 
@@ -5985,22 +5940,31 @@ Calling @code{dupwin} creates an exact duplicate of the window @var{win}.
 @end deffn 
 
 @deffn Procedure wsyncup win
-@findex syncok
+@findex syncok!
 
 Calling @code{wsyncup} touches all locations in ancestors of @var{win}
-that are changed in @var{win}.  If @code{syncok} is called with second
+that are changed in @var{win}.  If @code{syncok!} is called with second
 argument @code{#t} then @code{wsyncup} is called automatically
 whenever there is a change in the window.
 
 @end deffn 
 
+@deffn Procecure syncok! win bf
+
+If @code{syncok!} is called with the second argument @code{#t} then 
+@code{wsyncup} is called automatically whenever there is a change in the
+window.
+
+The return value is unspecified.
+@end deffn
+
 @deffn Procedure wsyncdown win
 
-@findex wrefresh
+@findex refresh
 
 The @code{wsyncdown} routine touches each location in @var{win} that
 has been touched in any of its ancestor windows. This routine is
-called by @code{wrefresh}, so it should almost never be necessary to
+called by @code{refresh}, so it should almost never be necessary to
 call it manually.
 
 @end deffn 
@@ -6266,10 +6230,10 @@ Unless @code{noecho} has been set, these routines echo the character
 into the designated window.
 
 If the window is not a pad and has been moved or modified since the
-last call to @code{wrefresh}, @code{wrefresh} will be called before
+last call to @code{refresh}, @code{refresh} will be called before
 another character is read.
 
-If @code{keypad} is enabled, these functions respond to the pressing
+If @code{keypad!} is enabled, these functions respond to the pressing
 of a function key by returning a list of two elements where the first
 element it @code{KEY_CODE_YES} and the second is the corresponding
 @code{KEY_} constant. See @ref{Getting characters from the keyboard} for
@@ -6489,7 +6453,7 @@ above any other panel) and returns the new panel.
 This procedure refreshes the virtual screen to reflect the relations
 between the panels in the stack, but does not call @code{doupdate} to
 refresh the physical screen.  Use this function and not
-@code{wrefresh} or @code{wnoutrefresh}.  @code{update-panels} may be
+@code{refresh} or @code{wnoutrefresh}.  @code{update-panels} may be
 called more than once before a call to @code{doupdate}, but
 @code{doupdate} is the procedure responsible for updating the physical
 screen.

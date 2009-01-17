@@ -31,7 +31,7 @@
 ;; Program Begins
 (define stdscr (initscr))		; Start curses
 (cbreak)				; Line buffering disabled
-(keypad stdscr #t)			; Check for function keys
+(keypad! stdscr #t)			; Check for function keys
 
 
 (let* ((height 3)

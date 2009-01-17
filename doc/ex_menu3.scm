@@ -10,7 +10,7 @@
 (start-color)
 (cbreak)
 (noecho)
-(keypad stdscr #t)
+(keypad! stdscr #t)
 (init-pair 1 COLOR_RED COLOR_BLACK)
 
 (let* (;; Labels for the menu items

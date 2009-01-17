@@ -9,7 +9,7 @@
 (define stdscr (initscr))
 (cbreak)
 (noecho)
-(keypad stdscr #t)
+(keypad! stdscr #t)
 
 (let* (;; Labels for the menu items
        (names '("Choice 1" "Choice 2" "Choice 3" "Choice 4" "Exit"))

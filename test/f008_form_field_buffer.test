@@ -27,7 +27,7 @@
 		(set! str (field-buffer field1 0))
 		(addstr stdscr (string-append "\"" str "\"") #:y 5 #:x 0)
 		(refresh stdscr)
-		(sleep 1)
+		;;(sleep 1)
 		(string=? (substring str 0 (string-length "Blammo!"))
 			  "Blammo!")))))
 

@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.8 2009/01/14 05:06:31 spike_gran Exp $
+## $Id: Makefile.am,v 1.9 2009/01/17 23:06:24 spike_gran Exp $
 
 # Cygwin's texi2dvi can try to call etex, resulting in this error:
 #   "texinfo.tex appears to be broken, quitting"
@@ -24,5 +24,7 @@ gucu_TEXINFOS = \
 	ex_menu2.scm \
 	ex_menu3.scm \
 	ex_panel.scm \
-	ex_window.scm
+	ex_window.scm \
+	ex_form.scm \
+	ex_form2.scm
 

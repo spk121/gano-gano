@@ -17,10 +17,10 @@
  "attr"
  
  ;; clear all attributes
- (pass-if "standend #1"
+ (pass-if "standend! #1"
 	  (begin
 	    (clear win)
-	    (standend win)
+	    (standend! win)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -150,10 +150,10 @@
 	      (equal? A_BLINK (logand A_ATTRIBUTES x2)))))
  
  ;; set it to STANDOUT alone
- (pass-if "standout"
+ (pass-if "standout!"
 	  (begin
 	    (clear win)
-	    (standout win)
+	    (standout! win)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))
@@ -169,21 +169,21 @@
 	    (let ((x2 (inch win #:y 0 #:x 0)))
 	      (equal? 0 (logand A_ATTRIBUTES x2)))))
  
- ;; add color via color-set
- (pass-if "color-set 1"
+ ;; add color via color-set!
+ (pass-if "color-set! 1"
 	  (begin
 	    (clear win)
-	    (color-set win 1)
+	    (color-set! win 1)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))
 	      (equal? (color-pair 1) (logand A_COLOR x2)))))
  
  
- (pass-if "standend #2"
+ (pass-if "standend! #2"
 	  (begin
 	    (clear win)
-	    (standend win)
+	    (standend! win)
 	    (addstr win "x" #:y 0 #:x 0)
 	    (refresh win)
 	    (let ((x2 (inch win #:y 0 #:x 0)))

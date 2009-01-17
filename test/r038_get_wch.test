@@ -39,7 +39,7 @@
 		   (lset= equal? pos '(2 2)))))))))
 					  
 (refresh win)
-(scrollok win #t)
+(scrollok! win #t)
 (move win 0 0)
 (map (lambda (key)
        (pass-if (keyname key)

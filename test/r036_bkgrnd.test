@@ -38,7 +38,7 @@
 		  
  (pass-if "bkgdset"
 	  (begin
-	    (standend win)
+	    (standend! win)
 	    (addstr win "This is a string" #:y 0 #:x 0)
 	    (bkgrndset win (list A_DIM 1 plus))
 	    (addstr win "This is another string" #:y 1 #:x 0)

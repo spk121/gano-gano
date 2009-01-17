@@ -7,9 +7,9 @@
 	     (ice-9 format)
 	     (srfi srfi-1))
 
-(initscr)
+(define stdscr (initscr))
 (define keyflag #t)
-(keypad (stdscr) keyflag)
+(keypad! stdscr keyflag)
 (cbreak)
 (noecho)
 (nonl)

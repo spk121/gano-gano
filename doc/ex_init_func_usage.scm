@@ -4,7 +4,7 @@
 
 (define stdscr (initscr))	   ; Start curses mode
 (raw)				   ; Line buffering disabled
-(keypad stdscr #t)		   ; We get F1, F2, etc
+(keypad! stdscr #t)		   ; We get F1, F2, etc
 (noecho)			   ; Don't echo when we get a keypress
 (addstr stdscr "Type any character to see it in bold\n")
 (let ((ch (getch stdscr)))	    ; Read a key press, put it in 'ch'
