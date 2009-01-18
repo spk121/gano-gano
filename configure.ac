@@ -20,20 +20,22 @@ AC_SUBST(LIBGUILE_GUCU_CURSES_INTERFACE)
 ##################
 # Check for Programs
 
-# Move the default CFLAGS to AM_CFLAGS, where they can be overridden
+# Check to see if the user specifically set CFLAGS
 cflags_were_set=false
-if test "${CFLAGS+set}" = set; then
-  AM_CFLAGS=$CFLAGS
-  CFLAGS=
-  cflags_were_set=:
-fi
-
+if test x"${CFLAGS+set}" = xset; then
+   flags_were_set=true
+else
+   flags_were_set=false
+fi	
 
 AC_PROG_CC
 AM_PROG_CC_C_O
 
-# Move the default CFLAGS to AM_CFLAGS, where they can be overridden
-if $cflags_were_set; then :; else
+# If CFLAGS is coming from AC_PROG_CC and not the user, move them
+# to the AM_CFLAGS variable, so that it can be overwritten
+if $cflags_were_set; then 
+   :; 
+else
   AM_CFLAGS=$CFLAGS
   CFLAGS=
 fi
