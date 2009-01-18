@@ -1,0 +1,25 @@
+;;;; -*- Mode: scheme; -*-
+;;;; r042_mouse.test --- test suite for mouse functions
+
+(use-modules (test lib)
+	     (test lib2)
+	     (gucu curses)
+	     (ice-9 format)
+	     (srfi srfi-1))
+
+(define test (curses-test-start))
+
+(define stdscr (initscr))
+
+(with-test-prefix 
+ "mouse"
+ (pass-if "mouseinterval 1"
+	  (eqv? 166 (mouseinterval -1)))
+ 
+ (pass-if "mouseinterval 1"
+	  (begin 
+	    (mouseinterval 140)
+	    (eqv? 140 (mouseinterval -1)))))
+
+(endwin)
+(curses-test-end test "r042_mouse.out")
