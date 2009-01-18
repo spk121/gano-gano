@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.10 2008/12/21 20:11:29 spike_gran Exp $
+## $Id: Makefile.am,v 1.11 2009/01/18 06:27:14 spike_gran Exp $
 
 ########### TESTBED ############
 # The program testbed is a statically linked guile interpreter to use
@@ -10,7 +10,8 @@ noinst_PROGRAMS = testbed
 testbed_LDADD = @LIBMENU@ @LIBPANEL@ @LIBFORM@ @LIBNCURSES@ $(GUILE_LDFLAGS)
 #testbed_LDADD = -lncursesw_g -lmenuw_g -lpanelw -lformw_g
 
-testbed_CPPFLAGS = -Wextra -Wall -I../src/raw -static -u gucu_initscr -u initscr
+testbed_CPPFLAGS = -ggdb -O0 -Wextra -Wall \
+	-I../src/raw -static -u gucu_initscr -u initscr
 testbed_LDFLAGS = -Bstatic
 
 testbed_SOURCES = \
@@ -54,7 +55,9 @@ endif
 # ncurses commands will execute in an xterm.
 
 bin_PROGRAMS = gucushell
-EXTRA_DIST = keypress.scm
+
+noinst_SCRIPTS = keypress.scm pre-inst-gucushell
+EXTRA_DIST = keypress.scm pre-inst-gucushell
 
 gucushell_LDADD = @LIBNCURSES@ -lutil $(GUILE_LDFLAGS)
 gucushell_CPPFLAGS = -Wextra -Wall 

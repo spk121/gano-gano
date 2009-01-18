@@ -47,7 +47,6 @@ inner_main (void *data __attribute__ ((unused)),
   gucu_menu_init ();
   gucu_panel_init ();
   gucu_form_init ();
-  scm_c_eval_string ("(initscr)");
   scm_shell (argc, argv);
 }
 

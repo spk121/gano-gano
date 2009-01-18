@@ -18,6 +18,7 @@
 # The program testbed is a statically linked guile interpreter to use
 # in debugging.  It does not get installed.
 
+
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkglibdir = $(libdir)/@PACKAGE@
@@ -104,6 +105,7 @@ testbed_DEPENDENCIES = $(am__DEPENDENCIES_1)
 testbed_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(testbed_LDFLAGS) \
 	$(LDFLAGS) -o $@
+SCRIPTS = $(noinst_SCRIPTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/build_aux/depcomp
 am__depfiles_maybe = depfiles
@@ -261,6 +263,7 @@ testbed_SOURCES = testbed.c ../src/raw/curs_const.c \
 	../src/raw/form_const.c ../src/raw/form_func.c \
 	../src/raw/form_main.c ../src/raw/form_spec.c \
 	../src/raw/form_type.c $(am__append_1)
+noinst_SCRIPTS = keypress.scm
 EXTRA_DIST = keypress.scm
 gucushell_LDADD = @LIBNCURSES@ -lutil $(GUILE_LDFLAGS)
 gucushell_CPPFLAGS = -Wextra -Wall 
@@ -903,7 +906,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(PROGRAMS)
+all-am: Makefile $(PROGRAMS) $(SCRIPTS)
 installdirs:
 	for dir in "$(DESTDIR)$(bindir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \

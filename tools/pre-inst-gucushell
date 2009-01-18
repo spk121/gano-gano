@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Script for running the gucushell program before before it has been installed
+
+# Make a path to the guile modules
+ln -s ../src/raw gucu
+
+libtool -dlopen ../src/raw/libguile-gucu.la  --mode=execute ./gucushell 

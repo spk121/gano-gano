@@ -233,8 +233,8 @@ inner_main (void *data    __attribute__ ((unused)),
     {
       if (!strcmp(argv[i], "--version") || !strcmp(argv[i], "-v"))
 	{
-	  printf ("Gucushell 0.1\n");
-	  printf ("Copyright (c) 2008 Michael L. Gran\n");
+	  printf ("Gucushell 0.3\n");
+	  printf ("Copyright (c) 2008,2009 Michael L. Gran\n");
 	  printf ("This may be freely distributed\n");
 	  printf ("For details, see the file COPYING, included in the distribution\n");
 	  return;
@@ -282,6 +282,7 @@ inner_main (void *data    __attribute__ ((unused)),
 	  erase ();
 	  refresh ();
 	  
+	  scm_c_eval_string ("(set! %load-path (append %load-path (list \".\")))");
 	  /* Call the curses libraries */
 	  if (_HAVE_LIBNCURSESW)
 	    {
@@ -294,6 +295,7 @@ inner_main (void *data    __attribute__ ((unused)),
 	      printf ("Loading (gucu curses)\n");
 	      scm_c_eval_string ("(use-modules (gucu curses))");
 	    }
+	  scm_c_eval_string ("(define stdscr (stdscr))");
 
 	  scm_shell (argc, argv);
 	  
