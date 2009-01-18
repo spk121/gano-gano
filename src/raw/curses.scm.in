@@ -363,7 +363,6 @@
 	    window?
 	    screen?
 	    open-curses-port
-	    newterm
 ))
 
 ;; These functions may not exist depending on the 

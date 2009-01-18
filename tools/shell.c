@@ -22,12 +22,6 @@ int is_unix98_pty (const char *);
 int is_bsd_pty (const char *);
 int is_cygwin_pty (const char *);
 
-#ifdef HAVE_CFMAKERAW
-const int _HAVE_CFMAKERAW = TRUE;
-#else
-const int _HAVE_CFMAKERAW = FALSE;
-#endif
-
 #ifdef HAVE_LIBNCURSESW
 const int _HAVE_LIBNCURSESW = TRUE;
 #else
@@ -193,17 +187,16 @@ open_terminal (char *pseudo_terminal_slave_name,
 
       /* Set to raw mode */
       tcgetattr (slave_file_descriptor, &terminal_attributes);
-      if (_HAVE_CFMAKERAW)
+#ifdef HAVE_CFMAKERAQ
 	cfmakeraw (&terminal_attributes);
-      else
-	{
-	  terminal_attributes.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP
-					   |INLCR|IGNCR|ICRNL|IXON);
-	  terminal_attributes.c_oflag &= ~OPOST;
-	  terminal_attributes.c_lflag &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);
-	  terminal_attributes.c_cflag &= ~(CSIZE|PARENB);
-	  terminal_attributes.c_cflag |= CS8;
-	}
+#else
+	terminal_attributes.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP
+					 |INLCR|IGNCR|ICRNL|IXON);
+	terminal_attributes.c_oflag &= ~OPOST;
+	terminal_attributes.c_lflag &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);
+	terminal_attributes.c_cflag &= ~(CSIZE|PARENB);
+	terminal_attributes.c_cflag |= CS8;
+#endif
 
       tcsetattr (slave_file_descriptor, TCSANOW, &terminal_attributes); 
       return process_id;

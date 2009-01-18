@@ -11,6 +11,11 @@
   #define acs_map (_nc_acs_map())
 #endif 
 
+static void curs_bad_state_error (const char *funcname)
+{
+  scm_misc_error (funcname, "Bad curses internal state", SCM_BOOL_F);
+}
+
 /* Set the attributes and color pair for a given window */
 SCM
 gucu_attr_set_x (SCM win, SCM attrs, SCM pair)
@@ -709,6 +714,10 @@ SCM
 gucu_stdscr ()
 {
   WINDOW *ret = stdscr;
+
+  if (ret == NULL)
+    curs_bad_state_error ("stdscr");
+
   SCM s_ret = _scm_from_window (ret);
 
   return s_ret;
