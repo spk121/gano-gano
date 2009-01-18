@@ -19,8 +19,27 @@ AC_SUBST(LIBGUILE_GUCU_CURSES_INTERFACE)
 
 ##################
 # Check for Programs
+
+# Move the default CFLAGS to AM_CFLAGS, where they can be overridden
+cflags_were_set=false
+if test "${CFLAGS+set}" = set; then
+  AM_CFLAGS=$CFLAGS
+  CFLAGS=
+  cflags_were_set=:
+fi
+
+
 AC_PROG_CC
 AM_PROG_CC_C_O
+
+# Move the default CFLAGS to AM_CFLAGS, where they can be overridden
+if $cflags_were_set; then :; else
+  AM_CFLAGS=$CFLAGS
+  CFLAGS=
+fi
+AC_SUBST(AM_CFLAGS)
+
+
 AC_CANONICAL_HOST
 AC_PROG_INSTALL
 AC_PROG_MKDIR_P
@@ -269,7 +288,6 @@ AC_CONFIG_FILES([Makefile
                 src/raw/Makefile 
                 doc/Makefile 
                 test/Makefile 
-                wrap/Makefile 
                 m4/Makefile 
                 build_aux/Makefile 
                 tools/Makefile])

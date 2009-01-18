@@ -20,20 +20,13 @@
 	    hline-set
 	    in-wch
 	    in-wchstr
-	    ins-nwstr
+	    innwstr
 	    ins-wch
 	    ins-wstr
-	    inwstr
 	    key-name
 	    killwchar
 	    mvadd-wch
-	    mvins-nwstr
-	    mvins-wch
-	    mvins-wstr
 	    mvwadd-wch
-	    mvwins-nwstr
-	    mvwins-wch
-	    mvwins-wstr
 	    term-attrs
 	    unget-wch
 	    vline-set
@@ -62,9 +55,6 @@
 	    wacs-ulcorner
 	    wacs-urcorner
 	    wacs-vline
-	    wins-nwstr
-	    wins-wch
-	    wins-wstr
 ))
 
 (define* (add-wch win ch #:key x y)
@@ -136,7 +126,19 @@
 	   #t)
        (%win-wchnstr win n)))
 
-(define* (inwstr win #:key y x (n -1))
+(define* (ins-wch win #:key y x)
+  (and (if (and y x)
+	   (move win y x)
+	   #t)
+       (%wins-wch win)))
+
+(define* (ins-wstr win str #:key y x (n -1))
+  (and (if (and y x)
+	   (move win y x)
+	   #t)
+       (%wins-nwstr win str n)))
+
+(define* (innwstr win n #:key y x)
   (and (if (and y x)
 	   (move win y x)
 	   #t)

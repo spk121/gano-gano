@@ -1,12 +1,10 @@
 TODO
-$Id: TODO,v 1.2 2008/08/01 14:58:25 spike_gran Exp $
+$Id: TODO,v 1.3 2009/01/18 07:01:11 spike_gran Exp $
 
 * Documentation is rough.
 
 * Documentation lacks subject index entries.
 
-* Documentation should continue splitting example programs out of the
-gucu.texi.
+* SLK library needs cleanup
 
-* Consider changing initscr to match the functionality in Dmitry's
-guile-ncurses-0.1
+* Many functions lack unit tests, garbage collection tests

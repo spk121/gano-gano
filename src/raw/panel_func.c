@@ -121,7 +121,7 @@ gucu_move_panel (SCM panel, SCM starty, SCM startx)
 }
 
 SCM
-gucu_panel_hidden (SCM panel)
+gucu_panel_hidden_p (SCM panel)
 {
   SCM_ASSERT (_scm_is_panel (panel), panel, SCM_ARG1, "panel-hidden?");
   
@@ -149,6 +149,6 @@ gucu_panel_init_function ()
 	scm_c_define_gsubr ("panel-window", 1, 0, 0, gucu_panel_window);
 	scm_c_define_gsubr ("replace-panel!", 2, 0, 0, gucu_replace_panel);
 	scm_c_define_gsubr ("move-panel", 3, 0, 0, gucu_move_panel);
-	scm_c_define_gsubr ("panel-hidden?", 1, 0, 0, gucu_panel_hidden);
+	scm_c_define_gsubr ("panel-hidden?", 1, 0, 0, gucu_panel_hidden_p);
 	scm_c_define_gsubr ("del-panel", 1, 0, 0, gucu_del_panel);
 }

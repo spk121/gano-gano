@@ -54,7 +54,7 @@ gucu_color_content (SCM s_color)
 			   scm_from_short (c_blue));
     }
   else
-    scm_misc_error ("color-content", "Out of range error not not initialized",
+    scm_misc_error ("color-content", "Out of range error or not initialized",
 		    SCM_BOOL_F);
 
   return s_list; 

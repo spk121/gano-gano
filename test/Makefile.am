@@ -1,11 +1,12 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.11 2009/01/17 23:06:24 spike_gran Exp $
+## $Id: Makefile.am,v 1.12 2009/01/18 07:01:11 spike_gran Exp $
 
 all-local:
 	-ln -s ../src/raw @PACKAGE@
 
 
-TESTS_ENVIRONMENT = ../libtool -dlopen ../src/raw/libguile-gucu.la --mode=execute \
+TESTS_ENVIRONMENT = ../libtool -dlopen ../src/raw/libguile-gucu.la \
+	--mode=execute \
 	guile -L $(top_srcdir) -L . -s 
 
 NARROWTESTS = r000_test.test \

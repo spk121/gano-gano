@@ -1,3 +1,8 @@
+2009-01-15  Mike Gran  <spike_gran@users.sourceforge.net>
+	* Everything: There is no point on keeping a changelog
+	when I'm radically recoding everything
+
+
 2008-08-01  Mike Gran  <spike_gran@users.sourceforge.net>
 
 	* test/f00*.test: Add form/menu/panel tests.

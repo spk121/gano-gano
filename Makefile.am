@@ -1,12 +1,11 @@
 ## Process this file with automake to produce Makefile.in
-## $Id: Makefile.am,v 1.6 2008/06/03 11:36:23 spike_gran Exp $
+## $Id: Makefile.am,v 1.7 2009/01/18 07:01:11 spike_gran Exp $
 
 SUBDIRS = \
 	src/raw \
 	m4 \
 	doc \
 	test \
-	wrap \
 	tools \
 	build_aux
 

@@ -40,7 +40,7 @@ fi
 # Make a path to the guile modules
 ln -s ../src/raw gucu
 
-#### Uncomment one of the following ####
+#### Run one of the following methods ####
 case $mode in
     run)
 	# We are just running the test

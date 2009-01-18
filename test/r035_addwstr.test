@@ -23,7 +23,7 @@
 	    (move win 0 0)
 	    (addwstr win (string->wstring "hello"))
 	    (refresh win)
-	    (let ((w2 (inwstr win #:y 0 #:x 0)))
+	    (let ((w2 (innwstr win 6 #:y 0 #:x 0)))
 	      (lset= eqv?  
 		     (string->wstring "hello") 
 		     (take w2 (string-length "hello"))))))
@@ -35,7 +35,7 @@
 	    (move win 0 0)
 	    (addwstr win (string->wstring "hello") #:n 2)
 	    (refresh win)
-	    (let ((w2 (inwstr win #:y 0 #:x 0)))
+	    (let ((w2 (innwstr win 6 #:y 0 #:x 0)))
 	      (lset= eqv? 
 		     (string->wstring "he")
 		     (take w2 (string-length "he"))))))
@@ -45,7 +45,7 @@
 	    (clear win)
 	    (addwstr win (string->wstring "bold") #:y 1 #:x 0)
 	    (refresh win)
-	    (let ((x2 (inwstr win #:y 1 #:x 0)))
+	    (let ((x2 (innwstr win 6 #:y 1 #:x 0)))
 	      (lset= eqv? 
 		     (string->wstring "bold") 
 		     (take x2 (string-length "bold"))))))
@@ -55,7 +55,7 @@
 	    (clear win)
 	    (addwstr win (string->wstring "bold") #:y 1 #:x 0 #:n 2)
 	    (refresh win)
-	    (let ((x2 (inwstr win #:y 1 #:x 0)))
+	    (let ((x2 (innwstr win 6 #:y 1 #:x 0)))
 	      (lset= eqv? 
 		     (string->wstring "bo")
 		     (take x2 (string-length "bo")))))))

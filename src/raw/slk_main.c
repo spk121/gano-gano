@@ -9,10 +9,10 @@
 #define API
 #endif
 
-void gucu_slk_init (void) API;
+void gucu_slk_module_init (void) API;
 
 void
-gucu_slk_init ()
+gucu_slk_module_init ()
 {
   gucu_slk_init_function ();
 }

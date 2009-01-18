@@ -73,6 +73,7 @@ distuninstallcheck_listfiles = find . -type f -print
 distcleancheck_listfiles = find . -type f -print
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
+AM_CFLAGS = @AM_CFLAGS@
 AR = @AR@
 AS = @AS@
 AUTOCONF = @AUTOCONF@
@@ -199,7 +200,6 @@ SUBDIRS = \
 	m4 \
 	doc \
 	test \
-	wrap \
 	tools \
 	build_aux
 

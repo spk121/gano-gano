@@ -21,10 +21,10 @@
       
       (cond 
        ((eqv? highlight i)
-	(attr-on win A_REVERSE)
+	(attr-on! win A_REVERSE)
 	(move win y x)
 	(addstr win (list-ref choices i))
-	(attr-off win A_REVERSE))
+	(attr-off! win A_REVERSE))
        (else
 	(move win y x)
 	(addstr win (list-ref choices i))))

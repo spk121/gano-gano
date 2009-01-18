@@ -28,7 +28,7 @@
        ;; Make a windows to hold the menu
        (my-menu-win (newwin 10 40 4 4)))
 
-  (keypad my-menu-win #t)
+  (keypad! my-menu-win #t)
 
   ;; Set the main window and subwindow
   (set-menu-win! my-menu my-menu-win)
@@ -40,10 +40,10 @@
   ;; Print a border around the main window, and a title
   (box my-menu-win 0 0)
 
-  (attr-on my-menu-win (color-pair 1))
+  (attr-on! my-menu-win (color-pair 1))
   (move my-menu-win 1 16)
   (addstr my-menu-win "My Menu")
-  (attr-off my-menu-win (color-pair 1))
+  (attr-off! my-menu-win (color-pair 1))
   
   (move my-menu-win 2 0)
   (addch my-menu-win (acs-ltee))

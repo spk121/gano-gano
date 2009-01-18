@@ -109,7 +109,8 @@ gucu_bkgd (SCM win, SCM ch)
 
   /* Always returns OK */
   ret = wbkgd (c_win, c_ch);
-  RETURNTF(ret);
+  
+  return SCM_UNDEFINED;
 }
 
 /* Change the new background character to the given rendered char */
@@ -200,7 +201,7 @@ gucu_clear (SCM win)
 
   c_win = _scm_to_window (win);
 
-  ret = wclear (c_win);
+  ret = wclear(c_win);
   RETURNTF(ret);
 }
 

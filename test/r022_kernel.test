@@ -8,17 +8,19 @@
 
 (define test (curses-test-start))
 
+(with-test-prefix "def-prog-mode"
+		  (pass-if "def-prog-mode"
+			   (begin
+			     (def-shell-mode)
+			     (def-prog-mode)
+			     #t)))
+
+
 (define win (initscr))
 
 ;; Should be able to save and reset tty
 (with-test-prefix "kernel"
 		  
-		  (pass-if "def-prog-mode"
-			   (begin
-			     (def-shell-mode)
-			     (def-prog-mode)
-			     #t))
-
  		  (pass-if "getsyx / setsyx"
  			   (begin
  			     (clear win)

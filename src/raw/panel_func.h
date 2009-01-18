@@ -19,7 +19,7 @@ SCM gucu_hide_panel (SCM arg1) API;
 SCM gucu_panel_window (SCM arg1) API;
 SCM gucu_replace_panel (SCM arg1, SCM arg2) API;
 SCM gucu_move_panel (SCM arg1, SCM arg2, SCM arg3) API;
-SCM gucu_panel_hidden (SCM arg1) API;
+SCM gucu_panel_hidden_p (SCM arg1) API;
 
 void gucu_panel_init_function (void) API;
 #endif

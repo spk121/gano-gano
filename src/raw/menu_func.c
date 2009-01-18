@@ -561,6 +561,9 @@ gucu_set_top_row (SCM arg1, SCM arg2)
 	int c_arg2 = scm_to_int (arg2);
 
 	int ret = set_top_row (c_arg1, c_arg2);
+	if (ret == ERR)
+	  return SCM_BOOL_F;
+
 	SCM s_ret = scm_from_int (ret);
 
 	return s_ret;
@@ -587,6 +590,9 @@ gucu_item_index (SCM arg1)
 	 ITEM *c_arg1 = _scm_to_item (arg1);
 
 	int ret = item_index (c_arg1);
+	if (ret == ERR)
+	  return SCM_BOOL_F;
+
 	SCM s_ret = scm_from_int (ret);
 
 	return s_ret;
@@ -745,7 +751,8 @@ gucu_menu_init_function ()
 	scm_c_define_gsubr ("unpost-menu", 1, 0, 0, gucu_unpost_menu);
 	scm_c_define_gsubr ("menu-request-name", 1, 0, 0, gucu_menu_request_name);
 	scm_c_define_gsubr ("menu-request-by-name", 1, 0, 0, gucu_menu_request_by_name);
-	scm_c_define_gsubr ("set-menu-spacing", 4, 0, 0, gucu_set_menu_spacing);
+	scm_c_define_gsubr ("set-menu-spacing!", 4, 0, 0, 
+			    gucu_set_menu_spacing);
 	scm_c_define_gsubr ("set-menu-win!", 2, 0, 0, gucu_set_menu_win);
 	scm_c_define_gsubr ("set-menu-sub!", 2, 0, 0, gucu_set_menu_sub);
 	scm_c_define_gsubr ("menu-win", 1, 0, 0, gucu_menu_win);

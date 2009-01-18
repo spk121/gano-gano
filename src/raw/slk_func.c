@@ -121,9 +121,10 @@ gucu_slk_init (SCM arg1)
 	int c_arg1 = scm_to_int (arg1);
 
 	int ret = slk_init (c_arg1);
-	SCM s_ret = scm_from_int (ret);
+	if (ret != OK)
+	  return SCM_BOOL_F;
 
-	return s_ret;
+	return SCM_BOOL_T;
 }
 
 SCM
@@ -178,11 +179,11 @@ gucu_slk_set (SCM arg1, SCM arg2, SCM arg3)
 	int c_arg3 = scm_to_int (arg3);
 
 	int ret = slk_set (c_arg1, c_arg2, c_arg3);
-	SCM s_ret = scm_from_int (ret);
+	if (ret != OK)
+	  return SCM_BOOL_F;
+	
+	return SCM_BOOL_T;
 
-	free (c_arg2);
-
-	return s_ret;
 }
 
 SCM

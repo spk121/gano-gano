@@ -22,4 +22,4 @@
 	    slk-touch
 ))
 
-(load-extension "XXlibnameXX" "gucu_slk_init")
+(load-extension "XXlibnameXX" "gucu_slk_module_init")

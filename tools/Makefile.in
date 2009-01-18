@@ -71,17 +71,18 @@ gucushell_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 am__testbed_SOURCES_DIST = testbed.c ../src/raw/curs_const.c \
 	../src/raw/curs_func.c ../src/raw/curs_main.c \
 	../src/raw/curs_spec.c ../src/raw/curs_port.c \
-	../src/raw/type.c ../src/raw/menu_const.c \
-	../src/raw/menu_func.c ../src/raw/menu_main.c \
-	../src/raw/menu_spec.c ../src/raw/menu_type.c \
-	../src/raw/eti_const.c ../src/raw/eti_main.c \
-	../src/raw/panel_func.c ../src/raw/panel_main.c \
-	../src/raw/panel_spec.c ../src/raw/panel_type.c \
-	../src/raw/form_const.c ../src/raw/form_func.c \
-	../src/raw/form_main.c ../src/raw/form_spec.c \
-	../src/raw/form_type.c ../src/raw/cursw_const.c \
-	../src/raw/cursw_func.c ../src/raw/cursw_main.c \
-	../src/raw/cursw_spec.c ../src/raw/typew.c
+	../src/raw/type.c ../src/raw/slk_func.c ../src/raw/slk_main.c \
+	../src/raw/menu_const.c ../src/raw/menu_func.c \
+	../src/raw/menu_main.c ../src/raw/menu_spec.c \
+	../src/raw/menu_type.c ../src/raw/eti_const.c \
+	../src/raw/eti_main.c ../src/raw/panel_func.c \
+	../src/raw/panel_main.c ../src/raw/panel_spec.c \
+	../src/raw/panel_type.c ../src/raw/form_const.c \
+	../src/raw/form_func.c ../src/raw/form_main.c \
+	../src/raw/form_spec.c ../src/raw/form_type.c \
+	../src/raw/cursw_const.c ../src/raw/cursw_func.c \
+	../src/raw/cursw_main.c ../src/raw/cursw_spec.c \
+	../src/raw/typew.c
 @WIDE_TRUE@am__objects_1 = testbed-cursw_const.$(OBJEXT) \
 @WIDE_TRUE@	testbed-cursw_func.$(OBJEXT) \
 @WIDE_TRUE@	testbed-cursw_main.$(OBJEXT) \
@@ -91,6 +92,7 @@ am_testbed_OBJECTS = testbed-testbed.$(OBJEXT) \
 	testbed-curs_const.$(OBJEXT) testbed-curs_func.$(OBJEXT) \
 	testbed-curs_main.$(OBJEXT) testbed-curs_spec.$(OBJEXT) \
 	testbed-curs_port.$(OBJEXT) testbed-type.$(OBJEXT) \
+	testbed-slk_func.$(OBJEXT) testbed-slk_main.$(OBJEXT) \
 	testbed-menu_const.$(OBJEXT) testbed-menu_func.$(OBJEXT) \
 	testbed-menu_main.$(OBJEXT) testbed-menu_spec.$(OBJEXT) \
 	testbed-menu_type.$(OBJEXT) testbed-eti_const.$(OBJEXT) \
@@ -102,9 +104,6 @@ am_testbed_OBJECTS = testbed-testbed.$(OBJEXT) \
 	$(am__objects_1)
 testbed_OBJECTS = $(am_testbed_OBJECTS)
 testbed_DEPENDENCIES = $(am__DEPENDENCIES_1)
-testbed_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
-	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(testbed_LDFLAGS) \
-	$(LDFLAGS) -o $@
 SCRIPTS = $(noinst_SCRIPTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/build_aux/depcomp
@@ -125,6 +124,8 @@ CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
+#testbed_LDADD = -lncursesw_g -lmenuw_g -lpanelw -lformw_g
+AM_CFLAGS = 
 AR = @AR@
 AS = @AS@
 AUTOCONF = @AUTOCONF@
@@ -247,24 +248,23 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 testbed_LDADD = @LIBMENU@ @LIBPANEL@ @LIBFORM@ @LIBNCURSES@ $(GUILE_LDFLAGS)
-#testbed_LDADD = -lncursesw_g -lmenuw_g -lpanelw -lformw_g
-testbed_CPPFLAGS = -Wextra -Wall -I../src/raw -static -u gucu_initscr \
-	-u initscr $(am__append_2)
-testbed_LDFLAGS = -Bstatic
+testbed_CPPFLAGS = -g -Wextra -Wall -I../src/raw -static -u \
+	gucu_initscr -u initscr $(am__append_2)
+AM_LDFLAGS = -Bstatic
 testbed_SOURCES = testbed.c ../src/raw/curs_const.c \
 	../src/raw/curs_func.c ../src/raw/curs_main.c \
 	../src/raw/curs_spec.c ../src/raw/curs_port.c \
-	../src/raw/type.c ../src/raw/menu_const.c \
-	../src/raw/menu_func.c ../src/raw/menu_main.c \
-	../src/raw/menu_spec.c ../src/raw/menu_type.c \
-	../src/raw/eti_const.c ../src/raw/eti_main.c \
-	../src/raw/panel_func.c ../src/raw/panel_main.c \
-	../src/raw/panel_spec.c ../src/raw/panel_type.c \
-	../src/raw/form_const.c ../src/raw/form_func.c \
-	../src/raw/form_main.c ../src/raw/form_spec.c \
-	../src/raw/form_type.c $(am__append_1)
-noinst_SCRIPTS = keypress.scm
-EXTRA_DIST = keypress.scm
+	../src/raw/type.c ../src/raw/slk_func.c ../src/raw/slk_main.c \
+	../src/raw/menu_const.c ../src/raw/menu_func.c \
+	../src/raw/menu_main.c ../src/raw/menu_spec.c \
+	../src/raw/menu_type.c ../src/raw/eti_const.c \
+	../src/raw/eti_main.c ../src/raw/panel_func.c \
+	../src/raw/panel_main.c ../src/raw/panel_spec.c \
+	../src/raw/panel_type.c ../src/raw/form_const.c \
+	../src/raw/form_func.c ../src/raw/form_main.c \
+	../src/raw/form_spec.c ../src/raw/form_type.c $(am__append_1)
+noinst_SCRIPTS = keypress.scm pre-inst-gucushell
+EXTRA_DIST = keypress.scm pre-inst-gucushell
 gucushell_LDADD = @LIBNCURSES@ -lutil $(GUILE_LDFLAGS)
 gucushell_CPPFLAGS = -Wextra -Wall 
 gucushell_LDFLAGS = 
@@ -360,7 +360,7 @@ gucushell$(EXEEXT): $(gucushell_OBJECTS) $(gucushell_DEPENDENCIES)
 	$(gucushell_LINK) $(gucushell_OBJECTS) $(gucushell_LDADD) $(LIBS)
 testbed$(EXEEXT): $(testbed_OBJECTS) $(testbed_DEPENDENCIES) 
 	@rm -f testbed$(EXEEXT)
-	$(testbed_LINK) $(testbed_OBJECTS) $(testbed_LDADD) $(LIBS)
+	$(LINK) $(testbed_OBJECTS) $(testbed_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -394,6 +394,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-panel_main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-panel_spec.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-panel_type.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-slk_func.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-slk_main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-testbed.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-type.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbed-typew.Po@am__quote@
@@ -530,6 +532,34 @@ testbed-type.obj: ../src/raw/type.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/type.c' object='testbed-type.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testbed-type.obj `if test -f '../src/raw/type.c'; then $(CYGPATH_W) '../src/raw/type.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/type.c'; fi`
+
+testbed-slk_func.o: ../src/raw/slk_func.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testbed-slk_func.o -MD -MP -MF $(DEPDIR)/testbed-slk_func.Tpo -c -o testbed-slk_func.o `test -f '../src/raw/slk_func.c' || echo '$(srcdir)/'`../src/raw/slk_func.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/testbed-slk_func.Tpo $(DEPDIR)/testbed-slk_func.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/slk_func.c' object='testbed-slk_func.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testbed-slk_func.o `test -f '../src/raw/slk_func.c' || echo '$(srcdir)/'`../src/raw/slk_func.c
+
+testbed-slk_func.obj: ../src/raw/slk_func.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testbed-slk_func.obj -MD -MP -MF $(DEPDIR)/testbed-slk_func.Tpo -c -o testbed-slk_func.obj `if test -f '../src/raw/slk_func.c'; then $(CYGPATH_W) '../src/raw/slk_func.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/slk_func.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/testbed-slk_func.Tpo $(DEPDIR)/testbed-slk_func.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/slk_func.c' object='testbed-slk_func.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testbed-slk_func.obj `if test -f '../src/raw/slk_func.c'; then $(CYGPATH_W) '../src/raw/slk_func.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/slk_func.c'; fi`
+
+testbed-slk_main.o: ../src/raw/slk_main.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testbed-slk_main.o -MD -MP -MF $(DEPDIR)/testbed-slk_main.Tpo -c -o testbed-slk_main.o `test -f '../src/raw/slk_main.c' || echo '$(srcdir)/'`../src/raw/slk_main.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/testbed-slk_main.Tpo $(DEPDIR)/testbed-slk_main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/slk_main.c' object='testbed-slk_main.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testbed-slk_main.o `test -f '../src/raw/slk_main.c' || echo '$(srcdir)/'`../src/raw/slk_main.c
+
+testbed-slk_main.obj: ../src/raw/slk_main.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testbed-slk_main.obj -MD -MP -MF $(DEPDIR)/testbed-slk_main.Tpo -c -o testbed-slk_main.obj `if test -f '../src/raw/slk_main.c'; then $(CYGPATH_W) '../src/raw/slk_main.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/slk_main.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/testbed-slk_main.Tpo $(DEPDIR)/testbed-slk_main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../src/raw/slk_main.c' object='testbed-slk_main.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o testbed-slk_main.obj `if test -f '../src/raw/slk_main.c'; then $(CYGPATH_W) '../src/raw/slk_main.c'; else $(CYGPATH_W) '$(srcdir)/../src/raw/slk_main.c'; fi`
 
 testbed-menu_const.o: ../src/raw/menu_const.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testbed_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT testbed-menu_const.o -MD -MP -MF $(DEPDIR)/testbed-menu_const.Tpo -c -o testbed-menu_const.o `test -f '../src/raw/menu_const.c' || echo '$(srcdir)/'`../src/raw/menu_const.c
