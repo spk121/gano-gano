@@ -2560,7 +2560,7 @@ ac_config_headers="$ac_config_headers config.h"
 ##################
 # Set some version constants
 LIBGUILE_GUCU_CURSES_MAJOR=0
-LIBGUILE_GUCU_CURSES_INTERFACE="0:2:0"
+LIBGUILE_GUCU_CURSES_INTERFACE="1:0:0"
 
 
 
