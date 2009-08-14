@@ -61,6 +61,7 @@ port_read (void *cookie, char *buf, size_t siz)
 ssize_t 
 port_write (void *cookie, const char *buf, size_t siz)
 {
+  size_t i;
   SCM port = PTR2SCM(cookie);
 
 #if 0
@@ -75,7 +76,7 @@ port_write (void *cookie, const char *buf, size_t siz)
       return siz;
     }
 #else
-  for (size_t i=0; i < siz; i++)
+  for (i=0; i < siz; i++)
     {
       scm_write_char (scm_integer_to_char (scm_from_char (buf[i])), 
 		      port);
