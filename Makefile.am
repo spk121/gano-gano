@@ -49,9 +49,11 @@ lib_LTLIBRARIES = \
 	gucu/libguile-gucu.la
 bin_PROGRAMS = \
 	tools/gucushell
+if GUCUKEY
 bin_SCRIPTS = \
 	tools/gucukey
-dist_pkgguilesite_SCRIPTS = \
+endif
+dist_pkgguilesite_DATA = \
 	gucu/curses.scm \
 	gucu/menu.scm \
 	gucu/panel.scm \
@@ -60,7 +62,7 @@ dist_pkgguilesite_SCRIPTS = \
 	gucu/slk.scm
 
 if WIDE
-dist_pkgguilesite_SCRIPTS += \
+dist_pkgguilesite_DATA += \
 	gucu/curses-wide.scm
 endif
 
@@ -135,12 +137,15 @@ tools_gucushell_LDADD = \
 
 ### OTHER RULES ###
 
-
 ### CHECK ###
+
+TESTLIB = \
+	test/lib.scm \
+	test/lib2.scm
 
 TESTS_ENVIRONMENT = ./libtool -dlopen gucu/libguile-gucu.la \
 	--mode=execute \
-	guile -L $(top_srcdir) -s 
+	guile -L $(abs_top_srcdir) -s 
 
 NARROWTESTS = \
 	test/r000_test.test \
@@ -222,8 +227,8 @@ endif
 # The problem lies in Cygwin's etex.fmt file
 # Forcing TEX to tex works around this problem
 # This should not harm other platforms
-TEX=tex
-TEXI2DVI = TEX=${TEX} texi2dvi
+# TEX=tex
+# TEXI2DVI = TEX=${TEX} texi2dvi
 
 info_TEXINFOS = \
 	doc/gucu.texi
@@ -255,8 +260,17 @@ EXTRA_DIST = \
 	README \
 	COPYING \
 	ChangeLog \
+	tools/gucukey \
 	tools/pre-inst-gucushell \
-	tools/pre-inst-gucukey
+	tools/pre-inst-gucukey \
+	$(TESTLIB) \
+	$(TESTS)
+
+# We don't distcheck this script, because it won't run in the build
+# environment without being prepended by
+# "libtool -dlopen ../gucu/libguile-gucu.la --mode=execute"
+
+DISTCHECK_CONFIGURE_FLAGS = --disable-gucukey
 
 ### INSTALLATION ###
 

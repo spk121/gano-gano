@@ -4,4 +4,4 @@
 
 GUILE_LOAD_PATH=.. \
 libtool -dlopen ../gucu/libguile-gucu.la  --mode=execute \
-guile gucukey
+./gucukey

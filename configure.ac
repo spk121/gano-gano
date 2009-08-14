@@ -205,18 +205,15 @@ AS_IF(
                  [1],
                  [Define if you have to explicitly declare the curses acs_map])])
 
-## Guile could get added to LIBS here, but, we are going to
-## (foolishly) rely on GUILE_LDFLAGS from guile.m4 to be right.
-
-#AC_CHECK_LIB([guile], 
-#             [scm_boot_guile], ,
-#	     # if guile is not ok
-#             [AC_MSG_ERROR([The guile library was not found])])
-
 AC_ARG_ENABLE([warnings],
               [AS_HELP_STRING([--enable-warnings],
                               [Build with most GCC warnings enabled])])
 AM_CONDITIONAL([WARN], [test "$enable_warnings" = yes])
+
+AC_ARG_ENABLE([gucukey],
+              [AS_HELP_STRING([--enable-gucukey],
+                              [Install the gucukey script])])
+AM_CONDITIONAL([GUCUKEY], [test "$enable_gucukey" = yes])
 
 
 ##################
@@ -266,10 +263,5 @@ AC_CHECK_FUNC([fopencookie],
 ##################
 #  Output
 AC_CONFIG_FILES([Makefile])
-dnl                 src/raw/Makefile 
-dnl                 doc/Makefile 
-dnl                 test/Makefile 
-dnl                 m4/Makefile 
-dnl                 build_aux/Makefile 
-dnl                 tools/Makefile])
+
 AC_OUTPUT
