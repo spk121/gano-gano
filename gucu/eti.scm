@@ -1,6 +1,6 @@
 
 ;; -*- Mode: scheme; -*-
-(define-module (XXpackageXX eti)
+(define-module (gucu eti)
 	#:export ( 
 		E_OK
 		E_SYSTEM_ERROR
@@ -19,4 +19,4 @@
 		E_CURRENT
 ))
 
-(load-extension "XXlibnameXX" "gucu_eti_init")
+(load-extension "libguile-gucu" "gucu_eti_init")

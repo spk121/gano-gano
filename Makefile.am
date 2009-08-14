@@ -151,29 +151,6 @@ tools_gucushell_LDADD = \
 do_subst = \
 	sed -e 's|XXlibnameXX|libguile-gucu|' -e 's|XXpackageXX|$(PACKAGE)|'
 
-gucu/curses.scm: gucu/curses.scm.in
-	$(do_subst) < $< > $@
-
-gucu/menu.scm: gucu/menu.scm.in
-	$(do_subst) < $< > $@
-
-gucu/panel.scm: gucu/panel.scm.in
-	$(do_subst) < $< > $@
-
-gucu/form.scm: gucu/form.scm.in
-	$(do_subst) < $< > $@
-
-gucu/eti.scm: gucu/eti.scm.in
-	$(do_subst) < $< > $@
-
-gucu/slk.scm: gucu/slk.scm.in
-	$(do_subst) < $< > $@
-
-if WIDE
-gucu/curses-wide.scm: gucu/curses-wide.scm.in
-	$(do_subst) < $< > $@
-endif
-
 CLEANFILES = $(BUILT_SOURCES)
 
 ### CHECK ###
@@ -295,15 +272,6 @@ EXTRA_DIST = \
 	README \
 	COPYING \
 	ChangeLog \
-	gucu/curses.scm.in \
-	gucu/curses-wide.scm.in \
-	gucu/menu.scm.in \
-	gucu/panel.scm.in \
-	gucu/form.scm.in \
-	gucu/eti.scm.in \
-	gucu/slk.scm.in \
-	gucu/curses-alt.scm \
-	gucu/curses-wide-alt.scm \
 	tools/pre-inst-gucushell \
 	tools/pre-inst-gucukey
 

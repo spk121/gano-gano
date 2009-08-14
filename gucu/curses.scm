@@ -1,6 +1,6 @@
 
 ;; -*- Mode: scheme; -*-
-(define-module (XXpackageXX curses)
+(define-module (gucu curses)
   #:use-module (ice-9 optargs)
   #:export ( 
 	    assume-default-colors
@@ -547,4 +547,4 @@
 
 		
 
-(load-extension "XXlibnameXX" "gucu_init")
+(load-extension "libguile-gucu" "gucu_init")

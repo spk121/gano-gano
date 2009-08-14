@@ -1,7 +1,7 @@
 
 ;; -*- Mode: scheme; -*-
-(define-module (XXpackageXX form)
-        #:use-module (XXpackageXX eti)
+(define-module (gucu form)
+        #:use-module (gucu eti)
 	#:export ( 
 		data-ahead?
 		data-behind?
@@ -157,4 +157,4 @@
         ))
 
 
-(load-extension "XXlibnameXX" "gucu_form_init")
+(load-extension "libguile-gucu" "gucu_form_init")

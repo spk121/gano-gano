@@ -1,6 +1,6 @@
 
 ;; -*- Mode: scheme; -*-
-(define-module (XXpackageXX panel)
+(define-module (gucu panel)
   #:export ( 
 	    new-panel
 	    bottom-panel
@@ -20,4 +20,4 @@
 	    ;;panel-userdata
 ))
 
-(load-extension "XXlibnameXX" "gucu_panel_init")
+(load-extension "libguile-gucu" "gucu_panel_init")

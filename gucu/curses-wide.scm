@@ -1,6 +1,6 @@
 
 ;; -*- Mode: scheme; -*-
-(define-module (XXpackageXX curses-wide)
+(define-module (gucu curses-wide)
   #:use-module (ice-9 optargs)
   #:use-module (gucu curses)
   #:export ( 
@@ -151,4 +151,4 @@
        (%wvline-set win ch n)))
 
 
-(load-extension "XXlibnameXX" "gucu_cursw_init")
+(load-extension "libguile-gucu" "gucu_cursw_init")

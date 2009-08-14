@@ -1,7 +1,7 @@
 
 ;; -*- Mode: scheme; -*-
-(define-module (XXpackageXX menu)
-        #:use-module (XXpackageXX eti)
+(define-module (gucu menu)
+        #:use-module (gucu eti)
 	#:export ( 
 		set-menu-fore!
 		menu-fore
@@ -102,5 +102,5 @@
 		E_CURRENT
 
         ))
-(load-extension "XXlibnameXX" "gucu_menu_init")
+(load-extension "libguile-gucu" "gucu_menu_init")
 
