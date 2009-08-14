@@ -122,36 +122,19 @@ gucu_libguile_gucu_la_SOURCES += \
 	gucu/cursw_main.c
 endif
 
-BUILT_SOURCES = \
-	gucu/curses.scm \
-	gucu/menu.scm \
-	gucu/panel.scm \
-	gucu/form.scm \
-	gucu/eti.scm \
-	gucu/slk.scm
-
-if WIDE
-BUILT_SOURCES += \
-	gucu/curses-wide.scm
-endif
-
 tools_gucushell_SOURCES = \
 	tools/shell.c
 
 ### LINKER ###
 
 gucu_libguile_gucu_la_LIBADD = \
-	@LIBMENU@ @LIBPANEL@ @LIBFORM@ @LIBNCURSES@ $(GUILE_LDFLAGS)
+	@LIBMENU@ @LIBPANEL@ @LIBFORM@ @LIBNCURSES@ $(GUILE_LIBS)
 
 tools_gucushell_LDADD = \
-	@LIBNCURSES@ -lutil $(GUILE_LDFLAGS)
+	@LIBNCURSES@ -lutil $(GUILE_LIBS)
 
 ### OTHER RULES ###
 
-do_subst = \
-	sed -e 's|XXlibnameXX|libguile-gucu|' -e 's|XXpackageXX|$(PACKAGE)|'
-
-CLEANFILES = $(BUILT_SOURCES)
 
 ### CHECK ###
 
