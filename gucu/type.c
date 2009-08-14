@@ -260,7 +260,7 @@ print_screen (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
     }
   else
     {
-      if (asprintf (&str, "%p", screen) < 0)
+      if (asprintf (&str, "%p", (void *) screen) < 0)
 	scm_puts ("???", port);
       else
 	scm_puts (str, port);
@@ -378,7 +378,7 @@ free_window (SCM x)
       if (win == stdscr)
 	{
 	  endwin ();
-	  fprintf (stderr, "Freeing stdscr #<window %p>", stdscr);
+	  fprintf (stderr, "Freeing stdscr #<window %p>", (void *) stdscr);
 	  delwin (stdscr);
 	  SCM_SET_SMOB_DATA (x, NULL);
 	}
@@ -405,7 +405,7 @@ print_window (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
     scm_puts ("(freed)", port);
   else
     {
-      if (asprintf (&str, "%p", win) < 0)
+      if (asprintf (&str, "%p", (void *) win) < 0)
 	scm_puts ("???", port);
       else
 	scm_puts (str, port);

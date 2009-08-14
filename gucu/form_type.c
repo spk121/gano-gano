@@ -108,7 +108,8 @@ _scm_from_field (FIELD *x)
 
   if (0) 
     {
-      fprintf (stderr, "Making <#field> smob from FIELD * %p\n", x);
+      fprintf (stderr, "Making <#field> smob from FIELD * %p\n", 
+               (void *) x);
     }
 
   return (s_field);
@@ -171,7 +172,7 @@ print_field (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
     scm_puts ("(freed)", port);
   else
     {
-      if (asprintf (&str, "%p", fld) < 0)
+      if (asprintf (&str, "%p", (void *) fld) < 0)
 	scm_puts ("???", port);
       else
 	scm_puts (str, port);
@@ -306,7 +307,7 @@ print_form (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
 
   scm_puts ("#<form ", port);
 
-  if (asprintf (&str, "%p", frm->form) < 0)
+  if (asprintf (&str, "%p", (void *) frm->form) < 0)
     scm_puts ("???", port);
   else
     scm_puts (str, port);

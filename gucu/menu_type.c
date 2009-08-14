@@ -90,7 +90,8 @@ _scm_from_item (ITEM *x)
 
   if (0) 
     {
-      fprintf (stderr, "Making <#item> smob from ITEM * %p\n", x);
+      fprintf (stderr, "Making <#item> smob from ITEM * %p\n", 
+               (void *) x);
     }
 
   return (s_item);
@@ -143,7 +144,7 @@ print_item (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
 
   scm_puts ("#<item ", port);
 
-  if (asprintf (&str, "%p", frm) < 0)
+  if (asprintf (&str, "%p", (void *) frm) < 0)
     scm_puts ("???", port);
   else
     scm_puts (str, port);
@@ -291,7 +292,7 @@ print_menu (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
 
   scm_puts ("#<menu ", port);
 
-  if (asprintf (&str, "%p", menu) < 0)
+  if (asprintf (&str, "%p", (void *) menu) < 0)
     scm_puts ("???", port);
   else
     scm_puts (str, port);

@@ -20,27 +20,7 @@ AC_SUBST(LIBGUILE_GUCU_CURSES_INTERFACE)
 ##################
 # Check for Programs
 
-# Check to see if the user specifically set CFLAGS
-cflags_were_set=false
-if test x"${CFLAGS+set}" = xset; then
-   flags_were_set=true
-else
-   flags_were_set=false
-fi	
-
 AC_PROG_CC
-AM_PROG_CC_C_O
-
-# If CFLAGS is coming from AC_PROG_CC and not the user, move them
-# to the AM_CFLAGS variable, so that it can be overwritten
-if $cflags_were_set; then 
-   :; 
-else
-  AM_CFLAGS=$CFLAGS
-  CFLAGS=
-fi
-AC_SUBST(AM_CFLAGS)
-
 
 AC_CANONICAL_HOST
 AC_PROG_INSTALL
@@ -57,7 +37,6 @@ GUILE_FLAGS
 
 # Deprecated method for Libtool 1.x
 AC_LIBTOOL_DLOPEN
-AC_DISABLE_FAST_INSTALL
 AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
 
@@ -263,7 +242,7 @@ AC_CHECK_SIZEOF([attr_t], ,[#include <curses.h>])
 AC_CHECK_SIZEOF([wchar_t], ,[#include <stddef.h>])
 AC_CHECK_SIZEOF([wint_t], ,[#include <wchar.h>])
 
-AC_PROG_CC_C99
+# AC_PROG_CC_C99
 
 ##################
 # Check for library functions
@@ -286,11 +265,11 @@ AC_CHECK_FUNC([fopencookie],
 
 ##################
 #  Output
-AC_CONFIG_FILES([Makefile 
-                src/raw/Makefile 
-                doc/Makefile 
-                test/Makefile 
-                m4/Makefile 
-                build_aux/Makefile 
-                tools/Makefile])
+AC_CONFIG_FILES([Makefile])
+dnl                 src/raw/Makefile 
+dnl                 doc/Makefile 
+dnl                 test/Makefile 
+dnl                 m4/Makefile 
+dnl                 build_aux/Makefile 
+dnl                 tools/Makefile])
 AC_OUTPUT

@@ -1,7 +1,8 @@
 #!/usr/bin/guile \
 -s
 !#
-;;; keypress.scm -- examine the raw keycodes returned when keys are pressed
+;;; keypress.scm -- examine the raw keycodes returned when keys are
+;;; pressed
 
 (use-modules (gucu curses)
 	     (ice-9 format)

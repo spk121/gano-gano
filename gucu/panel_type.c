@@ -155,7 +155,7 @@ print_panel (SCM x, SCM port, scm_print_state *pstate __attribute__ ((unused)))
     scm_puts ("(freed)", port);
   else
     {
-      if (asprintf (&str, "%p", pnl) < 0)
+      if (asprintf (&str, "%p", (void *) pnl) < 0)
 	scm_puts ("???", port);
       else
 	scm_puts (str, port);
