@@ -1,14 +1,10 @@
 The AUTHORS file for Guile Curses
-$Id: AUTHORS,v 1.4 2009/01/18 07:01:11 spike_gran Exp $
 
 Code:
-Michael L. Gran
+Michael Gran
 
-Local Variables:
-mode: text
-fill-column: 70
-mode: auto-fill
-End:
+M4: 
+geda-guile.m4 comes from Dan McMahill and the gEDA project
 
 
 
