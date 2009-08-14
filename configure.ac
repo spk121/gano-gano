@@ -25,8 +25,6 @@ AC_PROG_CC
 AC_CANONICAL_HOST
 AC_PROG_INSTALL
 AC_PROG_MKDIR_P
-GUILE_PROGS
-GUILE_FLAGS
 #NCURSESW_PROGS
 
 ##################
@@ -57,6 +55,8 @@ esac
 
 ##################
 # Check for libraries
+
+AX_CHECK_GUILE([1.8.0])
 
 AC_ARG_ENABLE([ndebug],
               [AS_HELP_STRING([--enable-ndebug],
