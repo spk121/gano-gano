@@ -156,7 +156,7 @@ Attributes
 * The details::                 
 * @code{attr-on!} vs @code{attr-set!}::  
 * @code{attr-get}::             
-* @code{chgat} functions::      
+* @code{chgat} function::      
 
 Windows Tutorial
 
@@ -1343,7 +1343,7 @@ file, parses it, and prints it in different colors.
 * The details::                 
 * @code{attr-on!} vs @code{attr-set!}::  
 * @code{attr-get}::             
-* @code{chgat} functions::      
+* @code{chgat} function::      
 @end menu
 
 @node The details, @code{attr-on!} vs @code{attr-set!}, Attributes, Attributes
@@ -1425,7 +1425,7 @@ a consistent policy and stick to it.  You can always use
 @code{standend!} which is equivalent to @code{(attr-set! win A_NORMAL)}
 which turns off all attributes and brings you back to normal mode.
 
-@node @code{attr-get}, @code{chgat} functions, @code{attr-on!} vs @code{attr-set!}, Attributes
+@node @code{attr-get}, @code{chgat} function, @code{attr-on!} vs @code{attr-set!}, Attributes
 @subsection @code{attr-get}
 @cindex Attributes, querying
 
@@ -1437,8 +1437,8 @@ what attribute each character is associated with.  Then this function
 can be used with either @code{attr-set!} or @code{attr-on!} to produce the
 desired effect.
 
-@node @code{chgat} functions,  , @code{attr-get}, Attributes
-@subsection @code{chgat} functions
+@node @code{chgat} function,  , @code{attr-get}, Attributes
+@subsection @code{chgat} function
 
 The function @code{chgat}, which is short for @emph{change
 attributes}, can be used to set attributes for a group of characters
@@ -3431,7 +3431,7 @@ window that doesn't wrap or scroll.
 @end deffn
 
 @deffn Procedure echochar win ch #:key y x
-@deffn Alternate echo-rendered-char win ch #:key y x
+@deffnx Alternate echo-rendered-char win ch #:key y x
 
 @findex addch
 @findex refresh
@@ -3583,22 +3583,27 @@ The set of line-graphics characters is given in @ref{tab:ACS}.
 @subsection Outputing strings
 
 @deffn Procecure addstr win #:key y x n
+@deffnx Alternate add-string win #:key y x n
 
 @findex addch
 
 This routine writes the characters of the unrendered, narrow string
 @var{str} on the given window. It is similar to calling @code{addch}
-once for each character in the string.  When called witn @var{n}
+once for each character in the string.  When called with @var{n}
 it writes at most n characters.  If @var{n} is -1,
 then the entire string will be added, up to the maximum number of
 characters that will fit on the line, or until a terminating null is
 reached.
 
-It returns @code{#f} upon failure and @code{#t} on success.
+It returns @code{#f} upon failure and @code{#t} on success.  Failure
+usually indicates at attempt to write beyond the borders of the window
+or to write in a place that would cause scroll or wrap on a window
+that doesn't support it.
 
 @end deffn
 
 @deffn Procedure addchstr win chstr #:key y x n
+@deffnx Alternate add-rendered-string win chstr #:key y x n
 
 These routines copy the rendered, narrow string @var{chstr} into the
 window image structure at and after the current cursor position.  If
@@ -3680,7 +3685,8 @@ The routine @code{color-set!} sets the current color of the given window to
 the foreground/background combination described by the
 @var{color-pair-number}.  
 
-The return value is unspecified.
+The return value is @code{#t} on success or @code{#f} on failure.
+Failure usually indicates that the color pair number was too large.
 @end deffn
 
 @deffn Procedure attr-get
@@ -3706,6 +3712,8 @@ function does a cursor move before acting.  In these functions, the
 @var{color} argument is a color-pair index as in the first argument of
 @code{init-pair}. @xref{Color manipulation routines}.
 
+The return value is unspecified.
+
 @end deffn
 
 The attributes can be passed to the routines
@@ -3719,7 +3727,7 @@ rendition, use @code{color-pair}.  @xref{tab:a}.
 Returns a bit mask to apply the color pair @var{n} to a rendition.
 @code{color-pair} values can only be @code{logior}'ed with attributes
 if the pair number is less than 256.  The alternate functions such as
-@code{color-set} can pass a color pair value directly.
+@code{color-set!} can pass a color pair value directly.
 @end deffn
 
 @deffn Procedure pair-number attrs
@@ -5945,7 +5953,7 @@ The @code{slk-attron}, @code{slk-attrset}, @code{slk-attroff} and
 labels are simulated on the bottom line of the screen.  The default
 highlight for soft keys is @code{A_STANDOUT}.
 
-The @code{slk-color} routine corresponds to @code{color-set}. It has
+The @code{slk-color} routine corresponds to @code{color-set!}. It has
 an effect only if soft labels are simulated on the bottom line of the
 screen.
 @end deffn
@@ -6331,11 +6339,11 @@ an error will be thrown.
 @findex termattrs
 
 The @code{term-attrs} function return a @code{logior} of all video
-attributes supported by the terminal using @code{WA_XXX} constants.
+attributes supported by the terminal using @code{A_XXX} constants.
 The @code{termattrs} function is almost identical except that it
 doesn't return the attributes for the rarely usable modes
-@code{WA_HORIZONTAL}, @code{WA_LEFT}, @code{WA_LOW}, @code{WA_RIGHT},
-@code{WA_TOP} and @code{WA_VERTICAL}.
+@code{A_HORIZONTAL}, @code{A_LEFT}, @code{A_LOW}, @code{A_RIGHT},
+@code{A_TOP} and @code{A_VERTICAL}.
 
 @end deffn
 
