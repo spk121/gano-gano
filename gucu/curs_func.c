@@ -120,8 +120,8 @@ gucu_bkgdset (SCM win, SCM ch)
   WINDOW *c_win;
   chtype c_ch;
 
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "bkgdset");
-  SCM_ASSERT (_scm_is_chtype (ch), ch, SCM_ARG2, "bkgdset");
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "bkgdset!");
+  SCM_ASSERT (_scm_is_chtype (ch), ch, SCM_ARG2, "bkgdset!");
 
   c_win = _scm_to_window (win);
   c_ch = _scm_to_chtype (ch);
@@ -2238,7 +2238,7 @@ gucu_init_function ()
   scm_c_define_gsubr ("baudrate", 0, 0, 0, gucu_baudrate);
   scm_c_define_gsubr ("beep", 0, 0, 0, gucu_beep);
   scm_c_define_gsubr ("bkgd", 2, 0, 0, gucu_bkgd);
-  scm_c_define_gsubr ("bkgdset", 2, 0, 0, gucu_bkgdset);
+  scm_c_define_gsubr ("bkgdset!", 2, 0, 0, gucu_bkgdset);
   scm_c_define_gsubr ("border", 9, 0, 0, gucu_border);
   scm_c_define_gsubr ("can-change-color?", 0, 0, 0, 
 		      gucu_can_change_color_p);
