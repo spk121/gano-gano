@@ -37,7 +37,7 @@
 	      (addstr win (format #f "Erasechar: ~a" c))
 	      (refresh win)
 	      ;; (sleep 1)
-	      (eqv? c (char->integer #\del)))
+	      (eqv? c #\del)
 	    *unspecified*))
  
  ;; Not sure what the correct answer for killchar
@@ -51,7 +51,7 @@
 	      (addstr win (format #f "Killchar: ~a" c))
 	      (refresh win)
 	      ;; (sleep 1)
-	      (eqv? c (char->integer #\nak)))
+	      (eqv? c #\nak))
 	    *unspecified*))
 
  (pass-if "has-ic?"

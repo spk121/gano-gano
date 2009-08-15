@@ -541,7 +541,7 @@ gucu_erase (SCM win)
 SCM
 gucu_erasechar ()
 {
-  return scm_from_char (erasechar ());
+  return scm_integer_to_char (scm_from_uchar ((unsigned char) erasechar ()));
 }
 
 /* Do curses only on one line */
@@ -911,7 +911,7 @@ gucu_keypad_x (SCM win, SCM bf)
 SCM
 gucu_killchar ()
 {
-  return scm_from_char (killchar ());
+  return scm_integer_to_char (scm_from_uchar ((unsigned char) killchar ()));
 }
 
 /* If false, curses will try to put the hardware cursor where the
