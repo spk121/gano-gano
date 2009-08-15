@@ -156,7 +156,7 @@ Attributes
 * The details::                 
 * @code{attr-on!} vs @code{attr-set!}::  
 * @code{attr-get}::             
-* @code{chgat} function::      
+* @code{chgat} function::       
 
 Windows Tutorial
 
@@ -1343,7 +1343,7 @@ file, parses it, and prints it in different colors.
 * The details::                 
 * @code{attr-on!} vs @code{attr-set!}::  
 * @code{attr-get}::             
-* @code{chgat} function::      
+* @code{chgat} function::       
 @end menu
 
 @node The details, @code{attr-on!} vs @code{attr-set!}, Attributes, Attributes
@@ -3028,6 +3028,7 @@ The gucu package provides the following modules:
 @end enumerate
 
 @menu
+* The naming of routines::
 * The basic curses library::    
 * Function key labels library::  
 * The wide curses library::     
@@ -3036,7 +3037,40 @@ The gucu package provides the following modules:
 * The curses form library::     
 @end menu
 
-@node The basic curses library, Function key labels library, Curses Reference, Curses Reference
+@node The naming of routines, The basic curses library, Curses Reference, Curses Reference
+@section The naming of routines
+
+When you look at this library, it may seem that exclamation points and
+question marks were sprinkled at random on the ends of curses
+functions.  There is actually a thought process behind it: it isn't
+just chaos.
+
+@itemize @bullet
+@item
+A procedure that returns @code{#t} or @code{#f} and @emph{does not}
+change the behavior of the system in any way ends in a question
+mark, e.g. @code{has-ic?}.
+@item
+But, a procedure that returns @code{#t} or @code{#f} and @emph{does}
+change the behavior of the system does not end in a question mark,
+e.g. @code{beep}.
+@item
+A procedure that changes any property of curses but does not write to
+a window or screen ends in an exclamation point, e.g. @code{bkgdset!}.
+@item
+Any procedure that writes to a window or screen does not in an
+exclamation point, e.g. @code{addch}.
+@item
+Curses integer contstants are capitalized and use underscores, for
+example @code{A_BOLD}.
+@item
+Curses procedures are not capitalized, even if they were capitalized
+macros in the C Ncurses library, for example @code{lines} and
+@code{tabsize}.
+@end itemize
+
+
+@node The basic curses library, Function key labels library, The naming of routines, Curses Reference
 @section The basic curses library: @code{(gucu curses)}
 
 These are the functions in the @code{(gucu curses)} module.
