@@ -1,6 +1,7 @@
 ;; -*- Mode: scheme; -*-
 (define-module (gucu curses)
   #:use-module (ice-9 optargs)
+  #:use-module (gucu macros)
   #:export ( 
 	    assume-default-colors
 	    addch
@@ -147,6 +148,7 @@
 	    vline
 	    wcursyncup
 	    wenclose?
+            %wmove
 	    wsyncup
 	    wsyncdown
 	    EOF
@@ -361,154 +363,80 @@
 (if (defined? 'newterm)
     (export newterm))
 
-;; Range checks
-
-(defmacro check-char (ch)
-  `(if (not (char? ,ch))
-       (scm-error 'wrong-type-arg fname 
-                  "Not a character: ~S" (list ,ch) (list ,ch))))
-
-(defmacro check-char-or-rendered-char (ch)
-  `(if (not (or (integer? ,ch) (char? ,ch)))
-       (scm-error 'wrong-type-arg fname 
-                  "Not a character or a rendered character: ~S" (list ,ch) (list ,ch))))
-
-(defmacro check-integer (n)
-  `(if (not (integer? ,n))
-       (scm-error 'wrong-type-arg fname 
-                  "Not an integer: ~S" (list ,n) (list ,n))))
-
-(defmacro check-integer-and-range-check (n lo hi)
-  `(cond
-    ((not (integer? ,n))
-     (scm-error 'wrong-type-arg fname 
-                "Not an integer: ~S" (list ,n) (list ,n)))
-    ((or (< ,n ,lo) (> ,n ,hi))
-     (scm_error 'out-of-range fname
-                "N value out of range ~S to ~S: ~S" (list ,lo ,hi ,n) (list ,n)))))
-
-(defmacro check-position-and-move (win y x)
-  `(if (and ,y ,x)
-       (begin
-         (check-integer ,x)
-         (check-integer ,y)
-         (check-x ,win ,x)
-         (check-y ,win ,y)
-         (%wmove ,win (inexact->exact ,y) (inexact->exact ,x)))
-       #t))
-
-;; This doesn't check every member of the list.  
-(defmacro check-string-or-rendered-string (str)
-  `(if (not (or (string? ,str) 
-                (and (list? ,str) (or (null? ,str) 
-                                      (integer? (list-ref ,str 0))))))
-       (scm-error 'wrong-type-arg fname 
-                  "Not a string or a rendered string: ~S" (list ,str) (list ,str))))
-
-(defmacro check-window (win)
-  `(if (not (window? ,win))
-       (scm-error 'wrong-type-arg fname 
-                  "Not a window: ~S" (list ,win) (list ,win))))
-
-(defmacro check-x (win x)
-  `(let ((maxyx (getmaxyx ,win)))
-     (if (or (< ,x 0) (>= ,x (cadr maxyx)))
-         (scm-error 'out-of-range fname 
-                    "X value out of range: ~S" (list ,x) (list ,x)))))
-
-(defmacro check-y (win y)
-  `(let ((maxyx (getmaxyx ,win)))
-     (if (or (< ,y 0) (>= ,y (car maxyx)))
-         (scm-error 'out-of-range fname 
-                    "Y value out of range: ~S" (list ,y) (list ,y)))))
-
-;; decorators
-
-(defmacro render-char-if-necessary (ch)
-  `(if (char? ,ch)
-       (char->integer ,ch)
-       (inexact->exact ,ch)))
-
-(defmacro render-string-if-necessary (str)
-  `(if (string? ,str)
-       (map char->integer (string->list ,str))
-       ,str))
-
-(defmacro string-length-or-length (str)
-  `(if (string? ,str)
-       (string-length ,str)
-       (length ,str)))
-  
-;; declaration outlines
-
-(defmacro WIN-RCH-KEY-YX (func primitive-func)
-  `(define* (,func win ch #:key y x)
-     (let ((fname (symbol->string ',func)))
-       (check-window win)
-       (check-char-or-rendered-char ch)
-       (and (check-position-and-move win y x)
-            (,primitive-func win (render-char-if-necessary ch))))))
-
-(defmacro WIN-RST-KEY-YX-N (func primitive-func)
-  `(define* (,func win str #:key y x (n -1))
-     (let ((fname (symbol->string ',func)))
-       (check-window win)
-       (check-string-or-rendered-string str)
-       (check-integer-and-range-check n -1 (string-length-or-length str))
-       (and (check-position-and-move win y x)
-            (,primitive-func win 
-                             (render-string-if-necessary str) 
-                             (inexact->exact n))))))
-
 ;; Scheme calling wrappers for C functions
 
 ;; CURSES NAME                          ALTERNATE NAME
 (WIN-RCH-KEY-YX addch %waddch)          (WIN-RCH-KEY-YX add-rendered-char %waddch)
 (WIN-RST-KEY-YX-N addchstr %waddchnstr) (WIN-RST-KEY-YX-N add-rendered-string %waddchnstr)
-(WIN-RCH-KEY-YX echochar %wechochar)    (WIN-RCH-KEY-YX echo-rendered-char %wechochar)
+(WIN-ST-KEY-YX-N addstr %waddnstr)      (WIN-ST-KEY-YX-N add-string %waddnstr)
 
-(define* (addstr win str #:key y x (n -1))
-  (and (if (and y x)
-	   (%wmove win y x)
-	   #t)
-       (%waddnstr win str n)))
-
-(define (attr-get win)
-  (let* ((ac (%wattr-get win))
-	 (attr (car ac))
-	 (color (cadr ac)))
-    (list
-     (logand attr (logior A_STANDOUT
-			  A_UNDERLINE
-			  A_REVERSE
-			  A_BLINK
-			  A_DIM
-			  A_BOLD
-			  A_ALTCHARSET
-			  A_INVIS
-			  A_PROTECT
-			  WA_HORIZONTAL
-			  WA_LEFT
-			  WA_LOW
-			  WA_RIGHT
-			  WA_TOP
-			  WA_VERTICAL))
-     color)))
+(defmacro m-attr-get (func)
+  `(define* (,func win)
+     (let ((fname (symbol->string ',func)))
+       (check-window win)
+       (let* ((ac (%wattr-get win))
+              (attr (car ac))
+              (color (cadr ac)))
+         (list
+          (logand attr (logior A_STANDOUT
+                               A_UNDERLINE
+                               A_REVERSE
+                               A_BLINK
+                               A_DIM
+                               A_BOLD
+                               A_ALTCHARSET
+                               A_INVIS
+                               A_PROTECT
+                               A_HORIZONTAL
+                               A_LEFT
+                               A_LOW
+                               A_RIGHT
+                               A_TOP
+                               A_VERTICAL))
+          color)))))
+(m-attr-get attr-get)
+(m-attr-get attributes-get)
 
 (define* (attr-set! win attr #:optional color)
-  (if color
-      (%attr-set! win attr color)
-      (%attr-set! win attr (pair-number attr))))
+  (let ((fname "attr-set!"))
+    (check-window win)
+    (check-integer attr)
+    (if color
+        (begin
+          (check-integer color)
+          (%attr-set! win attr color))
+        (%attr-set! win attr (pair-number attr)))))
+(define* (attrbutes-set! win attr #:optional color)
+  (let ((fname "attributes-set!"))
+    (check-window win)
+    (check-integer attr)
+    (if color
+        (begin
+          (check-integer color)
+          (%attr-set! win attr color))
+        (%attr-set! win attr (pair-number attr)))))
 
 (define (box win v h)
   (border win v v h h 0 0 0 0))
 
 (define* (chgat win n attr color #:key y x)
-  (and
-   (if (and y x)
-       (%wmove win y x)
-       #t)
-   (%wchgat win n attr color)))
+  (let ((fname "chgat"))
+    (check-window win)
+    (check-integer n)
+    (check-integer attr)
+    (check-integer color)
+    (and
+     (check-position-and-move win y x)
+     (%wchgat win n attr color))))
+(define* (change-attributes win n attr color #:key y x)
+  (let ((fname "change-attributes"))
+    (check-window win)
+    (check-integer n)
+    (check-integer attr)
+    (check-integer color)
+    (and
+     (check-position-and-move win y x)
+     (%wchgat win n attr color))))
 
 (define* (delch win #:key y x)
   (and
@@ -523,6 +451,8 @@
        (%wmove win y x)
        #t)
    (%winsdelln win -1)))
+
+(WIN-RCH-KEY-YX echochar %wechochar)    (WIN-RCH-KEY-YX echo-rendered-char %wechochar)
 
 (define* (getch win #:key y x)
   (and (if (and y x)
@@ -625,8 +555,5 @@
 	   (%wmove win y x)
 	   #t)
        (%wvline win ch n)))
-
-
-		
 
 (load-extension "libguile-gucu" "gucu_init")

@@ -3,6 +3,7 @@
 (define-module (gucu curses-wide)
   #:use-module (ice-9 optargs)
   #:use-module (gucu curses)
+  #:use-module (gucu macros)
   #:export ( 
 	    WEOF
 	    add-wch
@@ -57,17 +58,10 @@
 	    wacs-vline
 ))
 
-(define* (add-wch win ch #:key x y)
-  (and (if (and x y)
-	   (move win y x)
-	   #t)
-       (%wadd-wch win ch)))
-
-(define* (add-wchstr win wchstr #:key x y (n -1))
-  (and (if (and x y)
-	   (move win y x)
-	   #t)
-       (%wadd-wchnstr win wchstr n)))
+;; CURSES NAME                          ALTERNATE NAME
+(WIN-CCH-KEY-YX add-wch %wadd-wch)      (WIN-CCH-KEY-YX add-complex-char %wadd-wch)
+(WIN-CCH-KEY-YX echo-wchar %wecho-wchar) (WIN-CCH-KEY-YX echo-complex-char %wecho-wchar)
+(WIN-CST-KEY-YX-N add-wchstr %wadd-wchnstr) (WIN-CST-KEY-YX-N add-complex-string %wadd-wchnstr) 
 
 (define* (addwstr win wstr #:key x y (n -1))
   (and (if (and x y)
@@ -86,12 +80,6 @@
 
 (define (box-set win v h key)
   (%wborder-set win v v h h 0 0 0 0))
-
-(define* (echo-wchar win ch #:key y x)
-  (and (if (and y x)
-	   (move win y x)
-	   #t)
-       (%wecho-wchar win ch)))
 
 (define* (getbkgrnd #:key win)
   (%wgetbkgrnd win))

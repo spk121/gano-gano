@@ -281,12 +281,11 @@ gucu_color_set (SCM win, SCM pair)
 
   c_win = _scm_to_window (win);
   c_pair = scm_to_short (pair);
+  if (c_pair < 0)
+    scm_out_of_range ("color-set!", c_pair);
 
   ret = wcolor_set (c_win, c_pair, 0);
-  if (ret == ERR)
-    curs_param_or_bad_state_error ("color-set!");
-
-  return SCM_UNSPECIFIED;
+  RETURNTF (ret);
 }
 
 /* Copy part of srcwin onto part of destwin */
