@@ -14,7 +14,7 @@
 	    baudrate
 	    beep
 	    bkgd
-	    bkgdset
+	    bkgdset!
 	    border
 	    box
 	    can-change-color?
@@ -397,46 +397,34 @@
 (m-attr-get attr-get)
 (m-attr-get attributes-get)
 
-(define* (attr-set! win attr #:optional color)
-  (let ((fname "attr-set!"))
-    (check-window win)
-    (check-integer attr)
-    (if color
-        (begin
-          (check-integer color)
-          (%attr-set! win attr color))
-        (%attr-set! win attr (pair-number attr)))))
-(define* (attrbutes-set! win attr #:optional color)
-  (let ((fname "attributes-set!"))
-    (check-window win)
-    (check-integer attr)
-    (if color
-        (begin
-          (check-integer color)
-          (%attr-set! win attr color))
-        (%attr-set! win attr (pair-number attr)))))
+(defmacro m-attr-set! (func)
+  `(define* (,func win attr #:optional color)
+     (let ((fname ',func))
+       (check-window win)
+       (check-integer attr)
+       (if color
+           (begin
+             (check-integer color)
+             (%attr-set! win attr color))
+           (%attr-set! win attr (pair-number attr))))))
+(m-attr-set! attr-set!)
+(m-attr-set! attributes-set!)
 
 (define (box win v h)
   (border win v v h h 0 0 0 0))
 
-(define* (chgat win n attr color #:key y x)
-  (let ((fname "chgat"))
-    (check-window win)
-    (check-integer n)
-    (check-integer attr)
-    (check-integer color)
-    (and
-     (check-position-and-move win y x)
-     (%wchgat win n attr color))))
-(define* (change-attributes win n attr color #:key y x)
-  (let ((fname "change-attributes"))
-    (check-window win)
-    (check-integer n)
-    (check-integer attr)
-    (check-integer color)
-    (and
-     (check-position-and-move win y x)
-     (%wchgat win n attr color))))
+(defmacro m-chgat (fname)
+  `(define* (,fname win n attr color #:key y x)
+     (let ((fname (symbol->string ',fname)))
+       (check-window win)
+       (check-integer n)
+       (check-integer attr)
+       (check-integer color)
+       (and
+        (check-position-and-move win y x)
+        (%wchgat win n attr color)))))
+(m-chgat chgat)
+(m-chgat change-attributes)
 
 (define* (delch win #:key y x)
   (and
@@ -453,6 +441,9 @@
    (%winsdelln win -1)))
 
 (WIN-RCH-KEY-YX echochar %wechochar)    (WIN-RCH-KEY-YX echo-rendered-char %wechochar)
+
+(define (erase-char-get) 
+  (erasechar))
 
 (define* (getch win #:key y x)
   (and (if (and y x)
@@ -532,6 +523,22 @@
   
 (define (scroll win)
   (scrl win 1))
+
+(defmacro m-standend! (func)
+  `(define* (,func win)
+     (let ((fname (symbol->string ',func)))
+       (check-window win)
+       (%attr-set! win A_NORMAL 0))))
+(m-standend! standend!)
+(m-standend! attributes-off!)
+
+(defmacro m-standout! (func)
+  `(define* (,func win)
+     (let ((fname (symbol->string ',func)))
+       (check-window win)
+       (%attr-set! win A_STANDOUT 0))))
+(m-standout! standout!)
+(m-standout! attributes-bold!)
 
 (define (touchwin win)
   (%wtouchln win 0 (getmaxy win) #t))

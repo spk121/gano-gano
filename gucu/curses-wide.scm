@@ -62,12 +62,7 @@
 (WIN-CCH-KEY-YX add-wch %wadd-wch)      (WIN-CCH-KEY-YX add-complex-char %wadd-wch)
 (WIN-CCH-KEY-YX echo-wchar %wecho-wchar) (WIN-CCH-KEY-YX echo-complex-char %wecho-wchar)
 (WIN-CST-KEY-YX-N add-wchstr %wadd-wchnstr) (WIN-CST-KEY-YX-N add-complex-string %wadd-wchnstr) 
-
-(define* (addwstr win wstr #:key x y (n -1))
-  (and (if (and x y)
-	   (move win y x)
-	   #t)
-       (%waddnwstr win wstr n)))
+(WIN-WST-KEY-YX-N addwstr %waddnwstr)   (WIN-WST-KEY-YX-N add-wide-string %waddnwstr)
 
 (define (bkgrnd win wch)
   (%wbkgrnd win wch))
@@ -80,6 +75,9 @@
 
 (define (box-set win v h key)
   (%wborder-set win v v h h 0 0 0 0))
+
+(define (erase-wide-char-get)
+  (erasewchar))
 
 (define* (getbkgrnd #:key win)
   (%wgetbkgrnd win))

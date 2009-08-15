@@ -1617,40 +1617,6 @@ gucu_start_color ()
   return SCM_UNSPECIFIED;
 }
 
-/* Turns off all attributes */
-SCM
-gucu_standend_x (SCM win)
-{
-  WINDOW *c_win;
-
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "standend!");
-  
-  c_win = _scm_to_window (win);
-
-  /* wstandend() seems to be a macro that doesn't return anything
-     meaningful. */
-
-  wstandend (c_win);
-  
-  return SCM_UNSPECIFIED;
-}
-
-/* Turns on the A_STANDOUT attribute */
-SCM
-gucu_standout_x (SCM win)
-{
-  WINDOW *c_win;
-
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "standout!");
-
-  c_win = _scm_to_window (win);
-
-  /* There doesn't seem to be any meaning in the return value of wstandout */
-  wstandout (c_win);
-
-  return SCM_UNSPECIFIED;
-}
-
 SCM
 gucu_subpad (SCM orig, SCM nlines, SCM ncols, SCM begin_y, SCM begin_x)
 {
@@ -2330,8 +2296,6 @@ gucu_init_function ()
   scm_c_define_gsubr ("set-term", 1, 0, 0, gucu_set_term);
   scm_c_define_gsubr ("setscrreg!", 3, 0, 0, gucu_setscrreg_x);
   scm_c_define_gsubr ("setsyx", 2, 0, 0, gucu_setsyx);
-  scm_c_define_gsubr ("standend!", 1, 0, 0, gucu_standend_x);
-  scm_c_define_gsubr ("standout!", 1, 0, 0, gucu_standout_x);
   scm_c_define_gsubr ("start-color", 0, 0, 0, gucu_start_color);
   scm_c_define_gsubr ("subpad", 5, 0, 0, gucu_subpad);
   scm_c_define_gsubr ("subwin", 5, 0, 0, gucu_subwin);

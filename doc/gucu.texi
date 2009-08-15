@@ -5596,10 +5596,12 @@ verbose description of the current terminal.
 @deffn Procedure termattrs
 @findex term-attrs
 
-The @code{termattrs} function return a @code{logior} of all video attributes
-supported by the terminal using @code{A_XXX} constants.  The @code{term-attrs}
-function is nearly identical, except that it returns rarely used
-attributes having to do with wide characters.
+The @code{termattrs} function return a @code{logior} of all video
+attributes supported by the terminal using the standard @code{A_XXX}
+constants.  The @code{term-attrs} function is nearly identical, except
+that it tests rarely used attributes that might someday having to do
+with wide characters: @code{A_HORIZONTAL}, @code{A_LEFT},
+@code{A_LOW}, @code{A_RIGHT}, @code{A_TOP}, and @code{A_VERTICAL}.
 
 @end deffn
 
