@@ -3379,6 +3379,7 @@ There is a family of functions that add a rendered, narrow character
 to a curses window, and then advance the cursor.
 
 @deffn Procedure addch win ch #:key y x
+@deffnx Alternate add-rendered-char win ch #:key y x
 @findex scrollok! 
 
 The @code{addch} routine puts the rendered, narrow character @var{ch}
@@ -3410,10 +3411,15 @@ character.
 Since @var{ch} is a rendered character, the rendition will be applied
 to the character when it is put on the screen.
 
-This function returns @code{#t} on success and @code{#f} otherwise.
+This function returns @code{#t} on success and @code{#f} otherwise.  A
+@code{#f} usually indicates an attempt to add a character that won't
+fit on the screen or that would cause a wrap or scroll in a
+window that doesn't wrap or scroll.
+
 @end deffn
 
-@deffn Procedure echochar win ch
+@deffn Procedure echochar win ch #:key y x
+@deffn Alternate echo-rendered-char win ch #:key y x
 
 @findex addch
 @findex refresh
@@ -3422,7 +3428,10 @@ The @code{echochar} routine is equivalent to a call to @code{addch}
 followed by a call to @code{refresh}.  The knowledge that only a
 single character is being output allows for efficiency.
 
-This function returns @code{#t} on success and @code{#f} otherwise.
+This function returns @code{#t} on success and @code{#f} otherwise.  A
+@code{#f} usually indicates an attempt to add a character that won't
+fit on the screen or that would cause a wrap or scroll in a window
+that doesn't wrap or scroll.
 @end deffn
 
 @deffn Procecure tabsize

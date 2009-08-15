@@ -515,25 +515,6 @@ gucu_echo ()
   return SCM_UNSPECIFIED;
 }
 
-/* Write ch to the given window without advancing the curses.  Refresh
-   that character immediately */
-SCM
-gucu_echochar (SCM win, SCM ch)
-{
-  WINDOW *c_win;
-  chtype c_ch;
-  int ret;
-
-  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "echochar");
-  SCM_ASSERT (_scm_is_chtype (ch), ch, SCM_ARG2, "echochar");
-  
-  c_win = _scm_to_window (win);
-  c_ch = _scm_to_chtype (ch);
-
-  ret = wechochar (c_win, c_ch);
-  RETURNTF(ret);
-}
-
 /* Exit curses mode for this screen */
 SCM
 gucu_endwin ()
@@ -1982,6 +1963,25 @@ gucu_wdelch (SCM win)
   RETURNTF(ret);
 }
 
+/* Write ch to the given window without advancing the curses.  Refresh
+   that character immediately */
+SCM
+gucu_wechochar (SCM win, SCM ch)
+{
+  WINDOW *c_win;
+  chtype c_ch;
+  int ret;
+
+  SCM_ASSERT (_scm_is_window (win), win, SCM_ARG1, "%echochar");
+  SCM_ASSERT (_scm_is_chtype (ch), ch, SCM_ARG2, "%echochar");
+  
+  c_win = _scm_to_window (win);
+  c_ch = _scm_to_chtype (ch);
+
+  ret = wechochar (c_win, c_ch);
+  RETURNTF(ret);
+}
+
 /* return #t if y,x is enclosed by win */
 SCM
 gucu_wenclose_p (SCM win, SCM y, SCM x)
@@ -2262,7 +2262,6 @@ gucu_init_function ()
   scm_c_define_gsubr ("doupdate", 0, 0, 0, gucu_doupdate);
   scm_c_define_gsubr ("dupwin", 1, 0, 0, gucu_dupwin);
   scm_c_define_gsubr ("echo", 0, 0, 0, gucu_echo);
-  scm_c_define_gsubr ("echochar", 2, 0, 0, gucu_echochar);
   scm_c_define_gsubr ("endwin", 0, 0, 0, gucu_endwin);
   scm_c_define_gsubr ("erase", 1, 0, 0, gucu_erase);
   scm_c_define_gsubr ("erasechar", 0, 0, 0, gucu_erasechar);
@@ -2354,6 +2353,7 @@ gucu_init_function ()
   scm_c_define_gsubr ("%wchgat", 4, 0, 0, gucu_wchgat);
   scm_c_define_gsubr ("wcursyncup", 1, 0, 0, gucu_wcursyncup);
   scm_c_define_gsubr ("%wdelch", 1, 0, 0, gucu_wdelch);
+  scm_c_define_gsubr ("%wechochar", 2, 0, 0, gucu_wechochar);
   scm_c_define_gsubr ("wenclose?", 3, 0, 0, gucu_wenclose_p);
   scm_c_define_gsubr ("%wgetch", 1, 0, 0, gucu_wgetch);
   scm_c_define_gsubr ("%whline", 3, 0, 0, gucu_whline);
