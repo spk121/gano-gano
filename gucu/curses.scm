@@ -167,20 +167,12 @@
 	    A_REVERSE
 	    A_STANDOUT
 	    A_UNDERLINE
-	    WA_ALTCHARSET
-	    WA_BLINK
-	    WA_BOLD
-	    WA_DIM
-	    WA_HORIZONTAL
-	    WA_LEFT
-	    WA_LOW
-	    WA_PROTECT
-	    WA_REVERSE
-	    WA_RIGHT
-	    WA_STANDOUT
-	    WA_TOP
-	    WA_UNDERLINE
-	    WA_VERTICAL
+            A_HORIZONTAL
+            A_LEFT
+            A_LOW
+            A_RIGHT
+            A_TOP
+            A_VERTICAL
 	    COLOR_BLACK
 	    COLOR_GREEN
 	    COLOR_RED

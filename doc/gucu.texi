@@ -1382,6 +1382,18 @@ Invisible or blank mode
 Alternate character set
 @item A_CHARTEXT
 Bit-mask to extract a character
+@item A_HORIZONTAL
+Unsupported for now and left for future use
+@item A_LEFT
+Unsupported for now and left for future use
+@item A_LOW
+Unsupported for now and left for future use
+@item A_RIGHT
+Unsupported for now and left for future use
+@item A_TOP
+Unsupported for now and left for future use
+@item A_VERTICAL
+Unsupported for now and left for future use
 @item (color-pair n)
 A procedure that returns the bit mask for a color-pair
 @end table
