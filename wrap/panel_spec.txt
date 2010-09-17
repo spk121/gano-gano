@@ -1,4 +1,0 @@
-panel-above
-panel-below
-set-panel-userdata
-panel-userdata
