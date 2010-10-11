@@ -2,45 +2,36 @@ m4_include(`config.m4')
 
 (use-modules 
  (gano chars)
+ (gano flags)
+ (gano files)
  (gano global)
  (gano nano-h)
+ (gano winio)
  (ice-9 getopt-long)
  (ice-9 i18n)
+ (ncurses curses)
+ (ncurses extra)
  (rnrs control)
  )
 (use-syntax (ice-9 syncase))
 
-m4_ifdef({DISABLE_MOUSE},{},
-         {
-          ;; Used to store the user's original mouse click interval
-          (define oldinterval 1)
-          })
+m4_ifdef({DISABLE_MOUSE},{},{
+;; Used to store the user's original mouse click interval
+(define oldinterval -1)
+})
 
-m4_ifdef({ENABLE_NANORC},
-         {
-          ;; Should we ignore all rc files?
-          (define no_rcfiles #f)
-          })
+m4_ifdef({ENABLE_NANORC},{
+;; Should we ignore all rc files?
+(define no_rcfiles #f)
+})
 
 ;; The user's original terminal settings
 (define oldterm #f)
+;; A port containing the terminal
+(define terminal-port 0)
 ;; Used to set up all out fun signal handlers
 (define act #f)
 
-;; Create a new filestruct node.  Note that we do not set prevnode->next
-;; to the new line
-(define (make_new_node prevnode)
-  (let ((newnode (make-filestruct)))
-    (filestruct-data-set! newnode #f)
-    (filestruct-prev-set! newnode prevnode)
-    (filestruct-next-set! newnode #f)
-    (filestruct-lineno-set! newnode (if prevnode 
-                                        (+ 1 (filestruct-lineno prev))
-                                        1))
-    m4_ifdef({ENABLE_COLOR},{
-    (filestruct-multidata-set! newnode #f)
-    })
-    newnode))
 
 ;; Make a copy of a filestruct node.
 (define (copy_node src)
@@ -92,6 +83,49 @@ m4_ifdef({ENABLE_NANORC},
 ;; Display a warning about a key disabled in view mode
 (define (print_view_warning)
   (statusbar (_ "Key invalid in view mode")))
+
+;; Initialize the three window portions that nano uses.
+(define (window_init)
+  (set! editwinrows (+ (lines) -5 (no_more_space) (no_help)))
+  (when (or (< (cols) MIN_EDITOR_COLS)
+            (< editwinrows MIN_EDITOR_ROWS))
+        (die (_ "Window size is too small for nano...~%")))
+
+  m4_ifdef({DISABLE_WRAPJUSTIFY},{},{
+  ;; Set up fill column, based on the screen width
+  (set! fill wrap_at)                                    
+  (when (<= fill 0)
+        (set! fill (+ fill (cols))))
+  (when (< fill 0)
+        (set! fill 0))
+  })
+
+  (when topwin
+        (delwin topwin))
+  (when edit
+        (delwin edit))
+  (when bottomwin
+        (delwin bottomwin))
+
+  (set! topwin (newwin (- 2 (no_more_space)) 
+                       (cols) 
+                       0 
+                       0))
+  (set! edit (newwin editwinrows 
+                     (cols) 
+                     (- 2 (no_more_space)) 
+                     0))
+  (set! bottomwin (newwin (- 3 (no_help)) 
+                          (cols)
+                          (+ editwinrows 2 (- (no_more_space)))
+                          0))
+
+  ;; Turn on the keypad for the windows, if necessary
+  (unless (ISSET REBIND_KEYPAD)
+          (keypad! topwin #t)
+          (keypad! edit #t)
+          (keypad! bottomwin #t)))
+          
 
 ;; Explain how to properly use nano's command line options
 (define (usage)
@@ -290,6 +324,106 @@ m4_ifdef({ENABLE_NANORC},
             })
   (format #t "~%"))
 
+;; Return 1 if the MORE_SPACE flag is set, and 0 otherwise.  This is
+;; used to calculate the relative screen position while taking this
+;; flag into account, since it adds one line to the edit window.
+(define (no_more_space)
+  (if (ISSET MORE_SPACE)
+      1
+      0))
+
+;; Return 2 if the NO_HELP flag is set, and 0 otherwise.  This is used
+;; to calculate the relative screen position while taking this flag
+;; into account, since it removes two lines from the edit window.
+(define (no_help)
+  (if (ISSET NO_HELP)
+      2
+      0))
+
+;; Initialize the signal handlers.
+(define (signal_init)
+  ;; Trap SIGINT and SIGQUIT because we want them to do useful things.
+  (sigaction SIGINT SIG_IGN)
+  (sigaction SIGQUIT SIG_IGN)
+
+  ;; Trap SIGHUP and SIGTERM because we want to write the file out.
+  (sigaction SIGHUP handle_hupterm)
+  (sigaction SIGTERM handle_hupterm)
+  
+  m4_ifdef({NANO_TINY},{},{
+  ;; Trap SIGWINCH because we want to handle window resizes.
+  (sigaction SIGWINCH handle_sigwinch)
+  })
+
+  ;; Trap normal suspend (^Z) so we can handle it ourselves.
+  (if (ISSET SUSPEND)
+      (sigaction SIGSTOP SIG_IGN)
+      ;; else
+      ;; Block all other signals in the suspend and continue handlers.
+      ;; If we don't do this, other stuff interrupts them!
+
+      ;; FIXME: sigfillset(&act.sa_mask);
+      (begin
+        (sigaction SIGTSTP do_suspend)
+        (sigaction SIGCONT do_continue))))
+
+;; Handler for SIGHUP (hangup) and SIGTERM (terminate)
+(define (handle_hupterm signal)
+  (die (_ "Received SIGHUP or SIGTERM")))
+
+;; Handler for SIGTSTP (suspend).
+(define (do_suspend signal)
+  m4_ifdef({DISABLE_MOUSE},{},{
+  ;; Turn mouse support off.
+  (disable_mouse_support)
+  })
+
+  ;; Move the cursor to the last line of the screen.
+  (move (- (lines) 1) 0)
+  (endwin)
+
+  ;; Display our helpful message.
+  (display (_ "Use \"fg\" to return to nano.~%"))
+  (force-output)
+
+  ;; Restore the old terminal settings.
+  (tcsetattr terminal-port TCSANOW old_terminal)
+
+  ;; Trap SIGHUP and SIGTERM so we can properly deal with them while
+  ;; suspended.
+  (sigaction SIGHUP handle_hupterm)
+  (sigaction SIGTERM handle_hupterm)
+
+  ;; Do what mutt does: send ourselves a SIGSTOP. */
+  (kill terminal-port SIGSTOP))
+
+;; Handler for SIGCONT (continue after suspend).
+(define (do_continue signal)
+  m4_ifdef({DISABLE_MOUSE},{},{
+  ;; Turn mouse support back on if it was on before.
+  (when (ISSET USE_MOUSE)
+        (enable_mouse_support))
+  })
+
+  m4_ifdef({NANO_TINY},{
+  ;; Perhaps the user resized the window while we slept.  Handle it,
+  ;; and restore the terminal to its previous state and update the
+  ;; screen in the process.
+  (handle_sigwinch 0)
+  },{
+  ;; Restore the terminal to its previous state.
+  (terminal_init)
+
+  ;; Turn the cursor back on for sure.
+  (curs_set 1)
+
+  ;; Redraw the contents of the windows that need it.
+  (blank_statusbar)
+  (noutrefresh bottomwin)
+  (total_refresh)
+  })
+  )
+
 (define (main args)
   (let* ((optchr #f)
          ;; Line to try and start at
@@ -298,7 +432,8 @@ m4_ifdef({ENABLE_NANORC},
          (startcol 1)
          m4_ifdef({DISABLE_WRAPJUSTIFY},{},{
          ;; Was the fill option used?
-         (fill_used #f)})
+         (fill_used #f)
+         })
          m4_ifdef({ENABLE_MULTIBUFFER},{
          ;; The old value of the multibuffer option,
          ;; restored after we load all files on the command
@@ -323,7 +458,7 @@ m4_ifdef({ENABLE_NANORC},
             (quotestr (single-char #\Q) (value #t))
             })
             (restricted (single-char #\R) (value #f))
-            (tabsize (single-char #\T) (value #t))
+            (tabsizelen (single-char #\T) (value #t))
             (version (single-char #\V) (value #f))
             m4_ifdef({ENABLE_COLOR},{
             (syntax (single-char #\Y) (value #t))
@@ -441,9 +576,9 @@ m4_ifdef({ENABLE_NANORC},
     })
     (let ((tabsizestr (option-ref options 'tabsize #f)))
       (when tabsizestr
-            (set! tabsize (string->number tabsizestr))
-            (when (or (not tabsize)
-                      (<= tabsize 0))
+            (set! tabsizelen (string->number tabsizestr))
+            (when (or (not tabsizelen)
+                      (<= tabsizelen 0))
                   (format (current-error-port) 
                           (_ "Requested tab size \"~A\" is invalid~%")
                           tabsizestr)
@@ -559,7 +694,7 @@ m4_ifdef({ENABLE_NANORC},
               m4_ifdef({DISABLE_SPELLER},{},{
               (alt_speller_cpy alt_speller)
               })
-              (tabsize_cpy tabsize)
+              (tabsize_cpy tabsizelen)
               (flags_cpy (list-copy flags)))
           (begin
             m4_ifdef({DISABLE_OPERATINGDIR},{},{
@@ -600,7 +735,7 @@ m4_ifdef({ENABLE_NANORC},
                   (set! alt_speller alt_speller_cpy))
             })
             (unless (= -1 tabsize_cpy)
-                    (set! tabsize tabsize_cpy))
+                    (set! tabsizelen tabsize_cpy))
             (let loop ((i 0))
               (list-set! flags i (logior (list-ref flags i)
                                          (list-ref flags_cpy i)))
@@ -624,7 +759,9 @@ m4_ifdef({ENABLE_NANORC},
 
     ;; If we're using bold text instead of reverse video text, set it up now
     (when (ISSET BOLD_TEXT)
-          (set! reverse_attr A_BOLD))
+          (set! reverse_attr A_BOLD)
+          (format (current-output-port) "2429: reverse_attr = ~a~%" A_BOLD)
+          )
     
     m4_ifdef({NANO_TINY},{},{
     ;; Set up the search/replace history
@@ -701,17 +838,33 @@ m4_ifdef({ENABLE_NANORC},
             (set! whitespace_len '(1 1)))
     })
     })
-    
+
     ;; If tabsize wasn't specified, set its default value
-    (when (= -1 tabsize)
-          (set! tabsize WIDTH_OF_TAB))
+    (when (= -1 tabsizelen)
+          (set! tabsizelen WIDTH_OF_TAB)
+          (format (current-error-port) "2522: tabsizelen = ~a~%" tabsizelen)
+          )
   
+    ;; Set the output terminal.  Normally this is stdin/stdout, but,
+    ;; if this is running in guile-ncurses-shell, use that terminal
+    ;; instead
+    (if (defined? '%guile-ncurses-shell-read-port)
+        (set! terminal-port %guile-ncurses-shell-read-port)
+        ;; else
+        (set! terminal-port 0))
+
     ;; Back up the old terminal settings so that they can be restored
-    (set! oldterm (tcgetattr 0))
+    (set! oldterm (tcgetattr terminal-port))
+    (%termios-debug oldterm)
     
-    ;; Initialize curses mode.  If this fails, get out. 
-    (define! stdscr (initscr))
-    (unless stdscr
+    ;; Initialize curses mode.  If this fails, get out.  Curses may
+    ;; already be initialized if this is running in
+    ;; guile-ncurses-shell.  In that case, %stdscr will already be
+    ;; defined
+    (if (defined? '%guile-ncurses-shell-stdscr)
+        (set! mainwin %guile-ncurses-shell-stdscr)
+        (set! mainwin (initscr)))
+    (unless mainwin
             (exit 1))
     
     ;; Set up the terminal state
@@ -740,8 +893,8 @@ m4_ifdef({ENABLE_NANORC},
     })
   
     ;; Parse the remaining command line options
-    (let* ((argv (options-ref options '()))
-           (argc (length optarg))
+    (let* ((argv (option-ref options '() '()))
+           (argc (length argv))
            (optind 0))
       
       ;; If there's a +LINE or +LINE,COLUMN flag here, it is the first
@@ -805,7 +958,9 @@ m4_ifdef({ENABLE_NANORC},
       ;; invalid files like directories or if there were no command line
       ;; arguments given.  In this case, we have to load a blank buffer.
       ;; Also, we unset view mode to allow editing
-      (when (not openfile)
+      (format (current-error-port) "2614: openfile = ~a~%" (openfile?))
+      (when (not (openfile?))
+            (format (current-error-port) "2614: load blank buffer~%")
             (open_buffer "" #f)
             (UNSET VIEW_MODE))
       
@@ -839,7 +994,7 @@ m4_ifdef({ENABLE_NANORC},
         (while #t
                ;; Make sure cursor is in the edit window
                (reset_cursor)
-               (wnoutrefresh edit)
+               (noutrefresh edit)
                
                m4_ifdef({NANO_TINY},{},{
                (unless jump_buf_main
@@ -853,7 +1008,7 @@ m4_ifdef({ENABLE_NANORC},
                
                ;; Just in case we were at the statusbar prompt, make sure that
                ;; the statusbar cursor position is reset
-               (do_prompt_abort)
+               ;;(do_prompt_abort)
                
                ;; If constant cursor position display is on, and there are no
                ;; keys waiting in the input buffer, display the current
@@ -870,3 +1025,238 @@ m4_ifdef({ENABLE_NANORC},
       
       ;; We should never get here
       (error "assertion failed, #f"))))
+
+
+;; Disable extended input and output processing in our terminal
+;; settings. 
+(define (disable_extended_io)
+  (let ((term (tcgetattr terminal-port)))
+    (termios-lflag-set! term (logand (termios-lflag term) 
+                                     (lognot IEXTEN)))
+    (termios-oflag-set! term (logand (termios-oflag term) 
+                                     (lognot OPOST)))
+    (tcsetattr! terminal-port TCSANOW term)
+    (%termios-debug term)))
+
+;; Disable interpretation of the special control keys in our terminal
+;; settings.
+(define (disable_signals)
+  (let ((term (tcgetattr terminal-port)))
+    (termios-lflag-set! term (logand (termios-lflag term) 
+                                     (lognot ISIG)))
+    (tcsetattr! terminal-port TCSANOW term)))
+  
+m4_ifdef({NANO_TINY},{},{
+;; Enable interpretation of the special control keys in our terminal
+;; settings.
+(define (enable_signals) 
+  (let ((term (tcgetattr terminal-port)))
+    (termios-cflag-set! term (logior (termios-lflag term) 
+                                     ISIG))
+    (tcsetattr! terminal-port TCSANOW term)))
+})
+
+;; Disable interpretation of the flow control characters in our terminal
+;; settings.
+(define (disable_flow_control)
+  (let ((term (tcgetattr terminal-port)))
+    (termios-iflag-set! term (logand (termios-iflag term) 
+                                     (lognot ISIG)))
+    (tcsetattr! terminal-port TCSANOW term)))
+
+;; Enable interpretation of the flow control characters in our terminal
+;; settings.
+(define (enable_flow_control)
+  (let ((term (tcgetattr terminal-port)))
+    (termios-cflag-set! term (logior (termios-cflag term) 
+                                     IXON))
+    (tcsetattr! terminal-port TCSANOW term)))
+
+;; Set up the terminal state.  Put the terminal in raw mode (read one
+;; character at a time, disable the special control keys, and disable
+;; the flow control characters), disable translation of carriage return
+;; (^M) into newline (^J) so that we can tell the difference between the
+;; Enter key and Ctrl-J, and disable echoing of characters as they're
+;; typed.  Finally, disable extended input and output processing, and,
+;; if we're not in preserve mode, reenable interpretation of the flow
+;; control characters.
+(define (terminal_init)
+  (raw!)
+  (nonl!)
+  (noecho!)
+  (disable_extended_io)
+  (when (ISSET PRESERVE)
+        (enable_flow_control))
+  (disable_signals))
+
+
+
+
+;; Read in a character, interpret it as a shortcut or toggle if
+;; necessary, and return it.  Set meta_key to TRUE if the character is
+;; a meta sequence, set func_key to TRUE if the character is a
+;; function key, set s_or_t to TRUE if the character is a shortcut or
+;; toggle key, set ran_func to TRUE if we ran a function associated
+;; with a shortcut key, and set finished to TRUE if we're done after
+;; running or trying to run a function associated with a shortcut key.
+;; If allow_funcs is FALSE, don't actually run any functions
+;; associated with shortcut keys.
+(define-syntax do_input
+  (syntax-rules ()
+    ((_ meta_key func_key s_or_t ran_func finished allow_funcs)
+     (begin
+       (set! s_or_t #f)
+       (set! ran_func #f)
+       (set! finished #f)
+       
+       ;; Read in a character
+       (let ((input (get_kbinput edit meta_key func_key)))
+
+       m4_ifndef({DISABLE_MOUSE},{},{
+       (when allow_funcs
+             ;; If we got a mouse click and it was on a shortcut, read
+             ;; in the shortcut character
+             (when (and func_key (eq? input KEY_MOUSE))
+                   (if (eq? 1 (do_mouse))
+                       (set! input (get_kbinput edit meta_key func_key))
+                       ;; else
+                       (begin
+                         (set! meta_key #f)
+                         (set! func_key #f)
+                         (set! input ERR)))))
+       })
+
+       ;; Check for a shortcut in the main list
+       (let* ((s (get_shortcut MMAIN input meta_key func_key))
+              ;; If we have a shortcut from the main list, or a
+              ;; "universal" edit window shortcut, set have_shortcut
+              ;; to true
+              (have_shortcut (if s #t #f)))
+
+         ;; If we got a non-high-bit control key, a meta key sequence,
+         ;; or a function key, and it's not a shortcut or toggle,
+         ;; throw it out.
+         (unless have_shortcut
+                 (when (or (is_ascii_cntrl_char input)
+                           meta_key
+                           func_key)
+                       (statusbar "Unknown Command")
+                       (beep)
+                       (set! meta_key #f)
+                       (set! func_key #f)
+                       (set! input ERR)))
+         
+         (when allow_funcs
+               ;; If we got a character, and it isn't a shortcut or
+               ;; toggle, it's a normal text character.  Display the
+               ;; warning if we're in view mode, or add the character
+               ;; to the input buffer if we're not.
+               (when (and (not (eq? input ERR))
+                          (not have_shortcut))
+                     (if (ISSET VIEW_MODE)
+                         (print_view_warning)
+                         ;; else
+                         (append-kbinput! input))))
+
+         ;; If we got a shortcut or toggle, or if there aren't any
+         ;; other characters waiting after the one we read in, we need
+         ;; to output all the characters in the input buffer if it
+         ;; isn't empty.  Note that it should be empty if we're in
+         ;; view mode
+         (when (or have_shortcut (= 0 get_key_buffer_len))
+               m4_ifdef({DISABLE_WRAPPING},{},{
+               ;; If we got a shortcut or toggle, and it's not the
+               ;; shortcut for verbatim input, turn off prepending of
+               ;; wrapped text.
+               (when (and have_shortcut 
+                          (or (not have_shortcut)
+                              (not s)
+                              (sc
+	    if (have_shortcut && (!have_shortcut || s == NULL || s->scfunc !=
+		DO_VERBATIM_INPUT))
+		wrap_reset();
+#endif
+
+	    if (kbinput != NULL) {
+		/* Display all the characters in the input buffer at
+		 * once, filtering out control characters. */
+		char *output = charalloc(kbinput_len + 1);
+		size_t i;
+
+		for (i = 0; i < kbinput_len; i++)
+		    output[i] = (char)kbinput[i];
+		output[i] = '\0';
+
+		do_output(output, kbinput_len, FALSE);
+
+		free(output);
+
+		/* Empty the input buffer. */
+		kbinput_len = 0;
+		free(kbinput);
+		kbinput = NULL;
+	    }
+	}
+
+	if (have_shortcut) {
+	    switch (input) {
+		/* Handle the normal edit window shortcuts, setting
+		 * ran_func to TRUE if we try to run their associated
+		 * functions and setting finished to TRUE to indicate
+		 * that we're done after running or trying to run their
+		 * associated functions. */
+		default:
+		    /* If the function associated with this shortcut is
+		     * cutting or copying text, indicate this. */
+		    if (s->scfunc == DO_CUT_TEXT_VOID
+#ifndef NANO_TINY
+			|| s->scfunc == DO_COPY_TEXT || s->scfunc ==
+			DO_CUT_TILL_END
+#endif
+			)
+			cut_copy = TRUE;
+
+		    if (s->scfunc != 0) {
+			const subnfunc *f = sctofunc((sc *) s);
+			*ran_func = TRUE;
+			if (ISSET(VIEW_MODE) && f && !f->viewok)
+			    print_view_warning();
+			else {
+#ifndef NANO_TINY
+			    if (s->scfunc ==  DO_TOGGLE)
+				do_toggle(s->toggle);
+			    else {
+#else
+			    {
+#endif
+				iso_me_harder_funcmap(s->scfunc);
+#ifdef ENABLE_COLOR
+				if (f && !f->viewok && openfile->syntax != NULL
+					&& openfile->syntax->nmultis > 0) {
+				    reset_multis(openfile->current, FALSE);
+				}
+#endif
+				if (edit_refresh_needed) {
+#ifdef DEBUG
+	    			    fprintf(stderr, "running edit_refresh() as edit_refresh_needed is true\n");
+#endif
+				    edit_refresh();
+				    edit_refresh_needed = FALSE;
+				}
+
+			    }
+			}
+		    }
+		    *finished = TRUE;
+		    break;
+	    }
+	}
+    }
+
+    /* If we aren't cutting or copying text, blow away the text in the
+     * cutbuffer. */
+    if (!cut_copy)
+	cutbuffer_reset();
+
+    return input;
+}

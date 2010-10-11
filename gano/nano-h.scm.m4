@@ -1,9 +1,8 @@
 m4_include(`config.m4')
 
 (define-module (gano nano-h)
-  #:use-module (gano global)		; flags
-  #:use-module (rnrs records syntactic)
-  #:use-module (ncurses curses)
+  #:use-module ((ncurses curses) #:select (key-f))
+  #:use-module (gano records)
   #:export (
             ;; constants
             NANO_ROOT_UID
@@ -44,44 +43,6 @@ m4_include(`config.m4')
             CWHOLELINE
             CSTARTENDHERE
             CWTF
-
-            ;; flags
-            DONTUSE
-            CASE_SENSITIVE
-            CONST_UPDATE
-            NO_HELP
-            NOFOLLOW_SYMLINKS
-            SUSPEND
-            NO_WRAP
-            AUTOINDENT
-            VIEW_MODE
-            USE_MOUSE 
-            USE_REGEXP
-            TEMP_FILE
-            CUT_TO_END
-            BACKWARDS_SEARCH
-            MULTIBUFFER
-            SMOOTH_SCROLL
-            REBIND_DELETE
-            REBIND_KEYPAD
-            NO_CONVERT
-            BACKUP_FILE
-            INSECURE_BACKUP
-            NO_COLOR_SYNTAX
-            PRESERVE
-            HISTORYLOG
-            RESTRICTED
-            SMART_HOME
-            WHITESPACE_DISPLAY
-            MORE_SPACE
-            TABS_TO_SPACES
-            QUICK_BLANK
-            WORD_BOUNDS
-            NO_NEWLINES
-            BOLD_TEXT
-            QUIET
-            UNDOABLE
-            SOFTWRAP
             
             ;; menus
             MMAIN
@@ -270,58 +231,60 @@ m4_include(`config.m4')
 
             ;; macros
             IGNORE_CALL_RESULT
-            FLAGOFF
-            FLAGMASK
-            FLAGS
-            SET
-            UNSET
-            ISSET
-            TOGGLE
             _
             N_
             P_
+            )
+  #:re-export (
+               make-subnfunc
+               sc-keystr
+               subnfunc-desc
+               subnfunc-menus
+               subnfunc-scfunc
 
-            ;; records
-            make-sc
-            sc?
-            sc-keystr
-            sc-keystr-set!
-            sc-type
-            sc-type-set!
-            sc-seq
-            sc-seq-set!
-            sc-menu
-            sc-menu-set!
-            sc-scfunc
-            sc-scfunc-set!
-            sc-toggle
-            sc-toggle-set!
-            sc-execute
-            sc-execute-set!
-            sc-next
-            sc-next-set!
 
-            make-subnfunc
-            subnfunc?
-            subnfunc-scfunc
-            subnfunc-scfunc-set!
-            subnfunc-menus
-            subnfunc-menus-set!
-            subnfunc-desc
-            subnfunc-desc-set!
-            m4_ifdef({DISABLE_HELP},{},{
-            subnfunc-help
-            subnfunc-help-set!
-            subnfunc-blank_after
-            subnfunc-blank_after-set!
-            })
-            subnfunc-viewok
-            subnfunc-viewok-set!
-            subnfunc-toggle
-            subnfunc-toggle-set!
-            subnfunc-next
-            subnfunc-next-set!
-            ))
+            filestruct-data
+            filestruct-data-set!
+            filestruct-lineno
+            filestruct-lineno-set!
+            filestruct-multidata
+            filestruct-multidata-set!
+            filestruct-next
+            filestruct-next-set!
+            filestruct-prev
+            filestruct-prev-set!
+            make-filestruct
+
+            openfile?
+            set-openfile!
+            append-openfile!
+            make-openfilestruct
+            make_new_opennode
+            make_new_node
+            initialize_buffer_text
+            openfile-current-index
+            openfile-current-index-set!
+            openfile-current-lineno
+            openfile-current_x
+            openfile-current_x-set!
+            openfile-current_y
+            openfile-current_y-set!
+            openfile-edittop
+            openfile-edittop-index
+            openfile-edittop-index-set!
+            openfile-edittop-lineno
+            openfile-fileage-data-set!
+            openfile-fileage
+            openfile-fileage-set!
+            openfile-filename
+            openfile-filename-set!
+            openfile-modified
+            openfile-modified-set!
+            openfile-placewewant
+            openfile-placewewant-set!
+            openfile-totsize
+            openfile-totsize-set!
+               ))
 
 m4_ifdef({__TANDEM},{
 (define NANO_ROOT_UID 65535)
@@ -334,30 +297,6 @@ m4_ifdef({__TANDEM},{
 (define (IGNORE_CALL_RESULT thunk)
   (thunk)
   *unspecified*)
-
-;; Macros for flags.
-;; FIXME: replace this with an Alist
-(define sizeof-unsigned 32)
-(define (FLAGOFF flag) 
-  (quotient flag sizeof-unsigned))
-(define (FLAGMASK flag) 
-  (ash 1 (modulo flag sizeof-unsigned)))
-(define (FLAGS flag) 
-  (list-ref flags (FLAGOFF flag)))
-(define (SET flag) 
-  (list-set! flags (FLAGOFF flag) 
-	     (logior (FLAGS flag)
-		     (FLAGMASK flag))))
-(define (UNSET flag)
-  (list-set! flags (FLAGOFF flag)
-	     (logand (FLAGS flag) 
-		     (lognot (FLAGMASK flag)))))
-(define (ISSET flag)
-  (logtest (FLAGS flag) (FLAGMASK flag)))
-(define (TOGGLE flag)
-  (list-set! flags (FLAGOFF flag)
-	     (logxor (FLAGS flag)
-		     (FLAGMASK flag))))
 
 ;; Macros for character allocation and more.
 (define (charalloc howmuch)
@@ -446,57 +385,6 @@ m4_define({DISABLE_WRAPJUSTIFY},{1})
 (define INSERT 8)
 (define OTHER 9)
 
-m4_ifdef({ENABLE_COLOR},{
-(define-record-type colortype
-  (fields
-   ;; This syntax's foreground color
-   (mutable fg)
-   ;; This syntax's background color
-   (mutable bg)
-   ;; Is this color A_BOLD?
-   (mutable bright)
-   ;; Is this regex string case insensitive?
-   (mutable icase)
-   ;; The color pair number used for this pair
-   (mutable pairnum)
-   ;; The start (or all) of the regex string
-   (mutable start_regex)
-   ;; The compiled start (or all) of the regex string
-   (mutable start)
-   ;; The end (if any) of the regex string
-   (mutable end-regex)
-   ;; The compiled end (if any) of the regex string
-   (mutable end)
-   ;; Next set of colors
-   (mutable next)
-   ;; Basic id for assigning to lines later
-   (mutable id)
-   ))
-
-(define-record-type exttype
-  (fields
-   ;; The extension that match this syntax
-   (mutable ext_regex)
-   ;; The compiled extensions that match this syntax
-   (mutable ext)
-   ;; Next set of extensions
-   (mutable next)))
-
-(define-record-type syntaxtype
-  (fields
-   ;; The name of this syntax
-   (mutable desc)
-   ;; The list of extensions that this syntax applies to
-   (mutable extensions)
-   ;; Regexes to match on the 'header' (1st line) of the file
-   (mutable headers)
-   ;; The colors used in this syntax
-   (mutable color)
-   ;; How many multi line strings this syntax has
-   (mutable nmultis)
-   ;; Next Syntax
-   (mutable next)
-   ))
 
 ;; Yay, regex doesn't apply to this line at all!
 (define CNONE (ash 1 1))
@@ -510,239 +398,6 @@ m4_ifdef({ENABLE_COLOR},{
 (define CSTARTENDHERE (ash 1 5))
 ;; Something else
 (define CWTF (ash 1 6))
-
-})
-
-(define-record-type filestruct
-  (fields
-   ;; The text of this line
-   (mutable data)
-   ;; The numer of this line
-   (mutable lineno)
-   ;; Next node
-   (mutable next)
-   ;; Previous node
-   (mutable prev)
-m4_ifdef({ENABLE_COLOR},{
-   ;;Array of which multi-line regexes apply to this line
-   (mutable multidata)
-})
-  ))
-
-
-(define-record-type partition
-  (fields
-   ;; The top line of this portion of the file.
-   (mutable fileage)
-   ;; The line before the top line of this portion of the file.
-   (mutable top_prev)
-   ;; The text before the beginning of the top line of this portion of the file.
-   (mutable top_prev)
-   ;; The bottom line of this portion of the file
-   (mutable filebot)
-   ;; The line after the bottom line of this portion of the file
-   (mutable bot_next)
-   ;; The text after the end of the bottom line of this portion of the file
-   (mutable bot_data)))
-
-m4_ifdef({NANO_TINY},{},{
-(define-record-type undo
-  (fields
-   (mutable lineno)
-   ;; What type of undo was this
-   (mutable type)
-   ;; Where did this action begin or end
-   (mutable begin)
-   ;; String type data we will use for copying the affected line back
-   (mutable strdata)
-   (mutable strdata2)
-   (mutable xflags)
-
-   ;; Cut specific stuff we need
-
-   ;; Copy of the cutbuffer
-   (mutable cutbuffer)
-   ;; Copy of the cutbottom
-   (mutable cutbottom)
-   ;; Was the marker set when we cut
-   (mutable mark_set)
-   ;; Was this a cut to the end
-   (mutable to_end)
-   (mutable mark_begin_lineno)
-   (mutable mark_begin_x)
-   (mutable next)))
-})
-
-(define-record-type openfilestruct
-  (fields
-   ;; The current file's name
-   (mutable filename)
-   ;; The current file's first line
-   (mutable fileage)
-   ;; The current file's last line
-   (mutable filebot)
-   ;; The current top of the edit window. 
-   (mutable edittop)
-   ;; The current file's current line. 
-   (mutable current)
-   ;; The current file's total number of characters. 
-   (mutable totsize)
-   ;; The current file's x-coordinate position. 
-   (mutable current_x)
-   ;; The current file's place we want. 
-   (mutable placewewant)
-   ;; The current file's y-coordinate position. 
-   (mutable current_y)
-   ;; Whether the current file has been modified. 
-   (mutable modified)
-m4_ifdef({NANO_TINY},{},{
-   ;; Whether the mark is on in the current file. 
-   (mutable mark_set)
-   ;; The current file's beginning marked line, if any. 
-   (mutable mark_begin)
-   ;; The current file's beginning marked line's x-coordinate
-   ;; position, if any.
-   (mutable  mark_begin_x)
-   ;; The current file's format.
-   (mutable fmt)
-   ;; The current file's stat. 
-   (mutable current_stat)
-   ;; Top of the undo list 
-   (mutable undotop)
-   ;; The current (i.e. n ext) level of undo 
-   (mutable current_undo)
-   (mutable last_action)
-})
-m4_ifdef({ENABLE_COLOR},{
-    ;; The  syntax struct for this file, if any 
-    (mutable syntax)
-    ;; The current file's associated colors. 
-    (mutable colorstrings)
-})
-    ;; Next node. 
-    (mutable next)
-    ;; Previous node
-    (mutable prev)))
-
-(define-record-type shortcut
-  (fields
-   ;; The function's description
-   (mutable desc)
-m4_ifdef({DISABLE_HELP},{},{   
-   ;; The help file entry text for this function
-   (mutable help)
-   ;; Whether there should be a blank line after the help entry text
-   (mutable blank_after)
-})			    
-    ;; Note: Key values that aren't used should be set to NANO_NO_KEY.
-    
-    ;; The special sentinel key or control key we want bound, if any
-    (mutable ctrlval)
-    ;; The meta key we want bound, if any
-    (mutable metaval)
-    ;; The function key we want bound, if any
-    (mutable funcval)
-    ;; The other meta key we want bound, if any
-    (mutable miscval)
-    ;; Is this function allowe when in view mode?
-    (mutable viewok)
-    ;; The function to call when we get this key
-    (mutable func)
-    ;; Next shortcut
-    (mutable next)))
-
-m4_ifdef({ENABLE_NANORC},{
-(define-record-type rcoption
-  (fields
-    ;; The name of the rcfile option
-    (mutable name)
-    ;; The flag associated with it, if any
-    (mutable flag)))
-})
-
-(define-record-type (sc make-sc sc?)
-  (fields
-   ;; The shortcut key for a function, ASCII version 
-   (mutable keystr)
-   ;; What kind of function key is it for convenience later 
-   (mutable type)
-   ;; The actual sequence to check on the the type is determined 
-   (mutable seq)
-   ;; What list does this apply to 
-   (mutable menu)
-   ;; The function we're going to run 
-   (mutable scfunc)
-   ;; If a toggle, what we're toggling 
-   (mutable toggle)
-	;; Whether to execute the function in question or just return
-	;; so the sequence can be caught by the calling code
-   (mutable execute)
-   ;; Next in the list 
-   (mutable next)))
-
-(define-record-type (subnfunc make-subnfunc subnfunc?)
-  (fields
-   ;; What function is this 
-   (mutable scfunc)
-   ;; In what menus does this function applu 
-   (mutable menus)
-   ;; The function's description, e.g. "Page Up". 
-   (mutable desc)
-m4_ifdef({DISABLE_HELP},{},{
-   ;; The help file entry text for this function. 
-   (mutable help)
-   ;; Whether there should be a blank line after the help entry
-   ;; text for this function.
-   (mutable blank_after)
-})
-   ;; Is this function allowed when in view mode? 
-   (mutable viewok)
-   ;; If this is a toggle, if nonzero what toggle to set 
-   (mutable toggle)
-   ;; next item in the list 
-   (mutable next)
-   ))
-
-
-;; Enumeration to be used in flags table. See FLAGBIT and FLAGOFF 
-;; definitions.
-(define    DONTUSE 1)
-(define    CASE_SENSITIVE 2)
-(define    CONST_UPDATE 3)
-(define    NO_HELP 4)
-(define    NOFOLLOW_SYMLINKS 5)
-(define    SUSPEND 6)
-(define    NO_WRAP 7)
-(define    AUTOINDENT 8)
-(define    VIEW_MODE 9)
-(define    USE_MOUSE 10)
-(define    USE_REGEXP 11)
-(define    TEMP_FILE 12)
-(define    CUT_TO_END 13)
-(define    BACKWARDS_SEARCH 14)
-(define    MULTIBUFFER 15)
-(define    SMOOTH_SCROLL 16)
-(define    REBIND_DELETE 17)
-(define    REBIND_KEYPAD 18)
-(define    NO_CONVERT 19)
-(define    BACKUP_FILE 20)
-(define    INSECURE_BACKUP 21)
-(define    NO_COLOR_SYNTAX 22)
-(define    PRESERVE 23)
-(define    HISTORYLOG 24)
-(define    RESTRICTED 25)
-(define    SMART_HOME 26)
-(define    WHITESPACE_DISPLAY 27)
-(define    MORE_SPACE 28)
-(define    TABS_TO_SPACES 29)
-(define    QUICK_BLANK 30)
-(define    WORD_BOUNDS 31)
-(define    NO_NEWLINES 32)
-(define    BOLD_TEXT 33)
-(define    QUIET 34)
-(define    UNDOABLE 35)
-(define    SOFTWRAP 36)            
-
 
 ;; Flags for which menus in which a given function should be present
 (define MMAIN				(ash 1 0))

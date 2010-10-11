@@ -65,11 +65,11 @@ m4_dnl m4_define({HAVE_ICONV},{1})
 m4_dnl Define to 1 if you have the <inttypes.h> header file. 
 m4_define({HAVE_INTTYPES_H},{1})
 m4_dnl Define to 1 if you have the `isblank' function. 
-m4_define({HAVE_ISBLANK},{1})
+m4_dnl m4_define({HAVE_ISBLANK},{1})
 m4_dnl Define to 1 if you have the `iswalnum' function. 
 m4_define({HAVE_ISWALNUM},{1})
 m4_dnl Define to 1 if you have the `iswblank' function. 
-m4_define({HAVE_ISWBLANK},{1})
+m4_dnl m4_define({HAVE_ISWBLANK},{1})
 m4_dnl Define to 1 if you have the `iswpunct' function. 
 m4_define({HAVE_ISWPUNCT},{1})
 m4_dnl Define to 1 if you have the `iswspace' function. 

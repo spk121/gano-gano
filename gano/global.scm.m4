@@ -2,23 +2,36 @@ m4_include(`config.m4')
 m4_define({IFSCHELP},m4_ifdef({DISABLE_HELP},{""},{$1}))
 
 (define-module (gano global)
+  #:use-module (gano records)
+  #:use-module (gano flags)
   #:use-module (gano nano-h)
   #:use-module (ncurses curses)
   #:use-module (rnrs control)
+  #:use-module (srfi srfi-1)
   #:export (
             m4_ifdef({NANO_TINY},{},{
             jump_buf
             jump_buf_main
             })
-            m4_ifdef({DISABLE_WRAPJUSTIFY},{}.{
+            m4_ifdef({DISABLE_WRAPJUSTIFY},{},{
             fill
             wrap_at
             })
+            first_sc_for
             last_search
             last_replace
-            flags
-            tabsize
+            tabsizelen
+            mainwin
+            topwin
+            edit
+            bottomwin
+            editwinrows
             shortcut_init
+            reverse_attr
+            length_of_list
+            allfuncs
+            maxrows
+            currmenu
             ))
 
 m4_ifdef({NANO_TINY},{},{
@@ -45,9 +58,9 @@ m4_ifdef({DISABLE_WRAPJUSTIFY},{},{
 ;; The last replacement string we searched for
 (define last_replace #f)
 
-;; Our flag containing the states of all the global options
-(define flags '(0 0 0 0))
 
+;; The standard ncurses screen
+(define mainwin #f)
 ;; The top portion of the window, where we display the version
 ;; number of nano, the name of the current file, and whether
 ;; the current file has been modified
@@ -72,8 +85,7 @@ m4_ifdef({DISABLE_JUSTIFY},{},{
 })
 ;; The partition where we store a portion of the current file
 (define filepart #f)
-;; The list of all open file buffers
-(define openfile #f)
+
 
 m4_ifdef({NANO_TINY},{},{
 ;; The opening and closing brackets that can be found by bracket
@@ -119,7 +131,7 @@ m4_ifdef({HAVE_REGEX_H},{
 (define answer #f)
 
 ;; The width of a tab in spaces.  The default is set in main
-(define tabsize -1)
+(define tabsizelen -1)
 
 m4_ifdef({NANO_TINY},{},{
 ;; The directory where we store backup files
@@ -154,9 +166,10 @@ m4_ifdef({ENABLE_COLOR},{
 ;; The currently loaded menu
 (define currmenu #f)
 
-;; New shortcut key struct
+;; The shortcut key struct: a list of sc's
 (define sclist #f)
-;; New struct for the function list
+
+;; The main function list: a list of subnfunc's
 (define allfuncs #f)
 
 m4_ifdef({NANO_TINY},{},{
@@ -191,20 +204,21 @@ m4_ifdef({HAVE_REGEX_H},{
 ;; Return the number of entries in the shortcut list S for
 ;; a given menu
 (define (length_of_list menu)
-  (let loop ((i 0)
-             (f allfuncs))
-    (if (not f)
-        i                               ; return length
-        ;; else
-        (if (and menu 
-                 (subnfunc-menus f)
-                 m4_ifdef({DISABLE_HELP},{},{
-                 (subnfunc-help f)
-                 }))
-            (loop (+ i 1)
-                  (subnfunc-next f))
-            (loop i
-                  (subnfunc-next f))))))
+  (let loop ((index 0)
+             (count 0))
+    (if (< index (length allfuncs))
+        (begin
+          (let ((f (list-ref allfuncs index)))
+            (if (not f)
+                count
+                ;; else
+                (if (and menu 
+                         (subnfunc-menus f)
+                         )
+                    (loop (+ index 1) (+ count 1))
+                    ;; else
+                    (loop (+ index 1) count)))))
+        count)))
 
 ;; Set type of function based on the string
 (define (strtokeytype str)
@@ -223,15 +237,11 @@ m4_ifdef({HAVE_REGEX_H},{
 (define (add_to_funcs func menus desc help blank_after viewok)
   (let ((f #f))
     (if (not allfuncs)
-        (begin
-          ;; Initialization of allfuncs global
-          (set! allfuncs (make-subnfunc))
-          (set! f allfuncs))
+        ;; Initialization of allfuncs global
+        (set! allfuncs (list (make-subnfunc)))
         ;; else
-        (let loop ((cur allfuncs))
-          (if (subnfunc-next cur)
-              (loop (subnfunc-next cur))
-              (set! f cur))))
+        (set! allfuncs (append allfuncs (list (make-subnfunc)))))
+    (set! f (last allfuncs))
     (subnfunc-next-set! f #f)
     (subnfunc-scfunc-set! f func)
     (subnfunc-menus-set! f menus)
@@ -243,41 +253,68 @@ m4_ifdef({HAVE_REGEX_H},{
     })
 
     m4_ifdef({DEBUG},{
-    (format (current-error-port) "Added func \"~a\"" (subnfunc-desc f))
+    (format (current-error-port) "Added func \"~a\"~%" (subnfunc-desc f))
     })
     ))
         
+(define (first_sc_for menu func)
+  (let ((metasc #f)
+        (sc #f))
+    (let loop ((i 0))
+      (if (< i (length sclist))
+          (let ((s (list-ref sclist i)))
+            (when (and (logtest (sc-menu s) menu)
+                       (eq? (sc-scfunc s)))
+                  (if (eq? (sc-type s) META)
+                      (begin
+                        (set! metasc s)
+                        (loop (+ i 1)))
+                      ;; else 
+                      (set! sc s)
+                      ;; and stop looping
+                      ))
+            (loop (+ i 1)))))
+    ;; If we are here we have only found meta sequences.  If so, use
+    ;; one.
+    (cond
+     (sc
+      sc)
+     (metasc
+      sc)
+     (else
+      (format (current-error-port) "Whoops, returning null given func ~a in menu ~a~%"
+              func menu)
+      #f))))
+        
+            
+
+
 ;; Add a string to the new shortcut list implementation.
 (define (add_to_sclist menu scstring func toggle execute)
   (let ((s #f))
-    
     (if (not sclist)
         ;; Initialize the shortcut list if, if necessary
         (begin
-          (set! sclist (make-sc))
-          (sc-next-set! sclist #f)
-          (set! s sclist))
+          (set! sclist (list (make-sc)))
+          (set! s (car sclist)))
         ;; else, fast forward to a matching entry or the end of the list
         (begin
-          (let loop ((cur sclist))
-            (cond 
-             ((not (sc-next cur))
-              (set! s cur))        ; and break loop
-             ((and (eq? (sc-menu cur) menu)
-                   (string=? (sc-keystr cur) scstring))
-              (set! s cur))
-             (else
-              (loop (sc-next cur)))))
-          (when (or (not (eq? (sc-menu s) menu))
-                    (not (eq? (sc-keystr s) scstring)))
-                ;; This is not a replace
-                m4_ifdef({DEBUG},{
-                (format (current-error-port) "No match found...~%")
-                })
-                (sc-next-set! s (make-sc))
-                (set! s (sc-next s))
-                (sc-next-set! s #f))))
-                        
+          (let ((match (find (lambda (x)
+                               (and (eq? (sc-menu x) menu)
+                                    (string=? (sc-keystr x) scstring)))
+                             sclist)))
+            (if match
+                (set! s match)
+                ;; else
+                ;; add a new shortcut to the end of the list
+                (begin
+                  ;; This is not a replace
+                  m4_ifdef({DEBUG},{
+                  (format (current-error-port) "No match found...~%")
+                  })
+                  (set! sclist (append sclist (list (make-sc))))
+                  (set! s (last sclist)))))))
+
     (sc-type-set! s (strtokeytype scstring))
     (sc-menu-set! s menu)
     (sc-toggle-set! s toggle)
@@ -359,6 +396,18 @@ m4_ifdef({HAVE_REGEX_H},{
      })
      )))
 
+m4_ifdef({DEBUG},{
+(define (print_sclist)
+  (for-each (lambda (s)
+              (let ((f (sctofunc s)))
+                (if f
+                    (format (current-error-port)
+                            "Shortcut \"~a\", function: ~a, menus ~a\n"
+                            (sc-keystr s) (subnfunc-desc f) (subnfunc-menus f))
+                    (format (current-error-port)
+                            "Hmm, didnt find a func for \"~a\"\n" (sc-keystr s)))))
+            sclist))
+})
 
 ;; Stuff we need to make at least static here so we can access it
 ;; below.
@@ -574,10 +623,11 @@ m4_ifdef({ENABLE_MULTIBUFFER},{
         })
         }) ;; disable help
         )
-    (while allfuncs
-           (let ((f allfuncs))
-             (set! allfuncs (subnfunc-next allfuncs))
-             (set! f #f)))
+
+    ;; Clear out the old function list, if any
+    (set! allfuncs #f)
+    (gc)
+
     (add_to_funcs DO_HELP_VOID 
                   (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE 
                           MWRITEFILE MINSERTFILE MEXTCMD MSPELL MBROWSER 
@@ -1193,3 +1243,10 @@ m4_ifdef({ENABLE_MULTIBUFFER},{
     (print_sclist)
     })
     ))
+
+(define (sctofunc s)
+  (if (list? allfuncs)
+      (find (lambda (f)
+              (eq? (subnfunc-scfunc f) (sc-scfunc s)))
+            allfuncs)
+      #f))
