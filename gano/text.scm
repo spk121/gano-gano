@@ -27,8 +27,12 @@
   #:use-module (srfi srfi-1)
   #:export (
 	    do_enter
+	    wrap_reset
 	    ))
 
+
+;; Should we prepend wrapped text to the next line?
+(define prepend_wrap #f)
 
 ;; Someone hits Enter *gasp!*
 (define (do_enter undoing)
@@ -74,3 +78,21 @@
     (set_modified)
     (openfile-placewewant-set! (xplustabs))
     (set! edit_refresh_needed #t)))
+
+
+;; Update an undo item, or determine whether a new one is really
+;; needed and bounce the data to add_undo instead.  The latter
+;; functionality just feels gimmicky and may just be more hassle than
+;; it's worth, so it should be axed if needed.
+(define (update_undo action)
+  (let ((len 0))
+    (cond
+     ((not (ISSET UNDOABLE))
+      #f)
+     (else
+      (error "implement me!")))))
+
+;; Unset the prepend_wrap flag.  We need to do this as soo as we do
+;; something other than type text.
+(define (wrap_reset)
+  (set! prepend_wrap #f))

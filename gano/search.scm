@@ -32,11 +32,11 @@
   "Initialize the search and replace history lists."
   (set! search_history (list (make_new_node #f)))
   (filestruct-data-set! (car search_history) "")
-  (set! searchage 0)
+  (set! search_history_index 0)
 
   (set! replace_history (list (make_new_node #f)))
   (filestruct-data-set! (car replace_history) "")
-  (set! replaceage 0))
+  (set! replace_history_index 0))
 
 ;; Go to the specified line and column, or ask for them if interactive
 ;; is TRUE.  Save the x-coordinate and y-coordinate if save_pos is TRUE.

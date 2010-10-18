@@ -1,4 +1,5 @@
 (define-module (gano records)
+  #:use-module (srfi srfi-1)
   #:use-module (rnrs records syntactic)
   #:export (
             ;; records
@@ -52,6 +53,7 @@
 	    filestruct-prev-set!
 	    filestruct-syntax
 
+	    syntaxtype-nmultis
 
             openfile?
 	    openfile-count
@@ -75,6 +77,8 @@
 	    openfile-mark_set
 	    openfile-mark_set-set!
 	    openfile-syntax
+	    openfile-syntax-nmultis
+	    openfile-syntax-set!
 	    openfile-undotop-set!
             openfile-current
             openfile-current-data
@@ -87,14 +91,15 @@
             openfile-current_y
             openfile-current_y-set!
             openfile-edittop
-            openfile-edittop-index
-            openfile-edittop-index-set!
+            openfile-edittop_index
+            openfile-edittop_index-set!
             openfile-edittop-lineno
             openfile-fileage
             openfile-fileage-data-set!
             openfile-fileage-set!
             openfile-filename
             openfile-filename-set!
+	    openfile-filebot-lineno
             openfile-modified
             openfile-modified-set!
             openfile-placewewant
@@ -135,10 +140,21 @@
         (set! openfile_index (1- (length %openfile))))
       (set-openfile! x)))
 
-(define (openfile-current_x) (openfilestruct-current_x (openfile)))
-(define (openfile-current_x-set! val) (openfilestruct-current_x-set! (openfile) val))
-(define (openfile-current_y) (openfilestruct-current_y (openfile)))
-(define (openfile-current_y-set! val) (openfilestruct-current_y-set! (openfile) val))
+(define (openfile-current_x)
+  (openfilestruct-current_x (openfile)))
+(define (openfile-current_x-set! val)
+  (format #t "openfile-current_x-set!: orig ~a input ~a~%"
+	  (openfile-current_x) val)
+  (openfilestruct-current_x-set! (openfile) val)
+  (format #t "openfile-current_x-set!: new ~a~%"
+	  (openfile-current_x))
+  )
+
+(define (openfile-current_y)
+  (openfilestruct-current_y (openfile)))
+(define (openfile-current_y-set! val)
+  (openfilestruct-current_y-set! (openfile) val))
+
 (define (openfile-placewewant) (openfilestruct-placewewant (openfile)))
 
 (define (openfile-placewewant-set! val)
@@ -175,14 +191,20 @@
 (define (openfile-current_index-set! val)
   (openfilestruct-current_index-set! (openfile) val))
 
-(define (openfile-edittop-index)
-  (openfilestruct-edittop-index (openfile)))
+(define (openfile-edittop_index)
+  (openfilestruct-edittop_index (openfile)))
 
-(define (openfile-edittop-index-set! val)
-  (openfilestruct-edittop-index-set! (openfile) val))
+(define (openfile-edittop_index-set! val)
+  (openfilestruct-edittop_index-set! (openfile) val))
 
-(define (openfile-current) (list-ref (openfile-fileage)
-				     (openfile-current_index)))
+(define (openfile-current)
+  (if (not (openfile?))
+      #f
+      (if (not (list? (openfile-fileage)))
+	  #f
+	  (if (not (integer? (openfile-current_index)))
+	      #f
+	      (list-ref (openfile-fileage) (openfile-current_index))))))
 
 (define (openfile-current-data)
   (filestruct-data (openfile-current)))
@@ -230,7 +252,7 @@
     (openfilestruct-filename-set! newnode #f)
     (openfilestruct-fileage-set! newnode #f)
     ;; filebot not used
-    (openfilestruct-edittop-index-set! newnode 0)
+    (openfilestruct-edittop_index-set! newnode 0)
     (openfilestruct-current_index-set! newnode 0)
     (openfilestruct-current_stat-set! newnode #f)
     (openfilestruct-last_action-set! newnode 9)
@@ -241,7 +263,7 @@
 (define (initialize_buffer_text)
   (openfilestruct-fileage-set! (openfile) (list (make_new_node #f)))
   (openfile-fileage-data-set! "")
-  (openfilestruct-edittop-index-set! (openfile) 0)
+  (openfilestruct-edittop_index-set! (openfile) 0)
   (openfilestruct-current_index-set! (openfile) 0)
   (openfile-fileage-multidata-set! #f)
   (openfilestruct-totsize-set! (openfile) 0))
@@ -250,7 +272,7 @@
 ;; to the new line
 (define (make_new_node prevnode)
   (let ((newnode (make-filestruct)))
-    (filestruct-data-set! newnode #f)
+    (filestruct-data-set! newnode "")
     (filestruct-prev-set! newnode prevnode)
     (filestruct-next-set! newnode #f)
     (filestruct-lineno-set! newnode (if prevnode
@@ -375,7 +397,7 @@
    ;; unused
    (immutable filebot)
    ;; The index of the list 'fileage' that is the top of the current window
-   (mutable edittop-index)
+   (mutable edittop_index)
    ;; The current file's current line.
    ;; The index of the list 'fileage' that is the current line
    (mutable current_index)
@@ -488,17 +510,42 @@
    ))
 
 (define (openfile-current-lineno)
-  (filestruct-lineno (list-ref (openfile-fileage)
-			       (openfile-current_index))))
-
-(define (openfile-edittop)
-  (list-ref (openfile-fileage) (openfile-edittop-index)))
+  (if (not (openfile?))
+      #f
+      (if (not (list? (openfile-fileage)))
+	  #f
+	  (if (not (integer? (openfile-current_index)))
+	      #f
+	      (if (not (filestruct? (list-ref (openfile-fileage)
+					       (openfile-current_index))))
+		  #f
+		  (filestruct-lineno (list-ref (openfile-fileage)
+					       (openfile-current_index))))))))
 
 (define (openfile-edittop-lineno)
-  (filestruct-lineno (openfile-edittop)))
+  (if (not (openfile?))
+      #f
+      (if (not (list? (openfile-fileage)))
+	  #f
+	  (if (not (integer? (openfile-edittop_index)))
+	      #f
+	      (if (not (filestruct? (list-ref (openfile-fileage)
+					       (openfile-edittop_index))))
+		  #f
+		  (filestruct-lineno (list-ref (openfile-fileage)
+					       (openfile-edittop_index))))))))
+
+(define (openfile-edittop)
+  (list-ref (openfile-fileage) (openfile-edittop_index)))
+
+(define (openfile-filebot-lineno)
+  (filestruct-lineno (last (openfile-fileage))))
 
 (define (openfile-syntax)
   (openfilestruct-syntax (openfile)))
+
+(define (openfile-syntax-nmultis)
+  (syntaxtype-nmultis (openfile-syntax)))
 
 (define (openfile-colorstrings)
   (openfilestruct-colorstrings (openfile)))

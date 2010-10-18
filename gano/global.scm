@@ -30,15 +30,17 @@
   #:export (
             operating_dir
 	    search_history
-	    searchage
+	    syntaxes
+	    search_history_index
 	    replace_history
-	    replaceage
+	    replace_history_index
 	    homedir
             print_sclist
             punct
             brackets
             whitespace
             whitespace_len
+	    sctofunc
             quotestr
             quotereg
             quoteerr
@@ -69,6 +71,7 @@
             sclist
             edit_refresh_needed
 	    matchbrackets
+	    iso_me_harder_funcmap
             ))
 
 ;; Used to return to either main or the unjustify routing
@@ -187,15 +190,15 @@
 ;; The search string history list
 (define search_history #f)
 ;; The top of the search string history list
-(define searchage #f)
+(define search_history_index #f)
 ;; The bottom of the search string history list
-(define searchbot #f)
+;;(define searchbot #f)
 ;; The replace string history list
 (define replace_history #f)
 ;; Top of the replace string history list
-(define replaceage #f)
+(define replace_history_index #f)
 ;; Bottom of the replace string history list
-(define replacebot #f)
+;;(define replacebot #f)
 
 ;; The compiled regular expressionto use in searches
 (define search_regexp #f)
@@ -1018,3 +1021,7 @@ the \"Uncut\" key with the \"Unjustify\" command"
 	      (eq? (subnfunc-scfunc f) (sc-scfunc s)))
 	    allfuncs)
       #f))
+
+;; This is the main dispatch
+(define (iso_me_harder_funcmap func)
+  (error "implement me!?"))

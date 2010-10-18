@@ -126,8 +126,8 @@
         (set! len (- len keystroke_len))
         (set! len 0))
     (when (> len 0)
-        (addch bottomwin (normal #\space))
-        (addstr bottomwin desc #:n (actual_x desc len)))))
+      (addch bottomwin (normal #\space))
+      (addstr bottomwin desc #:n (actual_x desc len)))))
 
 ;; Convert buf into a string that can be displayed on screen.  The
 ;; caller wants to display buf starting with column start_col, and
@@ -139,7 +139,7 @@
 (define (display_string buf start_col len dollars)
   ;; If dollars is true, make room for the '$' at the end of the line.
   (when (and dollars (> len 0) (> (strlenpt buf) (+ start_col len)))
-        (set! len (- len 1)))
+    (set! len (- len 1)))
   (cond
    ((= len 0)
     "")
@@ -180,9 +180,7 @@
 		(set! converted (string-append converted " "))
 		(set! index (+ index 1))
 		(set! start_col (+ start_col 1))
-		(set! start_index (+ start_index 1))))
-
-          (set! start_index (+ start_index 1))))
+		(set! start_index (+ start_index 1))))))
 
       ;; Now for the rest of the characters
       (while (< start_index (string-length buf))
@@ -208,7 +206,8 @@
 		  (set! start_col (+ start_col 1))
 
 		  ;; advance to the next tab column
-		  (let ((n (remainder start_col tabsizelen)))
+		  (let ((n (- tabsizelen (remainder start_col tabsizelen))))
+		    (format (current-error-port) "do tab: index ~a start_col ~a tabsizelen ~a~%" index start_col tabsizelen)
 		    (set! converted (string-append converted (make-string n #\space)))
 		    (set! start_col (+ start_col n))
 		    (set! index (+ index n))))))
@@ -252,6 +251,8 @@
 	(set! start_index (+ start_index 1)))
 
       ;; Make sure converted takes up no more than len columns
+      (format (current-error-port) "before trunc: str ~s len ~s~%"
+	      converted len)
       (set! converted (string-take converted (actual_x converted len)))
       converted))))
 
@@ -312,16 +313,15 @@
 ;; portion of the window.
 (define (blank_bottombars)
   (unless (ISSET NO_HELP)
-          (blank_line bottomwin 1 0 (cols))
-          (blank_line bottomwin 2 0 (cols))))
+    (blank_line bottomwin 1 0 (cols))
+    (blank_line bottomwin 2 0 (cols))))
 
 ;; Reset current_y, based on the position of current, and put the cursor
 ;; in the edit window at (current_y, current_x).
 (define (reset_cursor)
   (cond
-
-    ;; If we haven't opened any files yet, put the cursor in the top
-    ;; left corner of the edit window and get out.
+   ;; If we haven't opened any files yet, put the cursor in the top
+   ;; left corner of the edit window and get out.
    ((not (openfile?))
     (move edit 0 0))
 
@@ -382,26 +382,26 @@
         ;; Limit verlen to 1/3 the length of the screen incolumns, minus
         ;; 3 columns for spaces
         (when (> verlen (- (quotient (cols) 3) 3))
-              (set! verlen (- (quotient (cols) 3) 3))))
+	  (set! verlen (- (quotient (cols) 3) 3))))
 
     (when (>= space 4)
-          ;; Add a space after the version message, and account for both it and
-          ;; the two spaces before it
-          (addstr topwin PACKAGE_STRING #:y 0 #:x 2 #:n (actual_x PACKAGE_STRING verlen))
-          (set! verlen (+ verlen 3))
-          ;; Account for the full length of the version message.
-          (set! space (- space verlen)))
+      ;; Add a space after the version message, and account for both it and
+      ;; the two spaces before it
+      (addstr topwin PACKAGE_STRING #:y 0 #:x 2 #:n (actual_x PACKAGE_STRING verlen))
+      (set! verlen (+ verlen 3))
+      ;; Account for the full length of the version message.
+      (set! space (- space verlen)))
 
     ;; Don't display the state if we're in the file browser. */
     (when path
-        (set! state #f))
+      (set! state #f))
 
     (unless path
-            (set! state (if (and (openfile?) (openfile-modified))
-                            "Modified"
-                            (if (ISSET VIEW_MODE)
-                                "View"
-                                ""))))
+      (set! state (if (and (openfile?) (openfile-modified))
+		      "Modified"
+		      (if (ISSET VIEW_MODE)
+			  "View"
+			  ""))))
     (set! statelen (strlenpt (if (and (string=? "" state) (not path))
                                  "Modified"
                                  state)))
@@ -494,76 +494,77 @@
   (compute_maxrows)
   (let ((cn (openfile-current-lineno))
         (en (openfile-edittop-lineno)))
-  (when (or (< cn en) (>= cn (+ en maxrows)))
+    (when (and cn en)
+      (when (or (< cn en) (>= cn (+ en maxrows)))
 
-        (format (current-error-port) "edit_refresh(): line = ~a, edittop ~a + maxrows ~a\n"
-                cn en maxrows)
+	(format (current-error-port) "edit_refresh(): line = ~a, edittop ~a + maxrows ~a\n"
+		cn en maxrows)
 
-        ;; Put the top line of the edit window in range of the current line
-        (edit_update CENTER))
+	;; Put the top line of the edit window in range of the current line
+	(edit_update CENTER))
 
-  (let ((index (openfile-edittop-index))
-        (nblanks 0))
+      (let ((index (openfile-edittop_index))
+	    (nblanks 0))
 
-    (format (current-error-port) "edit_refresh(): edittop->lineno = ~a\n" en)
+	(format (current-error-port) "edit_refresh(): edittop->lineno = ~a\n" en)
 
-    (let loop ((index index) (nlines 0))
-      (if (and (< nlines editwinrows)
-               (< index (length (openfile-fileage))))
-          (loop (+ index 1)
-                (+ nlines (update_line (+ index
-                                          (if (= index (openfile-current_index))
-                                              (openfile-current_x)
-                                              0)))))
-          ;; else
-          (set! nblanks nlines)))
-    (let loop2 ((nblanks nblanks))
-      (if (< nblanks editwinrows)
-          (begin
-            (blank_line edit nblanks 0 (cols))
-            (loop2 (+ nblanks 1)))))
-          ;;
-    (reset_cursor)
-    (noutrefresh edit))))
+	(let loop ((index index) (nlines 0))
+	  (if (and (< nlines editwinrows)
+		   (< index (length (openfile-fileage))))
+	      (loop (+ index 1)
+		    (+ nlines (update_line index
+					   (if (= index (openfile-current_index))
+					       (openfile-current_x)
+					       0))))
+	      ;; else
+	      (set! nblanks nlines)))
+	(let loop2 ((nblanks nblanks))
+	  (if (< nblanks editwinrows)
+	      (begin
+		(blank_line edit nblanks 0 (cols))
+		(loop2 (+ nblanks 1)))))
+	;;
+	(reset_cursor)
+	(noutrefresh edit)))))
 
 ;; Move edittop to put it in range of current, keeping current in the
 ;; same place.  location determines how we move it: if it's CENTER, we
 ;; center current, and if it's NONE, we put current current_y lines
 ;; below edittop.
 (define (edit_update location)
-    ;; If location is CENTER, we move edittop up (editwinrows / 2)
-    ;; lines.  This puts current at the center of the screen.  If
-    ;; location is NONE, we move edittop up current_y lines if current_y
-    ;; is in range of the screen, 0 lines if current_y is less than 0,
-    ;; or (editwinrows - 1) lines if current_y is greater than
-    ;; (editwinrows - 1).  This puts current at the same place on the
-    ;; screen as before, or at the top or bottom of the screen if
-    ;; edittop is beyond either.
-    (let ((goal (if (eq? location CENTER)
-		    (quotient editwinrows 2)
-		    ;; else
-		    (min (openfile-current_y)
-			 (1- editwinrows))))
-	  (index (openfile-current-index)))
+  ;; If location is CENTER, we move edittop up (editwinrows / 2)
+  ;; lines.  This puts current at the center of the screen.  If
+  ;; location is NONE, we move edittop up current_y lines if current_y
+  ;; is in range of the screen, 0 lines if current_y is less than 0,
+  ;; or (editwinrows - 1) lines if current_y is greater than
+  ;; (editwinrows - 1).  This puts current at the same place on the
+  ;; screen as before, or at the top or bottom of the screen if
+  ;; edittop is beyond either.
+  (let ((goal (if (eq? location CENTER)
+		  (quotient editwinrows 2)
+		  ;; else
+		  (min (openfile-current_y)
+		       (1- editwinrows))))
+	(index (openfile-current_index)))
 
-      (while (and (> goal 0) (> index 0))
-	(set! index (- index 1))
-	;; Reduce the goal line to account for wrapped lines
-	(when (ISSET SOFTWRAP)
-	  (set! goal (- goal (quotient (strlenpt (list-ref (openfile-fileage) index)) (cols))))))
+    (while (and (> goal 0) (> index 0))
+      (set! index (- index 1))
+      ;; Reduce the goal line to account for wrapped lines
+      (when (ISSET SOFTWRAP)
+	(set! goal (- goal (quotient (strlenpt (list-ref (openfile-fileage) index)) (cols))))))
 
-      (openfile-edittop-index-set! index)
+    (openfile-edittop_index-set! index)
 
-      (format (current-error-port) "edit_update(), setting edittop to lineno ~a~%"
-	      (openfile-edittop-lineno))
+    (format (current-error-port) "edit_update(), setting edittop to lineno ~a~%"
+	    (openfile-edittop-lineno))
 
-      (compute_maxrows)
-      (set! edit_refresh_needed #t)))
+    (compute_maxrows)
+    (set! edit_refresh_needed #t)))
 
 ;; Just update the Nth line of the document if it is on the screen.
 ;; This is basically a wrapper for edit_draw().  Returns: Number of
 ;; additional lines consumed (needed for SOFTWRAP)
-(define (update_line n . maxlen)
+(define (update_line n x)
   (let ((line 0)
         (extralinesused 0)
         (converted #f)
@@ -573,52 +574,62 @@
     (if (ISSET SOFTWRAP)
         ;; Find the screen line number of this line, taking into account
         ;; the fact that some lines could have wrapped
-        (let loop ((buffer-index (openfile-edittop-index))
+        (let loop ((buffer-index (openfile-edittop_index))
                    (screen-line 0))
-               (if (and (< buffer-index (length (openfile-fileage)))
-                        (< buffer-index n))
-                   (loop (1+ buffer-index) (quotient (strlenpt (list-ref (openfile-fileage) buffer-index))
-                                                     (cols)))
-                   ;; else
-                   (set! line screen-line)))
+	  (if (and (< buffer-index (length (openfile-fileage)))
+		   (< buffer-index n))
+	      (loop (1+ buffer-index) (quotient (strlenpt (list-ref (openfile-fileage) buffer-index))
+						(cols)))
+	      ;; else
+	      (set! line screen-line)))
         ;;else
-        (set! line (- n (openfile-edittop-index))))
+        (set! line (- n (openfile-edittop_index))))
 
-    ;; First, blank out the line.
-    (blank_line edit line 0 (cols))
-
+    (unless (or (< line 0) (>= line editwinrows))
+      ;; First, blank out the line.
+      (blank_line edit line 0 (cols)))
 
     ;; Now to decide on the horizontal scroll position.  onvert
     ;; variables that index the line to their equivalent positions in
     ;; the expanded line.
     (if (ISSET SOFTWRAP)
-        (set! index 0)
-        ;; else
-        (set! index 0))
-        ;;(set! index (strnlenpt (filestruct-data (list-ref (openfile-fileage) n)) maxlen)))
+	(set! index 0)
+	;; else
+	(set! index (strnlenpt (filestruct-data (list-ref (openfile-fileage) n)) index)))
     (set! page_start (get_page_start index))
 
+    ;; Expand the line, replacing tabs with spaces and control chars
+    ;; with display forms
+    (format (current-error-port)
+	    "before edit_draw: n = ~a page_start = ~a cols = ~a~%"
+	    n page_start (cols))
+    (format (current-error-port)
+	    "before edit_draw: orig_string = ~s~%"
+	    (filestruct-data (list-ref (openfile-fileage) n)))
+    (set!
+     converted
+     (display_string (filestruct-data (list-ref (openfile-fileage) n))
+		     page_start
+		     (cols)
+		     (not (ISSET SOFTWRAP))))
+    (format (current-error-port)
+	    "before edit_draw: converted_string = ~s ~%"
+	    converted)
 
-    ;; Expande the line, replacing tabs with spaces and contro chars with display forms
-    (set! converted (display_string (filestruct-data (list-ref (openfile-fileage) n))
-                                    page_start (cols) (not (ISSET SOFTWRAP))))
-
-
-    (format (current-error-port) "update_line(): converted(1) line = ~a~%" converted)
 
     ;; Paint the line.
     (edit_draw n converted line page_start)
 
     (if (not (ISSET SOFTWRAP))
-        (begin
-          (when (> page_start 0)
-                (addch edit #\$ #:y line #:x 0))
-          (when (> (strlenpt (filestruct-data (list-ref (openfile-fileage) n)))
-                   (+ page_start (cols)))
-                (addch edit #\$ #:y line #:x (- (cols) 1))))
-          ;; else
-        (begin
-          (error "implement me!!!")))
+	(begin
+	  (when (> page_start 0)
+	    (addch edit #\$ #:y line #:x 0))
+	  (when (> (strlenpt (filestruct-data (list-ref (openfile-fileage) n)))
+		   (+ page_start (cols)))
+	    (addch edit #\$ #:y line #:x (- (cols) 1))))
+	;; else
+	(begin
+	  (error "implement me!!!")))
 
     1))
 
@@ -632,9 +643,9 @@
 ;; corresponds to character number actual_x(fileptr->data, start) of the
 ;; line.
 (define (edit_draw fp converted line start)
-    ;; Just paint the string in any case (we'll add color or reverse on
-    ;; just the text that needs it). */
-    (addstr edit converted #:y line #:x 0))
+  ;; Just paint the string in any case (we'll add color or reverse on
+  ;; just the text that needs it). */
+  (addstr edit converted #:y line #:x 0))
 
 
 ;; When edittop changes, try and figure out how many lines we really
@@ -649,7 +660,7 @@
     ;; N is the line of the screen
     ;; INDEX is the line  of the file
     (let ((n 0)
-	  (index (openfile-edittop-index))
+	  (index (openfile-edittop_index))
 	  (eof (length (openfile-fileage))))
       (set! maxrows 0)
 
@@ -669,18 +680,18 @@
       (format (current-error-port) "compute_maxrows(): maxrows ~a\n" maxrows)
       ))))
 
- ;; Check if the number of keystrokes needed to blank the statusbar has
- ;; been pressed.  If so, blank the statusbar, unless constant cursor
- ;; position display is on. */
+;; Check if the number of keystrokes needed to blank the statusbar has
+;; been pressed.  If so, blank the statusbar, unless constant cursor
+;; position display is on. */
 (define (check_statusblank)
   (when (> statusblank 0)
-        (set! statusblank (- statusblank 1))
-        (when (and (= statusblank 0)
-                   (not (ISSET CONST_UPDATE)))
-              (blank_statusbar)
-              (noutrefresh bottomwin)
-              (reset_cursor)
-              (noutrefresh edit))))
+    (set! statusblank (- statusblank 1))
+    (when (and (= statusblank 0)
+	       (not (ISSET CONST_UPDATE)))
+      (blank_statusbar)
+      (noutrefresh bottomwin)
+      (reset_cursor)
+      (noutrefresh edit))))
 
 ;; Return the shortcut corresponding to the values of kbinput (the key
 ;; itself), meta_key (whether the key is a meta sequence), and
@@ -693,7 +704,7 @@
 ;; function. */
 (define (get_shortcut menu kbinput meta_key func_key)
   (format (current-error-port) "get_shortcut(): kbinput ~a, meta_key ~a func_key ~a~%"
-           kbinput meta_key func_key)
+	  kbinput meta_key func_key)
 
   (let ((shortcut (let loop ((i 0))
 		    (if (< i (length sclist))
@@ -711,8 +722,8 @@
 ;; update the titlebar to display the file's new status.
 (define (set_modified)
   (when (not (openfile-modified))
-        (openfile-modified-set! #t)
-        (titlebar #f)))
+    (openfile-modified-set! #t)
+    (titlebar #f)))
 
 ;; If constant is TRUE, we display the current cursor position only if
 ;; disable_cursorpos is FALSE.  Otherwise, we display it
@@ -721,25 +732,25 @@
 ;; FALSE, so that we leave the current statusbar alone this time, and
 ;; display the current cursor position next time.
 (define (do_cursorpos constant)
-    (unless (and constant disable_cursorpos)
-      (let* ((line-cur (openfile-current-lineno))
-	     (line-max (openfile-filebot-lineno))
-	     (line-ratio (if (zero? line-max)
-			     0
-			     (quotient (* 100 line-cur) line-max)))
-	     (col-cur (1+ (xplustabs)))
-	     (col-max (1+ (strlenpt (openfile-current-data))))
-	     (col-ratio (if (zero? col-max)
-			     0
-			     (quotient (* 100 col-cur) col-max)))
-	     (char-cur (get_totsize (openfile-fileage) (openfile-current-index)))
-	     (char-max (openfile-totsize))
-	     (char-ratio (if (zero? char-max)
-			     0
-			     (quotient (* 100 char-cur) char-max))))
-	(statusbar (format #f "line ~a/~a (~a%), col ~a/~a (~a%), char ~a/~a (~a%)"
-			   line-cur line-max line-ratio
-			   col-cur col-max col-ratio
-			   char-cur char-max char-ratio))))
+  (unless (and constant disable_cursorpos)
+    (let* ((line-cur (openfile-current-lineno))
+	   (line-max (openfile-filebot-lineno))
+	   (line-ratio (if (zero? line-max)
+			   0
+			   (quotient (* 100 line-cur) line-max)))
+	   (col-cur (1+ (xplustabs)))
+	   (col-max (1+ (strlenpt (openfile-current-data))))
+	   (col-ratio (if (zero? col-max)
+			  0
+			  (quotient (* 100 col-cur) col-max)))
+	   (char-cur (get_totsize (openfile-fileage) (openfile-current_index)))
+	   (char-max (openfile-totsize))
+	   (char-ratio (if (zero? char-max)
+			   0
+			   (quotient (* 100 char-cur) char-max))))
+      (statusbar (format #f "line ~a/~a (~a%), col ~a/~a (~a%), char ~a/~a (~a%)"
+			 line-cur line-max line-ratio
+			 col-cur col-max col-ratio
+			 char-cur char-max char-ratio))))
 
-    (set! disable_cursorpos #f))
+  (set! disable_cursorpos #f))

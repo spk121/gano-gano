@@ -26,8 +26,9 @@ objects := $(notdir $(patsubst %.scm,%.go,$(sources)))
 TESTS_ENVIRONMENT = GUILE_AUTO_COMPILE=0 guile -L . -s
 
 # These should return
-pass_test_sources = homedir.scm get_shortcut.scm
-xfail_test_sources = sunder.test
+pass_test_sources = homedir.scm get_shortcut.scm sctofunc.scm strnlenpt.scm \
+	actual_x.scm display_string.scm
+xfail_test_sources =
 test_sources := $(pass_test_sources) $(xfail_test_sources)
 
 testdir = tests

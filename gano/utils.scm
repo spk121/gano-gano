@@ -34,6 +34,7 @@
             xplustabs
 	    get_homedir
 	    new_magicline
+	    parse_line_column
             ))
 
 ;; Return the index in s of the character displayed at the given
@@ -41,12 +42,18 @@
 ;; column)) <= column.
 (define (actual_x s column)
   (let ((i 0)                       ; The position in s
-        (len 0))                    ; The screen display width to s[i]
-    (while (< i (string-length s))
-           (set! len (+ len (char-width (string-ref s i) column tabsizelen)))
-           (if (> len column)
-               break)
-           (set! i (+ i 1)))
+        (len 0)                    ; The screen display width to s[i]
+	(strlen (string-length s)))
+    (while (< i strlen)
+      ;; (format (current-error-port) "actual_x: s ~a col ~a~%" s column)
+      ;; (format (current-error-port) "actual_x: i ~a strlen ~a~%" i strlen)
+      ;; (format (current-error-port) "actual_x: len ~a c ~s~%" len (string-ref s i))
+      ;; (format (current-error-port) "actual_x: tabsizelen ~a~%" tabsizelen)
+
+      (set! len (+ len (char-width (string-ref s i) len tabsizelen)))
+      (if (> len column)
+	  (break))
+      (set! i (+ i 1)))
     i))
 
 ;; Returns the number of cells that the first MAXLEN characters
@@ -110,3 +117,6 @@
 (define (new_magicline)
   (openfile-fileage-set! (append (openfile-fileage)
 				 (list (make_new_node (last (openfile-fileage)))))))
+
+(define (parse_line_column str line column)
+  (error "Implement me"))

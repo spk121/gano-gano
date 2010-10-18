@@ -22,8 +22,15 @@
 
 
 (define-module (gano color)
-  #:export (set_colorpairs))
+  #:use-module (gano global)
+  #:use-module (rnrs control)
+  #:export (set_colorpairs
+	    reset_multis))
 
 (define (set_colorpairs)
-  #t
-  )
+  (when syntaxes
+    (error "implement me!!")))
+
+(define (reset_multis fileptr force)
+  (when (openfile-syntax)
+    (error "implement me!!!")))

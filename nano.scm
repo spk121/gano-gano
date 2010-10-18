@@ -31,8 +31,11 @@
  (gano utils)
  (gano nano-h)
  (gano text)
+ (gano prompt)
  (gano search)
  (gano rcfile)
+ (gano cut)
+ (gano color)
  (ice-9 getopt-long)
  (ice-9 i18n)
  (ncurses curses)
@@ -42,7 +45,7 @@
 (use-syntax (ice-9 syncase))
 
 (define PACKAGE "gano")
-(define LOCALEDIR "/usr/share/locale")
+(define LOCALEDIR "/usr/local/share/locale")
 
 ;; Used to store the user's original mouse click interval
 (define oldinterval -1)
@@ -738,10 +741,11 @@
 
 	    (format (current-error-port) "Main: top and bottom win~%")
 
+#!
 	    (when (and (openfile-syntax)
-		       (> (syntax-nmultis (openfile-syntax) 0)))
+		       (> (syntaxtype-nmultis (openfile-syntax)) 0))
 	      (precalc_multicolorinfo))
-
+!#
 	    (when (or (> startline 1) (> startcol 1))
 	      (do_gotolinecolumn startline startcol #f #f #f #f))
 
@@ -770,7 +774,7 @@
 
 		;; Just in case we were at the statusbar prompt, make sure that
 		;; the statusbar cursor position is reset
-		;;(do_prompt_abort)
+		(do_prompt_abort)
 
 		;; If constant cursor position display is on, and there are no
 		;; keys waiting in the input buffer, display the current
@@ -869,7 +873,9 @@
 	(input #f)
 	(s_or_t #f)
 	(ran_func #f)
-	(finished #f))
+	(finished #f)
+	(cut_copy #f)
+	(kbinput #f))
 
     ;; Read in a character
     (let ((input-list (get_kbinput edit)))
@@ -881,11 +887,17 @@
 	(set! input input-list)
 	(set! func_key #t))
 
-       ((and input-list (list? input-list) (eq? 'meta (car input-list)) (char? (cadr input-list)))
-	(set! input (cadr input-list))
+       ((and input-list
+	     (list? input-list)
+	     (eq? 'meta (car input-list))
+	     (char? (cadr input-list)))
+	(set! input (char->integer (char-downcase (cadr input-list))))
 	(set! meta_key #t))
 
-       ((and input-list (list? input-list) (eq? 'meta (car input-list)) (integer? (cadr input-list)))
+       ((and input-list
+	     (list? input-list)
+	     (eq? 'meta (car input-list))
+	     (integer? (cadr input-list)))
 	(set! input (cadr input-list))
 	(set! meta_key #t)
 	(set! func_key #t))
@@ -895,12 +907,12 @@
 	(set! input -1)))
 
       ;; Check for a shortcut in the main list
-      (let* ((s (get_shortcut MMAIN input meta_key func_key))
+      (let ((s (get_shortcut MMAIN input meta_key func_key))
 	     ;; If we have a shortcut from the main list, or a
 	     ;; "universal" edit window shortcut, set have_shortcut
 	     ;; to true
-	     (have_shortcut (if s #t #f)))
-
+	    (have_shortcut #f))
+	(set! have_shortcut (not (not s)))
 	;; If we got a non-high-bit control key, a meta key sequence,
 	;; or a function key, and it's not a shortcut or toggle,
 	;; throw it out.
@@ -924,60 +936,77 @@
 	    (if (ISSET VIEW_MODE)
 		(print_view_warning)
 		;; else
-		(do_output input #t))))
+		(set! kbinput input)))
 
-	#!
 	;; If we got a shortcut or toggle, or if there aren't any
 	;; other characters waiting after the one we read in, we need
 	;; to output all the characters in the input buffer if it
 	;; isn't empty.  Note that it should be empty if we're in
 	;; view mode
-	(when (or have_shortcut (= 0 get_key_buffer_len))
+	(when #t
 	  ;; If we got a shortcut or toggle, and it's not the
 	  ;; shortcut for verbatim input, turn off prepending of
 	  ;; wrapped text.
 	  (when (and have_shortcut
 		     (or (not have_shortcut)
-			 (not sc)
+			 (not s)
 			 (not (eq? (sc-scfunc s) DO_VERBATIM_INPUT))))
 	    (wrap_reset))
 
-	  (when (kbinput?)
+	  (when kbinput
 	    ;; Display all the characters in the input buffer
 	    ;; at once, filtering out control characters.
-	    (do_output (get-kbinput) #f);
-	    (free-kbinput)))
-	!#
+	    (if (char<? kbinput (integer->char 32))
+		(do_output #\nul #f)
+		(do_output kbinput #f))))
 
 	(when have_shortcut
-	  (cond
-	   ;; Handle the normal edit window shortcuts, setting
-	   ;; ran_func to TRUE if we try to run their associated
-	   ;; functions and setting finished to TRUE to indicate
-	   ;; that we're done after running or trying to run their
-	   ;; associated functions.
-	   (else
-	    ;; If the function associated with this shortcut is
-	    ;; cutting or copying text, indicate this. */
-	    (if (or (eq? (sc-scfunc s) DO_CUT_TEXT_VOID)
-		    (eq? (sc-scfunc s) DO COPY_TEXT)
-		    (eq? (sc-scfunc s) DO_CUT_TILL_END))
-		(set! cut_copy #t))
+	  ;; Handle the normal edit window shortcuts, setting
+	  ;; ran_func to TRUE if we try to run their associated
+	  ;; functions and setting finished to TRUE to indicate
+	  ;; that we're done after running or trying to run their
+	  ;; associated functions.
 
-	    (if (sc-scfunc s)
-		(let ((f (sctofunc s)))
-		  (set! ran_func #t)
-		  (if (and (ISSET VIEW_MODE)
-			   f
-			   (not (subnfunc-viewok f)))
-		      (print_view_warning)
-		      ;; else
-		      (begin
-			(if (eq? (sc-scfunc s) DO_TOGGLE)
-			    (do_toggle (sc-scfunc s))
-			    ;; else
-			    (iso_me_harder_funcmap (sc-scfunc s)))))))))))
-      input)))
+	  ;; FIXME: that'd go here
+
+	  ;; If the function associated with this shortcut is
+	  ;; cutting or copying text, indicate this. */
+	  (when (or (eq? (sc-scfunc s) DO_CUT_TEXT_VOID)
+		    (eq? (sc-scfunc s) DO_COPY_TEXT)
+		    (eq? (sc-scfunc s) DO_CUT_TILL_END))
+	    (set! cut_copy #t))
+
+	  (when (and (sc-scfunc s) (not (zero? (sc-scfunc s))))
+	    (let ((f (sctofunc s)))
+	      (set! ran_func #t)
+	      (if (and (ISSET VIEW_MODE)
+		       f
+		       (not (subnfunc-viewok f)))
+		  (print_view_warning)
+		  ;; else
+		  (begin
+		    (if (eq? (sc-scfunc s) DO_TOGGLE)
+			(do_toggle (sc-scfunc s))
+			;; else
+			(begin
+			  (iso_me_harder_funcmap (sc-scfunc s))
+			  (when (and f
+				     (not (subnfunc-viewok f))
+				     (openfile-syntax)
+				     (> (openfile-syntax-nmultis) 0))
+			    (reset_multis (openfile-current) #f))
+			  (when edit_refresh_needed
+			    (edit_refresh)
+			    (set! edit_refresh_needed #f)))))))
+	  (set! finished #t))))
+
+
+	;; If we aren't cutting or copying text, blow away the text in the
+	;; cutbuffer
+	(unless cut_copy
+	  (cutbuffer_reset))
+
+      input))))
 
 
 ;; The user typed output_len multibyte characters.  Add them to the edit
@@ -1026,6 +1055,16 @@
       (openfile-totsize-set! (1+ (openfile-totsize)))
       (set_modified)
 
+
+      ;; (update_undo ADD)
+
+      ;; Note that current_x has not yet been incremented
+      (when (and (openfile-mark_set)
+		 (eq? (openfile-mark_begin_index) (openfile-current_index))
+		 (< (openfile-current_x) (openfile-mark_begin_x)))
+	(openfile-mark_begin_x-set! (1+ (openfile-mark_begin_x))))
+
+      (openfile-current_x-set! (1+ (openfile-current_x)))
       (format (current-error-port)
 	      "after current-index ~s~%" (openfile-current_index))
       (format (current-error-port)
@@ -1036,26 +1075,17 @@
 	      "after c ~s~%" c)
       (format (current-error-port)
 	      "after totsize ~s~%" (openfile-totsize))
-      #!
-      update_undo(ADD);
 
-      /* Note that current_x has not yet been incremented. */
-      if (openfile->mark_set && openfile->current ==
-			     openfile->mark_begin && openfile->current_x <
-			     openfile->mark_begin_x)
-      openfile->mark_begin_x += char_buf_len;
+      ;; If we're wrapping text, we need to call edit_refresh
+      ;;(unless (ISSET NO_WRAP)
+	;;(when (do_wrap (openfile-current_index) #f)
+	 ;; (set! edit_refresh_needed #t)))
 
-      (openfile-current_x-set! (1+ (openfile-current_x)))
-
-      /* If we're wrapping text, we need to call edit_refresh(). */
-      if (do_wrap(openfile->current, FALSE))
-      edit_refresh_needed = TRUE;
-
-      /* If color syntaxes are available and turned on, we need to
-      * call edit_refresh(). */
-      if (openfile->colorstrings != NULL && !ISSET(NO_COLOR_SYNTAX))
-      edit_refresh_needed = TRUE;
-      !#
+      ;; If color syntaxes are available and turned on, call
+      ;; edit_refresh
+      (when (and (openfile-colorstrings)
+		 (not (ISSET NO_COLOR_SYNTAX)))
+	(set! edit_refresh_needed #t))
 
       ;; Well we might also need a full refresh if we've changed the
       ;; line length to be a new multiple of COLS
@@ -1064,6 +1094,7 @@
 		 (not (= (quotient (strlenpt (openfile-current-data)) (cols))
 			 (quotient orig_lenpt (cols)))))
 	(set! edit_refresh_needed #t))
+
       (openfile-placewewant-set! (xplustabs))
 
       #!
@@ -1085,3 +1116,29 @@ can deal with them later.  If allow is #f, unblock an SIGWINCH signals
 so we can deal with them now."
   ;; FIXME: need sigprocmask primitives
   #f)
+
+;; precalculate the multi-line start and end regex info so we can
+;; speed rendering
+(define (precalc_multicolorinfo)
+  (error "implement me!"))
+
+;; Handle the global toggle
+(define (do_toggle flag)
+  (TOGGLE flag)
+
+  (cond
+
+   ((= flag USE_MOUSE)
+    (mouse_init))
+   ((or (= flag MORE_SPACE) (= flag NO_HELP))
+    (window_init)
+    (total_refresh))
+   ((= flag SUSPEND)
+    (signal_init))
+   ((= flag WHITESPACE_DISPLAY)
+    (titlebar #f)
+    (edit_refresh))
+   ((= flag NO_COLOR_SYNTAX)
+    (edit_refresh))
+   ((= flag SOFTWRAP)
+    (total_refresh))))
