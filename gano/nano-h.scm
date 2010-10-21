@@ -251,8 +251,10 @@
                sc-menu-set!
                sc-scfunc
                sc-scfunc-set!
-               sc-seq
-               sc-seq-set!
+               sc-key
+               sc-key-set!
+	       sc-meta
+	       sc-meta-set!
                sc-toggle-set!
                sc-type-set!
 

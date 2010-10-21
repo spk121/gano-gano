@@ -24,7 +24,7 @@
   ;;#:use-module (gano nano-h)
   #:use-module (ncurses extra)
   #:export (
-	    utf8_init
+	    InitUtf8
 	    char-width
 	    is_ascii_cntrl_char
 	    is_cntrl_char
@@ -35,16 +35,16 @@
 ;; if this is true, we assume Guile 2.0.x and UCS-4 chars.  If this
 ;; is false, we assume Guile 1.8.x and 8-bit locale chars.  Otherwise,
 ;; we don't do any of the mbchar processing.
-(define use_utf8 #f)
+(define Utf8EnabledP #f)
 
-(define (utf8_init)
+(define (InitUtf8)
   "Enable UTF-8 support."
-  (set! use_utf8 #t))
+  (set! Utf8EnabledP #t))
 
 #!
 ;; Is UTF-8 support enabled?
 (define (using_utf8)
-  use_utf8)
+  Utf8EnabledP)
 !#
 
 #!
@@ -55,8 +55,8 @@
 
 ;; Return #t for the C0 ASCII control characters
 (define (is_ascii_cntrl_char c)
-  (let ((n (char->integer c)))
-    (and (<= 0 n) (< n 32))))
+  (let ([n (if (char? c) (char->integer c) c)])
+    (and n (<= 0 n) (< n 32))))
 
 ;; Return #t for all control 8-bit characters
 (define (is_cntrl_char c)

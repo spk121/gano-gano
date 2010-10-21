@@ -23,6 +23,7 @@
 (define-module (gano search)
   #:use-module (gano records)
   #:use-module (gano global)
+  #:use-module (srfi srfi-1)
   #:export (
 	    history_init
 	    do_gotolinecolumn
@@ -31,11 +32,11 @@
 (define (history_init)
   "Initialize the search and replace history lists."
   (set! search_history (list (make_new_node #f)))
-  (filestruct-data-set! (car search_history) "")
+  (filestruct-data-set! (first search_history) "")
   (set! search_history_index 0)
 
   (set! replace_history (list (make_new_node #f)))
-  (filestruct-data-set! (car replace_history) "")
+  (filestruct-data-set! (first replace_history) "")
   (set! replace_history_index 0))
 
 ;; Go to the specified line and column, or ask for them if interactive

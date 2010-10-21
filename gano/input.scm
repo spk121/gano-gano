@@ -125,37 +125,38 @@
              (byte_digits 0))
     (let ((kbinput (if kbinput_list (car kbinput_list) #f)))
       (cond
-       ((not kbinput)
-        #f)
+       [(not kbinput)
+        #f]
 
        ;; The escape key prefixes an extended sequence.
-       ((eq? kbinput #\esc)
-        (loop (get_input win 1) (1+ (modulo escapes 3)) byte_digits))
+       [(eq? kbinput #\esc)
+        (loop (get_input win 1) (1+ (modulo escapes 3)) byte_digits)]
 
-       ((= escapes 0)
+       [(= escapes 0)
         ;; A normal non-escaped input
-        kbinput)
+        (list 'raw kbinput)]
 
-       ((= escapes 1)
+       [(= escapes 1)
         (cond
-         ((and (char? kbinput) (null? key_buffer))
+         [(and (char? kbinput) (null? key_buffer))
           ;; One escape followed by a non-escape, and there aren't any
           ;; other keystrokes waiting.  Treat this as a meta key.
-          (list 'meta (char-downcase kbinput)))
+          (list 'meta (char-downcase kbinput))]
 
-         ((null? key_buffer)
-          ;; One escape followed by a control key? WTF?
-          (list 'meta kbinput))
+         [(null? key_buffer)
+          ;; One escape followed by a control key.  Meta the control key
+          (list 'meta kbinput)]
 
-         (else
-          ;; One escape followed by multiple keystrokes.  Take the multiple
-          ;; keystrokes as a single escape sequence
-          (unget_key kbinput)
-          (parse_escape_seq_kbinput win))))
+         [else
+          ;; One escape followed by multiple keystrokes.  The multiple
+	  ;; keystrokes are some unhandled function key
+          ;;(unget_key kbinput)
+          ;;(list 'raw (parse_escape_seq_kbinput win))
+	  #f])]
 
-       ((= escapes 2)
+       [(= escapes 2)
         (cond
-         ((and (null? key_buffer)
+         [(and (null? key_buffer)
                (char? kbinput)
                (char>=? kbinput #\0)
                (char<=? kbinput #\9))
@@ -165,43 +166,42 @@
           (unget_key kbinput)
           (let ((codepoint (get_codepoint_kbinput win)))
             (if (and codepoint (false-if-exception (integer->char codepoint)))
-                (integer->char codepoint)
+                (list 'raw (integer->char codepoint))
                 ;; else
-                ;; number was not a valid codepoint.  Return the first digit
-                ;; and dump the rest.  (FIXME: not what nano does)
-                kbinput)))
+                ;; number was not a valid codepoint.
+                #f))]
 
-         ((null? key_buffer)
-          ;; Two escapes followed by a non-decimal digit with no
-          ;; other keys waiting might be some sort of control
-          ;; sequence
-          (unget_key kbinput)
-          (get_control_kbinput win))
+         [(null? key_buffer)
+          ;; Two escapes followed by a char could be mapped to
+	  ;; Control-X.  But, for now, it is unused.
+	  #f]
 
-         (else
+         [else
           ;; Two escapes followed by multiple keystrokes, means that
           ;; we're meta'ing an unhandled function key.
-          (unget_key kbinput)
-          (list 'meta (parse_escape_seq_kbinput win)))))
+          ;;(unget_key kbinput)
+          ;;(list 'meta (parse_escape_seq_kbinput win))])]
+	  #f])]
 
-       ((= escapes 3)
+       [(= escapes 3)
         (cond
-         ((null? key_buffer)
+         [(null? key_buffer)
           ;; Three escapes followed by a non escape with no other
           ;; character waiting just returns that character.
-          kbinput)
+          (list 'raw kbinput)]
 
-         (else
+         [else
           ;; Three escapes followed by multiple keystrokes indicates
           ;; two escapes plus an unhandled function key.  Try to
           ;; parse the function key.  If yes, return the control'ed version
           ;; of that key.  If no, return #f.
-          (let ((seq (append (list kbinput) key_buffer)))
-            (unget_key kbinput)
-            (let ((k (parse_escape_seq_kbinput win)))
-              (if k
-                  (get_control_kbinput k)
-                  #f))))))))))
+          ;; (let ((seq (append (list kbinput) key_buffer)))
+          ;;   (unget_key kbinput)
+          ;;   (let ((k (parse_escape_seq_kbinput win)))
+          ;;     (if k
+          ;;         (list 'meta (get_control_kbinput k))
+          ;;         (list 'raw #f))))])]))))
+	  #f])]))))
 
 ;; Translate escape sequences that ncurses didn't handle.  If the
 ;; terminfo for the terminal you are using were complete, you would

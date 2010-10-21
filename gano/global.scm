@@ -24,11 +24,12 @@
   #:use-module (gano records)
   #:use-module (gano flags)
   #:use-module (gano nano-h)
+  #:use-module (gano text)
   #:use-module (ncurses curses)
   #:use-module (rnrs control)
   #:use-module (srfi srfi-1)
   #:export (
-            operating_dir
+            vstDirOperating
 	    search_history
 	    syntaxes
 	    search_history_index
@@ -51,8 +52,8 @@
             syntaxstr
             jump_buf
             jump_buf_main
-            fill
-            wrap_at
+            viColFill
+            viColWrap
             first_sc_for
             last_search
             last_replace
@@ -62,7 +63,7 @@
             edit
             bottomwin
             editwinrows
-            shortcut_init
+            InitShortcuts
             reverse_attr
             length_of_list
             allfuncs
@@ -82,12 +83,12 @@
 (define jump_buf_main #f)
 
 ;; The columns at which we will wrap lines.
-(define fill 0)
+(define viColFill 0)
 ;; The position where we will wrap lines.  fill is equal to this if
 ;; it's greater than zero, and equal to (COLS + this) if it isn't.
 
 ;; FIXME: In C, this uses CHARS_FROM_EOL which is a #define
-(define wrap_at -8)
+(define viColWrap -8)
 
 ;; The last string we searched for
 (define last_search #f)
@@ -160,7 +161,7 @@
 (define backup_dir #f)
 ;; The relative path to the operating directory, which
 ;; we can't move outside of
-(define operating_dir #f)
+(define vstDirOperating #f)
 ;; The full path
 (define full_operating_dir #f)
 
@@ -331,8 +332,8 @@
 
     (format (current-error-port) "list val = ~a~%" (sc-menu s))
     (format (current-error-port)
-            "Hey, set sequence to ~a for shortcut \"~a\"~%"
-            (sc-seq s) scstring)
+            "Hey, set sequence to ~a~a for shortcut \"~a\"~%"
+            (if (sc-meta s) "M-" "") (sc-key s) scstring)
     ))
 
 (define (assign_keyinfo s)
@@ -341,60 +342,89 @@
   (let ((type (sc-type s))
         (keystr (sc-keystr s)))
     (cond
-     ((eq? type CONTROL)
-      (sc-seq-set! s (- (char->integer (string-ref keystr 1)) 64)))
-     ((eq? type META)
-      (sc-seq-set! s (char->integer (char-downcase (string-ref keystr 2)))))
-     ((eq? type FKEY)
-      (sc-seq-set! s (key-f (string->number (string-drop keystr 1)))))
-     (else
-      (sc-seq-set! s (char->integer (string-ref keystr 0)))))
+     [(eq? type CONTROL)
+      (sc-key-set! s (integer->char (- (char->integer (string-ref keystr 1)) 64)))
+      (sc-meta-set! s #f)]
+     [(eq? type META)
+      (sc-key-set! s (char-downcase (string-ref keystr 2)))
+      (sc-meta-set! s #t)]
+     [(eq? type FKEY)
+      (sc-key-set! s (key-f (string->number (string-drop keystr 1))))
+      (sc-meta-set! s #f)]
+     [else
+      (sc-key-set! s (string-ref keystr 0))
+      (sc-meta-set! s #f)])
 
-    ;; Override some keys that don't bind as nicely as one would like.
+    ;; Process keys that have long names
     (cond
-     ((and (eq? (sc-type s) CONTROL)
+     [(and (eq? (sc-type s) CONTROL)
            (string-ci=? "space" (string-drop keystr 1)))
-      (sc-seq-set! s 0))
-     ((and (eq? (sc-type s) META)
+      (sc-key-set! s 0)
+      (sc-meta-set! s #f)]
+     [(and (eq? (sc-type s) META)
            (string-ci=? "space" (string-drop keystr 2)))
-      (sc-seq-set! s (char->integer #\space)))
-     ((and (eq? (sc-type s) RAW)
+      (sc-key-set! s #\space)
+      (sc-meta-set! s #t)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "kup" keystr))
-      (sc-seq-set! s KEY_UP))
-     ((and (eq? (sc-type s) RAW)
+      (sc-key-set! s KEY_UP)
+      (sc-meta-set! s #f)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "kdown" keystr))
-      (sc-seq-set! s KEY_DOWN))
-     ((and (eq? (sc-type s) RAW)
+      (sc-key-set! s KEY_DOWN)
+      (sc-meta-set! s #f)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "kleft" keystr))
-      (sc-seq-set! s KEY_LEFT))
-     ((and (eq? (sc-type s) RAW)
+      (sc-key-set! s KEY_LEFT)
+      (sc-meta-set! s #f)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "kright" keystr))
-      (sc-seq-set! s KEY_RIGHT))
-     ((and (eq? (sc-type s) RAW)
+      (sc-key-set! s KEY_RIGHT)
+      (sc-meta-set! s #f)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "kinser" keystr))
-      (sc-seq-set! s KEY_IC))
-     ((and (eq? (sc-type s) RAW)
+      (sc-key-set! s KEY_IC)
+      (sc-meta-set! s #f)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "kdel" keystr))
-      (sc-seq-set! s KEY_DC))
-     ((and (eq? (sc-type s) RAW)
+      (sc-key-set! s KEY_DC)
+      (sc-meta-set! s #f)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "kbsp" keystr))
-      (sc-seq-set! s KEY_BACKSPACE))
-     ((and (eq? (sc-type s) RAW)
+      (sc-meta-set! s KEY_BACKSPACE)
+      (sc-meta-set! s #f)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "kenter" keystr))
-      (sc-seq-set! s KEY_ENTER))
-     ((and (eq? (sc-type s) RAW)
+      (sc-key-set! s KEY_ENTER)
+      (sc-meta-set! s #f)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "kpup" keystr))
-      (sc-seq-set! s KEY_PPAGE))
-     ((and (eq? (sc-type s) RAW)
+      (sc-key-set! s KEY_PPAGE)
+      (sc-meta-set! s #f)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "kpdown" keystr))
-      (sc-seq-set! s KEY_NPAGE))
-     ((and (eq? (sc-type s) RAW)
+      (sc-key-set! s KEY_NPAGE)
+      (sc-meta-set! s #f)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "khome" keystr))
-      (sc-seq-set! s KEY_HOME))
-     ((and (eq? (sc-type s) RAW)
+      (sc-key-set! s KEY_HOME)
+      (sc-meta-set! s #f)]
+
+     [(and (eq? (sc-type s) RAW)
            (string-ci=? "kend" keystr))
-      (sc-seq-set! s KEY_END))
-     )))
+      (sc-key-set! s KEY_END)
+      (sc-meta-set! s #f)])))
 
 (define (print_sclist)
   (for-each (lambda (s)
@@ -435,19 +465,16 @@
 (define new_buffer_msg (N_ "New Buffer"))
 (define goto_dir_msg (N_ "Go To Dir"))
 
-(define (shortcut_init unjustify)
+(define (InitShortcuts unjustifyP)
   "Initialize all shortcut lists.  If unjustify is #t, replace the
 the \"Uncut\" key with the \"Unjustify\" command"
-  (let (
-        ;; TRANSLATORS: Try to keep the following strings at most 10
-        ;; characters.
-        (get_help_msg (N_ "Get Help"))
-        (exit_msg (N_ "Exit"))
-        (whereis_msg (N_ "Where Is"))
-        (prev_page_msg (N_ "Prev Page"))
-        (next_page_msg (N_ "Next Page"))
-        (first_line_msg (N_ "First Line"))
-        (last_line_msg (N_ "Last Line"))
+  (let ([getHelpMsg (N_ "Get Help")]
+        [exitMsg (N_ "Exit")]
+        [whereisMsg (N_ "Where Is")]
+        [prevPageMsg (N_ "Prev Page")]
+        [nextPageMsg (N_ "Next Page")]
+        [firstLineMsg (N_ "First Line")]
+        [lastLineMsg (N_ "Last Line")]
         (suspend_msg (N_ "Suspend"))
         (beg_of_par_msg (N_ "Beg of Par"))
         (end_of_par_msg (N_ "End of Par"))
@@ -552,7 +579,7 @@ the \"Uncut\" key with the \"Unjustify\" command"
                   (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE
                           MWRITEFILE MINSERTFILE MEXTCMD MSPELL MBROWSER
                           MWHEREISFILE MGOTODIR)
-                  get_help_msg nano_help_msg #f VIEW)
+                  getHelpMsg nano_help_msg #f VIEW)
 
     (add_to_funcs CANCEL_MSG
                   (logior MWHEREIS MREPLACE MREPLACE2 MGOTOLINE MWRITEFILE
@@ -564,12 +591,12 @@ the \"Uncut\" key with the \"Unjustify\" command"
                   MMAIN
                   ;; TRANSLATORS: Try to keep this at most 10 characters.
                   (if (and (openfile?) (> (openfile-count) 1))
-		      (N_ "Close") exit_msg)
+		      (N_ "Close") exitMsg)
 		  nano_exit_msg #f VIEW)
 
     (add_to_funcs DO_EXIT
 		  MBROWSER
-		  exit_msg nano_exitbrowser_msg #f VIEW)
+		  exitMsg nano_exitbrowser_msg #f VIEW)
 
     ;; TRANSLATORS: Try to keep this at most 10 characters.
     (add_to_funcs DO_WRITEOUT_VOID
@@ -592,19 +619,19 @@ the \"Uncut\" key with the \"Unjustify\" command"
 
     (add_to_funcs DO_SEARCH
 		  (logior MMAIN MBROWSER)
-		  whereis_msg nano_whereis_msg #f VIEW)
+		  whereisMsg nano_whereis_msg #f VIEW)
     (add_to_funcs DO_PAGE_UP
 		  (logior MMAIN MHELP MBROWSER)
-		  prev_page_msg nano_prevpage_msg #f VIEW)
+		  prevPageMsg nano_prevpage_msg #f VIEW)
     (add_to_funcs DO_PAGE_DOWN
 		  (logior MMAIN MHELP MBROWSER)
-		  next_page_msg nano_nextpage_msg #t VIEW)
+		  nextPageMsg nano_nextpage_msg #t VIEW)
 
     ;; TRANSLATORS: Try to keep this at most 10 characters.
     (add_to_funcs DO_CUT_TEXT_VOID
 		  MMAIN
 		  (N_ "Cut Text") nano_cut_msg #f NOVIEW)
-    (if unjustify
+    (if unjustifyP
 	;; TRANSLATORS: Try to keep this at most 10 characters.
 	(add_to_funcs DO_UNCUT_TEXT
 		      MMAIN (N_ "UnJustify") "" #f NOVIEW)
@@ -629,11 +656,11 @@ the \"Uncut\" key with the \"Unjustify\" command"
 
     (add_to_funcs DO_FIRST_LINE
 		  (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE)
-		  first_line_msg nano_firstline_msg #f VIEW)
+		  firstLineMsg nano_firstline_msg #f VIEW)
 
     (add_to_funcs DO_LAST_LINE
 		  (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE)
-		  last_line_msg nano_lastline_msg #t VIEW)
+		  lastLineMsg nano_lastline_msg #t VIEW)
 
     (add_to_funcs DO_GOTOLINECOLUMN_VOID
 		  (logior MMAIN MWHEREIS)
@@ -821,7 +848,7 @@ the \"Uncut\" key with the \"Unjustify\" command"
 
     (add_to_funcs DO_EXIT
 		  MHELP
-		  exit_msg nano_exit_msg #f VIEW)
+		  exitMsg nano_exit_msg #f VIEW)
     (add_to_funcs FIRST_FILE_MSG
 		  (logior MBROWSER MWHEREISFILE)
 		  first_file_msg nano_firstfile_msg #f VIEW)
@@ -853,7 +880,7 @@ the \"Uncut\" key with the \"Unjustify\" command"
     (add_to_sclist MMAIN "M-G" DO_GOTOLINECOLUMN_VOID 0 #t)
     (add_to_sclist MMAIN "^O" DO_WRITEOUT_VOID 0 #t)
     (add_to_sclist MMAIN "F3" DO_WRITEOUT_VOID 0 #t)
-    (add_to_sclist MMAIN "^J" DO_JUSTIFY_VOID 0 #t)
+    ;; (add_to_sclist MMAIN "^J" DO_JUSTIFY_VOID 0 #t)
     (add_to_sclist MMAIN "F4" DO_JUSTIFY_VOID 0 #t)
     (add_to_sclist MMAIN "^R" DO_INSERTFILE_VOID 0 #t)
     (add_to_sclist MMAIN "F5" DO_INSERTFILE_VOID 0 #t)
@@ -1006,7 +1033,8 @@ the \"Uncut\" key with the \"Unjustify\" command"
     (add_to_sclist MMAIN "^Z" DO_SUSPEND_VOID 0 #f)
     (add_to_sclist MMAIN "^L" TOTAL_REFRESH 0 #t)
     (add_to_sclist MALL "^I" DO_TAB 0 #t)
-    (add_to_sclist MALL "^M" DO_ENTER 0 #t)
+    ;;(add_to_sclist MALL "^M" DO_ENTER 0 #t)
+    (add_to_sclist MALL "^J" DO_ENTER 0 #t)
     (add_to_sclist MALL "kenter" DO_ENTER 0 #t)
     (add_to_sclist MALL "^D" DO_DELETE 0 #t)
     (add_to_sclist MALL "kdel" DO_DELETE 0 #t)
@@ -1024,4 +1052,9 @@ the \"Uncut\" key with the \"Unjustify\" command"
 
 ;; This is the main dispatch
 (define (iso_me_harder_funcmap func)
-  (error "implement me!?"))
+  (format (current-error-port) "Dispatching ~s~%" func)
+  (cond
+   [(eqv? func DO_ENTER)
+    (do_enter #f)]
+   [else
+    #f]))

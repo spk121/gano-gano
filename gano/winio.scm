@@ -268,9 +268,11 @@
            ;; for the last two, which will be longer by (COLS %
            ;; colwidth) columns so as to not waste space.  We need at
            ;; least three columns to display anything properly
-           (colwidth (quotient (cols) (+ (quotient slen 2) (remainder slen 2)))))
+	   (xLim (cadr (getmaxyx mainwin)))
+           (colwidth (quotient xLim (+ (quotient slen 2) (remainder slen 2)))))
       (blank_bottombars)
 
+      (format (current-error-port) "In bottombars, and cols == \"~a\" (should be 80)~%" xLim)
       (format (current-error-port) "In bottombars, and slen == \"~a\" (should be 12)~%" slen)
       (format (current-error-port) "In bottombars, and colwidth == \"~a\" (should be 13)~%" colwidth)
       (let loop ((i 0)
@@ -702,20 +704,27 @@
 ;; corresponds to a function with a control key, a function key, and a
 ;; meta key sequence will return the control key corresponding to that
 ;; function. */
-(define (get_shortcut menu kbinput meta_key func_key)
-  (format (current-error-port) "get_shortcut(): kbinput ~a, meta_key ~a func_key ~a~%"
-	  kbinput meta_key func_key)
+(define (get_shortcut menu kbinput meta_key)
+  (format (current-error-port) "get_shortcut(): kbinput ~s, meta_key ~s: "
+	  kbinput meta_key)
 
   (let ((shortcut (let loop ((i 0))
 		    (if (< i (length sclist))
 			(let ((s (list-ref sclist i)))
+			  ;; (format (current-error-port) "\ttesting key ~a~s~%" (if (sc-meta s) "M-" "")
+			  ;;	  (sc-key s))
 			  (if (and (logand menu (sc-menu s))
-				   (eq? kbinput (sc-seq s)))
+				   (eq? kbinput (sc-key s))
+				   (eq? meta_key (sc-meta s)))
 			      s
 			      ;; else
 			      (loop (+ i 1))))
 			;; else
 			#f))))
+    (if shortcut
+	(format (current-error-port) "FOUND ~s~%" shortcut)
+	(format (current-error-port) "no shortcut found~%"))
+
     shortcut))
 
 ;; Mark the current file as modified if it isn't already, and then

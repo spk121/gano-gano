@@ -20,6 +20,8 @@
 
 ;;; This file incorporates code from GNU Nano
 
+(setlocale LC_ALL "")
+
 (use-modules
  (gano chars)
  (gano flags)
@@ -40,18 +42,19 @@
  (ice-9 i18n)
  (ncurses curses)
  (ncurses extra)
+ (srfi srfi-1)
  (rnrs control)
  )
 (use-syntax (ice-9 syncase))
 
-(define PACKAGE "gano")
-(define LOCALEDIR "/usr/local/share/locale")
+(define vPackage "gano")
+(define vLocaleDir "/usr/local/share/locale")
 
 ;; Used to store the user's original mouse click interval
 (define oldinterval -1)
 
 ;; Should we ignore all rc files?
-(define no_rcfiles #f)
+(define rcFileEnableP #t)
 
 ;; The user's original terminal settings
 (define oldterm #f)
@@ -82,15 +85,15 @@
   (filestruct-prev-set! newnode begin)
   (filestruct-next-set! begin newnode)
   (when end
-    (filestruct-prev-set! end newnode)))
+	(filestruct-prev-set! end newnode)))
 
 ;; Unlink a node from the rest of the filestruct
 (define (unlink_node fileptr)
   (when (not fileptr) (error "assertion failed: fileptr != #f"))
   (when (filestruct-prev fileptr)
-    (filestruct-next-set! (filestruct-prev fileptr) (filestruct-next fileptr)))
+	(filestruct-next-set! (filestruct-prev fileptr) (filestruct-next fileptr)))
   (when (filestruct-next fileptr)
-    (filestruct-prev-set! (filestruct-next fileptr) (filestruct-prev fileptr))))
+	(filestruct-prev-set! (filestruct-next fileptr) (filestruct-prev fileptr))))
 
 ;; Delete a node from the filestruct
 (define-syntax delete_node
@@ -100,9 +103,9 @@
        (when (not fileptr) (error "assertion failed: fileptr != #f"))
        (when (not (filestruct-data fileptr)) (error "assertion failed: fileptr->data != #f"))
        (when (filestruct-data fileptr)
-         (filestruct-data-set! fileptr #f))
+	     (filestruct-data-set! fileptr #f))
        (when (filestruct-multidata fileptr)
-         (filestruct-multidata-set! fileptr #f))
+	     (filestruct-multidata-set! fileptr #f))
 
        (set! fileptr #f)))))
 
@@ -115,22 +118,22 @@
   (set! editwinrows (+ (lines) -5 (no_more_space) (no_help)))
   (when (or (< (cols) MIN_EDITOR_COLS)
             (< editwinrows MIN_EDITOR_ROWS))
-    (error (_ "Window size is too small for nano...~%")))
+	(error (_ "Window size is too small for nano...~%")))
 
   ;; Set up fill column, based on the screen width
-  (set! fill wrap_at)
-  (when (<= fill 0)
-    (set! fill (+ fill (cols))))
-  (when (< fill 0)
-    (set! fill 0))
+  (set! viColFill viColWrap)
+  (when (<= viColFill 0)
+	(set! viColFill (+ viColFill (cols))))
+  (when (< viColFill 0)
+	(set! viColFill 0))
 
 
   (when topwin
-    (delwin topwin))
+	(delwin topwin))
   (when edit
-    (delwin edit))
+	(delwin edit))
   (when bottomwin
-    (delwin bottomwin))
+	(delwin bottomwin))
 
   (set! topwin (newwin (- 2 (no_more_space))
                        (cols)
@@ -147,9 +150,9 @@
 
   ;; Turn on the keypad for the windows, if necessary
   (unless (ISSET REBIND_KEYPAD)
-    (keypad! topwin #t)
-    (keypad! edit #t)
-    (keypad! bottomwin #t)))
+	  (keypad! topwin #t)
+	  (keypad! edit #t)
+	  (keypad! bottomwin #t)))
 
 ;; Print one usage string to the screen.  This cuts down on duplicate
 ;; strings to translate, and leaves out the parts that shouldn't be
@@ -157,7 +160,7 @@
 (define (print_opt shortflag longflag desc)
   (format #t " ~a\t" shortflag)
   (when (< (strlenpt shortflag) 8)
-    (format #t "\t"))
+	(format #t "\t"))
 
   (format #t "~a\t" longflag)
   (cond
@@ -167,7 +170,7 @@
     (format #t "\t")))
 
   (when desc
-    (format #t "~a" desc))
+	(format #t "~a" desc))
 
   (format #t "~%"))
 
@@ -284,16 +287,16 @@
   (allow_pending_sigwinch #f)
 
   ;; Trap normal suspend (^Z) so we can handle it ourselves.
-  (if (ISSET SUSPEND)
-      (sigaction SIGSTOP SIG_IGN)
-      ;; else
-      ;; Block all other signals in the suspend and continue handlers.
-      ;; If we don't do this, other stuff interrupts them!
+  (cond [(¬ (ISSET SUSPEND))
+	 (sigaction SIGSTOP SIG_IGN)]
+	;; else
+	;; Block all other signals in the suspend and continue handlers.
+	;; If we don't do this, other stuff interrupts them!
 
-      ;; FIXME: sigfillset(&act.sa_mask);
-      (begin
-        (sigaction SIGTSTP do_suspend)
-        (sigaction SIGCONT do_continue))))
+	;; FIXME: sigfillset(&act.sa_mask);
+	[else
+	 (sigaction SIGTSTP do_suspend)
+	 (sigaction SIGCONT do_continue)]))
 
 ;; Handler for SIGHUP (hangup) and SIGTERM (terminate)
 (define (handle_hupterm signal)
@@ -328,7 +331,7 @@
 (define (do_continue signal)
   ;; Turn mouse support back on if it was on before.
   (when (ISSET USE_MOUSE)
-    (enable_mouse_support))
+	(enable_mouse_support))
 
 
   ;; Perhaps the user resized the window while we slept.  Handle it,
@@ -348,448 +351,442 @@
 
   )
 
-(define (main args)
-  (let* ((optchr #f)
-         ;; Line to try and start at
-         (startline 1)
-         ;; Column to try and start at
-         (startcol 1)
-         ;; Was the fill option used?
-         (fill_used #f)
-         ;; The old value of the multibuffer option,
-         ;; restored after we load all files on the command
-         ;; line
-         (old_multibuffer #f)
-         (long-options
-          '((help (single-char #\h) (value #f))
-            (boldtext (single-char #\D) (value #f))
-            (multibuffer (single-char #\F) (value #f))
-            (ignorercfiles (single-char #\I) (value #f))
-            (rebindkeypad (single-char #\K) (value #f))
-            (nonewlines (single-char #\L) (value #f))
-            (morespace (single-char #\O) (value #f))
-            (quotestr (single-char #\Q) (value #t))
-            (restricted (single-char #\R) (value #f))
-            (tabsizelen (single-char #\T) (value #t))
-            (version (single-char #\V) (value #f))
-            (syntax (single-char #\Y) (value #t))
-            (const (single-char #\c) (value #f))
-            (rebinddelete (single-char #\d) (value #f))
-            (nofollow (single-char #\l) (value #f))
-            (mouse (single-char #\m) (value #f))
-            (operatingdir (single-char #\o) (value #t))
-            (preserve (single-char #\p) (value #f))
-            (quiet (single-char #\q) (value #f))
-            (fill (single-char #\r) (value #t))
-            (speller (single-char #\s) (value #t))
-            (tempfile (single-char #\t) (value #f))
-            (view (single-char #\v) (value #f))
-            (nowrap (single-char #\w) (value #f))
-            (nohelp (single-char #\x) (value #f))
-            (suspend (single-char #\z) (value #f))
-            (smarthome (single-char #\A) (value #f))
-            (backup (single-char #\B) (value #f))
-            (backupdir (single-char #\C) (value #t))
-            (tabstospaces (single-char #\E) (value #f))
-            (historylog (single-char #\H) (value #f))
-            (noconvert (single-char #\N) (value #f))
-            (smooth (single-char #\S) (value #f))
-            (quickblank (single-char #\U) (value #f))
-            (undo (single-char #\u) (value #f))
-            (wordbounds (single-char #\W) (value #f))
-            (autoindent (single-char #\i) (value #f))
-            (cut (single-char #\k) (value #f))
-            (softwrap (single-char #\$) (value #f))
-            ))
-         (options (getopt-long args long-options))
-         (locale (setlocale LC_ALL "")))
+(define (Main args)
+  (let* ([optchr #f]
+	 ;; Line to try and start at
+	 [iLineStart 1]
+	 ;; Column to try and start at
+	 [iColStart 1]
+	 ;; Was the fill option used?
+	 [fillUsedP #t]
+	 ;; The old value of the multibuffer option,
+	 ;; restored after we load all files on the command
+	 ;; line
+	 (multibufferSavP #f)
+	 [optionsLong
+	  '((help (single-char #\h) (value #f))
+	    (boldtext (single-char #\D) (value #f))
+	    (multibuffer (single-char #\F) (value #f))
+	    (ignorercfiles (single-char #\I) (value #f))
+	    (rebindkeypad (single-char #\K) (value #f))
+	    (nonewlines (single-char #\L) (value #f))
+	    (morespace (single-char #\O) (value #f))
+	    (quotestr (single-char #\Q) (value #t))
+	    (restricted (single-char #\R) (value #f))
+	    (tabsizelen (single-char #\T) (value #t))
+	    (version (single-char #\V) (value #f))
+	    (syntax (single-char #\Y) (value #t))
+	    (const (single-char #\c) (value #f))
+	    (rebinddelete (single-char #\d) (value #f))
+	    (nofollow (single-char #\l) (value #f))
+	    (mouse (single-char #\m) (value #f))
+	    (operatingdir (single-char #\o) (value #t))
+	    (preserve (single-char #\p) (value #f))
+	    (quiet (single-char #\q) (value #f))
+	    (fill (single-char #\r) (value #t))
+	    (speller (single-char #\s) (value #t))
+	    (tempfile (single-char #\t) (value #f))
+	    (view (single-char #\v) (value #f))
+	    (nowrap (single-char #\w) (value #f))
+	    (nohelp (single-char #\x) (value #f))
+	    (suspend (single-char #\z) (value #f))
+	    (smarthome (single-char #\A) (value #f))
+	    (backup (single-char #\B) (value #f))
+	    (backupdir (single-char #\C) (value #t))
+	    (tabstospaces (single-char #\E) (value #f))
+	    (historylog (single-char #\H) (value #f))
+	    (noconvert (single-char #\N) (value #f))
+	    (smooth (single-char #\S) (value #f))
+	    (quickblank (single-char #\U) (value #f))
+	    (undo (single-char #\u) (value #f))
+	    (wordbounds (single-char #\W) (value #f))
+	    (autoindent (single-char #\i) (value #f))
+	    (cut (single-char #\k) (value #f))
+	    (softwrap (single-char #\$) (value #f)))]
+	 [options (getopt-long args optionsLong)]
+	 [locale (setlocale LC_ALL "")])
 
     ;; If the locale set exists and uses UTF-8, we should use UTF-8
     (when (and locale
-               (string-ci=? (locale-encoding) "UTF-8"))
-      (utf8_init))
+	       (string-ci=? (locale-encoding) "UTF-8"))
+	  (InitUtf8))
 
-    (bindtextdomain PACKAGE LOCALEDIR)
-    (textdomain PACKAGE)
+    (bindtextdomain vPackage vLocaleDir)
+    (textdomain vPackage)
 
     (when (option-ref options 'smarthome #f)
-      (SET SMART_HOME))
+	  (SET SMART_HOME))
     (when (option-ref options 'backup #f)
-      (SET BACKUP_FILE))
+	  (SET BACKUP_FILE))
     (let ((d (option-ref options 'backupdir #f)))
       (if d (set! backup_dir d)))
     (when (option-ref options 'boldtext #f)
-      (SET BOLD_TEXT))
+	  (SET BOLD_TEXT))
     (when (option-ref options 'tabstospaces #f)
-      (SET TABS_TO_SPACES))
+	  (SET TABS_TO_SPACES))
     (when (option-ref options 'multibuffer #f)
-      (SET MULTIBUFFER))
+	  (SET MULTIBUFFER))
     (when (option-ref options 'historylog #f)
-      (SET HISTORYLOG))
+	  (SET HISTORYLOG))
     (when (option-ref options 'ignorercfiles #f)
-      (set! no_rcfiles #t))
+	  (set! rcFileEnableP #f))
     (when (option-ref options 'rebindkeypad #f)
-      (SET REBIND_KEYPAD))
+	  (SET REBIND_KEYPAD))
     (when (option-ref options 'nonewlines #f)
-      (SET NO_NEWLINES))
+	  (SET NO_NEWLINES))
     (when (option-ref options 'noconvert #f)
-      (SET NO_CONVERT))
+	  (SET NO_CONVERT))
     (when (option-ref options 'morespace #f)
-      (SET MORE_SPACE))
+	  (SET MORE_SPACE))
     (let ((q (option-ref options 'quotestr #f)))
       (if q (set! quotestr q)))
     (when (option-ref options 'restricted #f)
-      (SET RESTRICTED))
+	  (SET RESTRICTED))
     (when (option-ref options 'smooth #f)
-      (SET SMOOTH_SCROLL))
+	  (SET SMOOTH_SCROLL))
     (let ((tabsizestr (option-ref options 'tabsize #f)))
       (when tabsizestr
-        (set! tabsizelen (string->number tabsizestr))
-        (when (or (not tabsizelen)
-                  (<= tabsizelen 0))
-          (format (current-error-port)
-                  (_ "Requested tab size \"~A\" is invalid~%")
-                  tabsizestr)
-          (exit 1))))
+	    (set! tabsizelen (string->number tabsizestr))
+	    (when (or (not tabsizelen)
+		      (<= tabsizelen 0))
+		  (format (current-error-port)
+			  (_ "Requested tab size \"~A\" is invalid~%")
+			  tabsizestr)
+		  (exit 1))))
     (when (option-ref options 'quickblank #f)
-      (SET QUICK_BLANK))
+	  (SET QUICK_BLANK))
     (when (option-ref options 'version #f)
-      (version)
-      (exit 0))
+	  (version)
+	  (exit 0))
     (when (option-ref options 'wordbounds #f)
-      (SET WORD_BOUNDS))
+	  (SET WORD_BOUNDS))
     (set! syntaxstr (option-ref options 'syntax #f))
     (when (option-ref options 'const #f)
-      (SET CONST_UPDATE))
+	  (SET CONST_UPDATE))
     (when (option-ref options 'rebinddelete #f)
-      (SET REBIND_DELETE))
+	  (SET REBIND_DELETE))
     (when (option-ref options 'autoindent #f)
-      (SET AUTOINDENT))
+	  (SET AUTOINDENT))
     (when (option-ref options 'cut #f)
-      (SET CUT_TO_END))
+	  (SET CUT_TO_END))
     (when (option-ref options 'nofollow #f)
-      (SET NOFOLLOW_SYMLINKS))
+	  (SET NOFOLLOW_SYMLINKS))
     (when (option-ref options 'mouse #f)
-      (SET USE_MOUSE))
-    (set! operating_dir (option-ref options 'operating #f))
+	  (SET USE_MOUSE))
+    (set! vstDirOperating (option-ref options 'operating #f))
     (when (option-ref options 'preserve #f)
-      (SET PRESERVE))
+	  (SET PRESERVE))
     (when (option-ref options 'quiet #f)
-      (SET QUIET))
+	  (SET QUIET))
     (let ((w (option-ref options 'fill #f)))
       (when w
-        (set! wrap_at (string->number w))
-        (when (not wrap_at)
-          (format (current-error-port) "Requested fill size \"~s\" is invalid!%"
-                  wrap_at)
-          (exit 1))
-        (set! fill_used #t)))
+	    (set! viColWrap (string->number w))
+	    (when (not viColWrap)
+		  (format (current-error-port) "Requested fill size \"~s\" is invalid!%"
+			  viColWrap)
+		  (exit 1))
+	    (set! fillUsedP #t)))
     (set! alt_speller (option-ref options 'speller #f))
     (when (option-ref options 'tempfile #f)
-      (SET TEMP_FILE))
+	  (SET TEMP_FILE))
     (when (option-ref options 'undo #f)
-      (SET UNDOABLE))
+	  (SET UNDOABLE))
     (when (option-ref options 'view #f)
-      (SET VIEW_MODE))
+	  (SET VIEW_MODE))
     (when (option-ref options 'nowrap #f)
-      (SET NO_WRAP)
-      (set! fill_used #f))
+	  (SET NO_WRAP)
+	  (set! fillUsedP #f))
     (when (option-ref options 'nohelp #f)
-      (SET NO_HELP))
+	  (SET NO_HELP))
     (when (option-ref options 'suspend #f)
-      (SET SUSPEND))
+	  (SET SUSPEND))
     (when (option-ref options 'softwrap #f)
-      (SET SOFTWRAP))
+	  (SET SOFTWRAP))
     ;; If the executable filename starts with 'r', enable restricted mode
-    (when (eq? (string-ref (basename (car (command-line))) 0) #\r)
-      (SET RESTRICTED))
+    (when (eq? (string-ref (first (command-line)) 0) #\r)
+	  (SET RESTRICTED))
 
     ;; If we're using restricted mode, disable suspending, backups, and reading
     ;; rcfiles, since they all would allow reading from or writing to files
     ;; not specified on the command line
     (when (ISSET RESTRICTED)
-      (UNSET SUSPEND)
-      (UNSET BACKUP_FILE)
-      (set! no_rcfiles #t))
+	  (UNSET SUSPEND)
+	  (UNSET BACKUP_FILE)
+	  (set! rcFileEnableP #f))
 
     ;; Set up the shortcut lists.  Need to to this before the rcfile.
-    (shortcut_init #f)
+    (InitShortcuts #f)
 
     ;; We've read through the command line options.  Now back up the
     ;; flags and values that are set, and read the rcfile(s).  If
     ;; the values haven't changed afterward, restore the backed-up
     ;; values.
-    (if (not no_rcfiles)
-        (let ((operating_dir_cpy operating_dir)
-              (wrap_at_cpy wrap_at)
-              (backup_dir_cpy backup_dir)
-              (quotestr_cpy quotestr)
-              (alt_speller_cpy alt_speller)
-              (tabsizelen_cpy tabsizelen)
-              (flags_cpy (list-copy flags)))
-          (begin
-            (set! operating_dir #f)
-            (set! backup_dir #f)
-            (set! quotestr #f)
-            (set! alt_speller #f)
-            (do_rcfile)
-            (format (current-error-port) "After rebinding keys...~%")
-            (print_sclist)
-            (when operating_dir_cpy
-              (set! operating_dir operating_dir_cpy))
-            (when fill_used
-              (set! wrap_at wrap_at_cpy))
-            (when backup_dir_cpy
-              (set! backup_dir backup_dir_cpy))
-            (when quotestr_cpy
-              (set! quotestr quotestr_cpy))
-            (when alt_speller_cpy
-              (set! alt_speller alt_speller_cpy))
-            (unless (= -1 tabsizelen_cpy)
-              (set! tabsizelen tabsizelen_cpy))
-	    (for-each (lambda (i)
-			(list-set! flags i (logior (list-ref flags i)
-						   (list-ref flags_cpy i))))
-		      (iota 4))
-	    ;; else
-	    (when (eq? 0 (geteuid))
-	      (SET NO_WRAP))
-	    )
+    (cond [rcFileEnableP
+	   (let ([stDirOperatingSav vstDirOperating]
+		 [iColWrapSav viColWrap]
+		 [backup_dir_cpy backup_dir]
+		 [quotestr_cpy quotestr]
+		 [alt_speller_cpy alt_speller]
+		 [tabsizelen_cpy tabsizelen]
+		 [flags_cpy (list-copy flags)])
+	     (set! vstDirOperating #f)
+	     (set! backup_dir #f)
+	     (set! quotestr #f)
+	     (set! alt_speller #f)
+	     (do_rcfile)
+	     (format (current-error-port) "After rebinding keys...~%")
+	     (print_sclist)
+	     (when stDirOperatingSav
+		   (set! vstDirOperating stDirOperatingSav))
+	     (when fillUsedP
+		   (set! viColWrap iColWrapSav))
+	     (when backup_dir_cpy
+		   (set! backup_dir backup_dir_cpy))
+	     (when quotestr_cpy
+		   (set! quotestr quotestr_cpy))
+	     (when alt_speller_cpy
+		   (set! alt_speller alt_speller_cpy))
+	     (unless (= -1 tabsizelen_cpy)
+		     (set! tabsizelen tabsizelen_cpy))
+	     (do ([i 0 (1+ i)]) ([= i 4])
+	       (list-set! flags i (logior (list-ref flags i) (list-ref flags_cpy i)))))]
 
-	  ;; Overwrite an rcfile "set nowrap" or
-	  ;; --disable-wrapping-as-root if a --fill option was
-	  ;; received on the command line
-	  (when fill_used
-	    (UNSET NO_WRAP))
+	  [else
+	   (when (eq? 0 (geteuid))
+		 (SET NO_WRAP))])
 
-	  ;; If we're using bold text instead of reverse video text, set it up now
-	  (when (ISSET BOLD_TEXT)
-	    (set! reverse_attr A_BOLD))
+    ;; Overwrite an rcfile "set nowrap" or
+    ;; --disable-wrapping-as-root if a --fill option was
+    ;; received on the command line
+    (when fillUsedP
+	  (UNSET NO_WRAP))
 
-	  ;; Set up the search/replace history
+    ;; If we're using bold text instead of reverse video text, set it up now
+    (when (ISSET BOLD_TEXT)
+	  (set! reverse_attr A_BOLD))
 
-	  (history_init)
-	  (unless (or no_rcfiles
-		      (not (ISSET HISTORYLOG)))
-	    (load-history))
+    ;; Set up the search/replace history
 
-	  ;; Set up the backup directory (unless we're using
-	  ;; restricted mode, in which case backups are disabled,
-	  ;; since they would allow reading from or writing to
-	  ;; files not specified on the command line).  This
-	  ;; entails making sure it exists and is a directory, so
-	  ;; that backup files will be saved there.
+    (history_init)
+    (when (and rcFileEnableP (ISSET HISTORYLOG))
+	  (load-history))
 
-	  (unless (ISSET RESTRICTED)
+    ;; Set up the backup directory (unless we're using
+    ;; restricted mode, in which case backups are disabled,
+    ;; since they would allow reading from or writing to
+    ;; files not specified on the command line).  This
+    ;; entails making sure it exists and is a directory, so
+    ;; that backup files will be saved there.
+
+    (unless (ISSET RESTRICTED)
 	    (init_backup_dir))
 
-	  ;; Set up the operating directory.  This entains chdir'ing there,
-	  ;; So that the file reads and writes will all be based there
+    ;; Set up the operating directory.  This entains chdir'ing there,
+    ;; So that the file reads and writes will all be based there
 
-	  (init_operating_dir)
+    (InitOperatingDir)
 
-	  ;; If punct wasn't specified, set its default value
-	  (unless punct
+    ;; If punct wasn't specified, set its default value
+    (unless punct
 	    (set! punct "!.?"))
-	  ;; If brackets wasn't specified, set its default value
-	  (unless brackets
+    ;; If brackets wasn't specified, set its default value
+    (unless brackets
 	    (set! brackets "\"')>]}"))
-	  ;; If quotestr wasn't specified, set its default value
-	  (unless quotestr
+    ;; If quotestr wasn't specified, set its default value
+    (unless quotestr
 	    (set! quotestr "^([ \t]*[#:>|}])+"))
 
-	  (set! quotereg (make-regexp quotestr regexp/extended))
-	  ;; We no longer need quotestr, just quotereg
-	  (set! quotestr #f)
+    (set! quotereg (make-regexp quotestr regexp/extended))
+    ;; We no longer need quotestr, just quotereg
+    (set! quotestr #f)
 
-	  ;; If we don't have an alternative spell checker after reading
-	  ;; the command line and/or rcfile(s), check $SPELL for one, as
-	  ;; Pico does (unless we're using restricted mode, in which case
-	  ;; spell checking is disabled, since it would allow reading from
-	  ;; or writing to files not specified on the command line).
-	  (when (and (not (ISSET RESTRICTED))
-		     (not alt_speller))
-	    (let ((spellenv (getenv "SPELL")))
-	      (when spellenv
-		(set! alt_speller spellenv))))
+    ;; If we don't have an alternative spell checker after reading
+    ;; the command line and/or rcfile(s), check $SPELL for one, as
+    ;; Pico does (unless we're using restricted mode, in which case
+    ;; spell checking is disabled, since it would allow reading from
+    ;; or writing to files not specified on the command line).
+    (when (and (not (ISSET RESTRICTED))
+	       (not alt_speller))
+	  (let ((spellenv (getenv "SPELL")))
+	    (when spellenv
+		  (set! alt_speller spellenv))))
 
-	  ;; If matchbrackets wasn't specified, set its default value
-	  (unless matchbrackets
+    ;; If matchbrackets wasn't specified, set its default value
+    (unless matchbrackets
 	    (set! matchbrackets "(<[{)>]}"))
 
-	  ;; If whitespace wasn't specified, set its default value
-	  (unless whitespace
+    ;; If whitespace wasn't specified, set its default value
+    (unless whitespace
 	    (set! whitespace "  ")
 	    (set! whitespace_len '(1 1)))
 
-	  ;; If tabsize wasn't specified, set its default value
-	  (when (= -1 tabsizelen)
-	    (set! tabsizelen WIDTH_OF_TAB))
+    ;; If tabsize wasn't specified, set its default value
+    (when (= -1 tabsizelen)
+	  (set! tabsizelen WIDTH_OF_TAB))
 
-	  ;; Set the output terminal.  Normally this is stdin/stdout, but,
-	  ;; if this is running in guile-ncurses-shell, use that terminal
-	  ;; instead
-	  (if (defined? '%guile-ncurses-shell-read-port)
-	      (set! terminal-port %guile-ncurses-shell-read-port)
-	      ;; else
-	      (set! terminal-port 0))
+    ;; Set the output terminal.  Normally this is stdin/stdout, but,
+    ;; if this is running in guile-ncurses-shell, use that terminal
+    ;; instead
+    (if (defined? '%guile-ncurses-shell-read-port)
+	(set! terminal-port %guile-ncurses-shell-read-port)
+	;; else
+	(set! terminal-port 0))
 
-	  ;; Back up the old terminal settings so that they can be restored
-	  (set! oldterm (tcgetattr terminal-port))
-	  ;; (%termios-debug oldterm)
+    ;; Back up the old terminal settings so that they can be restored
+    (set! oldterm (tcgetattr terminal-port))
+    ;; (%termios-debug oldterm)
 
-	  ;; Initialize curses mode.  If this fails, get out.  Curses may
-	  ;; already be initialized if this is running in
-	  ;; guile-ncurses-shell.  In that case, %stdscr will already be
-	  ;; defined
-	  (if (defined? '%guile-ncurses-shell-stdscr)
-	      (set! mainwin %guile-ncurses-shell-stdscr)
-	      (set! mainwin (initscr)))
-	  (unless mainwin
+    ;; Initialize curses mode.  If this fails, get out.  Curses may
+    ;; already be initialized if this is running in
+    ;; guile-ncurses-shell.  In that case, %stdscr will already be
+    ;; defined
+    (if (defined? '%guile-ncurses-shell-stdscr)
+	(set! mainwin %guile-ncurses-shell-stdscr)
+	(set! mainwin (initscr)))
+    (unless mainwin
 	    (exit 1))
 
-	  ;; Set up the terminal state
-	  (terminal_init)
+    ;; Set up the terminal state
+    (terminal_init)
 
-	  ;; Turn on the cursor for sure
-	  (curs-set 1)
+    ;; Turn on the cursor for sure
+    (curs-set 1)
 
-	  (format (current-error-port) "Main: set up windows~%")
+    (format (current-error-port) "Main: set up windows~%")
 
-	  ;; Initialize all the windows based on the current screen dimensions
-	  (window_init)
+    ;; Initialize all the windows based on the current screen dimensions
+    (window_init)
 
-	  ;; Set up the signal handlers
-	  ;; (signal_init)
+    ;; Set up the signal handlers
+    ;; (signal_init)
 
-	  ;; Initialize mouse support
-	  ;; (mouse_init)
-	  (format (current-error-port) "Main: open file~%")
+    ;; Initialize mouse support
+    ;; (mouse_init)
+    (format (current-error-port) "Main: open file~%")
 
-	  ;; Parse the remaining command line options
-	  (let* ((argv (option-ref options '() '()))
-		 (argc (length argv))
-		 (optind 0))
+    ;; Parse the remaining command line options
+    (let* ((argv (option-ref options '() '()))
+	   (argc (length argv))
+	   (optind 0))
 
-	    ;; If there's a +LINE or +LINE,COLUMN flag here, it is the first
-	    ;; non-option argument, and it is followed by at least one other
-	    ;; argument, the filename it applies to. */
-	    (when (and (< 0 optind)
-		       (< optind (- argc 1))
-		       (eq? (string-ref (list-ref argv optind) 0) #\+))
-	      (parse_line_column (string-drop (list-ref argv optind) 1)
-				 startline
-				 startcol)
-	      (set! optind (+ optind 1)))
+      ;; If there's a +LINE or +LINE,COLUMN flag here, it is the first
+      ;; non-option argument, and it is followed by at least one other
+      ;; argument, the filename it applies to. */
+      (when (and (< 0 optind)
+		 (< optind (- argc 1))
+		 (eq? (string-ref (list-ref argv optind) 0) #\+))
+	    (parse_line_column (string-drop (list-ref argv optind) 1)
+			       iLineStart
+			       iColStart)
+	    (set! optind (+ optind 1)))
 
-	    (when (and (< optind argc)
-		       (not (string=? (list-ref argv optind)
-				      "-")))
-	      (stdin_pager)
-	      (set_modified)
-	      (set! optind (+ optind 1)))
+      (when (and (< optind argc)
+		 (not (string=? (list-ref argv optind)
+				"-")))
+	    (stdin_pager)
+	    (set_modified)
+	    (set! optind (+ optind 1)))
 
-	    (set! old_multibuffer (ISSET MULTIBUFFER))
-	    (SET MULTIBUFFER)
+      (set! multibufferSavP (ISSET MULTIBUFFER))
+      (SET MULTIBUFFER)
 
-	    ;; Read all the files after the first one on the command line into
-	    ;; new buffers
-	    (let loop ((i (+ optind 1))
-		       (iline 1)
-		       (icol 1))
-	      (if (< i argc)
+      ;; Read all the files after the first one on the command line into
+      ;; new buffers
+      (let loop ((i (+ optind 1))
+		 (iline 1)
+		 (icol 1))
+	(if (< i argc)
+	    (begin
+	      ;; If there is a +LINE or +LINE,COLUMN flag here, it is
+	      ;; followeb by at least one other argument, the filename
+	      ;; it applies to
+	      (if (and (< i (- argc 1))
+		       (eq? (string-ref (list-ref argv i) 0) #\+)
+		       (eq? iline 1)
+		       (eq? icol 1))
+		  (parse_line_column (string-drop (list-ref argv i) 1)
+				     iline icol)
+		  ;; else
 		  (begin
-		    ;; If there is a +LINE or +LINE,COLUMN flag here, it is
-		    ;; followeb by at least one other argument, the filename
-		    ;; it applies to
-		    (if (and (< i (- argc 1))
-			     (eq? (string-ref (list-ref argv i) 0) #\+)
-			     (eq? iline 1)
-			     (eq? icol 1))
-			(parse_line_column (string-drop (list-ref argv i) 1)
-					   iline icol)
-			;; else
-			(begin
-			  (open_buffer (list-ref argv i) #f)
-			  (when (or (> iline 1)
-				    (> icol 1))
-			    (do_gotolinecolumn iline icol #f #f #f #f)
-			    (set! iline 1)
-			    (set! icol 1))))
-		    (loop (+ i 1)
-			  iline
-			  icol))))
+		    (open_buffer (list-ref argv i) #f)
+		    (when (or (> iline 1)
+			      (> icol 1))
+			  (do_gotolinecolumn iline icol #f #f #f #f)
+			  (set! iline 1)
+			  (set! icol 1))))
+	      (loop (+ i 1)
+		    iline
+		    icol))))
 
 
-	    ;; Read the first file on the command line into either the current buffer
-	    ;; or a new buffer, depending on whether multibuffer mode is enabled
-	    (if (< optind argc)
-		(open_buffer (list-ref argv optind) #f))
+      ;; Read the first file on the command line into either the current buffer
+      ;; or a new buffer, depending on whether multibuffer mode is enabled
+      (if (< optind argc)
+	  (open_buffer (list-ref argv optind) #f))
 
-	    ;; We didn't open any files in all the command line arguements were
-	    ;; invalid files like directories or if there were no command line
-	    ;; arguments given.  In this case, we have to load a blank buffer.
-	    ;; Also, we unset view mode to allow editing
-	    (format (current-error-port) "2614: openfile = ~a~%" (openfile?))
-	    (when (not (openfile?))
-	      (format (current-error-port) "2614: load blank buffer~%")
-	      (open_buffer "" #f)
-	      (UNSET VIEW_MODE))
+      ;; We didn't open any files in all the command line arguements were
+      ;; invalid files like directories or if there were no command line
+      ;; arguments given.  In this case, we have to load a blank buffer.
+      ;; Also, we unset view mode to allow editing
+      (when (not (openfile?))
+	    (format (current-error-port) "load blank buffer~%")
+	    (open_buffer "" #f)
+	    (UNSET VIEW_MODE))
 
-	    (unless old_multibuffer
+      (unless multibufferSavP
 	      (UNSET MULTIBUFFER))
 
-	    (format (current-error-port) "Main: top and bottom win~%")
+      (format (current-error-port) "Main: top and bottom win~%")
 
-#!
-	    (when (and (openfile-syntax)
-		       (> (syntaxtype-nmultis (openfile-syntax)) 0))
-	      (precalc_multicolorinfo))
-!#
-	    (when (or (> startline 1) (> startcol 1))
-	      (do_gotolinecolumn startline startcol #f #f #f #f))
+      #!
+      (when (and (openfile-syntax)
+		 (> (syntaxtype-nmultis (openfile-syntax)) 0))
+	    (precalc_multicolorinfo))
+      !#
+      (when (or (> iLineStart 1) (> iColStart 1))
+	    (do_gotolinecolumn iLineStart iColStart #f #f #f #f))
 
-	    (display_main_list)
+      (display_main_list)
 
-	    (display_buffer)
+      (display_buffer)
 
-	    (let ((meta_key #f)
-		  (func_key #f)
-		  (s_or_t #f)
-		  (ran_func #f)
-		  (finished #f))
-	      (while #t
-		;; Make sure cursor is in the edit window
-		(reset_cursor)
-		(noutrefresh edit)
+      (let ((meta_key #f)
+	    (func_key #f)
+	    (s_or_t #f)
+	    (ran_func #f)
+	    (finished #f))
+	(while #t
+	       ;; Make sure cursor is in the edit window
+	       (reset_cursor)
+	       (noutrefresh edit)
 
-		(unless jump_buf_main
-		  ;; If we haven't already, we're going to set
-		  ;; jump_buf so that we return here after a
-		  ;; SIGWINCH.  Indicate this.
-		  (set! jump_buf_main #t)
-		  ;; Return here after a sigwinch
-		  ;;(sigsetjump jump_buf 1)
-		  )
+	       (unless jump_buf_main
+		       ;; If we haven't already, we're going to set
+		       ;; jump_buf so that we return here after a
+		       ;; SIGWINCH.  Indicate this.
+		       (set! jump_buf_main #t)
+		       ;; Return here after a sigwinch
+		       ;;(sigsetjump jump_buf 1)
+		       )
 
-		;; Just in case we were at the statusbar prompt, make sure that
-		;; the statusbar cursor position is reset
-		(do_prompt_abort)
+	       ;; Just in case we were at the statusbar prompt, make sure that
+	       ;; the statusbar cursor position is reset
+	       (do_prompt_abort)
 
-		;; If constant cursor position display is on, and there are no
-		;; keys waiting in the input buffer, display the current
-		;; cursor position on the statusbar
-		(when (ISSET CONST_UPDATE)
-		  (do_cursorpos #t))
+	       ;; If constant cursor position display is on, and there are no
+	       ;; keys waiting in the input buffer, display the current
+	       ;; cursor position on the statusbar
+	       (when (ISSET CONST_UPDATE)
+		     (do_cursorpos #t))
 
-		(set! currmenu MMAIN)
+	       (set! currmenu MMAIN)
 
-		;; Read and interpret characters
-		(do_input #t)))
+	       ;; Read and interpret characters
+	       (do_input #t)))
 
 
-	    ;; We should never get here
-	    (error "assertion failed, #f"))))))
+      ;; We should never get here
+      (error "assertion failed, #f"))))
 
 
 ;; Disable extended input and output processing in our terminal
@@ -850,7 +847,7 @@
   (noecho!)
   (disable_extended_io)
   (when (ISSET PRESERVE)
-    (enable_flow_control))
+	(enable_flow_control))
   (disable_signals)
   !#
   #f)
@@ -873,168 +870,129 @@
 	(input #f)
 	(s_or_t #f)
 	(ran_func #f)
-	(finished #f)
 	(cut_copy #f)
 	(kbinput #f))
 
-    ;; Read in a character
-    (let ((input-list (get_kbinput edit)))
+    ;; Read in a character.  get_kbinput returns a qualifier and a key.
+    ;; The qualifier is either 'raw or 'meta.  The key is
+    ;; either a char or a ncurses keycode.
+    (let ([kbinput (get_kbinput edit)])
       (cond
-       ((and input-list (char? input-list))
-	(set! input input-list))
+       [(not kbinput)
+	;; no valid input.  We're done
+	#f]
 
-       ((and input-list (integer? input-list))
-	(set! input input-list)
-	(set! func_key #t))
+       [else
+	(let ([qualifier (first kbinput)]
+	      [input (second kbinput)])
 
-       ((and input-list
-	     (list? input-list)
-	     (eq? 'meta (car input-list))
-	     (char? (cadr input-list)))
-	(set! input (char->integer (char-downcase (cadr input-list))))
-	(set! meta_key #t))
+	  (if (eq? qualifier 'meta)
+	      [set! meta_key #t]
+	      [set! meta_key #f])
 
-       ((and input-list
-	     (list? input-list)
-	     (eq? 'meta (car input-list))
-	     (integer? (cadr input-list)))
-	(set! input (cadr input-list))
-	(set! meta_key #t)
-	(set! func_key #t))
+	  ;; Meta keys are not case sensitive
+	  (when (and (eq? qualifier 'meta) (char? input))
+		(set! input (char-downcase input)))
 
-       (else
-	;; unhandled input type
-	(set! input -1)))
+	  ;; Check for a shortcut in the main list
+	  (let* ([s (get_shortcut MMAIN input meta_key)]
+		 ;; If we have a shortcut from the main list, or a
+		 ;; "universal" edit window shortcut, set have_shortcut
+		 ;; to true
+		 [have_shortcut (not (not s))])
 
-      ;; Check for a shortcut in the main list
-      (let ((s (get_shortcut MMAIN input meta_key func_key))
-	     ;; If we have a shortcut from the main list, or a
-	     ;; "universal" edit window shortcut, set have_shortcut
-	     ;; to true
-	    (have_shortcut #f))
-	(set! have_shortcut (not (not s)))
-	;; If we got a non-high-bit control key, a meta key sequence,
-	;; or a function key, and it's not a shortcut or toggle,
-	;; throw it out.
-	(unless have_shortcut
-	  (when (or (is_ascii_cntrl_char input)
-		    meta_key
-		    func_key)
-	    (statusbar "Unknown Command")
-	    (beep)
-	    (set! meta_key #f)
-	    (set! func_key #f)
-	    (set! input ERR)))
+	    ;; If this wasn't a shortcut, and it isn't a regular character, quit
+	    (unless have_shortcut
+		    (when (or meta_key (not (char? input)))
+			  (statusbar "Unknown Command")
+			  (beep)
+			  (set! meta_key #f)
+			  (set! input ERR)))
 
-	(when allow_funcs
-	  ;; If we got a character, and it isn't a shortcut or
-	  ;; toggle, it's a normal text character.  Display the
-	  ;; warning if we're in view mode, or add the character
-	  ;; to the input buffer if we're not.
-	  (when (and (not (eq? input ERR))
-		     (not have_shortcut))
-	    (if (ISSET VIEW_MODE)
-		(print_view_warning)
-		;; else
-		(set! kbinput input)))
+	    (when allow_funcs
+		  ;; If we got a character, and it isn't a shortcut or
+		  ;; toggle, it's a normal text character.  Display the
+		  ;; warning if we're in view mode, or add the character
+		  ;; to the input buffer if we're not.
 
-	;; If we got a shortcut or toggle, or if there aren't any
-	;; other characters waiting after the one we read in, we need
-	;; to output all the characters in the input buffer if it
-	;; isn't empty.  Note that it should be empty if we're in
-	;; view mode
-	(when #t
-	  ;; If we got a shortcut or toggle, and it's not the
-	  ;; shortcut for verbatim input, turn off prepending of
-	  ;; wrapped text.
-	  (when (and have_shortcut
-		     (or (not have_shortcut)
-			 (not s)
-			 (not (eq? (sc-scfunc s) DO_VERBATIM_INPUT))))
-	    (wrap_reset))
+		  ;; FIXME: view mode processing
 
-	  (when kbinput
-	    ;; Display all the characters in the input buffer
-	    ;; at once, filtering out control characters.
-	    (if (char<? kbinput (integer->char 32))
-		(do_output #\nul #f)
-		(do_output kbinput #f))))
+		  (format (current-error-port) "valid input ~a~s~%"
+			  (if meta_key "M-" "") input)
 
-	(when have_shortcut
-	  ;; Handle the normal edit window shortcuts, setting
-	  ;; ran_func to TRUE if we try to run their associated
-	  ;; functions and setting finished to TRUE to indicate
-	  ;; that we're done after running or trying to run their
-	  ;; associated functions.
+		  ;; If it is a regular character, output it
+		  (when (and (not have_shortcut) (not (eq? ERR input)))
+			(do_output input #f))
 
-	  ;; FIXME: that'd go here
+		  ;; If we got a shortcut or toggle, and it's not the
+		  ;; shortcut for verbatim input, turn off prepending
+		  ;; of wrapped text.
+		  (when (and have_shortcut
+			     (not (eq? (sc-scfunc s) DO_VERBATIM_INPUT)))
+			(wrap_reset))
 
-	  ;; If the function associated with this shortcut is
-	  ;; cutting or copying text, indicate this. */
-	  (when (or (eq? (sc-scfunc s) DO_CUT_TEXT_VOID)
-		    (eq? (sc-scfunc s) DO_COPY_TEXT)
-		    (eq? (sc-scfunc s) DO_CUT_TILL_END))
-	    (set! cut_copy #t))
+		  ;; Finally, process the shortcuts
+		  (when have_shortcut
+			;; Handle the normal edit window shortcuts
 
-	  (when (and (sc-scfunc s) (not (zero? (sc-scfunc s))))
-	    (let ((f (sctofunc s)))
-	      (set! ran_func #t)
-	      (if (and (ISSET VIEW_MODE)
-		       f
-		       (not (subnfunc-viewok f)))
-		  (print_view_warning)
-		  ;; else
-		  (begin
-		    (if (eq? (sc-scfunc s) DO_TOGGLE)
-			(do_toggle (sc-scfunc s))
-			;; else
-			(begin
-			  (iso_me_harder_funcmap (sc-scfunc s))
-			  (when (and f
-				     (not (subnfunc-viewok f))
-				     (openfile-syntax)
-				     (> (openfile-syntax-nmultis) 0))
-			    (reset_multis (openfile-current) #f))
-			  (when edit_refresh_needed
-			    (edit_refresh)
-			    (set! edit_refresh_needed #f)))))))
-	  (set! finished #t))))
+			;; If the function associated with this shortcut is
+			;; cutting or copying text, indicate this.
+			(when (or (eq? (sc-scfunc s) DO_CUT_TEXT_VOID)
+				  (eq? (sc-scfunc s) DO_COPY_TEXT)
+				  (eq? (sc-scfunc s) DO_CUT_TILL_END))
+			      (set! cut_copy #t))
+
+			(when (and (sc-scfunc s) (not (zero? (sc-scfunc s))))
+			      (let ((f (sctofunc s)))
+				(set! ran_func #t)
+				(cond
+				 [(and (ISSET VIEW_MODE) f (not (subnfunc-viewok f)))
+				  (print_view_warning)]
+
+				 [else
+				  (if (eq? (sc-scfunc s) DO_TOGGLE)
+				      (do_toggle (sc-scfunc s))
+				      ;; else
+				      (begin
+					(iso_me_harder_funcmap (sc-scfunc s))
+					(when (and f
+						   (not (subnfunc-viewok f))
+						   (openfile-syntax)
+						   (> (openfile-syntax-nmultis) 0))
+					      (reset_multis (openfile-current) #f))
+					(when edit_refresh_needed
+					      (edit_refresh)
+					      (set! edit_refresh_needed #f))))])))))))
 
 
 	;; If we aren't cutting or copying text, blow away the text in the
 	;; cutbuffer
 	(unless cut_copy
-	  (cutbuffer_reset))
+		(cutbuffer_reset))
 
-      input))))
+	#t]))))
 
 
 ;; The user typed output_len multibyte characters.  Add them to the edit
 ;; buffer, filtering out all ASCII control characters if allow_cntrls is
 ;; TRUE.
 (define (do_output c allow_controls?)
-  (let ((orig_lenpt (strlenpt (openfile-current-data))))
+  (format (current-error-port) "do_output () ~s ~s~%" c allow_controls?)
+  (let ([orig_lenpt (strlenpt (openfile-current-data))])
+
+    (format (current-error-port) "orig_lenpt ~s~%" orig_lenpt)
     (cond
-
-     ;; C is null
-     ((and allow_controls? (char=? c #\newline))
-      (do_enter #f))
-
-     ((and (not allow_controls?) (is_ascii_cntrl_char c))
+     [(and (not allow_controls?) (is_ascii_cntrl_char c))
       ;; do nothing
-      #f)
+      (format (current-error-port) "Ignoring control character~%")]
 
-     (else
+     [else
       ;; Output it:  yeah!
 
-      (when (char=? c #\nul)
-	(set! c #\newline))
-
-      ;; If the NO_NEWLINES flag isn't set, when a character is added to
-      ;; the magicline, it means we need a new magicline.
-      (when (and (not (ISSET NO_NEWLINES))
-		 (= (openfile-current_index) (1- (length (openfile-fileage)))))
-	(new_magicline))
+      ;; When a character is added to the last line, we need a new
+      ;; last line.
+      (when (equal? (openfile-current_index) (1- (length (openfile-fileage))))
+	    (new_magicline))
 
       ;; Insert that char
       (format (current-error-port)
@@ -1062,7 +1020,7 @@
       (when (and (openfile-mark_set)
 		 (eq? (openfile-mark_begin_index) (openfile-current_index))
 		 (< (openfile-current_x) (openfile-mark_begin_x)))
-	(openfile-mark_begin_x-set! (1+ (openfile-mark_begin_x))))
+	    (openfile-mark_begin_x-set! (1+ (openfile-mark_begin_x))))
 
       (openfile-current_x-set! (1+ (openfile-current_x)))
       (format (current-error-port)
@@ -1078,14 +1036,14 @@
 
       ;; If we're wrapping text, we need to call edit_refresh
       ;;(unless (ISSET NO_WRAP)
-	;;(when (do_wrap (openfile-current_index) #f)
-	 ;; (set! edit_refresh_needed #t)))
+      ;;(when (do_wrap (openfile-current_index) #f)
+      ;; (set! edit_refresh_needed #t)))
 
       ;; If color syntaxes are available and turned on, call
       ;; edit_refresh
       (when (and (openfile-colorstrings)
 		 (not (ISSET NO_COLOR_SYNTAX)))
-	(set! edit_refresh_needed #t))
+	    (set! edit_refresh_needed #t))
 
       ;; Well we might also need a full refresh if we've changed the
       ;; line length to be a new multiple of COLS
@@ -1093,7 +1051,7 @@
 		 (not edit_refresh_needed)
 		 (not (= (quotient (strlenpt (openfile-current-data)) (cols))
 			 (quotient orig_lenpt (cols)))))
-	(set! edit_refresh_needed #t))
+	    (set! edit_refresh_needed #t))
 
       (openfile-placewewant-set! (xplustabs))
 
@@ -1108,7 +1066,7 @@
 	    (edit_refresh)
 	    (set! edit_refresh_needed #f))
 	  ;;
-	  (update_line (openfile-current_index) (openfile-current_x)))))))
+	  (update_line (openfile-current_index) (openfile-current_x)))])))
 
 (define (allow_pending_sigwinch allow)
   "If allow is true, block any SIGWINCH signal that we get, so that we

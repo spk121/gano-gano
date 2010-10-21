@@ -9,8 +9,10 @@
             sc-keystr-set!
             sc-type
             sc-type-set!
-            sc-seq
-            sc-seq-set!
+            sc-key
+            sc-key-set!
+	    sc-meta
+	    sc-meta-set!
             sc-menu
             sc-menu-set!
             sc-scfunc
@@ -143,10 +145,10 @@
 (define (openfile-current_x)
   (openfilestruct-current_x (openfile)))
 (define (openfile-current_x-set! val)
-  (format #t "openfile-current_x-set!: orig ~a input ~a~%"
+  (format (current-error-port) "openfile-current_x-set!: orig ~a input ~a~%"
 	  (openfile-current_x) val)
   (openfilestruct-current_x-set! (openfile) val)
-  (format #t "openfile-current_x-set!: new ~a~%"
+  (format (current-error-port) "openfile-current_x-set!: new ~a~%"
 	  (openfile-current_x))
   )
 
@@ -475,7 +477,8 @@
    ;; What kind of function key is it for convenience later
    (mutable type)
    ;; The actual sequence to check on the the type is determined
-   (mutable seq)
+   (mutable key)
+   (mutable meta)
    ;; What list does this apply to
    (mutable menu)
    ;; The function we're going to run

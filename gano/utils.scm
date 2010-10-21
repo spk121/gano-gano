@@ -26,6 +26,7 @@
   #:use-module (gano nano-h)
   #:use-module (gano global)
   #:use-module (ncurses curses)
+  #:use-module (rnrs control)
   #:export (
             actual_x
             strlenpt
@@ -101,17 +102,11 @@
 ;; directory.  We use $HOME, else fall back to the home directory of
 ;; the effective user ID.
 (define (get_homedir)
-  (if (not homedir)
-      (let ((h (getenv "HOME")))
-	(if h
-	    (set! homedir h)
-	    ;; else
-	    (let ((pw (false-if-exception (getpwuid (geteuid)))))
-	      (if pw
-		  (set! homedir (passwd:dir pw))
-		  ;; else
-		  ;;   don't know what to set the homedir to
-		  ))))))
+    (when (not homedir)
+	  (let ([h (getenv "HOME")]
+		[pw (false-if-exception (getpwuid (geteuid)))])
+	    (cond [h (set! homedir h)]
+		  [pw (set! homedir (passwd:dir pw))]))))
 
 ;; Append a new magicline to filebot
 (define (new_magicline)

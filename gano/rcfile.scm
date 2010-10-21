@@ -54,6 +54,8 @@
 
     (format (current-error-port) "~a~%" msg)))
 
+;; The main rcfile function.  It tried to open the system-wide rcfile, followed
+;; by the current user's rcfile.
 (define (do_rcfile)
   "Parse the system-wide rcfile, followed by the current user's rcfile"
   (let* ((nanorc (string-append SYSCONFDIR "/nanorc"))
@@ -100,3 +102,10 @@
     (read-char (current-input-port)))
 
   (set_colorpairs))
+
+
+;; Parse the rcfile, once it has been opened sucessfully.  If
+;; syntax-only is true, only allow the file to contain color syntax
+;; commands: syntax, color, and icolor
+(define (parse_rcfile syntax_only)
+  #t)

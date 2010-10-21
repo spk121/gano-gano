@@ -33,10 +33,11 @@
             open_buffer
             open_file
             display_buffer
-	    init_operating_dir
+	    InitOperatingDir
 	    init_backup_dir
             ))
 
+;; (load "syntax.scm")
 ;; Add an entry to the openfile openfilestruct.  This should only be
 ;; called from open_buffer().
 (define (make_new_buffer)
@@ -73,22 +74,21 @@
 ;; If it is not "", filename is a file to open.  We make a new buffer
 ;; if necessary, and then open and read the file, if applicable
 (define (open_buffer filename undoable)
-  (let ((new_buffer (or (not (openfile?))
-			(ISSET MULTIBUFFER)))
-        (f #f)
-        (rc 0))       ; -2 means new file. -1 open failure. 0 success.
+  (let ([new_buffer (or (not (openfile?)) (ISSET MULTIBUFFER))]
+        [f #f]
+        [rc 0])       ; -2 means new file. -1 open failure. 0 success.
 
     (cond
-     ((check_operating_dir filename #f)
-      (statusbar (format #f "Can't insert file from outside of ~a"
-			 operating_dir)))
+     [(check_operating_dir filename #f)
+      (statusbar (format #f "Can't insert file from outside of ~a" operating_dir))]
 
-     (else
+     [else
       ;; If the filename isn't blank, open the file.  Otherwise treat
       ;; it as a new file.
-      (set! rc (if (not (string-null? filename))
-		   (open_file filename new_buffer f)
-		   -2))
+      (set! rc (cond [(not (string-null? filename))
+		      (open_file filename new_buffer f)]
+		     [else
+		      -2]))
 
       ;; If we're loading into a new buffer, add a new entry to
       ;; openfile.
@@ -97,29 +97,25 @@
 
       ;; If we have a file, and we're loading into a new buffer, update
       ;; the filename
-      (when (and (not (= rc -1))
-		 new_buffer)
-	(openfile-filename-set! (string-copy filename))
+      (when (and (not (= rc -1)) new_buffer)
+	    (openfile-filename-set! (string-copy filename)))
 
-	;; If we have a non-new file, read it in.  The, if the buffer has no
-	;; stat, update the stat, if applicable.
-	(when (> rc 0)
-          (read_file f rc filename undoable new_buffer)
-          )
+      ;; If we have a non-new file, read it in.  The, if the buffer has no
+      ;; stat, update the stat, if applicable.
+      (when (> rc 0)
+	    (read_file f rc filename undoable new_buffer))
 
-	;; If we have a file, and we're loading into a new buffer, move
-	;; back to the beginning of the first line of the buffer.
-	(when (and (not (= rc -1))
-		   new_buffer)
-          (openfile-current_index-set! 0)
-          (openfile-current_x-set! 0)
-          (openfile-placewewant-set! 0))
+      ;; If we have a file, and we're loading into a new buffer, move
+      ;; back to the beginning of the first line of the buffer.
+      (when (and (not (= rc -1)) new_buffer)
+	    (openfile-current_index-set! 0)
+	    (openfile-current_x-set! 0)
+	    (openfile-placewewant-set! 0))
 
-	;; If we're loading into a new buffer, update the colorto account
-	;; for it, if applicable
-	;; (color_update)
-	)))
-    ))
+      ;; If we're loading into a new buffer, update the colorto account
+      ;; for it, if applicable
+      ;; (color_update)
+      ])))
 
 ;; Open the file (and decide if it exists).  If newfie is TRUE,
 ;; display "New File" if the file is missing.  Otherwise, say
@@ -285,9 +281,9 @@
       #f
       (error "implement me!!!!!")))
 
-(define (init_operating_dir)
+(define (InitOperatingDir)
   "Initialize the full_operating_dir based on operating_dir"
-  (if (not operating_dir)
+  (if (not vstDirOperating)
       #f
       (error "implement me!!!!!!")))
 

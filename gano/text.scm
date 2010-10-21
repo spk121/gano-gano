@@ -36,26 +36,31 @@
 
 ;; Someone hits Enter *gasp!*
 (define (do_enter undoing)
-  (unless undoing
-    (add_undo ENTER))
-  (let ((newnode (make_new_node (openfile-current)))
+  (format (current-error-port) "do_enter(): ~s~%" undoing)
+  ;;(unless undoing
+ ;;	  (add_undo ENTER))
+  (let ([newnode (make_new_node (openfile-current))]
 	;; Do auto-indenting, like the neolithic Turbo Pascal editor.
 	;; If we are breaking the line in the indentation, the new
 	;; indentation should have only current_x characters, and
 	;; current_x should not change.
-	(extra (if (ISSET AUTOINDENT)
+	[extra (if (ISSET AUTOINDENT)
 		   (min (openfile-current_x)
 			(indent_length (openfile-current-data)))
-		   0)))
+		   0)])
+    (format (current-error-port) "do_enter(): orig_line was ~s, orig x was ~s~%" (openfile-current-data) (openfile-current_x))
     (filestruct-data-set! newnode (string-append
 				   (make-string extra #\space)
 				   (string-copy (openfile-current-data)
 						(openfile-current_x))))
+
+    (format (current-error-port) "do_enter(): new node is ~s~%" (filestruct-data newnode))
     (openfile-current-data-set! (substring (openfile-current-data)
 					   0
 					   (openfile-current_x)))
+    (format (current-error-port) "do_enter(): orig_line is now ~s~%" (openfile-current-data))
 
-    (openfile-totsize-set! (+ (openfile-totsize) extr))
+    (openfile-totsize-set! (+ (openfile-totsize) extra))
 
     (when (and (openfile-mark_set)
 	       (eq? (openfile-current_index) (openfile-mark_begin_index))
@@ -67,17 +72,20 @@
     (openfile-current_x-set! extra)
 
     (openfile-fileage-set!
-     (append (take (openfile-fileage) (openfile-current_index))
+     (append (take (openfile-fileage) (1+ (openfile-current_index)))
 	     (list newnode)
-	     (drop (openfile-fileage) (openfile-current_index))))
+	     (drop (openfile-fileage) (1+ (openfile-current_index)))))
 
-    (renumber (openfile-current_index))
+    ;; (renumber (openfile-current_index))
     (openfile-current_index-set! (1+ (openfile-current_index)))
+    (format (current-error-port) "do_enter(): new line is ~s, new x is ~s~%" (openfile-current-data) (openfile-current_x))
 
     (openfile-totsize-set! (1+ (openfile-totsize)))
-    (set_modified)
+    ;; (set_modified)
     (openfile-placewewant-set! (xplustabs))
-    (set! edit_refresh_needed #t)))
+    ;; (set! edit_refresh_needed #t)
+    )
+    )
 
 
 ;; Update an undo item, or determine whether a new one is really
