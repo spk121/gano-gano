@@ -20,7 +20,9 @@
 
 ;;; This file incorporates code from GNU Nano
 (define-module (gano text)
-  #:use-module (gano records)
+  #:use-module (gano CText)
+  #:use-module (gano CBuffer)
+  #:use-module (gano chars)
   #:use-module (gano flags)
   #:use-module (gano utils)
   #:use-module (rnrs control)
@@ -39,53 +41,50 @@
   (format (current-error-port) "do_enter(): ~s~%" undoing)
   ;;(unless undoing
  ;;	  (add_undo ENTER))
-  (let ([newnode (make_new_node (openfile-current))]
+  (let ([newnode (MakeLine "")]
 	;; Do auto-indenting, like the neolithic Turbo Pascal editor.
 	;; If we are breaking the line in the indentation, the new
 	;; indentation should have only current_x characters, and
 	;; current_x should not change.
 	[extra (if (ISSET AUTOINDENT)
-		   (min (openfile-current_x)
-			(indent_length (openfile-current-data)))
+		   (min (GetBufferXCur)
+			(GetIndentILim (GetBufferLineTextCur)))
 		   0)])
-    (format (current-error-port) "do_enter(): orig_line was ~s, orig x was ~s~%" (openfile-current-data) (openfile-current_x))
-    (filestruct-data-set! newnode (string-append
-				   (make-string extra #\space)
-				   (string-copy (openfile-current-data)
-						(openfile-current_x))))
+    (format (current-error-port) "do_enter(): orig_line was ~s, orig x was ~s~%" (GetBufferLineTextCur)
+            (GetBufferXCur))
+    (SetLineText! newnode (string-append (make-string extra #\space)
+                                         (string-copy (GetBufferLineTextCur) (GetBufferXCur))))
 
-    (format (current-error-port) "do_enter(): new node is ~s~%" (filestruct-data newnode))
-    (openfile-current-data-set! (substring (openfile-current-data)
-					   0
-					   (openfile-current_x)))
-    (format (current-error-port) "do_enter(): orig_line is now ~s~%" (openfile-current-data))
+    (format (current-error-port) "do_enter(): new node is ~s~%" (GetLineText newnode))
+    (SetBufferLineTextCur! (substring (GetBufferLineTextCur) 0 (GetBufferXCur)))
+    (format (current-error-port) "do_enter(): orig_line is now ~s~%" (GetBufferLineTextCur))
 
-    (openfile-totsize-set! (+ (openfile-totsize) extra))
+    (IncreaseBufferTotalSize! extra)
 
-    (when (and (openfile-mark_set)
-	       (eq? (openfile-current_index) (openfile-mark_begin_index))
-	       (< (openfile-current_x) (openfile-mark_begin_x)))
-      (openfile-mark_begin_index-set! (1+ (openfile-current_index)))
-      (openfile-mark_begin_x-set! (+ (openfile-mark_begin_x)
-				     extra
-				     (- (openfile-current_x)))))
-    (openfile-current_x-set! extra)
+    (when (and (IsBufferMarkSet?)
+	       (eq? (GetBufferICur) (GetBufferIMarkBegin))
+	       (< (GetBufferXCur) (GetBufferXMarkBegin)))
+      (IncreaseBufferIMarkBegin! 1)
+      (IncreaseBufferXMarkBegin! (- extra (GetBufferXCur))))
 
-    (openfile-fileage-set!
-     (append (take (openfile-fileage) (1+ (openfile-current_index)))
+    (SetBufferXCur! extra)
+
+    (SetBufferLines!
+     (append (take (GetBufferLines) (1+ (GetBufferICur)))
 	     (list newnode)
-	     (drop (openfile-fileage) (1+ (openfile-current_index)))))
+	     (drop (GetBufferLines) (1+ (GetBufferICur)))))
 
     ;; (renumber (openfile-current_index))
-    (openfile-current_index-set! (1+ (openfile-current_index)))
-    (format (current-error-port) "do_enter(): new line is ~s, new x is ~s~%" (openfile-current-data) (openfile-current_x))
+    (IncreaseBufferICur! 1)
 
-    (openfile-totsize-set! (1+ (openfile-totsize)))
+    (format (current-error-port) "do_enter(): new line is ~s, new x is ~s~%" (GetBufferLineTextCur)
+            (GetBufferXCur))
+
+    (IncreaseBufferTotalSize! 1)
     ;; (set_modified)
-    (openfile-placewewant-set! (xplustabs))
+    (SetBufferXGoal! (GetBufferXGoalFromXCur))
     ;; (set! edit_refresh_needed #t)
-    )
-    )
+    ))
 
 
 ;; Update an undo item, or determine whether a new one is really
@@ -104,3 +103,7 @@
 ;; something other than type text.
 (define (wrap_reset)
   (set! prepend_wrap #f))
+
+;; Get index of the first character that isn't whitespace indentation
+(define (GetIndentILim str)
+  (string-index str (lambda (c) (not (IsBlankChar? c)))))

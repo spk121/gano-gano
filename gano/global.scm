@@ -21,7 +21,9 @@
 ;;; This file incorporates code from GNU Nano
 
 (define-module (gano global)
-  #:use-module (gano records)
+  #:use-module (oop goops)
+  #:use-module (gano CFunction)
+  #:use-module (gano CShortcut)
   #:use-module (gano flags)
   #:use-module (gano nano-h)
   #:use-module (gano text)
@@ -29,49 +31,49 @@
   #:use-module (rnrs control)
   #:use-module (srfi srfi-1)
   #:export (
-            vstDirOperating
-	    search_history
+            vDirOperating
+	    vrgSearchHistory
 	    syntaxes
-	    search_history_index
-	    replace_history
-	    replace_history_index
+	    viSearchHistory
+	    vrgReplaceHistory
+            viReplaceHistory
 	    homedir
-            print_sclist
-            punct
-            brackets
-            whitespace
-            whitespace_len
-	    sctofunc
-            quotestr
-            quotereg
+            PrintScList
+            vPunct
+            vBrackets
+            vWhiteSpace
+            vWhiteSpaceLen
+	    GetFunctionFromShortcut
+            vQuoteStr
+            vQuoteReg
             quoteerr
             quotelen
             regcomp
-            backup_dir
-            alt_speller
-            syntaxstr
+            vDirBackup
+            vSpellerAlt
+            vSyntaxStr
             jump_buf
             jump_buf_main
             viColFill
             viColWrap
-            first_sc_for
+            FindFirstShortcut
             last_search
             last_replace
-            tabsizelen
-            mainwin
+            vTabSize
+            vWinMain
             topwin
             edit
             bottomwin
             editwinrows
             InitShortcuts
-            reverse_attr
-            length_of_list
-            allfuncs
+            vAttrReverse
+            CountEntriesInMenu
+            vrgFunctions
             maxrows
             currmenu
-            sclist
-            edit_refresh_needed
-	    matchbrackets
+            vrgShortcuts
+            vfEditRefreshNeeded
+	    vMatchBrackets
 	    iso_me_harder_funcmap
             ))
 
@@ -95,9 +97,8 @@
 ;; The last replacement string we searched for
 (define last_replace #f)
 
-
 ;; The standard ncurses screen
-(define mainwin #f)
+(define vWinMain #f)
 ;; The top portion of the window, where we display the version
 ;; number of nano, the name of the current file, and whether
 ;; the current file has been modified
@@ -124,23 +125,23 @@
 
 ;; The opening and closing brackets that can be found by bracket
 ;; searches
-(define matchbrackets #f)
+(define vMatchBrackets #f)
 
 ;; The characters used when display the first characters of tabs
 ;; and spaces
-(define whitespace #f)
+(define vWhiteSpace #f)
 ;; The length of these characters
-(define whitespace_len '(0 0))
+(define vWhiteSpaceLen '(0 0))
 
 ;; The closing punctuation that can end sentences
-(define punct #f)
+(define vPunct #f)
 ;; The closing brackets that can follow closing punctuation and
 ;; can end sentences
-(define brackets #f)
+(define vBrackets #f)
 ;; The quoting string
-(define quotestr #f)
+(define vQuoteStr #f)
 ;; The compiled regular expression from the quoting string
-(define quotereg #f)
+(define vQuoteReg #f)
 ;; Whether it compiled successfully
 (define quoterc 0)
 ;; The error message, if it didn't
@@ -155,23 +156,23 @@
 (define answer #f)
 
 ;; The width of a tab in spaces.  The default is set in main
-(define tabsizelen -1)
+(define vTabSize -1)
 
 ;; The directory where we store backup files
-(define backup_dir #f)
+(define vDirBackup #f)
 ;; The relative path to the operating directory, which
 ;; we can't move outside of
-(define vstDirOperating #f)
+(define vDirOperating #f)
 ;; The full path
 (define full_operating_dir #f)
 
 ;; The command to use for the alternate spell checker
-(define alt_speller #f)
+(define vSpellerAlt #f)
 
 ;; The global list of color syntaxes
 (define syntaxes #f)
 ;; The color syntax name specified on the command line
-(define syntaxstr #f)
+(define vSyntaxStr #f)
 
 ;; Did a command mangle enough of the buffer refresh that we should
 ;; repaing the screen
@@ -183,21 +184,21 @@
 (define currmenu #f)
 
 ;; The shortcut key struct: a list of sc's
-(define sclist #f)
+(define vrgShortcuts '())
 
 ;; The main function list: a list of subnfunc's
-(define allfuncs #f)
+(define vrgFunctions '())
 
 ;; The search string history list
-(define search_history #f)
+(define vrgSearchHistory #f)
 ;; The top of the search string history list
-(define search_history_index #f)
+(define viSearchHistory #f)
 ;; The bottom of the search string history list
 ;;(define searchbot #f)
 ;; The replace string history list
-(define replace_history #f)
+(define vrgReplaceHistory #f)
 ;; Top of the replace string history list
-(define replace_history_index #f)
+(define viReplaceHistory #f)
 ;; Bottom of the replace string history list
 ;;(define replacebot #f)
 
@@ -208,234 +209,62 @@
 (define regmatches #f)
 
 ;; The curses attribute for reverse video
-(define reverse_attr A_REVERSE)
+(define vAttrReverse A_REVERSE)
 
 ;; The user's home directory: from $HOME or /etc/passwd
 (define homedir #f)
 
 ;; Return the number of entries in the shortcut list S for
 ;; a given menu
-(define (length_of_list menu)
-  (let loop ((index 0)
-             (count 0))
-    (if (< index (length allfuncs))
-        (begin
-          (let ((f (list-ref allfuncs index)))
-            (if (not f)
-                count
-                ;; else
-                (if (and menu
-                         (subnfunc-menus f)
-                         )
-                    (loop (+ index 1) (+ count 1))
-                    ;; else
-                    (loop (+ index 1) count)))))
-        count)))
+(define (CountEntriesInMenu menu)
+  (count (lambda (fn)
+           (logtest (GetFunctionMenus fn) menu))
+         vrgFunctions))
 
-;; Set type of function based on the string
-(define (strtokeytype str)
-  (let ((first-char (string-ref str 0)))
-    (cond
-     ((char-ci=? #\m first-char)
-      META)
-     ((char=? #\^ first-char)
-      CONTROL)
-     ((char-ci=? #\f first-char)
-      FKEY)
-     (else
-      RAW))))
+;; Add information about an external function
+(define (AddFunction func menus description help fBlankAfter fViewOk)
+  (let ([fn (CreateFunction func menus description help fBlankAfter fViewOk)])
+    (set! vrgFunctions (append! vrgFunctions (list fn)))
+    (format (current-error-port) "Added func \"~a\"" description)))
 
-;; Add a string to the new function list struct.
-(define (add_to_funcs func menus desc help blank_after viewok)
-  (let ((f #f))
-    (if (not allfuncs)
-        ;; Initialization of allfuncs global
-        (set! allfuncs (list (make-subnfunc)))
-        ;; else
-        (set! allfuncs (append! allfuncs (list (make-subnfunc)))))
-    (set! f (last allfuncs))
-    (subnfunc-next-set! f #f)
-    (subnfunc-scfunc-set! f func)
-    (subnfunc-menus-set! f menus)
-    (subnfunc-desc-set! f desc)
-    (subnfunc-viewok-set! f viewok)
-    (subnfunc-help-set! f help)
-    (subnfunc-blank_after-set! f blank_after)
-
-    (format (current-error-port) "Added func \"~a\"" (subnfunc-desc f))))
-
-(define (first_sc_for menu func)
-  (let ((metasc #f)
-        (sc #f)
-	(len (length sclist)))
-    (let loop ((i 0))
-      (if (< i len)
-          (let ((s (list-ref sclist i)))
-            (if (and (logtest (sc-menu s) menu)
-		     (eq? (sc-scfunc s) func))
-		(if (eq? (sc-type s) META)
-		    (begin
-		      (set! metasc s)
-		      (loop (+ i 1)))
-		    ;; else
-		    (set! sc s)
-		    ;; and stop looping
-		    )
-		;; else
-		(loop (+ i 1))))))
-    ;; If we are here we have only found meta sequences.  If so, use
-    ;; one.
-    (cond
-     (sc
-      sc)
-     (metasc
-      metasc)
-     (else
-      (format (current-error-port) "Whoops, returning null given func ~a in menu ~a~%"
-              func menu)
-      #f))))
-
-
-
+(define (FindFirstShortcut menu funcId)
+  (let ([nonMetaSc (find (lambda (sc)
+                           (and (DoesShortcutMatchMenuAndFuncId? sc menu funcId)
+                                (not (DoesShortcutUseMetaKey? sc))))
+                         vrgShortcuts)]
+        [metaSc (find (lambda (sc)
+                           (and (DoesShortcutMatchMenuAndFuncId? sc menu funcId)
+                                (DoesShortcutUseMetaKey? sc)))
+                         vrgShortcuts)])
+    (or nonMetaSc
+        metaSc)))
 
 ;; Add a string to the new shortcut list implementation.
-(define (add_to_sclist menu scstring func toggle execute)
-  (let ((s #f))
-    (if (not sclist)
-        ;; Initialize the shortcut list if, if necessary
-        (begin
-          (set! sclist (list (make-sc)))
-          (set! s (car sclist)))
-        ;; else, fast forward to a matching entry or the end of the list
-        (begin
-          (let ((match (find (lambda (x)
-                               (and (eq? (sc-menu x) menu)
-                                    (string=? (sc-keystr x) scstring)))
-                             sclist)))
-            (if match
-                (set! s match)
-                ;; else
-                ;; add a new shortcut to the end of the list
-                (begin
-                  ;; This is not a replace
-                  (format (current-error-port) "No match found...~%")
-                  (set! sclist (append sclist (list (make-sc))))
-                  (set! s (last sclist)))))))
+(define (AddShortcut menu keyStr funcId toggleId fExecute)
+  (format (current-error-port) "AddShortcut menu ~s keyStr ~s funcId ~s toggleId ~s fExecute ~s~%"
+          menu keyStr funcId toggleId fExecute)
+  ;; (format (current-error-port) "AddShortcut shortcut_list ~s~%" vrgShortcuts)
 
-    (sc-type-set! s (strtokeytype scstring))
-    (sc-menu-set! s menu)
-    (sc-toggle-set! s toggle)
-    (sc-keystr-set! s scstring)
-    (sc-scfunc-set! s func)
-    (sc-execute-set! s execute)
-    (assign_keyinfo s)
+  (let* ([sc (CreateShortcut menu keyStr funcId toggleId fExecute)]
+         [matchingSc (find (lambda (sc)
+                             (DoesShortcutMatchMenuAndFuncId? sc menu funcId))
+                           vrgShortcuts)])
+    (when matchingSc
+      (format (current-error-port) "~s is duplicate shortcut ~s on menu ~s and function ~s~%"
+              (GetShortcutKeyStr matchingSc) keyStr menu funcId))
 
-    (format (current-error-port) "list val = ~a~%" (sc-menu s))
-    (format (current-error-port)
-            "Hey, set sequence to ~a~a for shortcut \"~a\"~%"
-            (if (sc-meta s) "M-" "") (sc-key s) scstring)
-    ))
+    (set! vrgShortcuts (append! vrgShortcuts (list sc)))))
 
-(define (assign_keyinfo s)
-  ;; Assign the info to the shortcut struct.  Assumes keystr is already
-  ;; assigned, naturally.
-  (let ((type (sc-type s))
-        (keystr (sc-keystr s)))
-    (cond
-     [(eq? type CONTROL)
-      (sc-key-set! s (integer->char (- (char->integer (string-ref keystr 1)) 64)))
-      (sc-meta-set! s #f)]
-     [(eq? type META)
-      (sc-key-set! s (char-downcase (string-ref keystr 2)))
-      (sc-meta-set! s #t)]
-     [(eq? type FKEY)
-      (sc-key-set! s (key-f (string->number (string-drop keystr 1))))
-      (sc-meta-set! s #f)]
-     [else
-      (sc-key-set! s (string-ref keystr 0))
-      (sc-meta-set! s #f)])
-
-    ;; Process keys that have long names
-    (cond
-     [(and (eq? (sc-type s) CONTROL)
-           (string-ci=? "space" (string-drop keystr 1)))
-      (sc-key-set! s 0)
-      (sc-meta-set! s #f)]
-     [(and (eq? (sc-type s) META)
-           (string-ci=? "space" (string-drop keystr 2)))
-      (sc-key-set! s #\space)
-      (sc-meta-set! s #t)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "kup" keystr))
-      (sc-key-set! s KEY_UP)
-      (sc-meta-set! s #f)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "kdown" keystr))
-      (sc-key-set! s KEY_DOWN)
-      (sc-meta-set! s #f)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "kleft" keystr))
-      (sc-key-set! s KEY_LEFT)
-      (sc-meta-set! s #f)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "kright" keystr))
-      (sc-key-set! s KEY_RIGHT)
-      (sc-meta-set! s #f)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "kinser" keystr))
-      (sc-key-set! s KEY_IC)
-      (sc-meta-set! s #f)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "kdel" keystr))
-      (sc-key-set! s KEY_DC)
-      (sc-meta-set! s #f)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "kbsp" keystr))
-      (sc-meta-set! s KEY_BACKSPACE)
-      (sc-meta-set! s #f)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "kenter" keystr))
-      (sc-key-set! s KEY_ENTER)
-      (sc-meta-set! s #f)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "kpup" keystr))
-      (sc-key-set! s KEY_PPAGE)
-      (sc-meta-set! s #f)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "kpdown" keystr))
-      (sc-key-set! s KEY_NPAGE)
-      (sc-meta-set! s #f)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "khome" keystr))
-      (sc-key-set! s KEY_HOME)
-      (sc-meta-set! s #f)]
-
-     [(and (eq? (sc-type s) RAW)
-           (string-ci=? "kend" keystr))
-      (sc-key-set! s KEY_END)
-      (sc-meta-set! s #f)])))
-
-(define (print_sclist)
+(define (PrintScList)
   (for-each (lambda (s)
-              (let ((f (sctofunc s)))
+              (let ([f (GetFunctionFromShortcut s)])
                 (if f
                     (format (current-error-port)
                             "Shortcut \"~a\", function: ~a, menus ~a\n"
-                            (sc-keystr s) (subnfunc-desc f) (subnfunc-menus f))
+                            (GetShortcutKeyStr s) (GetFunctionDesc f) (GetFunctionMenus f))
                     (format (current-error-port)
-                            "Hmm, didnt find a func for \"~a\"\n" (sc-keystr s)))))
-            sclist))
+                            "Hmm, didnt find a func for \"~a\"\n" (GetShortcutKeyStr s)))))
+            vrgShortcuts))
 
 ;; Stuff we need to make at least static here so we can access it
 ;; below.
@@ -572,39 +401,35 @@ the \"Uncut\" key with the \"Unjustify\" command"
         (nano_gotodir_msg (N_ "Go to directory")))
 
     ;; Clear out the old function list, if any
-    (set! allfuncs #f)
+    (set! vrgFunctions '())
     (gc)
 
-    (add_to_funcs DO_HELP_VOID
+    (AddFunction DO_HELP_VOID
                   (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE
                           MWRITEFILE MINSERTFILE MEXTCMD MSPELL MBROWSER
                           MWHEREISFILE MGOTODIR)
                   getHelpMsg nano_help_msg #f VIEW)
 
-    (add_to_funcs CANCEL_MSG
+    (AddFunction CANCEL_MSG
                   (logior MWHEREIS MREPLACE MREPLACE2 MGOTOLINE MWRITEFILE
                           MINSERTFILE MEXTCMD MSPELL MWHEREISFILE MGOTODIR
                           MYESNO)
-                  cancel_msg nano_cancel_msg #f VIEW);
+                  cancel_msg nano_cancel_msg #f VIEW)
 
-    (add_to_funcs DO_EXIT
-                  MMAIN
-                  ;; TRANSLATORS: Try to keep this at most 10 characters.
-                  (if (and (openfile?) (> (openfile-count) 1))
-		      (N_ "Close") exitMsg)
-		  nano_exit_msg #f VIEW)
+    (AddFunction DO_EXIT
+                  MMAIN "Close" nano_exit_msg #f VIEW)
 
-    (add_to_funcs DO_EXIT
+    (AddFunction DO_EXIT
 		  MBROWSER
 		  exitMsg nano_exitbrowser_msg #f VIEW)
 
     ;; TRANSLATORS: Try to keep this at most 10 characters.
-    (add_to_funcs DO_WRITEOUT_VOID
+    (AddFunction DO_WRITEOUT_VOID
 		  MMAIN
 		  (N_ "WriteOut") nano_writeout_msg #f NOVIEW)
 
     ;; TRANSLATORS: Try to keep this at most 10 characters.
-    (add_to_funcs DO_JUSTIFY_VOID
+    (AddFunction DO_JUSTIFY_VOID
 		  MMAIN
 		  (N_ "Justify") nano_justify_msg #t NOVIEW)
 
@@ -613,35 +438,35 @@ the \"Uncut\" key with the \"Unjustify\" command"
     ;; restricted mode, inserting files is disabled, since it allows
     ;; reading from or writing to files not specified on the command
     ;; line.
-    (add_to_funcs (if (ISSET RESTRICTED) NANO_DISABLED_MSG DO_INSERTFILE_VOID)
+    (AddFunction (if (ISSET RESTRICTED) NANO_DISABLED_MSG DO_INSERTFILE_VOID)
 		  MMAIN
 		  (N_ "Read File") nano_insert_msg #f VIEW)
 
-    (add_to_funcs DO_SEARCH
+    (AddFunction DO_SEARCH
 		  (logior MMAIN MBROWSER)
 		  whereisMsg nano_whereis_msg #f VIEW)
-    (add_to_funcs DO_PAGE_UP
+    (AddFunction DO_PAGE_UP
 		  (logior MMAIN MHELP MBROWSER)
 		  prevPageMsg nano_prevpage_msg #f VIEW)
-    (add_to_funcs DO_PAGE_DOWN
+    (AddFunction DO_PAGE_DOWN
 		  (logior MMAIN MHELP MBROWSER)
 		  nextPageMsg nano_nextpage_msg #t VIEW)
 
     ;; TRANSLATORS: Try to keep this at most 10 characters.
-    (add_to_funcs DO_CUT_TEXT_VOID
+    (AddFunction DO_CUT_TEXT_VOID
 		  MMAIN
 		  (N_ "Cut Text") nano_cut_msg #f NOVIEW)
     (if unjustifyP
 	;; TRANSLATORS: Try to keep this at most 10 characters.
-	(add_to_funcs DO_UNCUT_TEXT
+	(AddFunction DO_UNCUT_TEXT
 		      MMAIN (N_ "UnJustify") "" #f NOVIEW)
 	;; else
-	(add_to_funcs DO_UNCUT_TEXT
+	(AddFunction DO_UNCUT_TEXT
 		      MMAIN (N_ "UnCut Text") nano_uncut_msg
 		      #f  NOVIEW))
 
     ;; TRANSLATORS: Try to keep this at most 10 characters.
-    (add_to_funcs DO_CURSORPOS_VOID
+    (AddFunction DO_CURSORPOS_VOID
 		  MMAIN
 		  (N_ "Cur Pos") nano_cursorpos_msg #f VIEW)
 
@@ -650,151 +475,151 @@ the \"Uncut\" key with the \"Unjustify\" command"
     ;; on the command line.
     (if (not (ISSET RESTRICTED))
 	;; TRANSLATORS: Try to keep this at most 10 characters.
-	(add_to_funcs DO_SPELL
+	(AddFunction DO_SPELL
 		      MMAIN
 		      (N_ "To Spell") nano_spell_msg #t NOVIEW))
 
-    (add_to_funcs DO_FIRST_LINE
+    (AddFunction DO_FIRST_LINE
 		  (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE)
 		  firstLineMsg nano_firstline_msg #f VIEW)
 
-    (add_to_funcs DO_LAST_LINE
+    (AddFunction DO_LAST_LINE
 		  (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE)
 		  lastLineMsg nano_lastline_msg #t VIEW)
 
-    (add_to_funcs DO_GOTOLINECOLUMN_VOID
+    (AddFunction DO_GOTOLINECOLUMN_VOID
 		  (logior MMAIN MWHEREIS)
 		  go_to_line_msg nano_gotoline_msg #f VIEW)
 
-    (add_to_funcs DO_REPLACE
+    (AddFunction DO_REPLACE
 		  (logior MMAIN MWHEREIS)
 		  replace_msg nano_replace_msg #f NOVIEW)
 
-    (add_to_funcs DO_MARK MMAIN (N_ "Mark Text") nano_mark_msg #f VIEW)
-    (add_to_funcs DO_RESEARCH (logior MMAIN MBROWSER) whereis_next_msg
+    (AddFunction DO_MARK MMAIN (N_ "Mark Text") nano_mark_msg #f VIEW)
+    (AddFunction DO_RESEARCH (logior MMAIN MBROWSER) whereis_next_msg
 		  nano_whereis_next_msg #t VIEW)
-    (add_to_funcs DO_COPY_TEXT MMAIN (N_ "Copy Text") nano_copy_msg #f NOVIEW)
-    (add_to_funcs DO_INDENT_VOID MMAIN (N_ "Indent Text") nano_indent_msg #f NOVIEW)
-    (add_to_funcs DO_UNINDENT MMAIN (N_ "Unindent Text") nano_unindent_msg #f NOVIEW)
+    (AddFunction DO_COPY_TEXT MMAIN (N_ "Copy Text") nano_copy_msg #f NOVIEW)
+    (AddFunction DO_INDENT_VOID MMAIN (N_ "Indent Text") nano_indent_msg #f NOVIEW)
+    (AddFunction DO_UNINDENT MMAIN (N_ "Unindent Text") nano_unindent_msg #f NOVIEW)
 
     (when (ISSET UNDOABLE)
-      (add_to_funcs DO_UNDO MMAIN (N_ "Undo") nano_undo_msg #f NOVIEW)
-      (add_to_funcs DO_REDO MMAIN (N_ "Redo") nano_redo_msg #t NOVIEW))
+      (AddFunction DO_UNDO MMAIN (N_ "Undo") nano_undo_msg #f NOVIEW)
+      (AddFunction DO_REDO MMAIN (N_ "Redo") nano_redo_msg #t NOVIEW))
 
-    (add_to_funcs DO_RIGHT MMAIN (N_ "Forward") nano_forward_msg #f VIEW)
-    (add_to_funcs DO_RIGHT MBROWSER (N_ "Forward") nano_forwardfile_msg #f VIEW)
-    (add_to_funcs DO_RIGHT MALL "" "" #f VIEW)
-    (add_to_funcs DO_LEFT MMAIN (N_ "Back") nano_back_msg #f VIEW)
-    (add_to_funcs DO_LEFT MBROWSER (N_ "Back") nano_backfile_msg #f VIEW)
-    (add_to_funcs DO_LEFT MALL "" "" FALSE VIEW)
-    (add_to_funcs DO_NEXT_WORD_VOID MMAIN (N_ "Next Word") nano_nextword_msg #f VIEW)
-    (add_to_funcs DO_PREV_WORD_VOID MMAIN (N_ "Prev Word") nano_prevword_msg #f VIEW)
-    (add_to_funcs DO_UP_VOID (logior MMAIN MHELP MBROWSER)
+    (AddFunction DO_RIGHT MMAIN (N_ "Forward") nano_forward_msg #f VIEW)
+    (AddFunction DO_RIGHT MBROWSER (N_ "Forward") nano_forwardfile_msg #f VIEW)
+    (AddFunction DO_RIGHT MALL "" "" #f VIEW)
+    (AddFunction DO_LEFT MMAIN (N_ "Back") nano_back_msg #f VIEW)
+    (AddFunction DO_LEFT MBROWSER (N_ "Back") nano_backfile_msg #f VIEW)
+    (AddFunction DO_LEFT MALL "" "" FALSE VIEW)
+    (AddFunction DO_NEXT_WORD_VOID MMAIN (N_ "Next Word") nano_nextword_msg #f VIEW)
+    (AddFunction DO_PREV_WORD_VOID MMAIN (N_ "Prev Word") nano_prevword_msg #f VIEW)
+    (AddFunction DO_UP_VOID (logior MMAIN MHELP MBROWSER)
 		  (N_ "Prev Line") nano_prevline_msg #f VIEW)
-    (add_to_funcs DO_DOWN_VOID (logior MMAIN MHELP MBROWSER)
+    (AddFunction DO_DOWN_VOID (logior MMAIN MHELP MBROWSER)
 		  (N_ "Next Line") nano_nextline_msg #t VIEW)
-    (add_to_funcs DO_HOME MMAIN (N_ "Home") nano_home_msg #f VIEW)
-    (add_to_funcs DO_END MMAIN (N_ "End") nano_end_msg #f VIEW)
-    (add_to_funcs DO_PARA_BEGIN_VOID (logior MMAIN MWHEREIS)
+    (AddFunction DO_HOME MMAIN (N_ "Home") nano_home_msg #f VIEW)
+    (AddFunction DO_END MMAIN (N_ "End") nano_end_msg #f VIEW)
+    (AddFunction DO_PARA_BEGIN_VOID (logior MMAIN MWHEREIS)
 		  beg_of_par_msg nano_parabegin_msg #f VIEW)
-    (add_to_funcs DO_PARA_END_VOID (logior MMAIN MWHEREIS)
+    (AddFunction DO_PARA_END_VOID (logior MMAIN MWHEREIS)
 		  end_of_par_msg nano_paraend_msg #f VIEW)
-    (add_to_funcs DO_FIND_BRACKET MMAIN (_ "Find Other Bracket") nano_bracket_msg #f VIEW)
-    (add_to_funcs DO_SCROLL_UP
+    (AddFunction DO_FIND_BRACKET MMAIN (_ "Find Other Bracket") nano_bracket_msg #f VIEW)
+    (AddFunction DO_SCROLL_UP
 		  MMAIN
 		  (N_ "Scroll Up") nano_scrollup_msg #f VIEW)
 
-    (add_to_funcs DO_SCROLL_DOWN
+    (AddFunction DO_SCROLL_DOWN
 		  MMAIN
 		  (N_ "Scroll Down") nano_scrolldown_msg #f VIEW)
-    (add_to_funcs SWITCH_TO_PREV_BUFFER_VOID
+    (AddFunction SWITCH_TO_PREV_BUFFER_VOID
 		  MMAIN
 		  (_ "Previous File") nano_prevfile_msg #f VIEW)
-    (add_to_funcs SWITCH_TO_NEXT_BUFFER_VOID
+    (AddFunction SWITCH_TO_NEXT_BUFFER_VOID
 		  MMAIN
 		  (N_ "Next File") nano_nextfile_msg #t VIEW)
-    (add_to_funcs DO_VERBATIM_INPUT
+    (AddFunction DO_VERBATIM_INPUT
 		  MMAIN
 		  (N_ "Verbatim Input") nano_verbatim_msg #f
 		  NOVIEW)
-    (add_to_funcs DO_VERBATIM_INPUT
+    (AddFunction DO_VERBATIM_INPUT
 		  (logior MWHEREIS MREPLACE MREPLACE2 MEXTCMD MSPELL)
 		  ""  ""  #f  NOVIEW)
-    (add_to_funcs DO_TAB
+    (AddFunction DO_TAB
 		  MMAIN
 		  (N_ "Tab") nano_tab_msg #f NOVIEW)
-    (add_to_funcs DO_TAB
+    (AddFunction DO_TAB
 		  MALL
 		  ""  ""  #f  NOVIEW)
-    (add_to_funcs DO_ENTER
+    (AddFunction DO_ENTER
 		  MMAIN
 		  (N_ "Enter") nano_enter_msg #f  NOVIEW)
-    (add_to_funcs DO_ENTER
+    (AddFunction DO_ENTER
 		  MALL
 		  ""  ""  #f  NOVIEW)
-    (add_to_funcs DO_DELETE
+    (AddFunction DO_DELETE
 		  MMAIN
 		  (N_ "Delete") nano_delete_msg #f NOVIEW)
-    (add_to_funcs DO_DELETE
+    (AddFunction DO_DELETE
 		  MALL
 		  ""  ""  #f  NOVIEW)
-    (add_to_funcs DO_BACKSPACE
+    (AddFunction DO_BACKSPACE
 		  MMAIN
 		  (N_ "Backspace") nano_backspace_msg #t NOVIEW)
-    (add_to_funcs DO_BACKSPACE
+    (AddFunction DO_BACKSPACE
 		  MALL
 		  ""  ""
 		  #t NOVIEW)
 
-    (add_to_funcs DO_CUT_TILL_END
+    (AddFunction DO_CUT_TILL_END
 		  MMAIN
 		  (N_ "CutTillEnd") nano_cut_till_end_msg #t
 		  NOVIEW)
-    (add_to_funcs XON_COMPLAINT
+    (AddFunction XON_COMPLAINT
 		  MMAIN
 		  ""  ""  #f  VIEW);
-    (add_to_funcs XOFF_COMPLAINT
+    (AddFunction XOFF_COMPLAINT
 		  MMAIN
 		  ""  ""  #f  VIEW);
 
-    (add_to_funcs DO_FULL_JUSTIFY
+    (AddFunction DO_FULL_JUSTIFY
 		  (logior MMAIN MWHEREIS)
 		  (N_ "Justify") nano_fulljustify_msg #f NOVIEW)
-    (add_to_funcs DO_WORDLINECHAR_COUNT
+    (AddFunction DO_WORDLINECHAR_COUNT
 		  MMAIN
 		  (N_ "Word Count") nano_wordcount_msg #f VIEW)
-    (add_to_funcs TOTAL_REFRESH
+    (AddFunction TOTAL_REFRESH
 		  (logior MMAIN MHELP)
 		  refresh_msg nano_refresh_msg #f VIEW)
 
-    (add_to_funcs DO_SUSPEND_VOID
+    (AddFunction DO_SUSPEND_VOID
 		  MMAIN
 		  suspend_msg nano_suspend_msg #t VIEW)
-    (add_to_funcs CASE_SENS_MSG
+    (AddFunction CASE_SENS_MSG
 		  (logior MWHEREIS MREPLACE MWHEREISFILE)
 		  case_sens_msg nano_case_msg #f VIEW)
 
-    (add_to_funcs BACKWARDS_MSG
+    (AddFunction BACKWARDS_MSG
 		  (logior MWHEREIS MREPLACE MWHEREISFILE)
 		  backwards_msg nano_reverse_msg #f VIEW)
-    (add_to_funcs REGEXP_MSG
+    (AddFunction REGEXP_MSG
 		  (logior MWHEREIS MREPLACE MWHEREISFILE)
 		  regexp_msg nano_regexp_msg #f VIEW)
-    (add_to_funcs PREV_HISTORY_MSG
+    (AddFunction PREV_HISTORY_MSG
 		  (logior MWHEREIS MREPLACE MREPLACE2 MWHEREISFILE)
 		  prev_history_msg nano_prev_history_msg #f VIEW)
-    (add_to_funcs NEXT_HISTORY_MSG
+    (AddFunction NEXT_HISTORY_MSG
 		  (logior MWHEREIS MREPLACE MREPLACE2 MWHEREISFILE)
 		  next_history_msg nano_next_history_msg #f VIEW)
-    (add_to_funcs NO_REPLACE_MSG
+    (AddFunction NO_REPLACE_MSG
 		  MREPLACE
 		  no_replace_msg nano_whereis_msg #f VIEW)
 
-    (add_to_funcs GOTOTEXT_MSG
+    (AddFunction GOTOTEXT_MSG
 		  MGOTOLINE
 		  gototext_msg nano_whereis_msg #t VIEW)
     (if (not (ISSET RESTRICTED))
-	(add_to_funcs TO_FILES_MSG
+	(AddFunction TO_FILES_MSG
 		      (logior MGOTOLINE MINSERTFILE)
 		      to_files_msg nano_tofiles_msg #f VIEW))
 
@@ -805,250 +630,249 @@ the \"Uncut\" key with the \"Unjustify\" command"
     ;; specified on the command line, and the fifth is useless since
     ;; backups are disabled.
     (unless (ISSET RESTRICTED)
-      (add_to_funcs DOS_FORMAT_MSG
+      (AddFunction DOS_FORMAT_MSG
 		    MWRITEFILE
 		    dos_format_msg nano_dos_msg #f NOVIEW)
-      (add_to_funcs MAC_FORMAT_MSG
+      (AddFunction MAC_FORMAT_MSG
 		    MWRITEFILE
 		    mac_format_msg nano_mac_msg #f  NOVIEW)
-      (add_to_funcs APPEND_MSG
+      (AddFunction APPEND_MSG
 		    MWRITEFILE
 		    append_msg nano_append_msg #f NOVIEW)
-      (add_to_funcs PREPEND_MSG
+      (AddFunction PREPEND_MSG
 		    MWRITEFILE
 		    prepend_msg nano_prepend_msg #f NOVIEW)
-      (add_to_funcs BACKUP_FILE_MSG MWRITEFILE
+      (AddFunction BACKUP_FILE_MSG MWRITEFILE
 		    backup_file_msg nano_backup_msg #f
 		    NOVIEW))
 
     ;; If we're using restricted mode, command execution is disabled.
     ;; It's useless since inserting files is disabled.
     (if (not (ISSET RESTRICTED))
-	(add_to_funcs EXT_CMD_MSG
+	(AddFunction EXT_CMD_MSG
 		      MINSERTFILE
 		      ext_cmd_msg nano_execute_msg #f NOVIEW))
 
     ;; If we're using restricted mode  the multibuffer toggle is
     ;; disabled.  It's useless since inserting files is disabled.
     (if (not (ISSET RESTRICTED))
-	(add_to_funcs NEW_BUFFER_MSG
+	(AddFunction NEW_BUFFER_MSG
 		      MINSERTFILE
 		      new_buffer_msg nano_multibuffer_msg #f
 		      NOVIEW))
-    (add_to_funcs  INSERT_FILE_MSG
+    (AddFunction  INSERT_FILE_MSG
 		   MEXTCMD
 		   insert_file_msg nano_insert_msg #f VIEW)
 
-    (add_to_funcs NEW_BUFFER_MSG
+    (AddFunction NEW_BUFFER_MSG
 		  MEXTCMD
 		  new_buffer_msg nano_multibuffer_msg #f NOVIEW)
-    (add_to_funcs REFRESH_MSG
+    (AddFunction REFRESH_MSG
 		  MHELP
 		  refresh_msg nano_refresh_msg #f VIEW)
 
-    (add_to_funcs DO_EXIT
+    (AddFunction DO_EXIT
 		  MHELP
 		  exitMsg nano_exit_msg #f VIEW)
-    (add_to_funcs FIRST_FILE_MSG
+    (AddFunction FIRST_FILE_MSG
 		  (logior MBROWSER MWHEREISFILE)
 		  first_file_msg nano_firstfile_msg #f VIEW)
 
-    (add_to_funcs LAST_FILE_MSG
+    (AddFunction LAST_FILE_MSG
 		  (logior MBROWSER MWHEREISFILE)
 		  last_file_msg nano_lastfile_msg #f VIEW)
 
-    (add_to_funcs GOTO_DIR_MSG
+    (AddFunction GOTO_DIR_MSG
 		  MBROWSER
 		  goto_dir_msg nano_gotodir_msg #f VIEW)
 
     (set! currmenu MMAIN)
 
-    (add_to_sclist (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE
+    (AddShortcut (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE
 			   MWRITEFILE MINSERTFILE MEXTCMD MSPELL MBROWSER
 			   MWHEREISFILE MGOTODIR)
 		   "^G" DO_HELP_VOID 0 #t)
-    (add_to_sclist (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE
+    (AddShortcut (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE
 			   MWRITEFILE MINSERTFILE MEXTCMD MSPELL MBROWSER
 			   MWHEREISFILE MGOTODIR)
 		   "F1" DO_HELP_VOID 0 #t)
-    (add_to_sclist (logior MMAIN MHELP MBROWSER)
+    (AddShortcut (logior MMAIN MHELP MBROWSER)
 		   "^X" DO_EXIT 0 #t)
-    (add_to_sclist (logior MMAIN MHELP MBROWSER)
+    (AddShortcut (logior MMAIN MHELP MBROWSER)
 		   "F2" DO_EXIT 0 #t)
-    (add_to_sclist MMAIN "^_" DO_GOTOLINECOLUMN_VOID 0 #t)
-    (add_to_sclist MMAIN "F13" DO_GOTOLINECOLUMN_VOID 0 #t)
-    (add_to_sclist MMAIN "M-G" DO_GOTOLINECOLUMN_VOID 0 #t)
-    (add_to_sclist MMAIN "^O" DO_WRITEOUT_VOID 0 #t)
-    (add_to_sclist MMAIN "F3" DO_WRITEOUT_VOID 0 #t)
-    ;; (add_to_sclist MMAIN "^J" DO_JUSTIFY_VOID 0 #t)
-    (add_to_sclist MMAIN "F4" DO_JUSTIFY_VOID 0 #t)
-    (add_to_sclist MMAIN "^R" DO_INSERTFILE_VOID 0 #t)
-    (add_to_sclist MMAIN "F5" DO_INSERTFILE_VOID 0 #t)
-    (add_to_sclist MMAIN "kinsert" DO_INSERTFILE_VOID 0 #t)
-    (add_to_sclist (logior MMAIN MBROWSER)
+    (AddShortcut MMAIN "^_" DO_GOTOLINECOLUMN_VOID 0 #t)
+    (AddShortcut MMAIN "F13" DO_GOTOLINECOLUMN_VOID 0 #t)
+    (AddShortcut MMAIN "M-G" DO_GOTOLINECOLUMN_VOID 0 #t)
+    (AddShortcut MMAIN "^O" DO_WRITEOUT_VOID 0 #t)
+    (AddShortcut MMAIN "F3" DO_WRITEOUT_VOID 0 #t)
+    ;; (AddShortcut MMAIN "^J" DO_JUSTIFY_VOID 0 #t)
+    (AddShortcut MMAIN "F4" DO_JUSTIFY_VOID 0 #t)
+    (AddShortcut MMAIN "^R" DO_INSERTFILE_VOID 0 #t)
+    (AddShortcut MMAIN "F5" DO_INSERTFILE_VOID 0 #t)
+    (AddShortcut MMAIN "kinsert" DO_INSERTFILE_VOID 0 #t)
+    (AddShortcut (logior MMAIN MBROWSER)
 		   "^W" DO_SEARCH 0 #t)
-    (add_to_sclist (logior MMAIN MBROWSER)
+    (AddShortcut (logior MMAIN MBROWSER)
 		   "F6" DO_SEARCH 0 #t)
-    (add_to_sclist (logior MMAIN MBROWSER MHELP MWHEREISFILE)
+    (AddShortcut (logior MMAIN MBROWSER MHELP MWHEREISFILE)
 		   "^Y" DO_PAGE_UP 0 #t)
-    (add_to_sclist (logior MMAIN MBROWSER MHELP MWHEREISFILE)
+    (AddShortcut (logior MMAIN MBROWSER MHELP MWHEREISFILE)
 		   "F7" DO_PAGE_UP 0 #t)
-    (add_to_sclist (logior MMAIN MBROWSER MHELP MWHEREISFILE)
+    (AddShortcut (logior MMAIN MBROWSER MHELP MWHEREISFILE)
 		   "kpup" DO_PAGE_UP 0 #t)
-    (add_to_sclist (logior MMAIN MBROWSER MHELP MWHEREISFILE)
+    (AddShortcut (logior MMAIN MBROWSER MHELP MWHEREISFILE)
 		   "^V" DO_PAGE_DOWN 0 #t)
-    (add_to_sclist (logior MMAIN MBROWSER MHELP MWHEREISFILE)
+    (AddShortcut (logior MMAIN MBROWSER MHELP MWHEREISFILE)
 		   "F8" DO_PAGE_DOWN 0 #t)
-    (add_to_sclist (logior MMAIN MBROWSER MHELP MWHEREISFILE)
+    (AddShortcut (logior MMAIN MBROWSER MHELP MWHEREISFILE)
 		   "kpdown" DO_PAGE_DOWN 0 #t)
-    (add_to_sclist MMAIN "^K" DO_CUT_TEXT_VOID 0 #t)
-    (add_to_sclist MMAIN "F9" DO_CUT_TEXT_VOID 0 #t)
-    (add_to_sclist MMAIN "^U" DO_UNCUT_TEXT 0 #t)
-    (add_to_sclist MMAIN "F10" DO_UNCUT_TEXT 0 #t)
-    (add_to_sclist MMAIN "^C" DO_CURSORPOS_VOID 0 #t)
-    (add_to_sclist MMAIN "F11" DO_CURSORPOS_VOID 0 #t)
-    (add_to_sclist MMAIN "^T" DO_SPELL 0 #t)
-    (add_to_sclist MMAIN "F12" DO_SPELL 0 #t)
-    (add_to_sclist MMAIN "^\\" DO_REPLACE 0 #t)
-    (add_to_sclist MMAIN "F14" DO_REPLACE 0 #t)
-    (add_to_sclist MMAIN "M-R" DO_REPLACE 0 #t)
-    (add_to_sclist MWHEREIS "^R" DO_REPLACE 0 #f)
-    (add_to_sclist MREPLACE "^R" NO_REPLACE_MSG 0 #f)
-    (add_to_sclist MWHEREIS "^T" DO_GOTOLINECOLUMN_VOID 0 #f)
-    (add_to_sclist MMAIN "^^" DO_MARK 0 #t)
-    (add_to_sclist MMAIN "F15" DO_MARK 0 #t)
-    (add_to_sclist MMAIN "M-A" DO_MARK 0 #t)
-    (add_to_sclist (logior MMAIN MBROWSER) "M-W" DO_RESEARCH 0 #t)
-    (add_to_sclist (logior MMAIN MBROWSER) "F16" DO_RESEARCH 0 #t)
-    (add_to_sclist MMAIN "M-^" DO_COPY_TEXT 0 #t)
-    (add_to_sclist MMAIN "M-6" DO_COPY_TEXT 0 #t)
-    (add_to_sclist MMAIN "M-\x7D" DO_INDENT_VOID 0 #t)
-    (add_to_sclist MMAIN "M-\x7B" DO_UNINDENT 0 #t)
+    (AddShortcut MMAIN "^K" DO_CUT_TEXT_VOID 0 #t)
+    (AddShortcut MMAIN "F9" DO_CUT_TEXT_VOID 0 #t)
+    (AddShortcut MMAIN "^U" DO_UNCUT_TEXT 0 #t)
+    (AddShortcut MMAIN "F10" DO_UNCUT_TEXT 0 #t)
+    (AddShortcut MMAIN "^C" DO_CURSORPOS_VOID 0 #t)
+    (AddShortcut MMAIN "F11" DO_CURSORPOS_VOID 0 #t)
+    (AddShortcut MMAIN "^T" DO_SPELL 0 #t)
+    (AddShortcut MMAIN "F12" DO_SPELL 0 #t)
+    (AddShortcut MMAIN "^\\" DO_REPLACE 0 #t)
+    (AddShortcut MMAIN "F14" DO_REPLACE 0 #t)
+    (AddShortcut MMAIN "M-R" DO_REPLACE 0 #t)
+    (AddShortcut MWHEREIS "^R" DO_REPLACE 0 #f)
+    (AddShortcut MREPLACE "^R" NO_REPLACE_MSG 0 #f)
+    (AddShortcut MWHEREIS "^T" DO_GOTOLINECOLUMN_VOID 0 #f)
+    (AddShortcut MMAIN "^^" DO_MARK 0 #t)
+    (AddShortcut MMAIN "F15" DO_MARK 0 #t)
+    (AddShortcut MMAIN "M-A" DO_MARK 0 #t)
+    (AddShortcut (logior MMAIN MBROWSER) "M-W" DO_RESEARCH 0 #t)
+    (AddShortcut (logior MMAIN MBROWSER) "F16" DO_RESEARCH 0 #t)
+    (AddShortcut MMAIN "M-^" DO_COPY_TEXT 0 #t)
+    (AddShortcut MMAIN "M-6" DO_COPY_TEXT 0 #t)
+    (AddShortcut MMAIN "M-\x7D" DO_INDENT_VOID 0 #t)
+    (AddShortcut MMAIN "M-\x7B" DO_UNINDENT 0 #t)
     (when (ISSET UNDOABLE)
-      (add_to_sclist MMAIN "M-U" DO_UNDO 0 #t)
-      (add_to_sclist MMAIN "M-E" DO_REDO 0 #t))
-    (add_to_sclist MALL "^F" DO_RIGHT 0 #t)
-    (add_to_sclist MALL "^B" DO_LEFT 0 #t)
-    (add_to_sclist MMAIN "^Space" DO_NEXT_WORD_VOID 0 #t)
-    (add_to_sclist MMAIN "M-Space" DO_PREV_WORD_VOID 0 #t)
-    (add_to_sclist MALL "kright" DO_RIGHT 0 #t)
-    (add_to_sclist MALL "kleft" DO_LEFT 0 #t)
-    (add_to_sclist MMAIN "^Q" XON_COMPLAINT 0 #t)
-    (add_to_sclist MMAIN "^S" XOFF_COMPLAINT 0 #t)
-    (add_to_sclist (logior MMAIN MHELP MBROWSER) "^P" DO_UP_VOID 0 #t)
-    (add_to_sclist (logior MMAIN MHELP MBROWSER) "kup" DO_UP_VOID 0 #t)
-    (add_to_sclist (logior MMAIN MHELP MBROWSER) "^N" DO_DOWN_VOID 0 #t)
-    (add_to_sclist (logior MMAIN MHELP MBROWSER) "kdown" DO_DOWN_VOID 0 #t)
-    (add_to_sclist MALL "^A" DO_HOME 0 #t)
-    (add_to_sclist MALL "khome" DO_HOME 0 #t)
-    (add_to_sclist MALL "^E" DO_END 0 #t)
-    (add_to_sclist MALL "kend" DO_END 0 #t)
-    (add_to_sclist (logior MWHEREIS MREPLACE MREPLACE2 MWHEREISFILE)
+      (AddShortcut MMAIN "M-U" DO_UNDO 0 #t)
+      (AddShortcut MMAIN "M-E" DO_REDO 0 #t))
+    (AddShortcut MALL "^F" DO_RIGHT 0 #t)
+    (AddShortcut MALL "^B" DO_LEFT 0 #t)
+    (AddShortcut MMAIN "^Space" DO_NEXT_WORD_VOID 0 #t)
+    (AddShortcut MMAIN "M-Space" DO_PREV_WORD_VOID 0 #t)
+    (AddShortcut MALL "kright" DO_RIGHT 0 #t)
+    (AddShortcut MALL "kleft" DO_LEFT 0 #t)
+    (AddShortcut MMAIN "^Q" XON_COMPLAINT 0 #t)
+    (AddShortcut MMAIN "^S" XOFF_COMPLAINT 0 #t)
+    (AddShortcut (logior MMAIN MHELP MBROWSER) "^P" DO_UP_VOID 0 #t)
+    (AddShortcut (logior MMAIN MHELP MBROWSER) "kup" DO_UP_VOID 0 #t)
+    (AddShortcut (logior MMAIN MHELP MBROWSER) "^N" DO_DOWN_VOID 0 #t)
+    (AddShortcut (logior MMAIN MHELP MBROWSER) "kdown" DO_DOWN_VOID 0 #t)
+    (AddShortcut MALL "^A" DO_HOME 0 #t)
+    (AddShortcut MALL "khome" DO_HOME 0 #t)
+    (AddShortcut MALL "^E" DO_END 0 #t)
+    (AddShortcut MALL "kend" DO_END 0 #t)
+    (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2 MWHEREISFILE)
 		   "^P"  PREV_HISTORY_MSG 0 #f)
-    (add_to_sclist (logior MWHEREIS MREPLACE MREPLACE2 MWHEREISFILE)
+    (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2 MWHEREISFILE)
 		   "kup"  PREV_HISTORY_MSG 0 #f)
-    (add_to_sclist (logior MWHEREIS MREPLACE MREPLACE2 MWHEREISFILE)
+    (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2 MWHEREISFILE)
 		   "^N"  NEXT_HISTORY_MSG 0 #f)
-    (add_to_sclist (logior MWHEREIS MREPLACE MREPLACE2 MWHEREISFILE)
+    (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2 MWHEREISFILE)
 		   "kdown"  NEXT_HISTORY_MSG 0 #f)
-    (add_to_sclist (logior MWHEREIS MREPLACE MREPLACE2)
+    (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2)
 		   "^W" DO_PARA_BEGIN_VOID 0 #t)
-    (add_to_sclist (logior MWHEREIS MREPLACE MREPLACE2)
+    (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2)
 		   "^O" DO_PARA_END_VOID 0 #t)
-    (add_to_sclist MALL "M-(" DO_PARA_BEGIN_VOID 0 #t)
-    (add_to_sclist MALL "M-9" DO_PARA_BEGIN_VOID 0 #t)
-    (add_to_sclist MALL "M-)" DO_PARA_END_VOID 0 #t)
-    (add_to_sclist MALL "M-0" DO_PARA_END_VOID 0 #t)
-    (add_to_sclist MWHEREIS "M-C" CASE_SENS_MSG 0 #f)
-    (add_to_sclist MREPLACE "M-C" CASE_SENS_MSG 0 #f)
-    (add_to_sclist MREPLACE2 "M-C" CASE_SENS_MSG 0 #f)
-    (add_to_sclist (logior MWHEREIS MREPLACE MREPLACE2)
+    (AddShortcut MALL "M-(" DO_PARA_BEGIN_VOID 0 #t)
+    (AddShortcut MALL "M-9" DO_PARA_BEGIN_VOID 0 #t)
+    (AddShortcut MALL "M-)" DO_PARA_END_VOID 0 #t)
+    (AddShortcut MALL "M-0" DO_PARA_END_VOID 0 #t)
+    (AddShortcut MWHEREIS "M-C" CASE_SENS_MSG 0 #f)
+    (AddShortcut MREPLACE "M-C" CASE_SENS_MSG 0 #f)
+    (AddShortcut MREPLACE2 "M-C" CASE_SENS_MSG 0 #f)
+    (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2)
 		   "M-B" BACKWARDS_MSG 0 #f)
-    (add_to_sclist (logior MWHEREIS MREPLACE MREPLACE2)
+    (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2)
 		   "M-R" REGEXP_MSG 0 #f)
 
-    (add_to_sclist MMAIN "M-\\" DO_FIRST_LINE 0 #t)
-    (add_to_sclist MMAIN "M- " DO_FIRST_LINE 0 #t)
-    (add_to_sclist MMAIN "M-/" DO_LAST_LINE 0 #t)
-    (add_to_sclist MMAIN "M-?" DO_LAST_LINE 0 #t)
-    (add_to_sclist (logior MWHEREIS MREPLACE MREPLACE2 MGOTOLINE MHELP)
+    (AddShortcut MMAIN "M-\\" DO_FIRST_LINE 0 #t)
+    (AddShortcut MMAIN "M- " DO_FIRST_LINE 0 #t)
+    (AddShortcut MMAIN "M-/" DO_LAST_LINE 0 #t)
+    (AddShortcut MMAIN "M-?" DO_LAST_LINE 0 #t)
+    (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2 MGOTOLINE MHELP)
 		   "^Y" DO_FIRST_LINE 0 #t)
-    (add_to_sclist (logior MWHEREIS MREPLACE MREPLACE2 MGOTOLINE MHELP)
+    (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2 MGOTOLINE MHELP)
 		   "^V" DO_LAST_LINE 0 #t)
 
-    (add_to_sclist (logior MBROWSER MWHEREISFILE) "M-\\"  FIRST_FILE_MSG 0 #t)
-    (add_to_sclist (logior MBROWSER MWHEREISFILE) "M- "  FIRST_FILE_MSG 0 #t)
-    (add_to_sclist (logior MBROWSER MWHEREISFILE) "M-/"  LAST_FILE_MSG 0 #t)
-    (add_to_sclist (logior MBROWSER MWHEREISFILE) "M-?"  LAST_FILE_MSG 0 #t)
-    (add_to_sclist (logior MBROWSER MWHEREISFILE) "^_"  GOTO_DIR_MSG 0 #t)
-    (add_to_sclist (logior MBROWSER MWHEREISFILE) "F13"  GOTO_DIR_MSG 0 #t)
-    (add_to_sclist (logior MBROWSER MWHEREISFILE) "M-G"  GOTO_DIR_MSG 0 #t)
-    (add_to_sclist MMAIN "M-]" DO_FIND_BRACKET 0 #t)
-    (add_to_sclist MMAIN "M--" DO_SCROLL_UP 0 #t)
-    (add_to_sclist MMAIN "M-_" DO_SCROLL_UP 0 #t)
-    (add_to_sclist MMAIN "M-+" DO_SCROLL_DOWN 0 #t)
-    (add_to_sclist MMAIN "M-=" DO_SCROLL_DOWN 0 #t)
-    (add_to_sclist MMAIN "M-<" SWITCH_TO_PREV_BUFFER_VOID 0 #t)
-    (add_to_sclist MMAIN "M-," SWITCH_TO_PREV_BUFFER_VOID 0 #t)
-    (add_to_sclist MMAIN "M->" SWITCH_TO_NEXT_BUFFER_VOID 0 #t)
-    (add_to_sclist MMAIN "M-." SWITCH_TO_NEXT_BUFFER_VOID 0 #t)
-    (add_to_sclist MALL "M-V" DO_VERBATIM_INPUT 0 #t)
-    (add_to_sclist MALL "M-T" DO_CUT_TILL_END 0 #t)
-    (add_to_sclist MALL "M-J" DO_FULL_JUSTIFY 0 #t)
-    (add_to_sclist MMAIN "M-D" DO_WORDLINECHAR_COUNT 0 #t)
-    (add_to_sclist MMAIN "M-X" DO_TOGGLE NO_HELP #t)
-    (add_to_sclist MMAIN "M-C" DO_TOGGLE CONST_UPDATE #t)
-    (add_to_sclist MMAIN "M-O" DO_TOGGLE MORE_SPACE #t)
-    (add_to_sclist MMAIN "M-S" DO_TOGGLE SMOOTH_SCROLL #t)
-    (add_to_sclist MMAIN "M-P" DO_TOGGLE WHITESPACE_DISPLAY #t)
-    (add_to_sclist MMAIN "M-Y" DO_TOGGLE NO_COLOR_SYNTAX #t)
-    (add_to_sclist MMAIN "M-H" DO_TOGGLE SMART_HOME #t)
-    (add_to_sclist MMAIN "M-I" DO_TOGGLE AUTOINDENT #t)
-    (add_to_sclist MMAIN "M-K" DO_TOGGLE CUT_TO_END #t)
-    (add_to_sclist MMAIN "M-L" DO_TOGGLE NO_WRAP #t)
-    (add_to_sclist MMAIN "M-Q" DO_TOGGLE TABS_TO_SPACES #t)
-    (add_to_sclist MMAIN "M-B" DO_TOGGLE BACKUP_FILE #t)
-    (add_to_sclist MMAIN "M-F" DO_TOGGLE MULTIBUFFER #t)
-    (add_to_sclist MMAIN "M-M" DO_TOGGLE USE_MOUSE #t)
-    (add_to_sclist MMAIN "M-N" DO_TOGGLE NO_CONVERT #t)
-    (add_to_sclist MMAIN "M-Z" DO_TOGGLE SUSPEND #t)
-    (add_to_sclist MMAIN "M-$" DO_TOGGLE SOFTWRAP #t)
-    (add_to_sclist MGOTOLINE "^T"  GOTOTEXT_MSG 0 #f)
-    (add_to_sclist (logior MINSERTFILE MEXTCMD)
+    (AddShortcut (logior MBROWSER MWHEREISFILE) "M-\\"  FIRST_FILE_MSG 0 #t)
+    (AddShortcut (logior MBROWSER MWHEREISFILE) "M- "  FIRST_FILE_MSG 0 #t)
+    (AddShortcut (logior MBROWSER MWHEREISFILE) "M-/"  LAST_FILE_MSG 0 #t)
+    (AddShortcut (logior MBROWSER MWHEREISFILE) "M-?"  LAST_FILE_MSG 0 #t)
+    (AddShortcut (logior MBROWSER MWHEREISFILE) "^_"  GOTO_DIR_MSG 0 #t)
+    (AddShortcut (logior MBROWSER MWHEREISFILE) "F13"  GOTO_DIR_MSG 0 #t)
+    (AddShortcut (logior MBROWSER MWHEREISFILE) "M-G"  GOTO_DIR_MSG 0 #t)
+    (AddShortcut MMAIN "M-]" DO_FIND_BRACKET 0 #t)
+    (AddShortcut MMAIN "M--" DO_SCROLL_UP 0 #t)
+    (AddShortcut MMAIN "M-_" DO_SCROLL_UP 0 #t)
+    (AddShortcut MMAIN "M-+" DO_SCROLL_DOWN 0 #t)
+    (AddShortcut MMAIN "M-=" DO_SCROLL_DOWN 0 #t)
+    (AddShortcut MMAIN "M-<" SWITCH_TO_PREV_BUFFER_VOID 0 #t)
+    (AddShortcut MMAIN "M-," SWITCH_TO_PREV_BUFFER_VOID 0 #t)
+    (AddShortcut MMAIN "M->" SWITCH_TO_NEXT_BUFFER_VOID 0 #t)
+    (AddShortcut MMAIN "M-." SWITCH_TO_NEXT_BUFFER_VOID 0 #t)
+    (AddShortcut MALL "M-V" DO_VERBATIM_INPUT 0 #t)
+    (AddShortcut MALL "M-T" DO_CUT_TILL_END 0 #t)
+    (AddShortcut MALL "M-J" DO_FULL_JUSTIFY 0 #t)
+    (AddShortcut MMAIN "M-D" DO_WORDLINECHAR_COUNT 0 #t)
+    (AddShortcut MMAIN "M-X" DO_TOGGLE NO_HELP #t)
+    (AddShortcut MMAIN "M-C" DO_TOGGLE CONST_UPDATE #t)
+    (AddShortcut MMAIN "M-O" DO_TOGGLE MORE_SPACE #t)
+    (AddShortcut MMAIN "M-S" DO_TOGGLE SMOOTH_SCROLL #t)
+    (AddShortcut MMAIN "M-P" DO_TOGGLE WHITESPACE_DISPLAY #t)
+    (AddShortcut MMAIN "M-Y" DO_TOGGLE NO_COLOR_SYNTAX #t)
+    (AddShortcut MMAIN "M-H" DO_TOGGLE SMART_HOME #t)
+    (AddShortcut MMAIN "M-I" DO_TOGGLE AUTOINDENT #t)
+    (AddShortcut MMAIN "M-K" DO_TOGGLE CUT_TO_END #t)
+    (AddShortcut MMAIN "M-L" DO_TOGGLE NO_WRAP #t)
+    (AddShortcut MMAIN "M-Q" DO_TOGGLE TABS_TO_SPACES #t)
+    (AddShortcut MMAIN "M-B" DO_TOGGLE BACKUP_FILE #t)
+    (AddShortcut MMAIN "M-F" DO_TOGGLE MULTIBUFFER #t)
+    (AddShortcut MMAIN "M-M" DO_TOGGLE USE_MOUSE #t)
+    (AddShortcut MMAIN "M-N" DO_TOGGLE NO_CONVERT #t)
+    (AddShortcut MMAIN "M-Z" DO_TOGGLE SUSPEND #t)
+    (AddShortcut MMAIN "M-$" DO_TOGGLE SOFTWRAP #t)
+    (AddShortcut MGOTOLINE "^T"  GOTOTEXT_MSG 0 #f)
+    (AddShortcut (logior MINSERTFILE MEXTCMD)
 		   "M-F"  NEW_BUFFER_MSG 0 #f)
-    (add_to_sclist (logior MWHEREIS MREPLACE MREPLACE2 MGOTOLINE MWRITEFILE
+    (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2 MGOTOLINE MWRITEFILE
 			   MINSERTFILE MEXTCMD MSPELL MWHEREISFILE MGOTODIR
 			   MYESNO)
 		   "^C" CANCEL_MSG 0 #f)
-    (add_to_sclist MHELP "^X" DO_EXIT 0 #t)
-    (add_to_sclist MHELP "F2" DO_EXIT 0 #t)
-    (add_to_sclist MWRITEFILE "M-D"  DOS_FORMAT_MSG 0 #f)
-    (add_to_sclist MWRITEFILE "M-M"  MAC_FORMAT_MSG 0 #f)
-    (add_to_sclist MWRITEFILE "M-A"  APPEND_MSG 0 #f)
-    (add_to_sclist MWRITEFILE "M-P"  PREPEND_MSG 0 #f)
-    (add_to_sclist MWRITEFILE "M-B"  BACKUP_FILE_MSG 0 #f)
-    (add_to_sclist MWRITEFILE "^T"  TO_FILES_MSG 0 #f)
-    (add_to_sclist MINSERTFILE "^T"  TO_FILES_MSG 0 #f)
-    (add_to_sclist MINSERTFILE "^X"  EXT_CMD_MSG 0 #f)
-    (add_to_sclist MMAIN "^Z" DO_SUSPEND_VOID 0 #f)
-    (add_to_sclist MMAIN "^L" TOTAL_REFRESH 0 #t)
-    (add_to_sclist MALL "^I" DO_TAB 0 #t)
-    ;;(add_to_sclist MALL "^M" DO_ENTER 0 #t)
-    (add_to_sclist MALL "^J" DO_ENTER 0 #t)
-    (add_to_sclist MALL "kenter" DO_ENTER 0 #t)
-    (add_to_sclist MALL "^D" DO_DELETE 0 #t)
-    (add_to_sclist MALL "kdel" DO_DELETE 0 #t)
-    (add_to_sclist MALL "^H" DO_BACKSPACE 0 #t)
-    (add_to_sclist MALL "kbsp" DO_BACKSPACE 0 #t)
+    (AddShortcut MHELP "^X" DO_EXIT 0 #t)
+    (AddShortcut MHELP "F2" DO_EXIT 0 #t)
+    (AddShortcut MWRITEFILE "M-D"  DOS_FORMAT_MSG 0 #f)
+    (AddShortcut MWRITEFILE "M-M"  MAC_FORMAT_MSG 0 #f)
+    (AddShortcut MWRITEFILE "M-A"  APPEND_MSG 0 #f)
+    (AddShortcut MWRITEFILE "M-P"  PREPEND_MSG 0 #f)
+    (AddShortcut MWRITEFILE "M-B"  BACKUP_FILE_MSG 0 #f)
+    (AddShortcut MWRITEFILE "^T"  TO_FILES_MSG 0 #f)
+    (AddShortcut MINSERTFILE "^T"  TO_FILES_MSG 0 #f)
+    (AddShortcut MINSERTFILE "^X"  EXT_CMD_MSG 0 #f)
+    (AddShortcut MMAIN "^Z" DO_SUSPEND_VOID 0 #f)
+    (AddShortcut MMAIN "^L" TOTAL_REFRESH 0 #t)
+    (AddShortcut MALL "^I" DO_TAB 0 #t)
+    ;;(AddShortcut MALL "^M" DO_ENTER 0 #t)
+    (AddShortcut MALL "^J" DO_ENTER 0 #t)
+    (AddShortcut MALL "kenter" DO_ENTER 0 #t)
+    (AddShortcut MALL "^D" DO_DELETE 0 #t)
+    (AddShortcut MALL "kdel" DO_DELETE 0 #t)
+    (AddShortcut MALL "^H" DO_BACKSPACE 0 #t)
+    (AddShortcut MALL "kbsp" DO_BACKSPACE 0 #t)
 
-    (print_sclist)))
+    ;;(PrintScList)
+    ))
 
-(define (sctofunc s)
-  (if (list? allfuncs)
-      (find (lambda (f)
-	      (eq? (subnfunc-scfunc f) (sc-scfunc s)))
-	    allfuncs)
-      #f))
+(define (GetFunctionFromShort s)
+  (find (lambda (f)
+          (eqv? (GetFunctionId f) (GetShortcutFuncId s)))
+        vrgFunctions))
 
 ;; This is the main dispatch
 (define (iso_me_harder_funcmap func)

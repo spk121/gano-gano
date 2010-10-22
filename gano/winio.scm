@@ -21,6 +21,10 @@
 ;;; This file incorporates code from GNU Nano
 
 (define-module (gano winio)
+  #:use-module (gano CBuffer)
+  #:use-module (gano CFunction)
+  #:use-module (gano CShortcut)
+  #:use-module (gano CText)
   #:use-module (gano chars)
   #:use-module (gano flags)
   #:use-module (gano global)
@@ -30,16 +34,16 @@
   #:use-module (ncurses extra)
   #:use-module (rnrs control)
   #:export (
-            statusbar
+            DisplayStatusbar
             onekey
             display_string
-            display_main_list
+            DisplayMainShortCutList
             blank_bottombars
             reset_cursor
-            titlebar
+            DisplayTitlebar
             blank_titlebar
-            edit_refresh
-            get_shortcut
+            RefreshEditor
+            GetShortcutFromMenuKey
             set_modified
             update_line
 	    do_cursorpos
@@ -58,7 +62,7 @@
   (move win y x)
   (addstr win (make-string n #\space)))
 
-(define (blank_statusbar)
+(define (EraseStatusbar)
   (blank_line bottomwin 0 0 (cols)))
 
 
@@ -66,7 +70,7 @@
 ;; Display a message on the statusbar, and set disable_cursorpos to
 ;; TRUE, so that the message won't be immediately overwritten if
 ;; constant cursor position display is on.
-(define (statusbar full-msg)
+(define (DisplayStatusbar full-msg)
   (let ((old_whitespace #f))
     ;; If curses mode is off, just use regular printing
     (cond
@@ -75,7 +79,7 @@
       (newline (current-error-port)))
 
      (else
-      (blank_statusbar)
+      (EraseStatusbar)
       (set! old_whitespace (ISSET WHITESPACE_DISPLAY))
       (UNSET WHITESPACE_DISPLAY)
 
@@ -84,14 +88,14 @@
       (if old_whitespace
           (SET WHITESPACE_DISPLAY))
 
-      (let* ((foo_len (strlenpt full-msg))
+      (let* ((foo_len (CountCellsInString full-msg))
              (start_x (quotient (+ (cols) (- foo_len) -4) 2)))
         (move bottomwin 0 start_x)
-        (attr-on! bottomwin reverse_attr)
+        (attr-on! bottomwin vAttrReverse)
         (addstr bottomwin "[ ")
         (addstr bottomwin full-msg)
         (addstr bottomwin " ]")
-        (attr-off! bottomwin reverse_attr)
+        (attr-off! bottomwin vAttrReverse)
         (noutrefresh bottomwin)
         (reset_cursor)
 
@@ -117,17 +121,17 @@
 ;; keystroke and desc are long.  Note that waddnstr(,,(size_t)-1) adds
 ;; the whole string!  We do not bother padding the entry with blanks.
 (define (onekey keystroke desc len)
-  (let ((keystroke_len (+ 1 (strlenpt keystroke))))
-    (attr-on! bottomwin reverse_attr)
-    (addstr bottomwin keystroke #:n (actual_x keystroke len))
-    (attr-off! bottomwin reverse_attr)
+  (let ((keystroke_len (+ 1 (CountCellsInString keystroke))))
+    (attr-on! bottomwin vAttrReverse)
+    (addstr bottomwin keystroke #:n (GetIndexFromStringCell keystroke len))
+    (attr-off! bottomwin vAttrReverse)
 
     (if (> len keystroke_len)
         (set! len (- len keystroke_len))
         (set! len 0))
     (when (> len 0)
       (addch bottomwin (normal #\space))
-      (addstr bottomwin desc #:n (actual_x desc len)))))
+      (addstr bottomwin desc #:n (GetIndexFromStringCell desc len)))))
 
 ;; Convert buf into a string that can be displayed on screen.  The
 ;; caller wants to display buf starting with column start_col, and
@@ -138,14 +142,14 @@
 ;; line if it's too long.
 (define (display_string buf start_col len dollars)
   ;; If dollars is true, make room for the '$' at the end of the line.
-  (when (and dollars (> len 0) (> (strlenpt buf) (+ start_col len)))
+  (when (and dollars (> len 0) (> (CountCellsInString buf) (+ start_col len)))
     (set! len (- len 1)))
   (cond
    ((= len 0)
     "")
    (else
-    (let* ((start_index (actual_x buf start_col))
-           (column (strnlenpt buf start_index))
+    (let* ((start_index (GetIndexFromStringCell buf start_col))
+           (column (CountCellsInSubstring buf start_index))
            (index 0)
            (converted ""))
       ;; OK.  START_INDEX is the number of characters skipped so far
@@ -165,11 +169,11 @@
         ;; We don't display all of this character since it start to
         ;; the left of the screen.
         (let ((initial_char (string-ref buf start_index)))
-          (if (is_cntrl_char initial_char)
+          (if (IsControlChar? initial_char)
               ;; For control characters like '^C', this means we're
               ;; skipping the '^'
               (when (< column start_col)
-		(set! converted (string-append converted (string (control_rep initial_char))))
+		(set! converted (string-append converted (string (GetDisplayCharFromControlChar initial_char))))
 		(set! index (+ index 1))
 		(set! start_col (+ start_col 1))
 		(set! start_index (+ start_index 1)))
@@ -193,8 +197,8 @@
 	    (if (ISSET WHITESPACE_DISPLAY)
 		(begin
 		  ;; Extract the alternate screen representation of #\tab
-		  (let* ((white-len (list-ref whitespace_len 0))
-			 (white (string-take whitespace white-len)))
+		  (let* ((white-len (list-ref vWhiteSpaceLen 0))
+			 (white (string-take vWhiteSpace white-len)))
 		    (set! converted (string-append converted white))
 		    (set! index white-len)
 		    (set! start_col (+ start_col 1))))
@@ -206,31 +210,31 @@
 		  (set! start_col (+ start_col 1))
 
 		  ;; advance to the next tab column
-		  (let ((n (- tabsizelen (remainder start_col tabsizelen))))
-		    (format (current-error-port) "do tab: index ~a start_col ~a tabsizelen ~a~%" index start_col tabsizelen)
+		  (let ((n (- vTabSize (remainder start_col vTabSize))))
+		    (format (current-error-port) "do tab: index ~a start_col ~a vTabSize ~a~%" index start_col vTabSize)
 		    (set! converted (string-append converted (make-string n #\space)))
 		    (set! start_col (+ start_col n))
 		    (set! index (+ index n))))))
 
 	   ;; Control characters
-	   ((is_cntrl_char c)
+	   ((IsControlChar? c)
 	    ;; First write the hat
 	    (set! converted (string-append converted "^"))
 	    (set! start_col (+ start_col 1))
 	    (set! index (+ index 1))
 	    ;; Then the modified character
-	    (set! converted (string-append converted (string (control_rep c))))
+	    (set! converted (string-append converted (string (GetDisplayCharFromControlChar c))))
 	    (set! index (+ index 1))
-	    (set! start_col (+ start_col (wcwidth (control_rep c)))))
+	    (set! start_col (+ start_col (wcwidth (GetDisplayCharFromControlChar c)))))
 
 	   ;; Space characters
 	   ((eq? c #\space)
 	    (if (ISSET WHITESPACE_DISPLAY)
 		;; Extract the alternate screen representation of #\space
-		(let* ((white-len (list-ref whitespace_len 1))
-		       (white (substring whitespace
-					 (list-ref whitespace_len 0)
-					 (+ (list-ref whitespace_len 0)
+		(let* ((white-len (list-ref vWhiteSpaceLen 1))
+		       (white (substring vWhiteSpace
+					 (list-ref vWhiteSpaceLen 0)
+					 (+ (list-ref vWhiteSpaceLen 0)
 					    white-len))))
 		  (set! converted (string-append converted white))
 		  (set! index white-len)
@@ -253,7 +257,7 @@
       ;; Make sure converted takes up no more than len columns
       (format (current-error-port) "before trunc: str ~s len ~s~%"
 	      converted len)
-      (set! converted (string-take converted (actual_x converted len)))
+      (set! converted (string-take converted (GetIndexFromStringCell converted len)))
       converted))))
 
 ;; Display the shortcut list in S on the last two rows of the bottom
@@ -263,12 +267,12 @@
    ((ISSET NO_HELP)
     #t)
    (else
-    (let* ((slen (min MAIN_VISIBLE (length_of_list menu)))
+    (let* ((slen (min MAIN_VISIBLE (CountEntriesInMenu menu)))
            ;; There will be this many characters per column, except
            ;; for the last two, which will be longer by (COLS %
            ;; colwidth) columns so as to not waste space.  We need at
            ;; least three columns to display anything properly
-	   (xLim (cadr (getmaxyx mainwin)))
+	   (xLim (cadr (getmaxyx vWinMain)))
            (colwidth (quotient xLim (+ (quotient slen 2) (remainder slen 2)))))
       (blank_bottombars)
 
@@ -277,20 +281,20 @@
       (format (current-error-port) "In bottombars, and colwidth == \"~a\" (should be 13)~%" colwidth)
       (let loop ((i 0)
                  (n 0))
-        (if (and (< i (length allfuncs))
+        (if (and (< i (length vrgFunctions))
                  (< i slen))
             (begin
-              (let ((func (list-ref allfuncs n)))
+              (let ((func (list-ref vrgFunctions n)))
 
                 (format (current-error-port) "Checking menu iterm....");
 
-                (if (and (logtest menu (subnfunc-menus func))
-                         (subnfunc-desc func)
-                         (not (string-null? (subnfunc-desc func))))
+                (if (and (logtest menu (GetFunctionMenus func))
+                         (GetFunctionDesc func)
+                         (not (string-null? (GetFunctionDesc func))))
                     (begin
                       (format (current-error-port) "found one! f->menus = ~a, desc = \"~a\"~%"
-                              (subnfunc-menus func) (subnfunc-desc func))
-                      (let ((s (first_sc_for menu (subnfunc-scfunc func))))
+                              (GetFunctionMenus func) (GetFunctionDesc func))
+                      (let ((s (FindFirstShortcut menu (GetFunctionId func))))
                         (begin
                           (if (not s)
                               (begin
@@ -301,8 +305,8 @@
                                 (move bottomwin (+ 1 (remainder i 2))
                                       (* colwidth (quotient i 2)))
                                 (format (current-error-port) "Calling onekey with keystr \"~a\" and desc \"~a\"~%"
-                                        (sc-keystr s) (subnfunc-desc func))
-                                (onekey (sc-keystr s) (subnfunc-desc func)
+                                        (GetShortcutKeyStr s) (GetFunctionDesc func))
+                                (onekey (GetShortcutKeyStr s) (GetFunctionDesc func)
                                         (+ colwidth (remainder (cols) colwidth)))
                                 (loop (+ i 1) (+ n 1)))))))
                     ;; else
@@ -324,26 +328,25 @@
   (cond
    ;; If we haven't opened any files yet, put the cursor in the top
    ;; left corner of the edit window and get out.
-   ((not (openfile?))
-    (move edit 0 0))
+   [(null? vrgBuffers)
+    (move edit 0 0)]
 
-   (else
-    (let ((xpt (xplustabs)))
+   [else
+    (let ((xpt (GetBufferXGoalFromXCur)))
       (if (ISSET SOFTWRAP)
 	  (error "implement me!")
 	  ;; else
 	  (begin
-	    (openfile-current_y-set! (- (openfile-current-lineno)
-					(openfile-edittop-lineno)))
-	    (when (< (openfile-current_y) editwinrows)
-	      (move edit (openfile-current_y)
-		    (- xpt (get_page_start xpt))))))))))
+	    (SetBufferYCur! (- (GetBufferICur) (GetBufferIEditTop)))
+	    (when (< (GetBufferYCur) editwinrows)
+	      (move edit (GetBufferYCur)
+		    (- xpt (get_page_start xpt)))))))]))
 
 
 
 ;; Display the main shortcut list on the last two rows of the bottom
 ;; portion of the window
-(define (display_main_list)
+(define (DisplayMainShortCutList)
   (bottombars MMAIN))
 
 ;; If path is NULL, we're in normal editing mode, so display the
@@ -352,10 +355,12 @@
 ;; NULL, we're in the file browser, and path contains the directory to
 ;; start the file browser in, so display the current version of nano
 ;; and the contents of path on the titlebar
-(define (titlebar path)
+(define (DisplayTitlebar path)
+  (when (string-null? path)
+    (set! path #f))
   (let ((space (cols))      ; The space we have available for display.
 	;; The length of the version message in columns, plus one for padding.
-        (verlen (+ 1 (strlenpt PACKAGE_STRING)))
+        (verlen (+ 1 (CountCellsInString PACKAGE_STRING)))
 	;; "DIR:", "File:", or "New Buffer".  Goes before filename.
         (prefix #f)
 	;; The length of the prefix in columns, plus one for padding.
@@ -372,7 +377,7 @@
         (newfie #f)
         ;; Do we put ellipsis before the path?
         (dots #f))
-    (attr-on! topwin reverse_attr)
+    (attr-on! topwin vAttrReverse)
     (blank_titlebar)
 
     ;; space has to be at least 4: two spaces before the version
@@ -389,7 +394,7 @@
     (when (>= space 4)
       ;; Add a space after the version message, and account for both it and
       ;; the two spaces before it
-      (addstr topwin PACKAGE_STRING #:y 0 #:x 2 #:n (actual_x PACKAGE_STRING verlen))
+      (addstr topwin PACKAGE_STRING #:y 0 #:x 2 #:n (GetIndexFromStringCell PACKAGE_STRING verlen))
       (set! verlen (+ verlen 3))
       ;; Account for the full length of the version message.
       (set! space (- space verlen)))
@@ -399,12 +404,12 @@
       (set! state #f))
 
     (unless path
-      (set! state (if (and (openfile?) (openfile-modified))
+      (set! state (if (IsBufferModified?)
 		      "Modified"
 		      (if (ISSET VIEW_MODE)
 			  "View"
 			  ""))))
-    (set! statelen (strlenpt (if (and (string=? "" state) (not path))
+    (set! statelen (CountCellsInString (if (and (string=? "" state) (not path))
                                  "Modified"
                                  state)))
 
@@ -414,13 +419,13 @@
       (set! statelen (+ 1 statelen)))
 
      (else
-      (if (string-null? (openfile-filename))
+      (if (string-null? (GetBufferFileName))
 	  (begin
 	    (set! prefix "New Buffer")
 	    (set! newfie #t))
 	  ;; else
 	  (set! prefix "File:"))
-      (set! prefixlen (1+ (strnlenpt prefix (- space statelen))))
+      (set! prefixlen (1+ (CountCellsInSubstring prefix (- space statelen))))
 
       ;; If newfie is #f, add a space after prefix
       (when (and (not newfie) (< (+ prefixlen statelen) space))
@@ -429,7 +434,7 @@
       ;; If we're not int he file browser, set path to the current
       ;; filename
       (unless path
-	(set! path (openfile-filename)))
+	(set! path (GetBufferFileName)))
 
       ;; Account for the full lengths of the prefix and state
       (if (>= space (+ prefixlen statelen))
@@ -438,7 +443,7 @@
 	  (set! space 0))
 
       (unless newfie
-	(let ((lenpt (strlenpt path))
+	(let ((lenpt (CountCellsInString path))
 	      (start_col 0))
 
 	  ;; Dont' set dots to true if we have fewer than eight columns
@@ -458,7 +463,7 @@
       ;; "file: ...ename"
       (if dots
 	  (begin
-	    (addstr topwin prefix #:x (1- verlen) #:y 0 #:n (actual_x prefix prefixlen))
+	    (addstr topwin prefix #:x (1- verlen) #:y 0 #:n (GetIndexFromStringCell prefix prefixlen))
 	    (if (not (or (<= space -3) newfie))
 		(begin
 		  (addch topwin (normal #\space))
@@ -466,21 +471,21 @@
 		  (if (not (<= space 0))
 		      (addstr topwin exppath)))))
 	  ;; else
-	  (let ((exppathlen (if newfie 0 (strlenpt exppath))))
+	  (let ((exppathlen (if newfie 0 (CountCellsInString exppath))))
 	    (addstr topwin prefix #:y 0 #:x (+ verlen (quotient (- space exppathlen) 3))
-		    #:n (actual_x prefix prefixlen))
+		    #:n (GetIndexFromStringCell prefix prefixlen))
 	    (unless newfie
 	      (addstr topwin " ")
 	      (addstr topwin exppath))))))
 
     (unless (string-null? state)
       (if (>= statelen (- (cols) 1))
-	  (addstr topwin state #:y 0 #:x 0 #:n (actual_x state (cols)))
+	  (addstr topwin state #:y 0 #:x 0 #:n (GetIndexFromStringCell state (cols)))
 	  ;; else
 	  (addstr topwin state #:y 0 #:x (+ (cols) (- statelen) -1)
-		  #:n (actual_x state statelen))))
+		  #:n (GetIndexFromStringCell state statelen))))
 
-    (attr-off! topwin reverse_attr)
+    (attr-off! topwin vAttrReverse)
     (noutrefresh topwin)
     (reset_cursor)
     (noutrefresh edit)))
@@ -492,31 +497,31 @@
 ;; Refresh the screen without changing the position of lines.  Use
 ;; this if we'ved moved and changed text.
 
-(define (edit_refresh)
+(define (RefreshEditor)
   (compute_maxrows)
-  (let ((cn (openfile-current-lineno))
-        (en (openfile-edittop-lineno)))
+  (let ((cn (GetBufferICur))
+        (en (GetBufferIEditTop)))
     (when (and cn en)
       (when (or (< cn en) (>= cn (+ en maxrows)))
 
-	(format (current-error-port) "edit_refresh(): line = ~a, edittop ~a + maxrows ~a\n"
+	(format (current-error-port) "RefreshEditor(): line = ~a, edittop ~a + maxrows ~a\n"
 		cn en maxrows)
 
 	;; Put the top line of the edit window in range of the current line
 	(edit_update CENTER))
 
-      (let ((index (openfile-edittop_index))
+      (let ((index (GetBufferIEditTop))
 	    (nblanks 0))
 
-	(format (current-error-port) "edit_refresh(): edittop->lineno = ~a\n" en)
+	(format (current-error-port) "RefreshEditor(): edittop->lineno = ~a\n" en)
 
 	(let loop ((index index) (nlines 0))
 	  (if (and (< nlines editwinrows)
-		   (< index (length (openfile-fileage))))
+		   (< index (GetBufferILim)))
 	      (loop (+ index 1)
 		    (+ nlines (update_line index
-					   (if (= index (openfile-current_index))
-					       (openfile-current_x)
+					   (if (= index (GetBufferICur))
+					       (GetBufferXCur)
 					       0))))
 	      ;; else
 	      (set! nblanks nlines)))
@@ -545,20 +550,20 @@
   (let ((goal (if (eq? location CENTER)
 		  (quotient editwinrows 2)
 		  ;; else
-		  (min (openfile-current_y)
+		  (min (GetBufferYCur)
 		       (1- editwinrows))))
-	(index (openfile-current_index)))
+	(index (GetBufferICur)))
 
     (while (and (> goal 0) (> index 0))
       (set! index (- index 1))
       ;; Reduce the goal line to account for wrapped lines
       (when (ISSET SOFTWRAP)
-	(set! goal (- goal (quotient (strlenpt (list-ref (openfile-fileage) index)) (cols))))))
+	(set! goal (- goal (quotient (CountCellsInString (GetBufferLine index)) (cols))))))
 
-    (openfile-edittop_index-set! index)
+    (SetBufferIEditTop! index)
 
     (format (current-error-port) "edit_update(), setting edittop to lineno ~a~%"
-	    (openfile-edittop-lineno))
+	    (GetBufferIEditTop))
 
     (compute_maxrows)
     (set! edit_refresh_needed #t)))
@@ -576,16 +581,16 @@
     (if (ISSET SOFTWRAP)
         ;; Find the screen line number of this line, taking into account
         ;; the fact that some lines could have wrapped
-        (let loop ((buffer-index (openfile-edittop_index))
+        (let loop ((buffer-index (GetBufferIEditTop))
                    (screen-line 0))
-	  (if (and (< buffer-index (length (openfile-fileage)))
+	  (if (and (< buffer-index (GetBufferILim))
 		   (< buffer-index n))
-	      (loop (1+ buffer-index) (quotient (strlenpt (list-ref (openfile-fileage) buffer-index))
+	      (loop (1+ buffer-index) (quotient (CountCellsInString (GetBufferLine index))
 						(cols)))
 	      ;; else
 	      (set! line screen-line)))
         ;;else
-        (set! line (- n (openfile-edittop_index))))
+        (set! line (- n (GetBufferIEditTop))))
 
     (unless (or (< line 0) (>= line editwinrows))
       ;; First, blank out the line.
@@ -597,7 +602,7 @@
     (if (ISSET SOFTWRAP)
 	(set! index 0)
 	;; else
-	(set! index (strnlenpt (filestruct-data (list-ref (openfile-fileage) n)) index)))
+	(set! index (CountCellsInSubstring (GetLineText (GetBufferLine n)) index)))
     (set! page_start (get_page_start index))
 
     ;; Expand the line, replacing tabs with spaces and control chars
@@ -607,10 +612,10 @@
 	    n page_start (cols))
     (format (current-error-port)
 	    "before edit_draw: orig_string = ~s~%"
-	    (filestruct-data (list-ref (openfile-fileage) n)))
+	    (GetLineText (GetBufferLine n)))
     (set!
      converted
-     (display_string (filestruct-data (list-ref (openfile-fileage) n))
+     (display_string (GetLineText (GetBufferLine n))
 		     page_start
 		     (cols)
 		     (not (ISSET SOFTWRAP))))
@@ -626,7 +631,7 @@
 	(begin
 	  (when (> page_start 0)
 	    (addch edit #\$ #:y line #:x 0))
-	  (when (> (strlenpt (filestruct-data (list-ref (openfile-fileage) n)))
+	  (when (> (CountCellsInString (GetLineText (GetBufferLine n)))
 		   (+ page_start (cols)))
 	    (addch edit #\$ #:y line #:x (- (cols) 1))))
 	;; else
@@ -642,8 +647,8 @@
 ;; window, with tabs and control characters replaced by strings of
 ;; regular characters.  start is the column number of the first
 ;; character of this page.  That is, the first character of converted
-;; corresponds to character number actual_x(fileptr->data, start) of the
-;; line.
+;; corresponds to character number
+;; GetIndexFromStringCell(fileptr->data, start) of the line.
 (define (edit_draw fp converted line start)
   ;; Just paint the string in any case (we'll add color or reverse on
   ;; just the text that needs it). */
@@ -662,8 +667,8 @@
     ;; N is the line of the screen
     ;; INDEX is the line  of the file
     (let ((n 0)
-	  (index (openfile-edittop_index))
-	  (eof (length (openfile-fileage))))
+	  (index (GetBufferIEditTop))
+	  (eof (GetBufferILim)))
       (set! maxrows 0)
 
       (while #t
@@ -671,7 +676,7 @@
 		 (< index eof))
 	    (begin
 	      (set! maxrows (+ maxrows 1))
-	      (set! n (+ n (strlenpt (filestruct-data (list-ref (openfile-fileage) index)))))
+	      (set! n (+ n (CountCellsInString (GetLineText (GetBufferLine index)))))
 	      (set! index (+ index 1)))
 	    ;; else
 	    (break)))
@@ -690,7 +695,7 @@
     (set! statusblank (- statusblank 1))
     (when (and (= statusblank 0)
 	       (not (ISSET CONST_UPDATE)))
-      (blank_statusbar)
+      (EraseStatusbar)
       (noutrefresh bottomwin)
       (reset_cursor)
       (noutrefresh edit))))
@@ -704,23 +709,23 @@
 ;; corresponds to a function with a control key, a function key, and a
 ;; meta key sequence will return the control key corresponding to that
 ;; function. */
-(define (get_shortcut menu kbinput meta_key)
+(define (GetShortcutFromMenuKey menu kbinput meta_key)
   (format (current-error-port) "get_shortcut(): kbinput ~s, meta_key ~s: "
 	  kbinput meta_key)
 
-  (let ((shortcut (let loop ((i 0))
-		    (if (< i (length sclist))
-			(let ((s (list-ref sclist i)))
+  (let ([shortcut (let loop ([i 0])
+		    (if (< i (length vrgShortcuts))
+			(let ((s (list-ref vrgShortcuts i)))
 			  ;; (format (current-error-port) "\ttesting key ~a~s~%" (if (sc-meta s) "M-" "")
 			  ;;	  (sc-key s))
-			  (if (and (logand menu (sc-menu s))
-				   (eq? kbinput (sc-key s))
-				   (eq? meta_key (sc-meta s)))
+			  (if (and (logand menu (GetShortcutMenus s))
+				   (eq? kbinput (GetShortcutKey s))
+				   (eq? meta_key (IsShortcutMeta? s)))
 			      s
 			      ;; else
 			      (loop (+ i 1))))
 			;; else
-			#f))))
+			#f))])
     (if shortcut
 	(format (current-error-port) "FOUND ~s~%" shortcut)
 	(format (current-error-port) "no shortcut found~%"))
@@ -730,9 +735,9 @@
 ;; Mark the current file as modified if it isn't already, and then
 ;; update the titlebar to display the file's new status.
 (define (set_modified)
-  (when (not (openfile-modified))
-    (openfile-modified-set! #t)
-    (titlebar #f)))
+  (when (not (IsBufferModified?))
+    (SetBufferModified! #t)
+    (DisplayTitlebar "")))
 
 ;; If constant is TRUE, we display the current cursor position only if
 ;; disable_cursorpos is FALSE.  Otherwise, we display it
@@ -742,24 +747,24 @@
 ;; display the current cursor position next time.
 (define (do_cursorpos constant)
   (unless (and constant disable_cursorpos)
-    (let* ((line-cur (openfile-current-lineno))
-	   (line-max (openfile-filebot-lineno))
+    (let* ((line-cur (GetBufferICur))
+	   (line-max (GetBufferILim))
 	   (line-ratio (if (zero? line-max)
 			   0
 			   (quotient (* 100 line-cur) line-max)))
-	   (col-cur (1+ (xplustabs)))
-	   (col-max (1+ (strlenpt (openfile-current-data))))
+	   (col-cur (1+ (GetBufferXGoalFromXCur)))
+	   (col-max (1+ (CountCellsInString (GetBufferLineTextCur))))
 	   (col-ratio (if (zero? col-max)
 			  0
 			  (quotient (* 100 col-cur) col-max)))
-	   (char-cur (get_totsize (openfile-fileage) (openfile-current_index)))
-	   (char-max (openfile-totsize))
+	   (char-cur (GetBufferCCur))
+	   (char-max (GetBufferCMax))
 	   (char-ratio (if (zero? char-max)
 			   0
 			   (quotient (* 100 char-cur) char-max))))
-      (statusbar (format #f "line ~a/~a (~a%), col ~a/~a (~a%), char ~a/~a (~a%)"
-			 line-cur line-max line-ratio
-			 col-cur col-max col-ratio
-			 char-cur char-max char-ratio))))
+      (DisplayStatusbar (format #f "line ~a/~a (~a%), col ~a/~a (~a%), char ~a/~a (~a%)"
+                                line-cur line-max line-ratio
+                                col-cur col-max col-ratio
+                                char-cur char-max char-ratio))))
 
   (set! disable_cursorpos #f))

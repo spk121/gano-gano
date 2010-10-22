@@ -21,6 +21,9 @@
 ;;; This file incorporates code from GNU Nano
 
 (define-module (gano files)
+  #:use-module (oop goops)
+  #:use-module (oop goops describe)
+  #:use-module (gano CBuffer)
   #:use-module (gano flags)
   #:use-module (gano global)
   #:use-module (gano winio)
@@ -30,91 +33,63 @@
   #:use-module (rnrs control)
   #:use-module (ncurses curses)
   #:export (
-            open_buffer
+            OpenBuffer
             open_file
-            display_buffer
+            DisplayBuffer
 	    InitOperatingDir
-	    init_backup_dir
+	    InitBackupDir
             ))
 
-;; (load "syntax.scm")
-;; Add an entry to the openfile openfilestruct.  This should only be
-;; called from open_buffer().
-(define (make_new_buffer)
-  ;; If there are no entries in openfile, make the first one and move
-  ;; to it
-  (if (not (openfile?))
-      (set-openfile! (make_new_opennode))
-      ;; else
-      ;;  Make a new entry for openfile, splice it in after the current entry,
-      ;;  and move to it
-      (append-openfile! (make_new_opennode)))
-
-  ;; Initialize the new buffer
-  (initialize_buffer))
-
-
-;; Initialize the current entry in the openfile openfilestruct
-(define (initialize_buffer)
-  (openfile-filename-set! "")
-  (initialize_buffer_text)
-  (openfile-current_x-set! 0)
-  (openfile-placewewant-set! 0)
-  (openfile-current_y-set! 0)
-  (openfile-modified-set! #f)
-  (openfile-mark_set-set! #f)
-  (openfile-mark_begin_index-set! #f)
-  (openfile-mark_begin_x-set! 0)
-  (openfile-fmt-set! NIX_FILE)
-  (openfile-current_stat-set! #f)
-  (openfile-undotop-set! #f)
-  (openfile-current_undo-set! #f)
-  (openfile-colorstrings-set! #f))
 
 ;; If it is not "", filename is a file to open.  We make a new buffer
 ;; if necessary, and then open and read the file, if applicable
-(define (open_buffer filename undoable)
-  (let ([new_buffer (or (not (openfile?)) (ISSET MULTIBUFFER))]
+(define (OpenBuffer fileName fUndoable)
+  (Buf!)
+  (let ([fBufferNew (or (null? vrgBuffers) (ISSET MULTIBUFFER))]
         [f #f]
-        [rc 0])       ; -2 means new file. -1 open failure. 0 success.
+        [returnCode 0])       ; -2 means new file. -1 open failure. 0 success.
 
     (cond
-     [(check_operating_dir filename #f)
-      (statusbar (format #f "Can't insert file from outside of ~a" operating_dir))]
+     [(CheckOperatingDir? fileName #f)
+      (DisplayStatusbar (format #f "Can't insert file from outside of ~a" vDirOperating))]
 
      [else
       ;; If the filename isn't blank, open the file.  Otherwise treat
       ;; it as a new file.
-      (set! rc (cond [(not (string-null? filename))
-		      (open_file filename new_buffer f)]
-		     [else
-		      -2]))
+      (set! returnCode (cond [(not (string-null? fileName))
+                              (OpenFile fileName fBufferNew f)]
+                             [else
+                              -2]))
 
       ;; If we're loading into a new buffer, add a new entry to
       ;; openfile.
-      (when new_buffer
-	(make_new_buffer))
+      (when fBufferNew
+	(set! vrgBuffers (list (make <CBuffer>))))
 
+      (write vrgBuffers)
+      (newline)
+      (describe (car vrgBuffers))
+      (newline)
       ;; If we have a file, and we're loading into a new buffer, update
       ;; the filename
-      (when (and (not (= rc -1)) new_buffer)
-	    (openfile-filename-set! (string-copy filename)))
+      (when (and fBufferNew (not (= returnCode -1)))
+        (SetBufferFileName! fileName))
 
       ;; If we have a non-new file, read it in.  The, if the buffer has no
       ;; stat, update the stat, if applicable.
-      (when (> rc 0)
-	    (read_file f rc filename undoable new_buffer))
+      (when (> returnCode 0)
+        (ReadFile f returnCode fileName fUndoable fBufferNew))
 
       ;; If we have a file, and we're loading into a new buffer, move
       ;; back to the beginning of the first line of the buffer.
-      (when (and (not (= rc -1)) new_buffer)
-	    (openfile-current_index-set! 0)
-	    (openfile-current_x-set! 0)
-	    (openfile-placewewant-set! 0))
+      (when (and (not (= returnCode -1)) fBufferNew)
+        (SetBufferICur! 0)
+        (SetBufferXCur! 0)
+        (SetBufferXGoal! 0))
 
       ;; If we're loading into a new buffer, update the colorto account
       ;; for it, if applicable
-      ;; (color_update)
+      ;; (UpdateColor)
       ])))
 
 ;; Open the file (and decide if it exists).  If newfie is TRUE,
@@ -147,21 +122,21 @@
 	    ;; Strange, I could open it for some reason.  I have no
 	    ;; idea what I'm supposed to do now.
 	    ;; FIXME
-	    (statusbar (_ "Reading File"))
+	    (DisplayStatusbar (_ "Reading File"))
 	    0)
 	   (newfie
-	    (statusbar (_ "New File"))
+	    (DisplayStatusbar (_ "New File"))
 	    -2)
 	   (else
-	    (statusbar (format #f (_ "\"~a\" not found") filename))
+	    (DisplayStatusbar (format #f (_ "\"~a\" not found") filename))
 	    (beep)
 	    -1))))
 
        ((member (stat:type fileinfo) '(directory block-special char-special))
 	;; Don't open directories, character files, or block files
 	(if (eq? 'directory (stat:type fileinfo))
-	    (statusbar (format #f (_ "\"~a\" is a directory") filename))
-	    (statusbar (format #f (_ "\"~a\" is a device file") filename)))
+	    (DisplayStatusbar (format #f (_ "\"~a\" is a directory") filename))
+	    (DisplayStatusbar (format #f (_ "\"~a\" is a device file") filename)))
 	(beep)
 	-1)
 
@@ -170,13 +145,13 @@
 	(let ((port (false-if-exception (open-file full_filename "r"))))
 	  (if (not port)
 	      (begin
-		(statusbar (format #f (_ "Error reading ~a") filename))
+		(DisplayStatusbar (format #f (_ "Error reading ~a") filename))
 		;; FIXME: can I have a more detailed error message?
 		(beep)
 		-1)
 	      ;; else
 	      (begin
-		(statusbar (_ "Reading File"))
+		(DisplayStatusbar (_ "Reading File"))
 		port))))))))
 
 ;; Get the full path from a relative path
@@ -270,22 +245,21 @@
     buf)))
 
 ;; update the screen to account for the current buffer
-(define (display_buffer)
-  (titlebar #f)
-
+(define (DisplayBuffer)
+  (DisplayTitlebar "")
   ;; Update the edit window
-  (edit_refresh))
+  (RefreshEditor))
 
-(define (init_backup_dir)
-  (if (not backup_dir)
+(define (InitBackupDir)
+  (if (not vDirBackup)
       #f
       (error "implement me!!!!!")))
 
 (define (InitOperatingDir)
   "Initialize the full_operating_dir based on operating_dir"
-  (if (not vstDirOperating)
+  (if (not vDirOperating)
       #f
       (error "implement me!!!!!!")))
 
-(define (check_operating_dir path allow_tabcomp)
+(define (CheckOperatingDir? path allow_tabcomp)
   #f)

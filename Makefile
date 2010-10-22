@@ -14,8 +14,8 @@ vpath %.scm gano
 
 main_sources = nano.scm
 lib_sources = chars.scm files.scm flags.scm global.scm input.scm	\
-	nano-c.scm nano-h.scm rcfile.scm records.scm		\
-	search.scm text.scm utils.scm winio.scm
+	nano-c.scm nano-h.scm rcfile.scm 	\
+	search.scm text.scm utils.scm winio.scm CBuffer.scm CText.scm CFunction.scm CShortcut.scm
 sources = $(lib_sources) $(main_sources)
 
 objects := $(notdir $(patsubst %.scm,%.go,$(sources)))

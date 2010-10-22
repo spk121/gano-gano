@@ -22,17 +22,16 @@
 
 (define-module (gano rcfile)
   #:use-module (gano flags)
+  #:use-module (gano config)
   #:use-module (gano color)
   #:use-module (rnrs control)
   #:use-module (gano nano-h)
   #:use-module (gano utils)
   #:use-module (gano global)
   #:export (
-	    do_rcfile
+	    LoadRcFile
 	    ))
 
-(define SYSCONFDIR "/usr/local/etc")
-(define RCFILE_NAME ".nanorc")
 ;;  Whether we got any errors while parsing an rcfile.
 (define errors #f)
 ;; If we did, the line number where the last error occurred.
@@ -56,10 +55,10 @@
 
 ;; The main rcfile function.  It tried to open the system-wide rcfile, followed
 ;; by the current user's rcfile.
-(define (do_rcfile)
+(define (LoadRcFile)
   "Parse the system-wide rcfile, followed by the current user's rcfile"
-  (let* ((nanorc (string-append SYSCONFDIR "/nanorc"))
-	 (fileinfo (false-if-exception (stat nanorc))))
+  (let* ([nanorc (string-append vDirSysConf "/nanorc")]
+	 [fileinfo (false-if-exception (stat nanorc))])
     ;; Don't open directories, character files, or block files
     (if (and fileinfo
 	     (member (stat:type fileinfo)
@@ -83,7 +82,7 @@
   (if (not homedir)
       (rcfile_error (N_ "I can't find my home directory!  Wah!"))
       ;; else
-      (let ((nanorc (string-append homedir "/" RCFILE_NAME))
+      (let ((nanorc (string-append homedir "/.nanorc"))
 	    (fileinfo (false-if-exception (stat nanorc))))
 	;; Don't open directories, character files, or block files
 	(if (and fileinfo

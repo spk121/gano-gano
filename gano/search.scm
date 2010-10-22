@@ -21,28 +21,24 @@
 ;;; This file incorporates code from GNU Nano
 
 (define-module (gano search)
-  #:use-module (gano records)
   #:use-module (gano global)
   #:use-module (srfi srfi-1)
   #:export (
-	    history_init
-	    do_gotolinecolumn
+	    InitHistory
+	    GoToLineColumn
 	    ))
 
-(define (history_init)
+(define (InitHistory)
   "Initialize the search and replace history lists."
-  (set! search_history (list (make_new_node #f)))
-  (filestruct-data-set! (first search_history) "")
-  (set! search_history_index 0)
+  (set! vrgSearchHistory '(""))
+  (set! viSearchHistory 0)
 
-  (set! replace_history (list (make_new_node #f)))
-  (filestruct-data-set! (first replace_history) "")
-  (set! replace_history_index 0))
+  (set! vrgReplaceHistory '(""))
+  (set! viReplaceHistory 0))
 
 ;; Go to the specified line and column, or ask for them if interactive
 ;; is TRUE.  Save the x-coordinate and y-coordinate if save_pos is TRUE.
 ;; Update the screen afterwards if allow_update is TRUE.  Note that both
 ;; the line and column numbers should be one-based. */
-(define (do_gotolinecolumn line column use_answer interactive save_pos
-			   allow_update)
+(define (GoToLineColumn line column use_answer interactive save_pos allow_update)
   (error "implement me!"))

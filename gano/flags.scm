@@ -5,7 +5,7 @@
 (define-module (gano flags)
   #:export (
             ;; global variable
-            flags
+            vFlags
 
             ;; constants
              DONTUSE
@@ -57,7 +57,7 @@
             ))
 
 ;; Our flag containing the states of all the global options
-(define flags '(0 0 0 0))
+(define vFlags '(0 0 0 0))
 
 ;; Macros for flags.
 ;; FIXME: replace this with an Alist
@@ -67,23 +67,24 @@
 (define (FLAGMASK flag)
   (ash 1 (modulo flag sizeof-unsigned)))
 (define (FLAGS flag)
-  (list-ref flags (FLAGOFF flag)))
+  (list-ref vFlags (FLAGOFF flag)))
 (define (SET flag)
-  (list-set! flags (FLAGOFF flag)
+  "Set Gano flags"
+  (list-set! vFlags (FLAGOFF flag)
 	     (logior (FLAGS flag)
 		     (FLAGMASK flag))))
 (define (UNSET flag)
-  (list-set! flags (FLAGOFF flag)
+  (list-set! vFlags (FLAGOFF flag)
 	     (logand (FLAGS flag)
 		     (lognot (FLAGMASK flag)))))
 (define (ISSET flag)
   (logtest (FLAGS flag) (FLAGMASK flag)))
 (define (TOGGLE flag)
-  (list-set! flags (FLAGOFF flag)
+  (list-set! vFlags (FLAGOFF flag)
 	     (logxor (FLAGS flag)
 		     (FLAGMASK flag))))
 
-;; Enumeration to be used in flags table. See FLAGBIT and FLAGOFF
+;; Enumeration to be used in vFlags table. See FLAGBIT and FLAGOFF
 ;; definitions.
 (define    DONTUSE 1)
 (define    CASE_SENSITIVE 2)

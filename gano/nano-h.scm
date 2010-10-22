@@ -1,6 +1,5 @@
 (define-module (gano nano-h)
   #:use-module ((ncurses curses) #:select (key-f))
-  #:use-module (gano records)
   #:export (
             ;; constants
             NANO_ROOT_UID
@@ -18,11 +17,6 @@
 
             CENTER
             NONE
-
-            CONTROL
-            META
-            FKEY
-            RAW
 
             ADD
             DEL
@@ -232,97 +226,7 @@
             _
             N_
             P_
-            )
-  #:re-export (
-               make-subnfunc
-               subnfunc-desc
-               subnfunc-menus
-               subnfunc-scfunc
-	       subnfunc-viewok
-	       subnfunc-help
-	       subnfunc-blank_after
-	       subnfunc-toggle
-
-               make-sc
-	       sc-execute-set!
-               sc-keystr
-               sc-keystr-set!
-               sc-menu
-               sc-menu-set!
-               sc-scfunc
-               sc-scfunc-set!
-               sc-key
-               sc-key-set!
-	       sc-meta
-	       sc-meta-set!
-               sc-toggle-set!
-               sc-type-set!
-
-	       syntaxtype-nmultis
-
-            filestruct-data
-            filestruct-data-set!
-            filestruct-lineno
-            filestruct-lineno-set!
-            filestruct-multidata
-            filestruct-multidata-set!
-            filestruct-next
-            filestruct-next-set!
-            filestruct-prev
-            filestruct-prev-set!
-            make-filestruct
-
-            openfile?
-	    openfile-count
-            set-openfile!
-            append-openfile!
-            make-openfilestruct
-            make_new_opennode
-            make_new_node
-            initialize_buffer_text
-
-            openfile-colorstrings
-            openfile-colorstrings-set!
-            openfile-current
-            openfile-current-data
-            openfile-current-data-set!
-            openfile-current-lineno
-            openfile-current_index
-            openfile-current_index-set!
-            openfile-current_stat-set!
-            openfile-current_undo-set!
-            openfile-current_x
-            openfile-current_x-set!
-            openfile-current_y
-            openfile-current_y-set!
-            openfile-edittop
-            openfile-edittop-lineno
-            openfile-edittop_index
-            openfile-edittop_index-set!
-            openfile-fileage
-            openfile-fileage-data-set!
-            openfile-fileage-set!
-            openfile-filebot-lineno
-            openfile-filename
-            openfile-filename-set!
-            openfile-fmt-set!
-            openfile-mark_begin_index
-            openfile-mark_begin_index-set!
-            openfile-mark_begin_x
-            openfile-mark_begin_x-set!
-	    openfile-mark_set
-            openfile-mark_set-set!
-            openfile-modified
-            openfile-modified-set!
-            openfile-placewewant
-            openfile-placewewant-set!
-            openfile-syntax
-            openfile-syntax-set!
-	    openfile-syntax-nmultis
-            openfile-totsize
-            openfile-totsize-set!
-            openfile-undotop-set!
-               ))
+            ))
 
 (define NANO_ROOT_UID 0)
 
@@ -378,12 +282,6 @@
 ;; update_type
 (define CENTER 0)
 (define NONE 1)
-
-;; function_type
-(define CONTROL 0)
-(define META 1)
-(define FKEY 2)
-(define RAW 3)
 
 ;; undo_type
 (define ADD 0)
