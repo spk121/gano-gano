@@ -62,7 +62,7 @@
 ;; takes up
 (define (CountCellsInSubstring str n)
   "Number of screen cells occupied by the first N characters of a string"
-  (CountCellsInString (substring str n)))
+  (CountCellsInString (substring str 0 n)))
 
 ;; Returns the number of character cells that the string takes up,
 ;; with tabs and multicolumn character factored in.
@@ -72,6 +72,7 @@
         [x 0])
     (do ([i 0 (1+ i)]) ([>= i iLim])
       (set! x (+ x (CountCellsInChar (string-ref str i) x vTabSize))))
+    (format (current-error-port) "CountCellsInString: str ~s count ~s~%" str x)
     x))
 
 ;; nano scrolls horizontally within a line in chunks.  Return the
@@ -91,9 +92,11 @@
 ;; column position of the cursor.  The value will be no smaller than
 ;; current_x.
 (define (GetBufferXGoalFromXCur)
-  (if (> (GetBufferILim) 0)
-      (CountCellsInSubstring (GetLineText (GetBufferLineCur)) (GetBufferXCur))
-      0))
+  (let* ([st (GetLineText (GetBufferLineCur))]
+         [x (GetBufferXCur)]
+         [goal (CountCellsInSubstring (GetLineText (GetBufferLineCur)) x)])
+    (format (current-error-port) "GetBufferXGoal... st ~s x ~s goal ~s~%" st x goal)
+    goal))
 
 ;; Initialize the global variable containing the user's home
 ;; directory.  We use $HOME, else fall back to the home directory of

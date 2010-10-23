@@ -72,8 +72,9 @@
             maxrows
             currmenu
             vrgShortcuts
-            vfEditRefreshNeeded
+            vfEditRefresh
 	    vMatchBrackets
+
 	    iso_me_harder_funcmap
             ))
 
@@ -176,7 +177,7 @@
 
 ;; Did a command mangle enough of the buffer refresh that we should
 ;; repaing the screen
-(define edit_refresh_needed #f)
+(define vfEditRefresh #f)
 
 ;; The current shortcut list we're using
 (define currshortcut #f)

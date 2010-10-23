@@ -6,6 +6,7 @@
   #:use-module (gano CColor)
   #:use-module (srfi srfi-1)
   #:export (
+            %DescribeBuffer
             Buf
             Buf?
             Buf!
@@ -45,7 +46,6 @@
             SetBufferXCur!
             SetBufferYCur!
             SetBufferXGoal!
-            SetBufferYCur!
 	    ))
 
 (define-class <CBuffer> ()
@@ -93,6 +93,11 @@
 
 (define (Buf?)
   vfBuf)
+
+(define (%DescribeBuffer)
+  (if (Buf?)
+      (describe (Buf))
+      (display "There are no buffers.\n")))
 
 (define (AppendBufferMagicLine)
   (SetBufferLines! (append (GetBufferLines)
@@ -149,7 +154,7 @@
   (slot-ref (Buf) 'm_xMarkBegin))
 
 (define (GetBufferYCur)
-  (slot-ref (Buf) 'm_xCur))
+  (slot-ref (Buf) 'm_yCur))
 
 (define (IncreaseBufferTotalSize! n)
   (SetBufferTotalSize! (+ n (GetBufferTotalSize))))

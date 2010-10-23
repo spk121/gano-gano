@@ -332,16 +332,18 @@
     (move edit 0 0)]
 
    [else
-    (let ((xpt (GetBufferXGoalFromXCur)))
+    (let ([xpt (GetBufferXGoalFromXCur)])
       (if (ISSET SOFTWRAP)
 	  (error "implement me!")
 	  ;; else
 	  (begin
+            (format (current-error-port) "resetCursor: before YCur ~s ICur ~s ITop ~s xpt ~s~%"
+                    (GetBufferYCur) (GetBufferICur) (GetBufferIEditTop) xpt)
 	    (SetBufferYCur! (- (GetBufferICur) (GetBufferIEditTop)))
 	    (when (< (GetBufferYCur) editwinrows)
-	      (move edit (GetBufferYCur)
-		    (- xpt (get_page_start xpt)))))))]))
-
+	      (move edit (GetBufferYCur) (- xpt (get_page_start xpt))))
+            (format (current-error-port) "resetCursor: after YCur ~s ICur ~s ITop ~s~%"
+                    (GetBufferYCur) (GetBufferICur) (GetBufferIEditTop)))))]))
 
 
 ;; Display the main shortcut list on the last two rows of the bottom
@@ -498,46 +500,31 @@
 ;; this if we'ved moved and changed text.
 
 (define (RefreshEditor)
-  (compute_maxrows)
-  (let ((cn (GetBufferICur))
-        (en (GetBufferIEditTop)))
-    (when (and cn en)
-      (when (or (< cn en) (>= cn (+ en maxrows)))
+  (let ([cn (GetBufferICur)]
+        [en (GetBufferIEditTop)]
+        [maxrows (ComputeMaxRows)]
+        [nblanks 0])
+    (when (or (< cn en) (>= cn (+ en maxrows)))
+      ;; Put the top line of the edit window in range of the current line
+      (edit_update CENTER))
 
-	(format (current-error-port) "RefreshEditor(): line = ~a, edittop ~a + maxrows ~a\n"
-		cn en maxrows)
+    (do ([nlines 0 nlines] [index (GetBufferIEditTop) (1+ index)])
+        ([or (>= nlines editwinrows) (>= index (GetBufferILim))])
+      (set! nlines (+ nlines (update_line index (if (= index (GetBufferICur))
+                                                    (GetBufferXCur)
+                                                    0))))
+      (set! nblanks nlines))
+    (do ([nblanks nblanks (1+ nblanks)]) ([>= nblanks editwinrows])
+      (blank_line edit nblanks 0 (cols)))
 
-	;; Put the top line of the edit window in range of the current line
-	(edit_update CENTER))
-
-      (let ((index (GetBufferIEditTop))
-	    (nblanks 0))
-
-	(format (current-error-port) "RefreshEditor(): edittop->lineno = ~a\n" en)
-
-	(let loop ((index index) (nlines 0))
-	  (if (and (< nlines editwinrows)
-		   (< index (GetBufferILim)))
-	      (loop (+ index 1)
-		    (+ nlines (update_line index
-					   (if (= index (GetBufferICur))
-					       (GetBufferXCur)
-					       0))))
-	      ;; else
-	      (set! nblanks nlines)))
-	(let loop2 ((nblanks nblanks))
-	  (if (< nblanks editwinrows)
-	      (begin
-		(blank_line edit nblanks 0 (cols))
-		(loop2 (+ nblanks 1)))))
-	;;
-	(reset_cursor)
-	(noutrefresh edit)))))
+    (reset_cursor)
+    (noutrefresh edit)))
 
 ;; Move edittop to put it in range of current, keeping current in the
 ;; same place.  location determines how we move it: if it's CENTER, we
 ;; center current, and if it's NONE, we put current current_y lines
 ;; below edittop.
+
 (define (edit_update location)
   ;; If location is CENTER, we move edittop up (editwinrows / 2)
   ;; lines.  This puts current at the center of the screen.  If
@@ -547,15 +534,16 @@
   ;; (editwinrows - 1).  This puts current at the same place on the
   ;; screen as before, or at the top or bottom of the screen if
   ;; edittop is beyond either.
-  (let ((goal (if (eq? location CENTER)
+  (let ([goal (if (eq? location CENTER)
 		  (quotient editwinrows 2)
 		  ;; else
 		  (min (GetBufferYCur)
-		       (1- editwinrows))))
-	(index (GetBufferICur)))
+		       (1- editwinrows)))]
+	[index (GetBufferICur)])
 
-    (while (and (> goal 0) (> index 0))
-      (set! index (- index 1))
+    (while (and (> goal 0) (>= index 0))
+      (set! index (1- index))
+      (set! goal (1- goal))
       ;; Reduce the goal line to account for wrapped lines
       (when (ISSET SOFTWRAP)
 	(set! goal (- goal (quotient (CountCellsInString (GetBufferLine index)) (cols))))))
@@ -564,8 +552,6 @@
 
     (format (current-error-port) "edit_update(), setting edittop to lineno ~a~%"
 	    (GetBufferIEditTop))
-
-    (compute_maxrows)
     (set! edit_refresh_needed #t)))
 
 ;; Just update the Nth line of the document if it is on the screen.
@@ -657,20 +643,18 @@
 
 ;; When edittop changes, try and figure out how many lines we really
 ;; have to work with (i.e. set maxrows)
-(define (compute_maxrows)
-  (format #t "compute maxrows~%")
+(define (ComputeMaxRows)
   (cond
-   ((not (ISSET SOFTWRAP))
-    (set! maxrows editwinrows))
+   [(not (ISSET SOFTWRAP))
+    editwinrows]
 
-   (else
+   [else
     ;; N is the line of the screen
     ;; INDEX is the line  of the file
-    (let ((n 0)
-	  (index (GetBufferIEditTop))
-	  (eof (GetBufferILim)))
-      (set! maxrows 0)
-
+    (let ([n 0]
+	  [index (GetBufferIEditTop)]
+	  [eof (GetBufferILim)]
+          [maxrows 0])
       (while #t
 	(if (and (< n editwinrows)
 		 (< index eof))
@@ -685,7 +669,7 @@
 	  (set! maxrows (+ maxrows (- editwinrows n))))
 
       (format (current-error-port) "compute_maxrows(): maxrows ~a\n" maxrows)
-      ))))
+      maxrows)]))
 
 ;; Check if the number of keystrokes needed to blank the statusbar has
 ;; been pressed.  If so, blank the statusbar, unless constant cursor

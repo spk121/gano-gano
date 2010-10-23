@@ -1,3 +1,5 @@
+#!/usr/local/bin/guile -s
+!#
 ;;; nano.scm
 ;;;
 ;;; Copyright (C) 2010 Michael L. Gran
@@ -41,6 +43,7 @@
              (gano cut)
              (gano color)
              (gano config)
+             (gano api)
              (ice-9 getopt-long)
              (ice-9 i18n)
              (ncurses curses)
@@ -404,7 +407,8 @@
             (wordbounds (single-char #\W) (value #f))
             (autoindent (single-char #\i) (value #f))
             (cut (single-char #\k) (value #f))
-            (softwrap (single-char #\$) (value #f)))]
+            (softwrap (single-char #\$) (value #f))
+            (rundebug (single-char #\e) (value #t)))]
          [options (getopt-long args rgOptionsLong)]
          [locale (setlocale LC_ALL "")])
 
@@ -678,8 +682,8 @@
                  (< optind (- argc 1))
                  (eq? (string-ref (list-ref argv optind) 0) #\+))
         (ParseLineColumn (string-drop (list-ref argv optind) 1)
-                           iLineStart
-                           iColStart)
+                         iLineStart
+                         iColStart)
         (set! optind (+ optind 1)))
 
       (when (and (< optind argc)
@@ -707,7 +711,7 @@
                        (eq? iLine 1)
                        (eq? iCol 1))
                   (ParseLineColumn (string-drop (list-ref argv i) 1)
-                                     iLine iCol)
+                                   iLine iCol)
                   ;; else
                   (begin
                     (OpenBuffer (list-ref argv i) #f)
@@ -754,9 +758,14 @@
       (DisplayMainShortCutList)
       (DisplayBuffer)
 
+      ;; Run the debug script
+      (when (option-ref options 'rundebug #f)
+        (primitive-load (option-ref options 'rundebug #f))
+        (endwin)
+        (tcsetattr! vTerminalPort TCSANOW vTermAttr)
+        (exit 0))
+
       (let ((meta_key #f)
-            (func_key #f)
-            (s_or_t #f)
             (ran_func #f)
             (finished #f))
         (while #t
@@ -854,25 +863,19 @@
     (enable_flow_control))
   (disable_signals)
   !#
+
   #f)
-
-
-
 
 ;; Read in a character, interpret it as a shortcut or toggle if
 ;; necessary, and return it.  Set meta_key to TRUE if the character is
-;; a meta sequence, set func_key to TRUE if the character is a
-;; function key, set s_or_t to TRUE if the character is a shortcut or
-;; toggle key, set ran_func to TRUE if we ran a function associated
+;; a meta sequence, set ran_func to TRUE if we ran a function associated
 ;; with a shortcut key, and set finished to TRUE if we're done after
 ;; running or trying to run a function associated with a shortcut key.
 ;; If allow_funcs is FALSE, don't actually run any functions
 ;; associated with shortcut keys.
 (define (do_input allow_funcs)
   (let ((meta_key #f)
-        (func_key #f)
         (input #f)
-        (s_or_t #f)
         (ran_func #f)
         (cut_copy #f)
         (kbinput #f))
@@ -901,8 +904,8 @@
           ;; Check for a shortcut in the main list
           (let* ([s (GetShortcutFromMenuKey MMAIN input meta_key)]
                  ;; If we have a shortcut from the main list, or a
-                 ;; "universal" edit window shortcut, set have_shortcut
-                 ;; to true
+                 ;; "universal" edit window shortcut, set
+                 ;; have_shortcut to true
                  [have_shortcut (not (not s))]
                  [funcId (if s (GetShortcutFuncId s) 0)])
 
@@ -915,19 +918,11 @@
                 (set! input ERR)))
 
             (when allow_funcs
-              ;; If we got a character, and it isn't a shortcut or
-              ;; toggle, it's a normal text character.  Display the
-              ;; warning if we're in view mode, or add the character
-              ;; to the input buffer if we're not.
-
               ;; FIXME: view mode processing
-
-              (format (current-error-port) "valid input ~a~s~%"
-                      (if meta_key "M-" "") input)
 
               ;; If it is a regular character, output it
               (when (and (not have_shortcut) (not (eq? ERR input)))
-                (DoOutput input #f))
+                (DoInsertChar input))
 
               ;; If we got a shortcut or toggle, and it's not the
               ;; shortcut for verbatim input, turn off prepending
@@ -953,115 +948,25 @@
                       (print_view_warning)]
 
                      [else
-                      (if (eq? funcId DO_TOGGLE)
-                          (do_toggle funcId)
-                          ;; else
-                          (begin
-                            (iso_me_harder_funcmap funcId)
-                            #!
-                            (when (and f
-                                       (not (subnfunc-viewok f))
-                                       (openfile-syntax)
-                                       (> (openfile-syntax-nmultis) 0))
-                              (reset_multis (openfile-current) #f))
-                            !#
-                            (when edit_refresh_needed
-                              (RefreshEditor)
-                              (set! edit_refresh_needed #f))))])))))))
+                      (Dispatch funcId)])))))))])
 
+      ;; If we aren't cutting or copying text, blow away the text in the
+      ;; cutbuffer
+      (unless cut_copy
+        (cutbuffer_reset)))))
 
-        ;; If we aren't cutting or copying text, blow away the text in the
-        ;; cutbuffer
-        (unless cut_copy
-          (cutbuffer_reset))
-
-        #t]))))
-
-
+#!
 ;; The user typed the character 'CH'.  Add them to the edit buffer,
 ;; filtering out all ASCII control characters if allow_cntrls is TRUE.
 (define (DoOutput c fAllowControls)
   (format (current-error-port) "DoOutput () ~s ~s~%" c fAllowControls)
-  (let ([orig_lenpt (CountCellsInString (GetBufferLineTextCur))])
-
-    (format (current-error-port) "orig_lenpt ~s~%" orig_lenpt)
-    (cond
-     [(and (not fAllowControls) (IsAsciiControlChar? c))
-      ;; do nothing
-      (format (current-error-port) "Ignoring control character~%")]
-
-     [else
-      ;; Output it:  yeah!
-
-      ;; When a character is added to the last line, we need a new
-      ;; last line.
-      (when (equal? (GetBufferICur) (1- (GetBufferILim)))
-        (AppendBufferMagicLine))
-
-      ;; Insert that char
-      (format (current-error-port) "before current-index ~s~%" (GetBufferICur))
-      (format (current-error-port) "before current-data ~s~%" (GetBufferLineTextCur))
-      (format (current-error-port) "before current-x ~s~%" (GetBufferXCur))
-      (format (current-error-port) "before c ~s~%" c)
-      (format (current-error-port) "before totsize ~s~%" (GetBufferTotalSize))
-
-      (SetBufferLineTextCur!
-       (string-append (substring (GetBufferLineTextCur) 0 (GetBufferXCur))
-                      (string c)
-                      (substring (GetBufferLineTextCur) (GetBufferXCur))))
-      (IncreaseBufferTotalSize! 1)
-      (SetBufferModified! #t)
-
-      ;; (update_undo ADD)
-
-      ;; Note that current_x has not yet been incremented
-      (when (and (IsBufferMarkSet?)
-                 (eq? (GetBufferIMarkBegin) (GetBufferICur))
-                 (< (GetBufferXCur) (GetBufferXMarkBegin)))
-        (IncreaseBufferXMarkBegin! 1))
-
-      (IncreaseBufferXCur! 1)
-      (format (current-error-port) "after current-index ~s~%" (GetBufferICur))
-      (format (current-error-port) "after current-data ~s~%" (GetBufferLineTextCur))
-      (format (current-error-port) "after current-x ~s~%" (GetBufferXCur))
-      (format (current-error-port) "after c ~s~%" c)
-      (format (current-error-port) "after totsize ~s~%" (GetBufferTotalSize))
-
-      ;; If we're wrapping text, we need to call edit_refresh
-      ;;(unless (ISSET NO_WRAP)
-      ;;(when (do_wrap (openfile-current_index) #f)
-      ;; (set! edit_refresh_needed #t)))
-
-      ;; If color syntaxes are available and turned on, call
-      ;; edit_refresh
-      #!
-      (when (and (openfile-colorstrings)
-                 (not (ISSET NO_COLOR_SYNTAX)))
-        (set! edit_refresh_needed #t))
-      !#
-
-      ;; Well we might also need a full refresh if we've changed the
-      ;; line length to be a new multiple of COLS
-      (when (and (ISSET SOFTWRAP)
-                 (not edit_refresh_needed)
-                 (not (= (quotient (CountCellsInString (GetBufferLineTextCur)) (cols))
-                         (quotient orig_lenpt (cols)))))
-        (set! edit_refresh_needed #t))
-
-      (SetBufferXGoal! (GetBufferXGoalFromXCur))
-
-      #!
-      #ifdef ENABLE_COLOR
-      reset_multis(openfile->current, FALSE);
-      #endif
-      !#
-
-      (if edit_refresh_needed
-          (begin
-            (RefreshEditor)
-            (set! edit_refresh_needed #f))
-          ;;
-          (update_line (GetBufferICur) (GetBufferXCur)))])))
+  (cond
+   [(and (not fAllowControls) (IsAsciiControlChar? c))
+    ;; do nothing
+    (format (current-error-port) "Ignoring control character~%")]
+   [else
+    DoInsertChar c]))
+!#
 
 (define (allow_pending_sigwinch allow)
   "If allow is true, block any SIGWINCH signal that we get, so that we
@@ -1078,22 +983,27 @@ so we can deal with them now."
 ;; Handle the global toggle
 (define (do_toggle flag)
   (TOGGLE flag)
-
   (cond
-
-   ((= flag USE_MOUSE)
-    (InitMouse))
-   ((or (= flag MORE_SPACE) (= flag NO_HELP))
+   [(= flag USE_MOUSE)
+    (InitMouse)]
+   [(or (= flag MORE_SPACE) (= flag NO_HELP))
     (InitWindow)
-    (total_refresh))
-   ((= flag SUSPEND)
-    (InitSignal))
-   ((= flag WHITESPACE_DISPLAY)
+    (total_refresh)]
+   [(= flag SUSPEND)
+    (InitSignal)]
+   [(= flag WHITESPACE_DISPLAY)
     (DisplayTitlebar #f)
-    (RefreshEditor))
-   ((= flag NO_COLOR_SYNTAX)
-    (RefreshEditor))
-   ((= flag SOFTWRAP)
-    (total_refresh))))
+    (RefreshEditor)]
+   [(= flag NO_COLOR_SYNTAX)
+    (RefreshEditor)]
+   [(= flag SOFTWRAP)
+    (total_refresh)]))
+
+(define (Dispatch funcId)
+  "Given a function ID, call an API function"
+  (format (current-error-port) "Dispatch: ~s~%" funcId)
+  (format (current-error-port) "~s~%" (with-output-to-string %DescribeBuffer))
+  (cond
+   [(= funcId DO_ENTER) (DoEnter)]))
 
 (Main (command-line))
