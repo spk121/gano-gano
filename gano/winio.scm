@@ -37,16 +37,17 @@
             DisplayStatusbar
             onekey
             display_string
-            DisplayMainShortCutList
-            blank_bottombars
+            DisplayMainShortcutList
+            DisplayShortcutList
             reset_cursor
             DisplayTitlebar
-            blank_titlebar
+            BlankTitlebar
             RefreshEditor
             GetShortcutFromMenuKey
             set_modified
             update_line
 	    do_cursorpos
+            NeedVerticalUpdate?
             ))
 
 (define PACKAGE_STRING "Gano 0.0")
@@ -63,7 +64,7 @@
   (addstr win (make-string n #\space)))
 
 (define (EraseStatusbar)
-  (blank_line bottomwin 0 0 (cols)))
+  (blank_line vWinBottom 0 0 (cols)))
 
 
 
@@ -90,18 +91,18 @@
 
       (let* ((foo_len (CountCellsInString full-msg))
              (start_x (quotient (+ (cols) (- foo_len) -4) 2)))
-        (move bottomwin 0 start_x)
-        (attr-on! bottomwin vAttrReverse)
-        (addstr bottomwin "[ ")
-        (addstr bottomwin full-msg)
-        (addstr bottomwin " ]")
-        (attr-off! bottomwin vAttrReverse)
-        (noutrefresh bottomwin)
+        (move vWinBottom 0 start_x)
+        (attr-on! vWinBottom vAttrReverse)
+        (addstr vWinBottom "[ ")
+        (addstr vWinBottom full-msg)
+        (addstr vWinBottom " ]")
+        (attr-off! vWinBottom vAttrReverse)
+        (noutrefresh vWinBottom)
         (reset_cursor)
 
         ;; Leave the cursor at its position in the edit window, not
         ;; in the statusber
-        (noutrefresh edit)
+        (noutrefresh vWinEdit)
 
         (set! disable_cursorpos #t)
         ;; If we're doing quick statusbar blanking, and constant
@@ -122,16 +123,16 @@
 ;; the whole string!  We do not bother padding the entry with blanks.
 (define (onekey keystroke desc len)
   (let ((keystroke_len (+ 1 (CountCellsInString keystroke))))
-    (attr-on! bottomwin vAttrReverse)
-    (addstr bottomwin keystroke #:n (GetIndexFromStringCell keystroke len))
-    (attr-off! bottomwin vAttrReverse)
+    (attr-on! vWinBottom vAttrReverse)
+    (addstr vWinBottom keystroke #:n (GetIndexFromStringCell keystroke len))
+    (attr-off! vWinBottom vAttrReverse)
 
     (if (> len keystroke_len)
         (set! len (- len keystroke_len))
         (set! len 0))
     (when (> len 0)
-      (addch bottomwin (normal #\space))
-      (addstr bottomwin desc #:n (GetIndexFromStringCell desc len)))))
+      (addch vWinBottom (normal #\space))
+      (addstr vWinBottom desc #:n (GetIndexFromStringCell desc len)))))
 
 ;; Convert buf into a string that can be displayed on screen.  The
 ;; caller wants to display buf starting with column start_col, and
@@ -262,7 +263,7 @@
 
 ;; Display the shortcut list in S on the last two rows of the bottom
 ;; portion of the window
-(define (bottombars menu)
+(define (DisplayShortcutList menu)
   (cond
    ((ISSET NO_HELP)
     #t)
@@ -274,7 +275,7 @@
            ;; least three columns to display anything properly
 	   (xLim (cadr (getmaxyx vWinMain)))
            (colwidth (quotient xLim (+ (quotient slen 2) (remainder slen 2)))))
-      (blank_bottombars)
+      (BlankShortcutList)
 
       (format (current-error-port) "In bottombars, and cols == \"~a\" (should be 80)~%" xLim)
       (format (current-error-port) "In bottombars, and slen == \"~a\" (should be 12)~%" slen)
@@ -302,7 +303,7 @@
                                 (loop i (+ n 1)))
                               ;; else
                               (begin
-                                (move bottomwin (+ 1 (remainder i 2))
+                                (move vWinBottom (+ 1 (remainder i 2))
                                       (* colwidth (quotient i 2)))
                                 (format (current-error-port) "Calling onekey with keystr \"~a\" and desc \"~a\"~%"
                                         (GetShortcutKeyStr s) (GetFunctionDesc func))
@@ -311,16 +312,16 @@
                                 (loop (+ i 1) (+ n 1)))))))
                     ;; else
                     (loop i (+ n 1)))))))
-      (noutrefresh bottomwin)
+      (noutrefresh vWinBottom)
       (reset_cursor)
-      (noutrefresh edit)))))
+      (noutrefresh vWinEdit)))))
 
 ;; If the NO_HELP flag isn't set, blank the last two lines of the bottom
 ;; portion of the window.
-(define (blank_bottombars)
+(define (BlankShortcutList)
   (unless (ISSET NO_HELP)
-    (blank_line bottomwin 1 0 (cols))
-    (blank_line bottomwin 2 0 (cols))))
+    (blank_line vWinBottom 1 0 (cols))
+    (blank_line vWinBottom 2 0 (cols))))
 
 ;; Reset current_y, based on the position of current, and put the cursor
 ;; in the edit window at (current_y, current_x).
@@ -329,7 +330,7 @@
    ;; If we haven't opened any files yet, put the cursor in the top
    ;; left corner of the edit window and get out.
    [(null? vrgBuffers)
-    (move edit 0 0)]
+    (move vWinEdit 0 0)]
 
    [else
     (let ([xpt (GetBufferXGoalFromXCur)])
@@ -341,15 +342,15 @@
                     (GetBufferYCur) (GetBufferICur) (GetBufferIEditTop) xpt)
 	    (SetBufferYCur! (- (GetBufferICur) (GetBufferIEditTop)))
 	    (when (< (GetBufferYCur) editwinrows)
-	      (move edit (GetBufferYCur) (- xpt (get_page_start xpt))))
+	      (move vWinEdit (GetBufferYCur) (- xpt (get_page_start xpt))))
             (format (current-error-port) "resetCursor: after YCur ~s ICur ~s ITop ~s~%"
                     (GetBufferYCur) (GetBufferICur) (GetBufferIEditTop)))))]))
 
 
 ;; Display the main shortcut list on the last two rows of the bottom
 ;; portion of the window
-(define (DisplayMainShortCutList)
-  (bottombars MMAIN))
+(define (DisplayMainShortcutList)
+  (DisplayShortcutList MMAIN))
 
 ;; If path is NULL, we're in normal editing mode, so display the
 ;; current version of nano, the current filename, and whether the
@@ -379,7 +380,7 @@
         (newfie #f)
         ;; Do we put ellipsis before the path?
         (dots #f))
-    (attr-on! topwin vAttrReverse)
+    (attr-on! vWinTop vAttrReverse)
     (blank_titlebar)
 
     ;; space has to be at least 4: two spaces before the version
@@ -396,7 +397,7 @@
     (when (>= space 4)
       ;; Add a space after the version message, and account for both it and
       ;; the two spaces before it
-      (addstr topwin PACKAGE_STRING #:y 0 #:x 2 #:n (GetIndexFromStringCell PACKAGE_STRING verlen))
+      (addstr vWinTop PACKAGE_STRING #:y 0 #:x 2 #:n (GetIndexFromStringCell PACKAGE_STRING verlen))
       (set! verlen (+ verlen 3))
       ;; Account for the full length of the version message.
       (set! space (- space verlen)))
@@ -465,36 +466,36 @@
       ;; "file: ...ename"
       (if dots
 	  (begin
-	    (addstr topwin prefix #:x (1- verlen) #:y 0 #:n (GetIndexFromStringCell prefix prefixlen))
+	    (addstr vWinTop prefix #:x (1- verlen) #:y 0 #:n (GetIndexFromStringCell prefix prefixlen))
 	    (if (not (or (<= space -3) newfie))
 		(begin
-		  (addch topwin (normal #\space))
-		  (addstr topwin "..." #:n (+ space 3))
+		  (addch vWinTop (normal #\space))
+		  (addstr vWinTop "..." #:n (+ space 3))
 		  (if (not (<= space 0))
-		      (addstr topwin exppath)))))
+		      (addstr vWinTop exppath)))))
 	  ;; else
 	  (let ((exppathlen (if newfie 0 (CountCellsInString exppath))))
-	    (addstr topwin prefix #:y 0 #:x (+ verlen (quotient (- space exppathlen) 3))
+	    (addstr vWinTop prefix #:y 0 #:x (+ verlen (quotient (- space exppathlen) 3))
 		    #:n (GetIndexFromStringCell prefix prefixlen))
 	    (unless newfie
-	      (addstr topwin " ")
-	      (addstr topwin exppath))))))
+	      (addstr vWinTop " ")
+	      (addstr vWinTop exppath))))))
 
     (unless (string-null? state)
       (if (>= statelen (- (cols) 1))
-	  (addstr topwin state #:y 0 #:x 0 #:n (GetIndexFromStringCell state (cols)))
+	  (addstr vWinTop state #:y 0 #:x 0 #:n (GetIndexFromStringCell state (cols)))
 	  ;; else
-	  (addstr topwin state #:y 0 #:x (+ (cols) (- statelen) -1)
+	  (addstr vWinTop state #:y 0 #:x (+ (cols) (- statelen) -1)
 		  #:n (GetIndexFromStringCell state statelen))))
 
-    (attr-off! topwin vAttrReverse)
-    (noutrefresh topwin)
+    (attr-off! vWinTop vAttrReverse)
+    (noutrefresh vWinTop)
     (reset_cursor)
-    (noutrefresh edit)))
+    (noutrefresh vWinEdit)))
 
 ;; Blank the first line of the top portion of the window.
 (define (blank_titlebar)
-  (blank_line topwin 0 0 (cols)))
+  (blank_line vWinTop 0 0 (cols)))
 
 ;; Refresh the screen without changing the position of lines.  Use
 ;; this if we'ved moved and changed text.
@@ -515,10 +516,10 @@
                                                     0))))
       (set! nblanks nlines))
     (do ([nblanks nblanks (1+ nblanks)]) ([>= nblanks editwinrows])
-      (blank_line edit nblanks 0 (cols)))
+      (blank_line vWinEdit nblanks 0 (cols)))
 
     (reset_cursor)
-    (noutrefresh edit)))
+    (noutrefresh vWinEdit)))
 
 ;; Move edittop to put it in range of current, keeping current in the
 ;; same place.  location determines how we move it: if it's CENTER, we
@@ -552,7 +553,7 @@
 
     (format (current-error-port) "edit_update(), setting edittop to lineno ~a~%"
 	    (GetBufferIEditTop))
-    (set! edit_refresh_needed #t)))
+    (set! vfEditRefresh #t)))
 
 ;; Just update the Nth line of the document if it is on the screen.
 ;; This is basically a wrapper for edit_draw().  Returns: Number of
@@ -580,7 +581,7 @@
 
     (unless (or (< line 0) (>= line editwinrows))
       ;; First, blank out the line.
-      (blank_line edit line 0 (cols)))
+      (blank_line vWinEdit line 0 (cols)))
 
     ;; Now to decide on the horizontal scroll position.  onvert
     ;; variables that index the line to their equivalent positions in
@@ -616,10 +617,10 @@
     (if (not (ISSET SOFTWRAP))
 	(begin
 	  (when (> page_start 0)
-	    (addch edit #\$ #:y line #:x 0))
+	    (addch vWinEdit (normal #\$) #:y line #:x 0))
 	  (when (> (CountCellsInString (GetLineText (GetBufferLine n)))
 		   (+ page_start (cols)))
-	    (addch edit #\$ #:y line #:x (- (cols) 1))))
+	    (addch vWinEdit (normal #\$) #:y line #:x (- (cols) 1))))
 	;; else
 	(begin
 	  (error "implement me!!!")))
@@ -638,7 +639,7 @@
 (define (edit_draw fp converted line start)
   ;; Just paint the string in any case (we'll add color or reverse on
   ;; just the text that needs it). */
-  (addstr edit converted #:y line #:x 0))
+  (addstr vWinEdit converted #:y line #:x 0))
 
 
 ;; When edittop changes, try and figure out how many lines we really
@@ -680,9 +681,9 @@
     (when (and (= statusblank 0)
 	       (not (ISSET CONST_UPDATE)))
       (EraseStatusbar)
-      (noutrefresh bottomwin)
+      (noutrefresh vWinBottom)
       (reset_cursor)
-      (noutrefresh edit))))
+      (noutrefresh vWinEdit))))
 
 ;; Return the shortcut corresponding to the values of kbinput (the key
 ;; itself), meta_key (whether the key is a meta sequence), and
@@ -752,3 +753,12 @@
                                 char-cur char-max char-ratio))))
 
   (set! disable_cursorpos #f))
+
+
+;; Return #t if a move up or down also requires a full update.  This
+;; is true if the mark is set or if moving vertically would move the
+;; cursor outside of the current edit window.
+(define (NeedVerticalUpdate? xGoal)
+  (or (IsBufferMarkSet?)
+      (not (eqv? (get_page_start xGoal)
+                 (get_page_start (GetBufferXGoal))))))

@@ -132,31 +132,31 @@
     (set! viColFill 0))
 
 
-  (when topwin
-    (delwin topwin))
-  (when edit
-    (delwin edit))
-  (when bottomwin
-    (delwin bottomwin))
+  (when vWinTop
+    (delwin vWinTop))
+  (when vWinEdit
+    (delwin vWinEdit))
+  (when vWinBottom
+    (delwin vWinBottom))
 
-  (set! topwin (newwin (- 2 (no_more_space))
+  (set! vWinTop (newwin (- 2 (no_more_space))
                        (cols)
                        0
                        0))
-  (set! edit (newwin editwinrows
+  (set! vWinEdit (newwin editwinrows
                      (cols)
                      (- 2 (no_more_space))
                      0))
-  (set! bottomwin (newwin (- 3 (no_help))
+  (set! vWinBottom (newwin (- 3 (no_help))
                           (cols)
                           (+ editwinrows 2 (- (no_more_space)))
                           0))
 
   ;; Turn on the keypad for the windows, if necessary
   (unless (ISSET REBIND_KEYPAD)
-    (keypad! topwin #t)
-    (keypad! edit #t)
-    (keypad! bottomwin #t)))
+    (keypad! vWinTop #t)
+    (keypad! vWinEdit #t)
+    (keypad! vWinBottom #t)))
 
 ;; Print one usage string to the screen.  This cuts down on duplicate
 ;; strings to translate, and leaves out the parts that shouldn't be
@@ -350,7 +350,7 @@
 
   ;; Redraw the contents of the windows that need it.
   (EraseStatusbar)
-  (noutrefresh bottomwin)
+  (noutrefresh vWinBottom)
   (total_refresh)
 
   )
@@ -358,10 +358,10 @@
 (define (Main args)
   "Main entry point for the Gano editor"
   (let* ([optchr #f]
-         ;; Line to try and start at
-         [iLineStart 1]
-         ;; Column to try and start at
-         [iColStart 1]
+         ;; Line to try and start at, beginning at 1.
+         [rowStart 1]
+         ;; Column to try and start at, beginning at 1.
+         [colStart 1]
          ;; Was the fill option used?
          [fFillUsed #f]
          ;; The old value of the multibuffer option,
@@ -420,6 +420,25 @@
     (bindtextdomain vPackage vDirLocale)
     (textdomain vPackage)
 
+;;; INITIALIZATION:
+;;; 1. Default parameters: lowest priority
+;;; 2. RC File
+;;; 3. Command line options
+;;; 4. Options based on the name of the executable
+;;; 5. Run Script File: highest priority
+
+
+    ;; Set up the shortcut lists.  Need to to this before the rcfile.
+    (InitShortcuts #f)
+
+    ;; Load the RC file
+    (when (option-ref options 'ignorercfiles #f)
+      (set! fRcFileEnable #f))
+    (when (and (not (char=? #\r (string-ref (first args) 0)))
+               fRcFileEnable)
+      (LoadRcFile))
+
+    ;; Command line options
     (when (option-ref options 'smarthome #f)
       (SET SMART_HOME))
     (when (option-ref options 'backup #f)
@@ -434,8 +453,6 @@
       (SET MULTIBUFFER))
     (when (option-ref options 'historylog #f)
       (SET HISTORYLOG))
-    (when (option-ref options 'ignorercfiles #f)
-      (set! fRcFileEnable #f))
     (when (option-ref options 'rebindkeypad #f)
       (SET REBIND_KEYPAD))
     (when (option-ref options 'nonewlines #f)
@@ -508,6 +525,7 @@
       (SET SUSPEND))
     (when (option-ref options 'softwrap #f)
       (SET SOFTWRAP))
+
     ;; If the executable filename starts with 'r', enable restricted mode
     (when (eq? (string-ref (first (command-line)) 0) #\r)
       (SET RESTRICTED))
@@ -520,76 +538,30 @@
       (UNSET BACKUP_FILE)
       (set! fRcFileEnable #f))
 
-    ;; Set up the shortcut lists.  Need to to this before the rcfile.
-    (InitShortcuts #f)
-
-    ;; We've read through the command line options.  Now back up the
-    ;; flags and values that are set, and read the rcfile(s).  If
-    ;; the values haven't changed afterward, restore the backed-up
-    ;; values.
-    (cond [fRcFileEnable
-           (let ([dirOperatingSav vDirOperating]
-                 [iColWrapSav viColWrap]
-                 [dirBackupSav vDirBackup]
-                 [quoteStrSav vQuoteStr]
-                 [spellerAltSav vSpellerAlt]
-                 [tabSizeSav vTabSize]
-                 [flagsSav (list-copy vFlags)])
-             (set! vDirOperating #f)
-             (set! vDirBackup #f)
-             (set! vQuoteStr #f)
-             (set! vSpellerAlt #f)
-             (LoadRcFile)
-             ;; (format (current-error-port) "After rebinding keys...~%")
-             ;; (PrintScList)
-             (when dirOperatingSav
-               (set! vDirOperating dirOperatingSav))
-             (when fFillUsed
-               (set! viColWrap iColWrapSav))
-             (when dirBackupSav
-               (set! vDirBackup dirBackupSav))
-             (when quoteStrSav
-               (set! vQuoteStr quoteStrSav))
-             (when spellerAltSav
-               (set! vSpellerAlt spellerAltSav))
-             (unless (= -1 tabSizeSav)
-               (set! vTabSize tabSizeSav))
-             (do ([i 0 (1+ i)]) ([= i 4])
-               (list-set! vFlags i (logior (list-ref vFlags i) (list-ref flagsSav i)))))]
-
-          [else
-           (when (eq? 0 (geteuid))
-             (SET NO_WRAP))])
-
-    ;; Overwrite an rcfile "set nowrap" or
-    ;; --disable-wrapping-as-root if a --fill option was
-    ;; received on the command line
-    (when fFillUsed
-      (UNSET NO_WRAP))
+    ;; Usually, we don't wrap when root unless specifically requested
+    (when (and (eq? 0 (geteuid))
+               (not fFillUsed))
+      (SET NO_WRAP))
 
     ;; If we're using bold text instead of reverse video text, set it up now
     (when (ISSET BOLD_TEXT)
       (set! vAttrReverse A_BOLD))
 
     ;; Set up the search/replace history
-
     (InitHistory)
     (when (and fRcFileEnable (ISSET HISTORYLOG))
       (load-history))
 
-    ;; Set up the backup directory (unless we're using
-    ;; restricted mode, in which case backups are disabled,
-    ;; since they would allow reading from or writing to
-    ;; files not specified on the command line).  This
-    ;; entails making sure it exists and is a directory, so
-    ;; that backup files will be saved there.
-
+    ;; Set up the backup directory (unless we're using restricted
+    ;; mode, in which case backups are disabled, since they would
+    ;; allow reading from or writing to files not specified on the
+    ;; command line).  This entails making sure it exists and is a
+    ;; directory, so that backup files will be saved there.
     (unless (ISSET RESTRICTED)
       (InitBackupDir))
 
     ;; Set up the operating directory.  This entains chdir'ing there,
     ;; So that the file reads and writes will all be based there
-
     (InitOperatingDir)
 
     ;; If punct wasn't specified, set its default value
@@ -682,8 +654,8 @@
                  (< optind (- argc 1))
                  (eq? (string-ref (list-ref argv optind) 0) #\+))
         (ParseLineColumn (string-drop (list-ref argv optind) 1)
-                         iLineStart
-                         iColStart)
+                         rowStart
+                         colStart)
         (set! optind (+ optind 1)))
 
       (when (and (< optind argc)
@@ -752,10 +724,10 @@
                  (> (syntaxtype-nmultis (openfile-syntax)) 0))
         (precalc_multicolorinfo))
       !#
-      (when (or (> iLineStart 1) (> iColStart 1))
-        (GoToLineColumn iLineStart iColStart #f #f #f #f))
+      (when (or (> rowStart 1) (> colStart 1))
+        (GoToLineColumn rowStart colStart #f #f #f #f))
 
-      (DisplayMainShortCutList)
+      (DisplayMainShortcutList)
       (DisplayBuffer)
 
       ;; Run the debug script
@@ -771,7 +743,7 @@
         (while #t
           ;; Make sure cursor is in the edit window
           (reset_cursor)
-          (noutrefresh edit)
+          (noutrefresh vWinEdit)
 
           (unless jump_buf_main
             ;; If we haven't already, we're going to set
@@ -792,7 +764,7 @@
           (when (ISSET CONST_UPDATE)
             (do_cursorpos #t))
 
-          (set! currmenu MMAIN)
+          (set! vMenuCur MMAIN)
 
           ;; Read and interpret characters
           (do_input #t)))
@@ -883,7 +855,7 @@
     ;; Read in a character.  get_kbinput returns a qualifier and a key.
     ;; The qualifier is either 'raw or 'meta.  The key is
     ;; either a char or a ncurses keycode.
-    (let ([kbinput (get_kbinput edit)])
+    (let ([kbinput (get_kbinput vWinEdit)])
       (cond
        [(not kbinput)
         ;; no valid input.  We're done
@@ -922,14 +894,14 @@
 
               ;; If it is a regular character, output it
               (when (and (not have_shortcut) (not (eq? ERR input)))
-                (DoInsertChar input))
+                (DoCharInsert input #f))
 
               ;; If we got a shortcut or toggle, and it's not the
               ;; shortcut for verbatim input, turn off prepending
               ;; of wrapped text.
               (when (and have_shortcut
                          (not (eq? funcId DO_VERBATIM_INPUT)))
-                (wrap_reset))
+                (ResetWrap))
 
               ;; Finally, process the shortcuts
               (when have_shortcut
@@ -965,7 +937,7 @@
     ;; do nothing
     (format (current-error-port) "Ignoring control character~%")]
    [else
-    DoInsertChar c]))
+    DoCharInsert c]))
 !#
 
 (define (allow_pending_sigwinch allow)
@@ -1001,9 +973,21 @@ so we can deal with them now."
 
 (define (Dispatch funcId)
   "Given a function ID, call an API function"
-  (format (current-error-port) "Dispatch: ~s~%" funcId)
-  (format (current-error-port) "~s~%" (with-output-to-string %DescribeBuffer))
+  (format (current-error-port) "Dispatch: ~s~%" (GetFuncIdNameFromFuncId funcId))
+  ;;(format (current-error-port) "~s~%" (with-output-to-string %DescribeBuffer))
   (cond
-   [(= funcId DO_ENTER) (DoEnter)]))
+   [(= funcId DO_ENTER) (DoEnter)]
+   [(= funcId TOTAL_REFRESH) (DoTotalRefresh)]
+   [(= funcId DO_FIRST_LINE) (DoLineFirst)]
+   [(= funcId DO_LAST_LINE) (DoLineLast)]
+   [(= funcId DO_SCROLL_UP) (DoScrollUp)]
+   [(= funcId DO_SCROLL_DOWN) (DoScrollDown)]
+   [(= funcId DO_UP_VOID) (DoLinePrev (ISSET SMOOTH_SCROLL))]
+   [(= funcId DO_DOWN_VOID) (DoLineNext (ISSET SMOOTH_SCROLL))]
+   [(= funcId DO_LEFT) (DoCharPrev)]
+   [(= funcId DO_RIGHT) (DoCharNext)]
+   [(= funcId DO_DELETE) (DoCharDelete)]
+   [(= funcId DO_PAGE_UP) (DoPagePrev)]
+   [(= funcId DO_PAGE_DOWN) (DoPageNext)]))
 
 (Main (command-line))

@@ -37,7 +37,7 @@
 	    viSearchHistory
 	    vrgReplaceHistory
             viReplaceHistory
-	    homedir
+	    vDirHome
             PrintScList
             vPunct
             vBrackets
@@ -61,20 +61,20 @@
             last_replace
             vTabSize
             vWinMain
-            topwin
-            edit
-            bottomwin
+            vWinTop
+            vWinEdit
+            vWinBottom
             editwinrows
             InitShortcuts
             vAttrReverse
             CountEntriesInMenu
             vrgFunctions
             maxrows
-            currmenu
+            vMenuCur
             vrgShortcuts
             vfEditRefresh
 	    vMatchBrackets
-
+            GetFuncIdNameFromFuncId
 	    iso_me_harder_funcmap
             ))
 
@@ -103,13 +103,13 @@
 ;; The top portion of the window, where we display the version
 ;; number of nano, the name of the current file, and whether
 ;; the current file has been modified
-(define topwin #f)
+(define vWinTop #f)
 ;; The middle portion of the window, where we display the
 ;; file we're editing
-(define edit #f)
+(define vWinEdit #f)
 ;; The bottom portion of the window, where we display statusbar
 ;; messages, the statusbar primpt, and a list of shortcuts
-(define bottomwin #f)
+(define vWinBottom #f)
 ;; How many rows does the window take up
 (define editwinrows 0)
 ;; How many usable lines are there (due to soft wrapping)
@@ -182,7 +182,7 @@
 ;; The current shortcut list we're using
 (define currshortcut #f)
 ;; The currently loaded menu
-(define currmenu #f)
+(define fMenuCur #f)
 
 ;; The shortcut key struct: a list of sc's
 (define vrgShortcuts '())
@@ -213,7 +213,7 @@
 (define vAttrReverse A_REVERSE)
 
 ;; The user's home directory: from $HOME or /etc/passwd
-(define homedir #f)
+(define vDirHome #f)
 
 ;; Return the number of entries in the shortcut list S for
 ;; a given menu
@@ -242,14 +242,18 @@
 
 ;; Add a string to the new shortcut list implementation.
 (define (AddShortcut menu keyStr funcId toggleId fExecute)
-  (format (current-error-port) "AddShortcut menu ~s keyStr ~s funcId ~s toggleId ~s fExecute ~s~%"
-          menu keyStr funcId toggleId fExecute)
   ;; (format (current-error-port) "AddShortcut shortcut_list ~s~%" vrgShortcuts)
 
   (let* ([sc (CreateShortcut menu keyStr funcId toggleId fExecute)]
          [matchingSc (find (lambda (sc)
                              (DoesShortcutMatchMenuAndFuncId? sc menu funcId))
                            vrgShortcuts)])
+    (format (current-error-port)
+            "AddShortcut menu ~s keyStr ~s funcId ~s toggleId ~s fExecute ~s~%"
+            menu keyStr (GetFuncIdNameFromFuncId funcId) toggleId fExecute)
+    (format (current-error-port)
+            "AddShortcut meta ~s key ~s~%" (DoesShortcutUseMetaKey? sc)
+            (keyname (GetShortcutKey sc)))
     (when matchingSc
       (format (current-error-port) "~s is duplicate shortcut ~s on menu ~s and function ~s~%"
               (GetShortcutKeyStr matchingSc) keyStr menu funcId))
@@ -295,7 +299,7 @@
 (define new_buffer_msg (N_ "New Buffer"))
 (define goto_dir_msg (N_ "Go To Dir"))
 
-(define (InitShortcuts unjustifyP)
+(define (InitShortcuts fUnjustify)
   "Initialize all shortcut lists.  If unjustify is #t, replace the
 the \"Uncut\" key with the \"Unjustify\" command"
   (let ([getHelpMsg (N_ "Get Help")]
@@ -457,7 +461,7 @@ the \"Uncut\" key with the \"Unjustify\" command"
     (AddFunction DO_CUT_TEXT_VOID
 		  MMAIN
 		  (N_ "Cut Text") nano_cut_msg #f NOVIEW)
-    (if unjustifyP
+    (if fUnjustify
 	;; TRANSLATORS: Try to keep this at most 10 characters.
 	(AddFunction DO_UNCUT_TEXT
 		      MMAIN (N_ "UnJustify") "" #f NOVIEW)
@@ -687,7 +691,7 @@ the \"Uncut\" key with the \"Unjustify\" command"
 		  MBROWSER
 		  goto_dir_msg nano_gotodir_msg #f VIEW)
 
-    (set! currmenu MMAIN)
+    (set! vMenuCur MMAIN)
 
     (AddShortcut (logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE
 			   MWRITEFILE MINSERTFILE MEXTCMD MSPELL MBROWSER
@@ -794,7 +798,7 @@ the \"Uncut\" key with the \"Unjustify\" command"
 		   "M-R" REGEXP_MSG 0 #f)
 
     (AddShortcut MMAIN "M-\\" DO_FIRST_LINE 0 #t)
-    (AddShortcut MMAIN "M- " DO_FIRST_LINE 0 #t)
+    (AddShortcut MMAIN "M-|" DO_FIRST_LINE 0 #t)
     (AddShortcut MMAIN "M-/" DO_LAST_LINE 0 #t)
     (AddShortcut MMAIN "M-?" DO_LAST_LINE 0 #t)
     (AddShortcut (logior MWHEREIS MREPLACE MREPLACE2 MGOTOLINE MHELP)
@@ -803,7 +807,7 @@ the \"Uncut\" key with the \"Unjustify\" command"
 		   "^V" DO_LAST_LINE 0 #t)
 
     (AddShortcut (logior MBROWSER MWHEREISFILE) "M-\\"  FIRST_FILE_MSG 0 #t)
-    (AddShortcut (logior MBROWSER MWHEREISFILE) "M- "  FIRST_FILE_MSG 0 #t)
+    (AddShortcut (logior MBROWSER MWHEREISFILE) "M-|"  FIRST_FILE_MSG 0 #t)
     (AddShortcut (logior MBROWSER MWHEREISFILE) "M-/"  LAST_FILE_MSG 0 #t)
     (AddShortcut (logior MBROWSER MWHEREISFILE) "M-?"  LAST_FILE_MSG 0 #t)
     (AddShortcut (logior MBROWSER MWHEREISFILE) "^_"  GOTO_DIR_MSG 0 #t)
@@ -883,3 +887,45 @@ the \"Uncut\" key with the \"Unjustify\" command"
     (do_enter #f)]
    [else
     #f]))
+
+
+(define (GetFuncIdNameFromFuncId funcId)
+  (let ([rgFuncIdNames
+         '(NUL CASE_SENS_MSG BACKWARDS_MSG REGEXP_MSG WHEREIS_NEXT_MSG
+               FIRST_FILE_MSG LAST_FILE_MSG GOTO_DIR_MSG TOTAL_REFRESH DO_HELP_VOID
+               DO_SEARCH DO_PAGE_UP DO_PAGE_DOWN DO_UP_VOID DO_LEFT DO_DOWN_VOID
+               DO_RIGHT DO_ENTER DO_EXIT NEW_BUFFER_MSG EXT_CMD_MSG TO_FILES_MSG
+               DOS_FORMAT_MSG MAC_FORMAT_MSG BACKUP_FILE_MSG PREPEND_MSG APPEND_MSG
+               DO_FIRST_LINE DO_LAST_LINE DO_TOGGLE GOTOTEXT_MSG NO_REPLACE_MSG
+               DO_BACKSPACE DO_DELETE DO_TAB DO_VERBATIM_INPUT
+               SWITCH_TO_NEXT_BUFFER_VOID SWITCH_TO_PREV_BUFFER_VOID DO_END DO_HOME
+               NEXT_HISTORY_MSG PREV_HISTORY_MSG DO_REDO DO_UNDO
+               DO_WORDLINECHAR_COUNT DO_FIND_BRACKET DO_PREV_WORD_VOID
+               DO_SUSPEND_VOID CANCEL_MSG DO_WRITEOUT_VOID DO_INSERTFILE_VOID
+               DO_CUT_TEXT_VOID DO_UNCUT_TEXT DO_CURSORPOS_VOID
+               DO_GOTOLINECOLUMN_VOID DO_REPLACE DO_JUSTIFY_VOID DO_PARA_BEGIN_VOID
+               DO_PARA_END_VOID DO_FULL_JUSTIFY DO_MARK DO_RESEARCH DO_COPY_TEXT
+               DO_INDENT_VOID DO_UNINDENT DO_SCROLL_UP DO_SCROLL_DOWN
+               DO_NEXT_WORD_VOID DO_CUT_TILL_END NANO_GOTODIR_MSG NANO_LASTFILE_MSG
+               NANO_FIRSTFILE_MSG INSERT_FILE_MSG NANO_MULTIBUFFER_MSG
+               NANO_EXECUTE_MSG NANO_BACKUP_MSG NANO_PREPEND_MSG NANO_APPEND_MSG
+               NANO_MAC_MSG NANO_DOS_MSG NANO_TOFILES_MSG NANO_NEXT_HISTORY_MSG
+               NANO_PREV_HISTORY_MSG NANO_REGEXP_MSG NANO_REVERSE_MSG NANO_CASE_MSG
+               NANO_SUSPEND_MSG SUSPEND_MSG NANO_REFRESH_MSG REFRESH_MSG
+               NANO_WORDCOUNT_MSG NANO_FULLJUSTIFY_MSG FULLJSTIFY_MSG XOFF_COMPLAINT
+               XON_COMPLAINT NANO_CUT_TILL_END_MSG NANO_BACKSPACE_MSG NANO_DELETE_MSG
+               NANO_ENTER_MSG NANO_TAB_MSG NANO_VERBATIM_MSG NANO_NEXTFILE_MSG
+               NANO_PREVFILE_MSG NANO_SCROLLDOWN_MSG NANO_SCROLLUP_MSG
+               NANO_BRACKET_MSG NANO_PARAEND_MSG END_OF_PAR_MSG NANO_PARABEGIN_MSG
+               BEG_OF_PAR_MSG NANO_END_MSG NANO_HOME_MSG NANO_NEXTLINE_MSG
+               NANO_PREVLINE_MSG NANO_PREVWORD_MSG NANO_NEXTWORD_MSG NANO_BACK_MSG
+               NANO_FORWARD_MSG NANO_REDO_MSG NANO_UNDO_MSG NANO_UNINDENT_MSG
+               NANO_INDENT_MSG NANO_COPY_MSG NANO_WHEREIS_NEXT_MSG NANO_MARK_MSG
+               NANO_REPLACE_MSG REPLACE_MSG NANO_GOTOLINE_MSG NANO_LASTLINE_MSG
+               NANO_FIRSTLINE_MSG NANO_SPELL_MSG DO_SPELL NANO_CURSORPOS_MSG
+               NANO_UNCUT_MSG GET_HELP_MSG NANO_HELP_MSG NANO_CANCEL_MSG
+               NANO_EXIT_MSG EXIT_MSG NANO_EXITBROWSER_MSG NANO_WRITEOUT_MSG
+               NANO_DISABLED_MSG NANO_INSERT_MSG WHEREIS_MSG NANO_WHEREIS_MSG
+               NANO_PREVPAGE_MSG NANO_NEXTPAGE_MSG NANO_CUT_MSG DO_CUT_TEXT
+               DO_NEXT_WORD DO_PREV_WORD )])
+    (list-ref rgFuncIdNames funcId)))

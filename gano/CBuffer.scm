@@ -26,10 +26,12 @@
             GetBufferLines
             GetBufferTotalSize
             GetBufferXCur
+            GetBufferXGoal
             GetBufferXMarkBegin
             GetBufferYCur
             IncreaseBufferTotalSize!
             IncreaseBufferICur!
+            IncreaseBufferIEditTop!
             IncreaseBufferIMarkBegin!
             IncreaseBufferXMarkBegin!
             IncreaseBufferXCur!
@@ -150,6 +152,9 @@
 (define (GetBufferXCur)
   (slot-ref (Buf) 'm_xCur))
 
+(define (GetBufferXGoal)
+  (slot-ref (Buf) 'm_xGoal))
+
 (define (GetBufferXMarkBegin)
   (slot-ref (Buf) 'm_xMarkBegin))
 
@@ -159,11 +164,15 @@
 (define (IncreaseBufferTotalSize! n)
   (SetBufferTotalSize! (+ n (GetBufferTotalSize))))
 
+(define (IncreaseBufferICur! n)
+  (SetBufferICur! (+ n (GetBufferICur))))
+
+(define (IncreaseBufferIEditTop! n)
+  (SetBufferIEditTop! (+ n (GetBufferIEditTop))))
+
 (define (IncreaseBufferIMarkBegin! n)
   (SetBufferIMarkBegin! (+ n (GetBufferIMarkBegin))))
 
-(define (IncreaseBufferICur! n)
-  (SetBufferICur! (+ n (GetBufferICur))))
 
 (define (IncreaseBufferXMarkBegin! n)
   (SetBufferXMarkBegin! (+ n (GetBufferXMarkBegin))))

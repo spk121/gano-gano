@@ -219,8 +219,8 @@
    ;; In our own tilde directory
    ((and (>= (string-length buf) 2)
 	 (string=? "~/" (string-take buf 2)))
-    (get_homedir)
-    (string-append homedir (string-drop buf 2)))
+    (InitDirHome)
+    (string-append vDirHome (string-drop buf 2)))
 
    ;; In another user's tilde directory
    ((and (>= (string-length buf) 1)

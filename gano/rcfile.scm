@@ -23,88 +23,48 @@
 (define-module (gano rcfile)
   #:use-module (gano flags)
   #:use-module (gano config)
-  #:use-module (gano color)
   #:use-module (rnrs control)
-  #:use-module (gano nano-h)
   #:use-module (gano utils)
   #:use-module (gano global)
   #:export (
 	    LoadRcFile
 	    ))
 
-;;  Whether we got any errors while parsing an rcfile.
-(define errors #f)
-;; If we did, the line number where the last error occurred.
-(define lineno 0)
-(define nanorc #f)
-(define endsyntax #f)
-(define endheader #f)
-(define endcolor #f)
-
-;; We have an error in some part of the rcfile.  Print the error message
-;; on stderr, and then make the user hit Enter to continue starting
-;; nano.
-(define (rcfile_error msg)
-  (when (not (ISSET QUIET))
-    (format (current-error-port) "~%")
-    (when (> lineno 0)
-      (set! errors #t)
-      (format (current-error-port) "Error in ~a on line ~a: " nanorc lineno))
-
-    (format (current-error-port) "~a~%" msg)))
-
 ;; The main rcfile function.  It tried to open the system-wide rcfile, followed
 ;; by the current user's rcfile.
 (define (LoadRcFile)
   "Parse the system-wide rcfile, followed by the current user's rcfile"
-  (let* ([nanorc (string-append vDirSysConf "/nanorc")]
-	 [fileinfo (false-if-exception (stat nanorc))])
-    ;; Don't open directories, character files, or block files
-    (if (and fileinfo
-	     (member (stat:type fileinfo)
-		     '(directory block-special char-special)))
-        ;; Don't open directories, character files, or block files
-	(begin
-	  (if (eq? 'directory (stat:type fileinfo))
-	      (rcfile_error (format #f (_ "\"~a\" is a directory") nanorc))
-	      (rcfile_error (format #f (_ "\"~a\" is a device file") nanorc))))
-	;; else
-	(when (file-exists? nanorc)
-	  (with-input-from-file nanorc (lambda () (parse_rcfile #f))))))
+  (let* ([systemRc (string-append vDirSysConf "/ganorc")])
 
-  ;; We already read the system nanorc, if it's there.  If we're root,
-  ;; and --disable-wrapping-as-root is used, turn wrapping off new
+    (when (IsRegularFile? systemRc)
+      (primitive-load systemRc)))
+
+  ;; We already read the system ganorc, if it's there.  If we're root,
+  ;; and --disable-wrapping-as-root is used, turn wrapping off anew.
   (when (eq? (geteuid) 0)
     (SET NO_WRAP))
 
-  (get_homedir)
+  (InitDirHome)
 
-  (if (not homedir)
-      (rcfile_error (N_ "I can't find my home directory!  Wah!"))
+  (if (not vDirHome)
+      (format (current-error-port) "Can't find home directory.~%")
       ;; else
-      (let ((nanorc (string-append homedir "/.nanorc"))
-	    (fileinfo (false-if-exception (stat nanorc))))
-	;; Don't open directories, character files, or block files
-	(if (and fileinfo
-		 (member (stat:type fileinfo)
-			 '(directory block-special char-special)))
-	    (begin
-	      (if (eq? 'directory (stat:type fileinfo))
-		  (rcfile_error (format #f (_ "\"~a\" is a directory") nanorc))
-		  (rcfile_error (format #f (_ "\"~a\" is a device file") nanorc))))
-	    ;; else
-	    (when (file-exists? nanorc)
-	      (with-input-from-file nanorc (lambda () (parse_rcfile #f)))))))
-  (when (and errors (not (ISSET QUIET)))
-    (set! error #f)
-    (format (current-error-port) (_ "Press Enter to continue starting nano!%"))
-    (read-char (current-input-port)))
+      (let ([ganoRc (string-append vDirHome "/.nanorc")])
+        (when (IsRegularFile? ganoRc)
+          (primitive-load ganoRc)))))
 
-  (set_colorpairs))
-
-
-;; Parse the rcfile, once it has been opened sucessfully.  If
-;; syntax-only is true, only allow the file to contain color syntax
-;; commands: syntax, color, and icolor
-(define (parse_rcfile syntax_only)
-  #t)
+;; Returns #t if FILENAME is a regular file
+(define (IsRegularFile? fileName)
+  (let ([fileInfo (false-if-exception (stat fileName))])
+    ;; Don't open directories, character files, or block files
+    (if (and fileInfo
+             (member (stat:type fileInfo)
+                     '(directory block-special char-special)))
+        ;; Don't open directories, character files, or block files
+        (begin
+          (if (eq? 'directory (stat:type fileInfo))
+              (format (current-error-port) "\"~a\" is a directory" fileName)
+              (format (current-error-port) "\"~a\" is a device file" fileName))
+          #f)
+        ;; else
+        (file-exists? fileName))))

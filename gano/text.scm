@@ -28,70 +28,29 @@
   #:use-module (rnrs control)
   #:use-module (srfi srfi-1)
   #:export (
-	    do_enter
-	    wrap_reset
+	    ResetWrap
+            GetIndentILim
+            UpdateUndo
 	    ))
 
 
 ;; Should we prepend wrapped text to the next line?
-(define prepend_wrap #f)
+(define vfWrapPrepend #f)
 
-;; Someone hits Enter *gasp!*
-(define (do_enter undoing)
-  (format (current-error-port) "do_enter(): ~s~%" undoing)
-  ;;(unless undoing
- ;;	  (add_undo ENTER))
-  (let ([newnode (MakeLine "")]
-	;; Do auto-indenting, like the neolithic Turbo Pascal editor.
-	;; If we are breaking the line in the indentation, the new
-	;; indentation should have only current_x characters, and
-	;; current_x should not change.
-	[extra (if (ISSET AUTOINDENT)
-		   (min (GetBufferXCur)
-			(GetIndentILim (GetBufferLineTextCur)))
-		   0)])
-    (format (current-error-port) "do_enter(): orig_line was ~s, orig x was ~s~%" (GetBufferLineTextCur)
-            (GetBufferXCur))
-    (SetLineText! newnode (string-append (make-string extra #\space)
-                                         (string-copy (GetBufferLineTextCur) (GetBufferXCur))))
+;; Get index of the first character that isn't whitespace indentation
+(define (GetIndentILim str)
+  (string-index str (lambda (c) (not (IsBlankChar? c)))))
 
-    (format (current-error-port) "do_enter(): new node is ~s~%" (GetLineText newnode))
-    (SetBufferLineTextCur! (substring (GetBufferLineTextCur) 0 (GetBufferXCur)))
-    (format (current-error-port) "do_enter(): orig_line is now ~s~%" (GetBufferLineTextCur))
-
-    (IncreaseBufferTotalSize! extra)
-
-    (when (and (IsBufferMarkSet?)
-	       (eq? (GetBufferICur) (GetBufferIMarkBegin))
-	       (< (GetBufferXCur) (GetBufferXMarkBegin)))
-      (IncreaseBufferIMarkBegin! 1)
-      (IncreaseBufferXMarkBegin! (- extra (GetBufferXCur))))
-
-    (SetBufferXCur! extra)
-
-    (SetBufferLines!
-     (append (take (GetBufferLines) (1+ (GetBufferICur)))
-	     (list newnode)
-	     (drop (GetBufferLines) (1+ (GetBufferICur)))))
-
-    ;; (renumber (openfile-current_index))
-    (IncreaseBufferICur! 1)
-
-    (format (current-error-port) "do_enter(): new line is ~s, new x is ~s~%" (GetBufferLineTextCur)
-            (GetBufferXCur))
-
-    (IncreaseBufferTotalSize! 1)
-    ;; (set_modified)
-    (SetBufferXGoal! (GetBufferXGoalFromXCur))
-    ;; (set! edit_refresh_needed #t)
-    ))
-
+;; Unset the prepend_wrap flag.  We need to do this as soon as we do
+;; something other than type text.
+(define (ResetWrap)
+  (set! vfWrapPrepend #f))
 
 ;; Update an undo item, or determine whether a new one is really
 ;; needed and bounce the data to add_undo instead.  The latter
 ;; functionality just feels gimmicky and may just be more hassle than
 ;; it's worth, so it should be axed if needed.
-(define (update_undo action)
+(define (UpdateUndo action)
   (let ((len 0))
     (cond
      ((not (ISSET UNDOABLE))
@@ -99,11 +58,4 @@
      (else
       (error "implement me!")))))
 
-;; Unset the prepend_wrap flag.  We need to do this as soo as we do
-;; something other than type text.
-(define (wrap_reset)
-  (set! prepend_wrap #f))
 
-;; Get index of the first character that isn't whitespace indentation
-(define (GetIndentILim str)
-  (string-index str (lambda (c) (not (IsBlankChar? c)))))

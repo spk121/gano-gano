@@ -119,7 +119,7 @@
       (slot-set! sc 'm_fMeta #f)]
 
      [(and (eq? type RAW)
-           (string-ci=? "kinser" keyStr))
+           (string-ci=? "kinsert" keyStr))
       (slot-set! sc 'm_key KEY_IC)
       (slot-set! sc 'm_fMeta #f)]
 
@@ -130,7 +130,7 @@
 
      [(and (eq? type RAW)
            (string-ci=? "kbsp" keyStr))
-      (slot-set! sc 'm_fMeta KEY_BACKSPACE)
+      (slot-set! sc 'm_key KEY_BACKSPACE)
       (slot-set! sc 'm_fMeta #f)]
 
      [(and (eq? type RAW)
@@ -156,18 +156,23 @@
      [(and (eq? type RAW)
            (string-ci=? "kend" keyStr))
       (slot-set! sc 'm_key KEY_END)
-      (slot-set! sc 'm_fMeta #f)])))
+      (slot-set! sc 'm_fMeta #f)]
+
+     [(and (eq? type RAW)
+           (> (string-length keyStr) 1))
+      (error "bad keyStr ~s~%" keyStr)])))
 
 
 ;; Set type of function based on the string
 (define (GetKeyTypeFromKeyStr str)
-  (let ([firstChar (string-ref str 0)])
+  (let ([firstChar (string-ref str 0)]
+        [len (string-length str)])
     (cond
-     [(char-ci=? #\m firstChar)
+     [(and (> len 2) (char-ci=? #\m firstChar))
       META]
-     [(char=? #\^ firstChar)
+     [(and (> len 1) (char=? #\^ firstChar))
       CONTROL]
-     [(char-ci=? #\f firstChar)
+     [(and (> len 1) (char-ci=? #\f firstChar))
       FKEY]
      [else
       RAW])))

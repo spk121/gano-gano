@@ -35,7 +35,7 @@
             CountCellsInSubstring
             get_page_start
             GetBufferXGoalFromXCur
-	    get_homedir
+	    InitDirHome
 	    ParseLineColumn
             ))
 
@@ -101,12 +101,12 @@
 ;; Initialize the global variable containing the user's home
 ;; directory.  We use $HOME, else fall back to the home directory of
 ;; the effective user ID.
-(define (get_homedir)
-  (when (not homedir)
+(define (InitDirHome)
+  (when (not vDirHome)
     (let ([h (getenv "HOME")]
           [pw (false-if-exception (getpwuid (geteuid)))])
-      (cond [h (set! homedir h)]
-            [pw (set! homedir (passwd:dir pw))]))))
+      (cond [h (set! vDirHome h)]
+            [pw (set! vDirHome (passwd:dir pw))]))))
 
 ;; Append a new empty line to the bottom of the file.  Don't know why this
 ;; is called a magic line.
