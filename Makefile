@@ -12,13 +12,14 @@ MAKEINFO = makeinfo
 
 vpath %.scm gano
 
-main_sources = nano.scm
+main_sources = nano
 lib_sources = chars.scm files.scm flags.scm global.scm input.scm	\
-	nano-c.scm nano-h.scm rcfile.scm 	\
-	search.scm text.scm utils.scm winio.scm CBuffer.scm CText.scm CFunction.scm CShortcut.scm
+	nano-c.scm nano-h.scm rcfile.scm search.scm text.scm utils.scm	\
+	winio.scm CBuffer.scm CText.scm CFunction.scm CShortcut.scm	\
+	api.scm help.scm
 sources = $(lib_sources) $(main_sources)
 
-objects := $(notdir $(patsubst %.scm,%.go,$(sources)))
+objects := nano.go $(notdir $(patsubst %.scm,%.go,$(lib_sources)))
 
 ########################
 # TEST ENVIRONMENT
@@ -45,7 +46,7 @@ install:
 uninstall:
 
 clean:
-	-rm $(objects) *~
+	-rm -f $(objects) *~
 
 distclean:
 
@@ -155,6 +156,10 @@ check: $(tests)
 .PHONY : all install uninstall clean distclean mostlyclean maintainer-clean \
 	info dist check
 ########################
+
+nano.go : nano
+	GUILE_AUTO_COMPILE=0 \
+	guile-tools compile $(GUILE_WARNINGS) -L . --output="$@" "$<"
 
 %.go : %.scm
 	GUILE_AUTO_COMPILE=0 \
