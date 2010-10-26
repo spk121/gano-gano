@@ -34,20 +34,23 @@
   #:use-module (ncurses extra)
   #:use-module (rnrs control)
   #:export (
-            DisplayStatusbar
-            onekey
-            display_string
-            DisplayMainShortcutList
-            DisplayShortcutList
-            reset_cursor
-            DisplayTitlebar
+	    do_cursorpos
+	    BlankEditor
+	    BlankShortcutList
+	    BlankStatusbar
             BlankTitlebar
-            RefreshEditor
+            DisplayShortcutList
+            DisplayStatusbar
+            DisplayTitlebar
             GetShortcutFromMenuKey
+	    InitWindow
+            NeedVerticalUpdate?
+            RefreshEditor
+            display_string
+            onekey
+            reset_cursor
             set_modified
             update_line
-	    do_cursorpos
-            NeedVerticalUpdate?
             ))
 
 (define PACKAGE_STRING "Gano 0.0")
@@ -59,14 +62,86 @@
 (define statusblank 0)
 
 ;; move to x,y and write over a line with N spaces
-(define (blank_line win y x n)
+(define (BlankLine win y x n)
+  "Erase all the text on the given line"
   (move win y x)
   (addstr win (make-string n #\space)))
 
-(define (EraseStatusbar)
-  (blank_line vWinBottom 0 0 (cols)))
+(define (BlankEditor)
+  "Erase all the text on the editor window"
+  (do ([i 0 (1+ i)]) ([= i editwinrows])
+    (BlankLine vWinEdit i 0 (cols))))
 
+;; If the NO_HELP flag isn't set, blank the last two lines of the bottom
+;; portion of the window.
+(define (BlankShortcutList)
+  "Erase all the text in the shortcut list window"
+  (unless (ISSET NO_HELP)
+    (BlankLine vWinBottom 1 0 (cols))
+    (BlankLine vWinBottom 2 0 (cols))))
 
+;; Clear the status bar
+(define (BlankStatusbar)
+  (BlankLine vWinBottom 0 0 (cols)))
+
+;; Blank the first line of the top portion of the window.
+(define (BlankTitlebar)
+  (BlankLine vWinTop 0 0 (cols)))
+
+;; Display the shortcut list in S on the last two rows of the bottom
+;; portion of the window
+(define (DisplayShortcutList menu)
+  (cond
+   ((ISSET NO_HELP)
+    #t)
+   (else
+    (let* ((slen (min MAIN_VISIBLE (CountEntriesInMenu menu)))
+           ;; There will be this many characters per column, except
+           ;; for the last two, which will be longer by (COLS %
+           ;; colwidth) columns so as to not waste space.  We need at
+           ;; least three columns to display anything properly
+	   (xLim (cadr (getmaxyx vWinMain)))
+           (colwidth (quotient xLim (+ (quotient slen 2) (remainder slen 2)))))
+      (BlankShortcutList)
+
+      (format (current-error-port) "In bottombars, and cols == \"~a\" (should be 80)~%" xLim)
+      (format (current-error-port) "In bottombars, and slen == \"~a\" (should be 12)~%" slen)
+      (format (current-error-port) "In bottombars, and colwidth == \"~a\" (should be 13)~%" colwidth)
+      (let loop ((i 0)
+                 (n 0))
+        (if (and (< n (length vrgFunctions))
+                 (< i slen))
+            (begin
+              (let ((func (list-ref vrgFunctions n)))
+
+                (format (current-error-port) "Checking menu item....~%");
+
+                (if (and (logtest menu (GetFunctionMenus func))
+                         (GetFunctionDesc func)
+                         (not (string-null? (GetFunctionDesc func))))
+                    (begin
+                      (format (current-error-port) "found one! f->menus = ~a, desc = \"~a\"~%"
+                              (GetFunctionMenus func) (GetFunctionDesc func))
+                      (let ((s (FindFirstShortcut menu (GetFunctionId func))))
+                        (begin
+                          (if (not s)
+                              (begin
+                                (format (current-error-port) "Whoops, gues not, no shortcut key found fo func!~%")
+                                (loop i (+ n 1)))
+                              ;; else
+                              (begin
+                                (move vWinBottom (+ 1 (remainder i 2))
+                                      (* colwidth (quotient i 2)))
+                                (format (current-error-port) "Calling onekey with keystr \"~a\" and desc \"~a\"~%"
+                                        (GetShortcutKeyStr s) (GetFunctionDesc func))
+                                (onekey (GetShortcutKeyStr s) (GetFunctionDesc func)
+                                        (+ colwidth (remainder (cols) colwidth)))
+                                (loop (+ i 1) (+ n 1)))))))
+                    ;; else
+                    (loop i (+ n 1)))))))
+      (noutrefresh vWinBottom)
+      (reset_cursor)
+      (noutrefresh vWinEdit)))))
 
 ;; Display a message on the statusbar, and set disable_cursorpos to
 ;; TRUE, so that the message won't be immediately overwritten if
@@ -80,7 +155,7 @@
       (newline (current-error-port)))
 
      (else
-      (EraseStatusbar)
+      (BlankStatusbar)
       (set! old_whitespace (ISSET WHITESPACE_DISPLAY))
       (UNSET WHITESPACE_DISPLAY)
 
@@ -115,6 +190,188 @@
                   1
                   26)
               ))))))
+
+;; If path is NULL, we're in normal editing mode, so display the
+;; current version of nano, the current filename, and whether the
+;; current file has been modified on the titlebar.  If path isn't
+;; NULL, we're in the file browser, and path contains the directory to
+;; start the file browser in, so display the current version of nano
+;; and the contents of path on the titlebar
+(define (DisplayTitlebar path)
+  (when (string-null? path)
+    (set! path #f))
+  (let ((space (cols))      ; The space we have available for display.
+	;; The length of the version message in columns, plus one for padding.
+        (verlen (+ 1 (CountCellsInString PACKAGE_STRING)))
+	;; "DIR:", "File:", or "New Buffer".  Goes before filename.
+        (prefix #f)
+	;; The length of the prefix in columns, plus one for padding.
+        (prefixlen #f)
+	;; "Modified", "View", or "".  Shows the state of this  buffer.
+        (state #f)
+	;; The length of the state in columns, or the length of
+	;; "Modified" if the state is blank and we're not in the file
+	;; browser.
+        (statelen 0)
+        ;; The filename, expanded for display
+        (exppath #f)
+        ;; Do we say "new Buffer"
+        (newfie #f)
+        ;; Do we put ellipsis before the path?
+        (dots #f))
+    (attr-on! vWinTop vAttrReverse)
+    (BlankTitlebar)
+
+    ;; space has to be at least 4: two spaces before the version
+    ;; message, at least one character of the version message, and one
+    ;; space after the version message.
+    (if (< space 4)
+        (set! space 0)
+        ;; else
+        ;; Limit verlen to 1/3 the length of the screen incolumns, minus
+        ;; 3 columns for spaces
+        (when (> verlen (- (quotient (cols) 3) 3))
+	  (set! verlen (- (quotient (cols) 3) 3))))
+
+    (when (>= space 4)
+      ;; Add a space after the version message, and account for both it and
+      ;; the two spaces before it
+      (addstr vWinTop PACKAGE_STRING #:y 0 #:x 2 #:n (GetIndexFromStringCell PACKAGE_STRING verlen))
+      (set! verlen (+ verlen 3))
+      ;; Account for the full length of the version message.
+      (set! space (- space verlen)))
+
+    ;; Don't display the state if we're in the file browser. */
+    (when path
+      (set! state #f))
+
+    (unless path
+      (set! state (if (IsBufferModified?)
+		      "Modified"
+		      (if (ISSET VIEW_MODE)
+			  "View"
+			  ""))))
+    (set! statelen (CountCellsInString (if (and (string=? "" state) (not path))
+                                 "Modified"
+                                 state)))
+
+    ;; If possible, add a space before state.
+    (cond
+     ((and (> space 0) (< statelen space))
+      (set! statelen (+ 1 statelen)))
+
+     (else
+      (if (string-null? (GetBufferFileName))
+	  (begin
+	    (set! prefix "New Buffer")
+	    (set! newfie #t))
+	  ;; else
+	  (set! prefix "File:"))
+      (set! prefixlen (1+ (CountCellsInSubstring prefix (- space statelen))))
+
+      ;; If newfie is #f, add a space after prefix
+      (when (and (not newfie) (< (+ prefixlen statelen) space))
+	(set! prefixlen (+ prefixlen 1)))
+
+      ;; If we're not int he file browser, set path to the current
+      ;; filename
+      (unless path
+	(set! path (GetBufferFileName)))
+
+      ;; Account for the full lengths of the prefix and state
+      (if (>= space (+ prefixlen statelen))
+	  (set! space (- state (+ prefixlen statelen)))
+	  ;; else
+	  (set! space 0))
+
+      (unless newfie
+	(let ((lenpt (CountCellsInString path))
+	      (start_col 0))
+
+	  ;; Dont' set dots to true if we have fewer than eight columns
+	  ;; (one col for padding, seven for a name)
+	  (set! dots (and (>= space 8) (>= lenpt space)))
+
+	  (if dots
+	      (begin
+		(set! start_col (+ lenpt (- space) 3))
+		(set! space (- space 3)))
+	      ;; else
+	      (set! start_col 0))
+
+	  (set! exppath (display_string path start_col space #f))))
+
+      ;; If dots is #t, we will display something like
+      ;; "file: ...ename"
+      (if dots
+	  (begin
+	    (addstr vWinTop prefix #:x (1- verlen) #:y 0 #:n (GetIndexFromStringCell prefix prefixlen))
+	    (if (not (or (<= space -3) newfie))
+		(begin
+		  (addch vWinTop (normal #\space))
+		  (addstr vWinTop "..." #:n (+ space 3))
+		  (if (not (<= space 0))
+		      (addstr vWinTop exppath)))))
+	  ;; else
+	  (let ((exppathlen (if newfie 0 (CountCellsInString exppath))))
+	    (addstr vWinTop prefix #:y 0 #:x (+ verlen (quotient (- space exppathlen) 3))
+		    #:n (GetIndexFromStringCell prefix prefixlen))
+	    (unless newfie
+	      (addstr vWinTop " ")
+	      (addstr vWinTop exppath))))))
+
+    (unless (string-null? state)
+      (if (>= statelen (- (cols) 1))
+	  (addstr vWinTop state #:y 0 #:x 0 #:n (GetIndexFromStringCell state (cols)))
+	  ;; else
+	  (addstr vWinTop state #:y 0 #:x (+ (cols) (- statelen) -1)
+		  #:n (GetIndexFromStringCell state statelen))))
+
+    (attr-off! vWinTop vAttrReverse)
+    (noutrefresh vWinTop)
+    (reset_cursor)
+    (noutrefresh vWinEdit)))
+
+;; Initialize the three window portions that nano uses.
+(define (InitWindow)
+  (set! editwinrows (+ (lines) -5 (no_more_space) (no_help)))
+  (when (or (< (cols) MIN_EDITOR_COLS)
+            (< editwinrows MIN_EDITOR_ROWS))
+    (error (_ "Window size is too small for nano...~%")))
+
+  ;; Set up fill column, based on the screen width
+  (set! viColFill viColWrap)
+  (when (<= viColFill 0)
+    (set! viColFill (+ viColFill (cols))))
+  (when (< viColFill 0)
+    (set! viColFill 0))
+
+
+  (when vWinTop
+    (delwin vWinTop))
+  (when vWinEdit
+    (delwin vWinEdit))
+  (when vWinBottom
+    (delwin vWinBottom))
+
+  (set! vWinTop (newwin (- 2 (no_more_space))
+                       (cols)
+                       0
+                       0))
+  (set! vWinEdit (newwin editwinrows
+                     (cols)
+                     (- 2 (no_more_space))
+                     0))
+  (set! vWinBottom (newwin (- 3 (no_help))
+                          (cols)
+                          (+ editwinrows 2 (- (no_more_space)))
+                          0))
+
+  ;; Turn on the keypad for the windows, if necessary
+  (unless (ISSET REBIND_KEYPAD)
+    (keypad! vWinTop #t)
+    (keypad! vWinEdit #t)
+    (keypad! vWinBottom #t)))
 
 ;; Write a shortcut key to the help area at the bottom of the window.
 ;; keystroke is e.g. "^G" and desc is e.g. "Get Help".  We are careful
@@ -261,67 +518,6 @@
       (set! converted (string-take converted (GetIndexFromStringCell converted len)))
       converted))))
 
-;; Display the shortcut list in S on the last two rows of the bottom
-;; portion of the window
-(define (DisplayShortcutList menu)
-  (cond
-   ((ISSET NO_HELP)
-    #t)
-   (else
-    (let* ((slen (min MAIN_VISIBLE (CountEntriesInMenu menu)))
-           ;; There will be this many characters per column, except
-           ;; for the last two, which will be longer by (COLS %
-           ;; colwidth) columns so as to not waste space.  We need at
-           ;; least three columns to display anything properly
-	   (xLim (cadr (getmaxyx vWinMain)))
-           (colwidth (quotient xLim (+ (quotient slen 2) (remainder slen 2)))))
-      (BlankShortcutList)
-
-      (format (current-error-port) "In bottombars, and cols == \"~a\" (should be 80)~%" xLim)
-      (format (current-error-port) "In bottombars, and slen == \"~a\" (should be 12)~%" slen)
-      (format (current-error-port) "In bottombars, and colwidth == \"~a\" (should be 13)~%" colwidth)
-      (let loop ((i 0)
-                 (n 0))
-        (if (and (< i (length vrgFunctions))
-                 (< i slen))
-            (begin
-              (let ((func (list-ref vrgFunctions n)))
-
-                (format (current-error-port) "Checking menu iterm....");
-
-                (if (and (logtest menu (GetFunctionMenus func))
-                         (GetFunctionDesc func)
-                         (not (string-null? (GetFunctionDesc func))))
-                    (begin
-                      (format (current-error-port) "found one! f->menus = ~a, desc = \"~a\"~%"
-                              (GetFunctionMenus func) (GetFunctionDesc func))
-                      (let ((s (FindFirstShortcut menu (GetFunctionId func))))
-                        (begin
-                          (if (not s)
-                              (begin
-                                (format (current-error-port) "Whoops, gues not, no shortcut key found fo func!~%")
-                                (loop i (+ n 1)))
-                              ;; else
-                              (begin
-                                (move vWinBottom (+ 1 (remainder i 2))
-                                      (* colwidth (quotient i 2)))
-                                (format (current-error-port) "Calling onekey with keystr \"~a\" and desc \"~a\"~%"
-                                        (GetShortcutKeyStr s) (GetFunctionDesc func))
-                                (onekey (GetShortcutKeyStr s) (GetFunctionDesc func)
-                                        (+ colwidth (remainder (cols) colwidth)))
-                                (loop (+ i 1) (+ n 1)))))))
-                    ;; else
-                    (loop i (+ n 1)))))))
-      (noutrefresh vWinBottom)
-      (reset_cursor)
-      (noutrefresh vWinEdit)))))
-
-;; If the NO_HELP flag isn't set, blank the last two lines of the bottom
-;; portion of the window.
-(define (BlankShortcutList)
-  (unless (ISSET NO_HELP)
-    (blank_line vWinBottom 1 0 (cols))
-    (blank_line vWinBottom 2 0 (cols))))
 
 ;; Reset current_y, based on the position of current, and put the cursor
 ;; in the edit window at (current_y, current_x).
@@ -347,155 +543,6 @@
                     (GetBufferYCur) (GetBufferICur) (GetBufferIEditTop)))))]))
 
 
-;; Display the main shortcut list on the last two rows of the bottom
-;; portion of the window
-(define (DisplayMainShortcutList)
-  (DisplayShortcutList MMAIN))
-
-;; If path is NULL, we're in normal editing mode, so display the
-;; current version of nano, the current filename, and whether the
-;; current file has been modified on the titlebar.  If path isn't
-;; NULL, we're in the file browser, and path contains the directory to
-;; start the file browser in, so display the current version of nano
-;; and the contents of path on the titlebar
-(define (DisplayTitlebar path)
-  (when (string-null? path)
-    (set! path #f))
-  (let ((space (cols))      ; The space we have available for display.
-	;; The length of the version message in columns, plus one for padding.
-        (verlen (+ 1 (CountCellsInString PACKAGE_STRING)))
-	;; "DIR:", "File:", or "New Buffer".  Goes before filename.
-        (prefix #f)
-	;; The length of the prefix in columns, plus one for padding.
-        (prefixlen #f)
-	;; "Modified", "View", or "".  Shows the state of this  buffer.
-        (state #f)
-	;; The length of the state in columns, or the length of
-	;; "Modified" if the state is blank and we're not in the file
-	;; browser.
-        (statelen 0)
-        ;; The filename, expanded for display
-        (exppath #f)
-        ;; Do we say "new Buffer"
-        (newfie #f)
-        ;; Do we put ellipsis before the path?
-        (dots #f))
-    (attr-on! vWinTop vAttrReverse)
-    (blank_titlebar)
-
-    ;; space has to be at least 4: two spaces before the version
-    ;; message, at least one character of the version message, and one
-    ;; space after the version message.
-    (if (< space 4)
-        (set! space 0)
-        ;; else
-        ;; Limit verlen to 1/3 the length of the screen incolumns, minus
-        ;; 3 columns for spaces
-        (when (> verlen (- (quotient (cols) 3) 3))
-	  (set! verlen (- (quotient (cols) 3) 3))))
-
-    (when (>= space 4)
-      ;; Add a space after the version message, and account for both it and
-      ;; the two spaces before it
-      (addstr vWinTop PACKAGE_STRING #:y 0 #:x 2 #:n (GetIndexFromStringCell PACKAGE_STRING verlen))
-      (set! verlen (+ verlen 3))
-      ;; Account for the full length of the version message.
-      (set! space (- space verlen)))
-
-    ;; Don't display the state if we're in the file browser. */
-    (when path
-      (set! state #f))
-
-    (unless path
-      (set! state (if (IsBufferModified?)
-		      "Modified"
-		      (if (ISSET VIEW_MODE)
-			  "View"
-			  ""))))
-    (set! statelen (CountCellsInString (if (and (string=? "" state) (not path))
-                                 "Modified"
-                                 state)))
-
-    ;; If possible, add a space before state.
-    (cond
-     ((and (> space 0) (< statelen space))
-      (set! statelen (+ 1 statelen)))
-
-     (else
-      (if (string-null? (GetBufferFileName))
-	  (begin
-	    (set! prefix "New Buffer")
-	    (set! newfie #t))
-	  ;; else
-	  (set! prefix "File:"))
-      (set! prefixlen (1+ (CountCellsInSubstring prefix (- space statelen))))
-
-      ;; If newfie is #f, add a space after prefix
-      (when (and (not newfie) (< (+ prefixlen statelen) space))
-	(set! prefixlen (+ prefixlen 1)))
-
-      ;; If we're not int he file browser, set path to the current
-      ;; filename
-      (unless path
-	(set! path (GetBufferFileName)))
-
-      ;; Account for the full lengths of the prefix and state
-      (if (>= space (+ prefixlen statelen))
-	  (set! space (- state (+ prefixlen statelen)))
-	  ;; else
-	  (set! space 0))
-
-      (unless newfie
-	(let ((lenpt (CountCellsInString path))
-	      (start_col 0))
-
-	  ;; Dont' set dots to true if we have fewer than eight columns
-	  ;; (one col for padding, seven for a name)
-	  (set! dots (and (>= space 8) (>= lenpt space)))
-
-	  (if dots
-	      (begin
-		(set! start_col (+ lenpt (- space) 3))
-		(set! space (- space 3)))
-	      ;; else
-	      (set! start_col 0))
-
-	  (set! exppath (display_string path start_col space #f))))
-
-      ;; If dots is #t, we will display something like
-      ;; "file: ...ename"
-      (if dots
-	  (begin
-	    (addstr vWinTop prefix #:x (1- verlen) #:y 0 #:n (GetIndexFromStringCell prefix prefixlen))
-	    (if (not (or (<= space -3) newfie))
-		(begin
-		  (addch vWinTop (normal #\space))
-		  (addstr vWinTop "..." #:n (+ space 3))
-		  (if (not (<= space 0))
-		      (addstr vWinTop exppath)))))
-	  ;; else
-	  (let ((exppathlen (if newfie 0 (CountCellsInString exppath))))
-	    (addstr vWinTop prefix #:y 0 #:x (+ verlen (quotient (- space exppathlen) 3))
-		    #:n (GetIndexFromStringCell prefix prefixlen))
-	    (unless newfie
-	      (addstr vWinTop " ")
-	      (addstr vWinTop exppath))))))
-
-    (unless (string-null? state)
-      (if (>= statelen (- (cols) 1))
-	  (addstr vWinTop state #:y 0 #:x 0 #:n (GetIndexFromStringCell state (cols)))
-	  ;; else
-	  (addstr vWinTop state #:y 0 #:x (+ (cols) (- statelen) -1)
-		  #:n (GetIndexFromStringCell state statelen))))
-
-    (attr-off! vWinTop vAttrReverse)
-    (noutrefresh vWinTop)
-    (reset_cursor)
-    (noutrefresh vWinEdit)))
-
-;; Blank the first line of the top portion of the window.
-(define (blank_titlebar)
-  (blank_line vWinTop 0 0 (cols)))
 
 ;; Refresh the screen without changing the position of lines.  Use
 ;; this if we'ved moved and changed text.
@@ -516,7 +563,7 @@
                                                     0))))
       (set! nblanks nlines))
     (do ([nblanks nblanks (1+ nblanks)]) ([>= nblanks editwinrows])
-      (blank_line vWinEdit nblanks 0 (cols)))
+      (BlankLine vWinEdit nblanks 0 (cols)))
 
     (reset_cursor)
     (noutrefresh vWinEdit)))
@@ -581,7 +628,7 @@
 
     (unless (or (< line 0) (>= line editwinrows))
       ;; First, blank out the line.
-      (blank_line vWinEdit line 0 (cols)))
+      (BlankLine vWinEdit line 0 (cols)))
 
     ;; Now to decide on the horizontal scroll position.  onvert
     ;; variables that index the line to their equivalent positions in
@@ -680,7 +727,7 @@
     (set! statusblank (- statusblank 1))
     (when (and (= statusblank 0)
 	       (not (ISSET CONST_UPDATE)))
-      (EraseStatusbar)
+      (BlankStatusbar)
       (noutrefresh vWinBottom)
       (reset_cursor)
       (noutrefresh vWinEdit))))
@@ -762,3 +809,27 @@
   (or (IsBufferMarkSet?)
       (not (eqv? (get_page_start xGoal)
                  (get_page_start (GetBufferXGoal))))))
+
+;; This function needs optimization to be more like nano's function.
+(define (ScrollEditor direction n)
+  (let ([nLines (cond [(eqv? direction 'up)
+                       (max n (GetBufferIEditTop))]
+                      [(eqv? direction 'down)
+                       (min n (- (GetBufferILim) (GetBufferIEditTop)))])])
+    (IncreaseBufferIEditTop! (if (eq? direction 'up) (- n) n))
+    (set! vfEditRefresh #t)))
+;; Return 1 if the MORE_SPACE flag is set, and 0 otherwise.  This is
+;; used to calculate the relative screen position while taking this
+;; flag into account, since it adds one line to the edit window.
+(define (no_more_space)
+  (if (ISSET MORE_SPACE)
+      1
+      0))
+
+;; Return 2 if the NO_HELP flag is set, and 0 otherwise.  This is used
+;; to calculate the relative screen position while taking this flag
+;; into account, since it removes two lines from the edit window.
+(define (no_help)
+  (if (ISSET NO_HELP)
+      2
+      0))

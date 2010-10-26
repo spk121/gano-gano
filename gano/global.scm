@@ -874,7 +874,7 @@ the \"Uncut\" key with the \"Unjustify\" command"
     ;;(PrintScList)
     ))
 
-(define (GetFunctionFromShort s)
+(define (GetFunctionFromShortcut s)
   (find (lambda (f)
           (eqv? (GetFunctionId f) (GetShortcutFuncId s)))
         vrgFunctions))

@@ -14,11 +14,14 @@
   #:use-module (ice-9 optargs)
   #:export (
             %DoDumpDebugInfo
+            DoCharDeleteLeft
             DoCharDelete
             DoCharInsert
             DoCharNext
             DoCharPrev
             DoEnter
+            DoLineBeginning
+            DoLineEnd
             DoLineFirst
             DoLineLast
             DoLineNext
@@ -43,6 +46,17 @@
       (%DescribeBuffer)
       (for-each (lambda (x) (write (GetLineText x)) (newline))
                 (GetBufferLines)))))
+
+(define (DoCharDeleteLeft)
+  "Remove the character under the cursor"
+  ;; Update Model
+  (unless (and (= 0 (GetBufferICur)) (= 0 (GetBufferXCur)))
+    (GoToCharPrevModel)
+    (UpdateUndo 'del)
+    (DeleteCharModel)
+    ;; FIXME: only need to update a couple of lines
+    (RefreshEditor)
+    (set! vfEditRefresh #f)))
 
 (define (DoCharDelete)
   "Remove the character under the cursor"
@@ -100,6 +114,14 @@
     ;; Update View
     (RefreshEditor)
     (set! vfEditRefresh #f)))
+
+(define (DoLineBeginning)
+  (GoToLineBeginningModel)
+  (RefreshEditor))
+
+(define (DoLineEnd)
+  (GoToLineEndModel)
+  (RefreshEditor))
 
 (define (DoLineFirst)
   "Move to the first line of the file"
@@ -192,8 +214,11 @@
   (DisplayTitlebar "")
   (RefreshEditor)
   (DisplayShortcutList vMenuCur)
+  (refresh vWinTop)
+  (refresh vWinEdit)
   (refresh vWinBottom)
-  (refresh vWinMain))
+  ;;(refresh vWinMain)
+  )
 
 ;;;-------------------------------------------------------------
 ;;; MODEL UPDATE FUNCTIONS TO BE MOVED LATER
@@ -265,6 +290,14 @@
       (SetBufferXCur! (string-length (GetBufferLineTextCur)))])
 
     (SetBufferXGoal! (GetBufferXGoalFromXCur))))
+
+(define (GoToLineBeginningModel)
+  (SetBufferXCur! 0)
+  (SetBufferXGoal! 0))
+
+(define (GoToLineEndModel)
+  (SetBufferXCur! (string-length (GetBufferLineTextCur)))
+  (SetBufferXGoal! (GetBufferXGoalFromXCur)))
 
 (define (GoToLineFirstModel)
   "Set the buffer's position to the beginning of the buffer"

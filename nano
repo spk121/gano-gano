@@ -44,6 +44,7 @@
              (gano color)
              (gano config)
              (gano api)
+             (gano help)
              (ice-9 getopt-long)
              (ice-9 i18n)
              (ncurses curses)
@@ -117,46 +118,6 @@
 (define (print_view_warning)
   (DisplayStatusbar (_ "Key invalid in view mode")))
 
-;; Initialize the three window portions that nano uses.
-(define (InitWindow)
-  (set! editwinrows (+ (lines) -5 (no_more_space) (no_help)))
-  (when (or (< (cols) MIN_EDITOR_COLS)
-            (< editwinrows MIN_EDITOR_ROWS))
-    (error (_ "Window size is too small for nano...~%")))
-
-  ;; Set up fill column, based on the screen width
-  (set! viColFill viColWrap)
-  (when (<= viColFill 0)
-    (set! viColFill (+ viColFill (cols))))
-  (when (< viColFill 0)
-    (set! viColFill 0))
-
-
-  (when vWinTop
-    (delwin vWinTop))
-  (when vWinEdit
-    (delwin vWinEdit))
-  (when vWinBottom
-    (delwin vWinBottom))
-
-  (set! vWinTop (newwin (- 2 (no_more_space))
-                       (cols)
-                       0
-                       0))
-  (set! vWinEdit (newwin editwinrows
-                     (cols)
-                     (- 2 (no_more_space))
-                     0))
-  (set! vWinBottom (newwin (- 3 (no_help))
-                          (cols)
-                          (+ editwinrows 2 (- (no_more_space)))
-                          0))
-
-  ;; Turn on the keypad for the windows, if necessary
-  (unless (ISSET REBIND_KEYPAD)
-    (keypad! vWinTop #t)
-    (keypad! vWinEdit #t)
-    (keypad! vWinBottom #t)))
 
 ;; Print one usage string to the screen.  This cuts down on duplicate
 ;; strings to translate, and leaves out the parts that shouldn't be
@@ -260,21 +221,6 @@
   (format #t (_ " Email: nano@nano-editor.org Web: http://www.nano-editor.org~%"))
   (format #t "~%"))
 
-;; Return 1 if the MORE_SPACE flag is set, and 0 otherwise.  This is
-;; used to calculate the relative screen position while taking this
-;; flag into account, since it adds one line to the edit window.
-(define (no_more_space)
-  (if (ISSET MORE_SPACE)
-      1
-      0))
-
-;; Return 2 if the NO_HELP flag is set, and 0 otherwise.  This is used
-;; to calculate the relative screen position while taking this flag
-;; into account, since it removes two lines from the edit window.
-(define (no_help)
-  (if (ISSET NO_HELP)
-      2
-      0))
 
 ;; Initialize the signal handlers.
 (define (InitSignal)
@@ -321,7 +267,7 @@
   (force-output)
 
   ;; Restore the old terminal settings.
-  (tcsetattr vTerminalPort TCSANOW old_terminal)
+  (tcsetattr! vTerminalPort TCSANOW old_terminal)
 
   ;; Trap SIGHUP and SIGTERM so we can properly deal with them while
   ;; suspended.
@@ -349,7 +295,7 @@
   (curs-set 1)
 
   ;; Redraw the contents of the windows that need it.
-  (EraseStatusbar)
+  (BlankStatusbar)
   (noutrefresh vWinBottom)
   (total_refresh)
 
@@ -430,7 +376,6 @@
 
     ;; Set up the shortcut lists.  Need to to this before the rcfile.
     (InitShortcuts #f)
-
     ;; Load the RC file
     (when (option-ref options 'ignorercfiles #f)
       (set! fRcFileEnable #f))
@@ -727,7 +672,7 @@
       (when (or (> rowStart 1) (> colStart 1))
         (GoToLineColumn rowStart colStart #f #f #f #f))
 
-      (DisplayMainShortcutList)
+      (DisplayShortcutList MMAIN)
       (DisplayBuffer)
 
       ;; Run the debug script
@@ -988,6 +933,12 @@ so we can deal with them now."
    [(= funcId DO_RIGHT) (DoCharNext)]
    [(= funcId DO_DELETE) (DoCharDelete)]
    [(= funcId DO_PAGE_UP) (DoPagePrev)]
-   [(= funcId DO_PAGE_DOWN) (DoPageNext)]))
+   [(= funcId DO_PAGE_DOWN) (DoPageNext)]
+   [(= funcId DO_END) (DoLineEnd)]
+   [(= funcId DO_HOME) (DoLineBeginning)]
+   [(= funcId DO_BACKSPACE) (DoCharDeleteLeft)]
+   [(= funcId DO_HELP_VOID) 
+    (DoHelp MMAIN)
+    (DoTotalRefresh)]))
 
 (Main (command-line))

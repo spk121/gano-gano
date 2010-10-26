@@ -5,6 +5,7 @@
             CreateFunction
             GetFunctionId
             GetFunctionMenus
+            GetFunctionHelp
             GetFunctionDesc
             IsFunctionReadOnly?
             ))
@@ -47,6 +48,9 @@
 
 (define-method (GetFunctionDesc (fn <CFunction>))
   (slot-ref fn 'm_desc))
+
+(define-method (GetFunctionHelp (fn <CFunction>))
+  (slot-ref fn 'm_help))
 
 (define-method (IsFunctionReadOnly? (fn <CFunction>))
   (slot-ref fn 'm_fReadOnly))
