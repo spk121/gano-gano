@@ -937,7 +937,7 @@ so we can deal with them now."
    [(= funcId DO_END) (DoLineEnd)]
    [(= funcId DO_HOME) (DoLineBeginning)]
    [(= funcId DO_BACKSPACE) (DoCharDeleteLeft)]
-   [(= funcId DO_HELP_VOID) 
+   [(= funcId DO_HELP_VOID)
     (DoHelp MMAIN)
     (DoTotalRefresh)]))
 
