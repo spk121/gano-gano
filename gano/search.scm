@@ -28,6 +28,13 @@
 	    GoToLineColumn
 	    ))
 
+(define vSearchLast "")
+(define vReplaceLast "")
+
+(define (DoSearch)
+  "Search for a string"
+  (InitSearch #f #f))
+
 (define (InitHistory)
   "Initialize the search and replace history lists."
   (set! vrgSearchHistory '(""))
@@ -35,6 +42,27 @@
 
   (set! vrgReplaceHistory '(""))
   (set! viReplaceHistory 0))
+
+(define (InitSearch fReplace)
+  "Set up the system variables for search and replace"
+  (InitSearchGlobals)
+
+  ;; Display the search prompt
+  (let ([buf (if (not (string-null? vSearchLast))
+                 (format #f " [~a~a]"
+                         (DisplayString vSearchLast 0 (quotient (cols) 3) #f)
+                         (if (> (CountCellsInString vSearchLast) (quotient (cols) 3))
+                             "..."
+                             ""))
+                 ;; else
+                 "")])
+
+    (DoPrompt #t (if fReplace MREPLACE MWHEREIS)
+
+(define (InitSearchGlobals)
+  "Initialize the global search and replace strings"
+  (set! vSearchLast "")
+  (set! vReplaceLast ""))
 
 ;; Go to the specified line and column, or ask for them if interactive
 ;; is TRUE.  Save the x-coordinate and y-coordinate if save_pos is TRUE.

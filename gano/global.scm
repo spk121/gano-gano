@@ -850,8 +850,6 @@ the \"Uncut\" key with the \"Unjustify\" command"
 			   MINSERTFILE MEXTCMD MSPELL MWHEREISFILE MGOTODIR
 			   MYESNO)
 		   "^C" CANCEL_MSG 0 #f)
-    (AddShortcut MHELP "^X" DO_EXIT 0 #t)
-    (AddShortcut MHELP "F2" DO_EXIT 0 #t)
     (AddShortcut MWRITEFILE "M-D"  DOS_FORMAT_MSG 0 #f)
     (AddShortcut MWRITEFILE "M-M"  MAC_FORMAT_MSG 0 #f)
     (AddShortcut MWRITEFILE "M-A"  APPEND_MSG 0 #f)
