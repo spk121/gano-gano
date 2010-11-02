@@ -31,6 +31,7 @@
             IsBlankChar?
             IsControlChar?
             IsLatin1Char?
+            ComputePpListFromString
             ))
 
 ;; Whether we've enabled UTF-8 support.  In Gano (and not in Nano)
@@ -78,12 +79,29 @@
   "Number of cells a character CHR at column X would take up"
   (cond
    [(eqv? chr #\nul)
+    (format (current-error-port) "CountCellsInChar c ~s x ~s tabsize ~s siz ~a~%" chr x tabSize 0)
     0]
    [(eqv? chr #\tab)
+    (format (current-error-port) "CountCellsInChar c ~s x ~s tabsize ~s siz ~a~%" chr x tabSize (- tabSize (modulo x tabSize)))
     (- tabSize (modulo x tabSize))]
    [(IsControlChar? chr)
     ;; Add 1 for the caret '^'
     (1+ (wcwidth (GetDisplayCharFromControlChar chr)))]
    [else
+    (format (current-error-port) "CountCellsInChar c ~s x ~s tabsize ~s siz ~a~%" chr x tabSize (wcwidth chr))
+
     (wcwidth chr)]))
 
+
+;; Given a string, this returns a vector containing the Presentation
+;; Position (Pp) of each character of the line
+(define (ComputePpListFromString str tabsize)
+  (let loop ([pp 0] [lst '()] [str str])
+    (cond
+     [(not (string-null? str))
+      (loop (+ pp (CountCellsInChar (string-ref str 0) pp tabsize))
+            (append lst (list pp))
+            (string-drop str 1))]
+     [else
+      ;; return list
+      (append lst (list pp))])))

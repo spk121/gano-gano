@@ -22,10 +22,14 @@
 
 
 (define-module (gano color)
+  #:use-module (gano config)
   #:use-module (gano global)
-  #:use-module (rnrs control)
   #:export (set_colorpairs
 	    reset_multis))
+
+(if %have-rnrs-control
+    (use-modules (rnrs control))
+    (use-modules (gano control)))
 
 (define (set_colorpairs)
   (when syntaxes

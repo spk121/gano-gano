@@ -21,6 +21,7 @@
 ;;; This file incorporates code from GNU Nano
 
 (define-module (gano files)
+  #:use-module (gano config)
   #:use-module (oop goops)
   #:use-module (oop goops describe)
   #:use-module (gano CBuffer)
@@ -30,7 +31,6 @@
   #:use-module (gano nano-h)
   #:use-module (gano nano-c)
   #:use-module (gano utils)
-  #:use-module (rnrs control)
   #:use-module (ncurses curses)
   #:export (
             OpenBuffer
@@ -40,6 +40,9 @@
 	    InitBackupDir
             ))
 
+(if %have-rnrs-control
+    (use-modules (rnrs control))
+    (use-modules (gano control)))
 
 ;; If it is not "", filename is a file to open.  We make a new buffer
 ;; if necessary, and then open and read the file, if applicable
@@ -83,9 +86,9 @@
       ;; If we have a file, and we're loading into a new buffer, move
       ;; back to the beginning of the first line of the buffer.
       (when (and (not (= returnCode -1)) fBufferNew)
-        (SetBufferICur! 0)
-        (SetBufferXCur! 0)
-        (SetBufferXGoal! 0))
+        (SetBufferLCur! 0)
+        (SetBufferPdCur! 0)
+        (SetBufferPpGoal! 0))
 
       ;; If we're loading into a new buffer, update the colorto account
       ;; for it, if applicable

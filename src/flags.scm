@@ -8,7 +8,7 @@
             vFlags
 
             ;; constants
-             DONTUSE
+            DONTUSE
             CASE_SENSITIVE
             CONST_UPDATE
             NO_HELP
@@ -46,10 +46,6 @@
             SOFTWRAP
 
             ;; macros
-            IGNORE_CALL_RESULT
-            FLAGOFF
-            FLAGMASK
-            FLAGS
             SET
             UNSET
             ISSET
@@ -71,18 +67,18 @@
 (define (SET flag)
   "Set Gano flags"
   (list-set! vFlags (FLAGOFF flag)
-	     (logior (FLAGS flag)
-		     (FLAGMASK flag))))
+             (logior (FLAGS flag)
+                     (FLAGMASK flag))))
 (define (UNSET flag)
   (list-set! vFlags (FLAGOFF flag)
-	     (logand (FLAGS flag)
-		     (lognot (FLAGMASK flag)))))
+             (logand (FLAGS flag)
+                     (lognot (FLAGMASK flag)))))
 (define (ISSET flag)
   (logtest (FLAGS flag) (FLAGMASK flag)))
 (define (TOGGLE flag)
   (list-set! vFlags (FLAGOFF flag)
-	     (logxor (FLAGS flag)
-		     (FLAGMASK flag))))
+             (logxor (FLAGS flag)
+                     (FLAGMASK flag))))
 
 ;; Enumeration to be used in vFlags table. See FLAGBIT and FLAGOFF
 ;; definitions.

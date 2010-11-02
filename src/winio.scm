@@ -21,6 +21,7 @@
 ;;; This file incorporates code from GNU Nano
 
 (define-module (gano winio)
+  #:use-module (gano config)
   #:use-module (gano CBuffer)
   #:use-module (gano CFunction)
   #:use-module (gano CShortcut)
@@ -32,7 +33,6 @@
   #:use-module (gano utils)
   #:use-module (ncurses curses)
   #:use-module (ncurses extra)
-  #:use-module (rnrs control)
   #:export (
 	    do_cursorpos
 	    BlankEditor
@@ -52,6 +52,11 @@
             set_modified
             update_line
             ))
+
+(if %have-rnrs-control
+    (use-modules (rnrs control))
+    ;; else
+    (use-modules (gano control)))
 
 (define PACKAGE_STRING "Gano 0.0")
 
@@ -529,18 +534,18 @@
     (move vWinEdit 0 0)]
 
    [else
-    (let ([xpt (GetBufferXGoalFromXCur)])
+    (let ([xpt (GetPpFromBufferPdCur)])
       (if (ISSET SOFTWRAP)
 	  (error "implement me!")
 	  ;; else
 	  (begin
             (format (current-error-port) "resetCursor: before YCur ~s ICur ~s ITop ~s xpt ~s~%"
-                    (GetBufferYCur) (GetBufferICur) (GetBufferIEditTop) xpt)
-	    (SetBufferYCur! (- (GetBufferICur) (GetBufferIEditTop)))
+                    (GetBufferYCur) (GetBufferLCur) (GetBufferLFrame) xpt)
+	    (SetBufferYCur! (- (GetBufferLCur) (GetBufferLFrame)))
 	    (when (< (GetBufferYCur) editwinrows)
 	      (move vWinEdit (GetBufferYCur) (- xpt (get_page_start xpt))))
             (format (current-error-port) "resetCursor: after YCur ~s ICur ~s ITop ~s~%"
-                    (GetBufferYCur) (GetBufferICur) (GetBufferIEditTop)))))]))
+                    (GetBufferYCur) (GetBufferLCur) (GetBufferLFrame)))))]))
 
 
 
@@ -548,18 +553,18 @@
 ;; this if we'ved moved and changed text.
 
 (define (RefreshEditor)
-  (let ([cn (GetBufferICur)]
-        [en (GetBufferIEditTop)]
+  (let ([cn (GetBufferLCur)]
+        [en (GetBufferLFrame)]
         [maxrows (ComputeMaxRows)]
         [nblanks 0])
     (when (or (< cn en) (>= cn (+ en maxrows)))
       ;; Put the top line of the edit window in range of the current line
       (edit_update CENTER))
 
-    (do ([nlines 0 nlines] [index (GetBufferIEditTop) (1+ index)])
-        ([or (>= nlines editwinrows) (>= index (GetBufferILim))])
-      (set! nlines (+ nlines (update_line index (if (= index (GetBufferICur))
-                                                    (GetBufferXCur)
+    (do ([nlines 0 nlines] [index (GetBufferLFrame) (1+ index)])
+        ([or (>= nlines editwinrows) (>= index (GetBufferLLim))])
+      (set! nlines (+ nlines (update_line index (if (= index (GetBufferLCur))
+                                                    (GetBufferPdCur)
                                                     0))))
       (set! nblanks nlines))
     (do ([nblanks nblanks (1+ nblanks)]) ([>= nblanks editwinrows])
@@ -587,7 +592,7 @@
 		  ;; else
 		  (min (GetBufferYCur)
 		       (1- editwinrows)))]
-	[index (GetBufferICur)])
+	[index (GetBufferLCur)])
 
     (while (and (> goal 0) (>= index 0))
       (set! index (1- index))
@@ -596,10 +601,10 @@
       (when (ISSET SOFTWRAP)
 	(set! goal (- goal (quotient (CountCellsInString (GetBufferLine index)) (cols))))))
 
-    (SetBufferIEditTop! index)
+    (SetBufferLFrame! index)
 
     (format (current-error-port) "edit_update(), setting edittop to lineno ~a~%"
-	    (GetBufferIEditTop))
+	    (GetBufferLFrame))
     (set! vfEditRefresh #t)))
 
 ;; Just update the Nth line of the document if it is on the screen.
@@ -615,16 +620,16 @@
     (if (ISSET SOFTWRAP)
         ;; Find the screen line number of this line, taking into account
         ;; the fact that some lines could have wrapped
-        (let loop ((buffer-index (GetBufferIEditTop))
+        (let loop ((buffer-index (GetBufferLFrame))
                    (screen-line 0))
-	  (if (and (< buffer-index (GetBufferILim))
+	  (if (and (< buffer-index (GetBufferLLim))
 		   (< buffer-index n))
 	      (loop (1+ buffer-index) (quotient (CountCellsInString (GetBufferLine index))
 						(cols)))
 	      ;; else
 	      (set! line screen-line)))
         ;;else
-        (set! line (- n (GetBufferIEditTop))))
+        (set! line (- n (GetBufferLFrame))))
 
     (unless (or (< line 0) (>= line editwinrows))
       ;; First, blank out the line.
@@ -636,7 +641,7 @@
     (if (ISSET SOFTWRAP)
 	(set! index 0)
 	;; else
-	(set! index (CountCellsInSubstring (GetLineText (GetBufferLine n)) index)))
+	(set! index (CountCellsInSubstring (GetBufferLine n) index)))
     (set! page_start (get_page_start index))
 
     ;; Expand the line, replacing tabs with spaces and control chars
@@ -646,10 +651,10 @@
 	    n page_start (cols))
     (format (current-error-port)
 	    "before edit_draw: orig_string = ~s~%"
-	    (GetLineText (GetBufferLine n)))
+	    (GetBufferLine n))
     (set!
      converted
-     (display_string (GetLineText (GetBufferLine n))
+     (display_string (GetBufferLine n)
 		     page_start
 		     (cols)
 		     (not (ISSET SOFTWRAP))))
@@ -665,7 +670,7 @@
 	(begin
 	  (when (> page_start 0)
 	    (addch vWinEdit (normal #\$) #:y line #:x 0))
-	  (when (> (CountCellsInString (GetLineText (GetBufferLine n)))
+	  (when (> (CountCellsInString (GetBufferLine n))
 		   (+ page_start (cols)))
 	    (addch vWinEdit (normal #\$) #:y line #:x (- (cols) 1))))
 	;; else
@@ -700,15 +705,15 @@
     ;; N is the line of the screen
     ;; INDEX is the line  of the file
     (let ([n 0]
-	  [index (GetBufferIEditTop)]
-	  [eof (GetBufferILim)]
+	  [index (GetBufferLFrame)]
+	  [eof (GetBufferLLim)]
           [maxrows 0])
       (while #t
 	(if (and (< n editwinrows)
 		 (< index eof))
 	    (begin
 	      (set! maxrows (+ maxrows 1))
-	      (set! n (+ n (CountCellsInString (GetLineText (GetBufferLine index)))))
+	      (set! n (+ n (CountCellsInString (GetBufferLine index))))
 	      (set! index (+ index 1)))
 	    ;; else
 	    (break)))
@@ -779,13 +784,13 @@
 ;; display the current cursor position next time.
 (define (do_cursorpos constant)
   (unless (and constant disable_cursorpos)
-    (let* ((line-cur (GetBufferICur))
-	   (line-max (GetBufferILim))
+    (let* ((line-cur (GetBufferLCur))
+	   (line-max (GetBufferLLim))
 	   (line-ratio (if (zero? line-max)
 			   0
 			   (quotient (* 100 line-cur) line-max)))
-	   (col-cur (1+ (GetBufferXGoalFromXCur)))
-	   (col-max (1+ (CountCellsInString (GetBufferLineTextCur))))
+	   (col-cur (1+ (GetPpFromBufferPdCur)))
+	   (col-max (1+ (CountCellsInString (GetBufferLineCur))))
 	   (col-ratio (if (zero? col-max)
 			  0
 			  (quotient (* 100 col-cur) col-max)))
@@ -808,15 +813,15 @@
 (define (NeedVerticalUpdate? xGoal)
   (or (IsBufferMarkSet?)
       (not (eqv? (get_page_start xGoal)
-                 (get_page_start (GetBufferXGoal))))))
+                 (get_page_start (GetBufferPpGoal))))))
 
 ;; This function needs optimization to be more like nano's function.
 (define (ScrollEditor direction n)
   (let ([nLines (cond [(eqv? direction 'up)
-                       (max n (GetBufferIEditTop))]
+                       (max n (GetBufferLFrame))]
                       [(eqv? direction 'down)
-                       (min n (- (GetBufferILim) (GetBufferIEditTop)))])])
-    (IncreaseBufferIEditTop! (if (eq? direction 'up) (- n) n))
+                       (min n (- (GetBufferLLim) (GetBufferLFrame)))])])
+    (IncreaseBufferLFrame! (if (eq? direction 'up) (- n) n))
     (set! vfEditRefresh #t)))
 ;; Return 1 if the MORE_SPACE flag is set, and 0 otherwise.  This is
 ;; used to calculate the relative screen position while taking this

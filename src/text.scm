@@ -20,12 +20,12 @@
 
 ;;; This file incorporates code from GNU Nano
 (define-module (gano text)
+  #:use-module (gano config)
   #:use-module (gano CText)
   #:use-module (gano CBuffer)
   #:use-module (gano chars)
   #:use-module (gano flags)
   #:use-module (gano utils)
-  #:use-module (rnrs control)
   #:use-module (srfi srfi-1)
   #:export (
 	    ResetWrap
@@ -33,6 +33,10 @@
             UpdateUndo
 	    ))
 
+(if %have-rnrs-control
+    (use-modules (rnrs control))
+    ;; else
+    (use-modules (gano control)))
 
 ;; Should we prepend wrapped text to the next line?
 (define vfWrapPrepend #f)

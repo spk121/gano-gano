@@ -233,12 +233,7 @@
 ;; Macros for character allocation and more.
 (define (charalloc howmuch)
   (make-string howmuch))
-(define-syntax charealloc
-  (syntax-rules ()
-    ((_ ptr howmuch)
-     (if (< howmuch (string-length ptr))
-	 (set! ptr (substring ptr 0 howmuch))
-	 (set! ptr (string-append ptr (make-string (- howmuch (string-length ptr) #\nul))))))))
+
 (define (charmove dest src n)
   (string-copy! dest 0 src 0 n))
 (define (charset dest src n)
@@ -408,9 +403,9 @@
 (define NANO_META_X #\x)
 (define NANO_META_Y #\y)
 (define NANO_META_Z #\z)
-(define NANO_META_LCURLYBRACKET #\x7b)
+(define NANO_META_LCURLYBRACKET #\173)
 (define NANO_META_PIPE #\|)
-(define NANO_META_RCURLYBRACKET #\x7d)
+(define NANO_META_RCURLYBRACKET #\175)
 
 ;; Some semi-changeable keybindings; don't play with these unless you're)
 ;; sure you know what you're doing.  Assume ERR is defined as -1.

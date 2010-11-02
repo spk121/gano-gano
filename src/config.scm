@@ -1,10 +1,8 @@
 (define-module (gano config)
   #:export (
-	    vPackage
-	    vDirLocale
-            vDirSysConf
+	    %have-rnrs-control
+	    %have-ucs4
 	    ))
 
-(define vPackage "gano")
-(define vDirLocale "/usr/local/share/locale")
-(define vDirSysConf "/usr/local/etc")
+(define %have-rnrs-control #f)
+(define %have-ucs4 #f)

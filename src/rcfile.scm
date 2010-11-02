@@ -21,14 +21,19 @@
 ;;; This file incorporates code from GNU Nano
 
 (define-module (gano rcfile)
+  #:use-module (gano config)
   #:use-module (gano flags)
   #:use-module (gano config)
-  #:use-module (rnrs control)
   #:use-module (gano utils)
   #:use-module (gano global)
   #:export (
 	    LoadRcFile
 	    ))
+
+(if %have-rnrs-control
+    (use-modules (rnrs control))
+    ;;else
+    (use-modules (gano control)))
 
 ;; The main rcfile function.  It tried to open the system-wide rcfile, followed
 ;; by the current user's rcfile.

@@ -1,5 +1,5 @@
 (define-module (gano prompt)
-  #:use-module (gano CMiniBuffer)
+  ;;#:use-module (gano CMiniBuffer)
   #:export (
             DoStatusbarInput
             ))

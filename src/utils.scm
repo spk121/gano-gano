@@ -21,6 +21,7 @@
 ;;; This file incorporates code from GNU Nano
 
 (define-module (gano utils)
+  #:use-module (gano config)
   #:use-module (gano CText)
   #:use-module (gano CBuffer)
   #:use-module (srfi srfi-1)
@@ -28,16 +29,20 @@
   #:use-module (gano nano-h)
   #:use-module (gano global)
   #:use-module (ncurses curses)
-  #:use-module (rnrs control)
   #:export (
             GetIndexFromStringCell
             CountCellsInString
             CountCellsInSubstring
             get_page_start
-            GetBufferXGoalFromXCur
+            GetPpFromBufferPdCur
 	    InitDirHome
 	    ParseLineColumn
             ))
+
+(if %have-rnrs-control
+    (use-modules (rnrs control))
+    ;; else
+    (use-modules (gano control)))
 
 ;; Return the index in s of the character displayed at the given]
 ;; column, i.e. the largest value such that strnlenpt(s, actual_x(s,
@@ -91,10 +96,10 @@
 ;; Return the placewewant associated with current_x, i.e. the zero-based
 ;; column position of the cursor.  The value will be no smaller than
 ;; current_x.
-(define (GetBufferXGoalFromXCur)
-  (let* ([st (GetLineText (GetBufferLineCur))]
-         [x (GetBufferXCur)]
-         [goal (CountCellsInSubstring (GetLineText (GetBufferLineCur)) x)])
+(define (GetPpFromBufferPdCur)
+  (let* ([st (GetBufferLineCur)]
+         [x (GetBufferPdCur)]
+         [goal (CountCellsInSubstring (GetBufferLineCur) x)])
     (format (current-error-port) "GetBufferXGoal... st ~s x ~s goal ~s~%" st x goal)
     goal))
 

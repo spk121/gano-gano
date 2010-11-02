@@ -21,6 +21,7 @@
 ;;; This file incorporates code from GNU Nano
 
 (define-module (gano global)
+  #:use-module (gano config)
   #:use-module (oop goops)
   #:use-module (gano CFunction)
   #:use-module (gano CShortcut)
@@ -28,7 +29,6 @@
   #:use-module (gano nano-h)
   #:use-module (gano text)
   #:use-module (ncurses curses)
-  #:use-module (rnrs control)
   #:use-module (srfi srfi-1)
   #:export (
             vDirOperating
@@ -75,8 +75,11 @@
             vfEditRefresh
 	    vMatchBrackets
             GetFuncIdNameFromFuncId
-	    iso_me_harder_funcmap
             ))
+
+(if %have-rnrs-control
+    (use-modules (rnrs control))
+    (use-modules (gano control)))
 
 ;; Used to return to either main or the unjustify routing
 ;; in do justify after a SIGWINCH
@@ -148,7 +151,7 @@
 ;; The error message, if it didn't
 (define quoteerr #f)
 ;; The length of the quoting string in bytes
-(define quotelen)
+(define quotelen 0)
 
 ;; Are we in nodelay mode (checking for a cancel while doing something)
 (define nodelay_mode #f)
@@ -876,16 +879,6 @@ the \"Uncut\" key with the \"Unjustify\" command"
   (find (lambda (f)
           (eqv? (GetFunctionId f) (GetShortcutFuncId s)))
         vrgFunctions))
-
-;; This is the main dispatch
-(define (iso_me_harder_funcmap func)
-  (format (current-error-port) "Dispatching ~s~%" func)
-  (cond
-   [(eqv? func DO_ENTER)
-    (do_enter #f)]
-   [else
-    #f]))
-
 
 (define (GetFuncIdNameFromFuncId funcId)
   (let ([rgFuncIdNames
