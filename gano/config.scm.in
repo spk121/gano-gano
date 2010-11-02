@@ -1,8 +1,0 @@
-(define-module (gano config)
-  #:export (
-	    %have-rnrs-control
-	    %have-ucs4
-	    ))
-
-(define %have-rnrs-control @RNRS_CONTROL@ )
-(define %have-ucs4 @UCS4@ )
