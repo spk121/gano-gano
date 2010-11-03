@@ -33,11 +33,7 @@ psdir = $(psdir)
 libdir = $(exec_prefix)/lib
 lispdir = $(datarootdir)/emacs/site-lisp
 guiledir = $(datarootdir)/guile
-ifeq ($(GUILE_VERSION),1.8)
 guilesitedir = $(datarootdir)/guile/site
-else
-guilesitedir = $(datarootdir)/guile/$(GUILE_VERSION)/site
-endif
 srcdir = .
 
 ##########################
@@ -45,7 +41,7 @@ srcdir = .
 
 VPATH = src
 
-main_sources = nano
+main_sources = nano.scm
 lib_sources = chars.scm files.scm flags.scm global.scm input.scm	\
 	nano-c.scm nano-h.scm rcfile.scm text.scm utils.scm	\
 	winio.scm CBuffer.scm CText.scm CFunction.scm CShortcut.scm	\
@@ -72,15 +68,19 @@ xfail_tests = $(addprefix $(testdir)/,$(xfail_test_sources))
 
 # ALL: compile the entire program.  Do not rebuild and documentation
 # files.
-all: $(sources)
-	-mkdir gano
-	list=' $+ '; \
+all: nano
+
+nano: $(sources)
+	-@mkdir -p gano
+	@list=' $? '; \
 	if test -n "$$list"; then \
 	  for tst in $$list; do \
             fname=`basename $$tst`; \
+	    echo "processing" $$tst; \
 	    cat $$tst | tr [] \(\) > gano/$$fname; \
 	  done; \
-        fi
+        fi; \
+	cp gano/nano.scm nano
 
 # INSTALL: compile the program and copy the executables, libraries.
 # Create all the directories in which files are to be installed, if

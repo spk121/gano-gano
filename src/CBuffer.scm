@@ -490,6 +490,7 @@ overwriting the current character.  If DEVICE is 'data, the current
 codepoint is replaced with C.  If DEVICE is 'presentation, those
 graphemes that would be wholly or partly overwritten by this grapheme
 will be erased before this grapheme is added."
+  
   #t)
 
 (define-method (write-tab (buf <CBuffer>) c device)
