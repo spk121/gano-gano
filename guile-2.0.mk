@@ -1,48 +1,11 @@
 # Makefile
-
-SHELL = /bin/sh
-.SUFFIXES:
 .SUFFIXES: .scm .go
 
-
-GUILE_VERSION = 1.8
-
-GUILE = guile
 GUILECOMPILE = guile-tools compile
 GUILECOMPILEFLAGS = -Wunsupported-warning -Wunbound-variable -Warity-mismatch \
-	-Wformat 
+	-Wformat
 
-INSTALL_PROGRAM = $(INSTALL)
-INSTALL_DATA = ${INSTALL} -m 644
-
-##########################
-# INSTALLATION DIRECTORIES
-
-prefix = /usr/local
-exec_prefix = $(prefix)
-bindir = $(exec_prefix)/bin
-sbindir = $(exec_prefix)/sbin
-libexecdir = $(exec_prefix)/libexec
-datarootdir = $(prefix)/share
-datadir = $(datarootdir)
-sysconfdir = $(prefix)/etc
-sharedstatedir = $(prefix)/com
-localstatedir = $(prefix)/var
-includedir = $(prefix)/include
-docdir = $(datarootdir)/doc/gano
-infodir = $(datarootdir)/info
-htmldir = $(docdir)
-dvidir = $(docdir)
-pdfdir = $(docdir)
-psdir = $(psdir)
-libdir = $(exec_prefix)/lib
-lispdir = $(datarootdir)/emacs/site-lisp
-guiledir = $(datarootdir)/guile
-ifeq ($(GUILE_VERSION),1.8)
-guilesitedir = $(datarootdir)/guile/site
-else
 guilesitedir = $(datarootdir)/guile/$(GUILE_VERSION)/site
-endif
 srcdir = .
 
 ##########################
@@ -50,14 +13,9 @@ srcdir = .
 
 vpath %.scm gano
 
-main_sources = nano
-lib_sources = chars.scm files.scm flags.scm global.scm input.scm	\
-	nano-c.scm nano-h.scm rcfile.scm text.scm utils.scm	\
-	winio.scm CBuffer.scm CText.scm CFunction.scm CShortcut.scm	\
-	api.scm help.scm
-sources = $(lib_sources) $(main_sources)
+sources = $(lib_sources) $(script_sources)
 
-objects := nano.go $(notdir $(patsubst %.scm,%.go,$(lib_sources)))
+lib_objects := $(notdir $(patsubst %.scm,%.go,$(lib_sources)))
 
 ########################
 # TEST ENVIRONMENT
@@ -65,8 +23,7 @@ objects := nano.go $(notdir $(patsubst %.scm,%.go,$(lib_sources)))
 TESTS_ENVIRONMENT = GUILE_AUTO_COMPILE=0 guile -L . -s
 
 # These should return
-pass_test_sources = homedir.scm get_shortcut.scm sctofunc.scm strnlenpt.scm \
-	actual_x.scm display_string.scm
+pass_test_sources =
 xfail_test_sources =
 test_sources := $(pass_test_sources) $(xfail_test_sources)
 
@@ -85,9 +42,9 @@ all: $(objects)
 # Create all the directories in which files are to be installed, if
 # they don't exist.
 
-# PRE_INSTALL: 
+# PRE_INSTALL:
 install:
-	$(PRE_INSTALL)		
+	$(PRE_INSTALL)
 	$(NORMAL_INSTALL)
 	$(POST_INSTALL)		# Run install-info
 
@@ -123,7 +80,7 @@ TAGS: $(sources)
 	etags $^
 
 # INFO: generate info files
-info: 
+info:
 
 # Create a distribution tar file for this program. (Depends on all non-source
 # files that are in the distribution)
