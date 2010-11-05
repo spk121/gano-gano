@@ -4,5 +4,5 @@
 	    %have-ucs4
 	    ))
 
-(define %have-rnrs-control #f)
-(define %have-ucs4 #f)
+(define %have-rnrs-control #t)
+(define %have-ucs4 #t)

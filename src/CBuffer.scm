@@ -5,6 +5,7 @@
   #:use-module (gano chars)
   #:use-module (gano utils)
   #:use-module (srfi srfi-1)
+  #:use-module (rnrs control)
   #:use-module ((ncurses extra) #:select (wcwidth))
   #:export (
             <CBuffer>
@@ -30,6 +31,8 @@
             line-position-forward
             scroll-down
             scroll-up
+            write-character
+            write-tabulation
 
             get-pd-cur
             get-pp-cur
@@ -43,6 +46,7 @@
             set-pp-cur!
             set-pp-goal!
             set-text!
+            set-text-cur!
             ))
 
 (if %have-rnrs-control
@@ -60,7 +64,7 @@
     (m_PpCur #:init-value 0 #:getter get-pp-cur #:setter set-pp-cur!)
     (m_PpGoal #:init-value 0 #:getter get-pp-goal #:setter set-pp-goal!)
     (m_fModified #:init-value #f)
-    (m_fMarkSet #:init-value #f)
+    (m_fMarkSet #:init-value #f #:getter is-mark-enabled? #:setter set-mark-flag!)
     (m_LMark #:init-value 0)
     (m_PdMark #:init-value 0)
     (m_fileFormat #:init-value 'nix)
@@ -80,6 +84,9 @@
 
 (define-method (increase-pd-cur! (buf <CBuffer>) n)
   (set-pd-cur! buf (+ (get-pd-cur buf) n)))
+
+(define-method (set-text-cur! (buf <CBuffer>) str)
+  (list-set! (get-text buf) (get-line-cur buf) str))
 
 ;; METHODS
 
@@ -130,7 +137,8 @@ line"
     (set-pp-goal! buf pp)))
 
 (define-method (character-and-line-position (buf <CBuffer>) n m)
-  "Moves the active data position to the n-th line position m-th character position"
+  "Moves the active data position to the n-th line position m-th
+character position"
   (set-line-cur! (max 0 (min (get-line-max buf) n)))
   (character-position-absolute (buf m)))
 
@@ -334,7 +342,7 @@ will be replaced with a single space character.  The active data
 position remains the same but the presentation position may change.
 This may change the visual presentation of the line"
 
-  (add-undo (list 'EL device P (get-line-cur buf) (get-pd-cur buf) (get-line-text buf)))
+  ;;(add-undo (list 'EL device P (get-line-cur buf) (get-pd-cur buf) (get-line-text buf)))
 
   (let ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
         [pp-cur (get-pp-cur buf)]
@@ -409,7 +417,7 @@ This may change the visual presentation of the line"
 (define-method (insert-character (buf <CBuffer>) n)
   "Shift the contents of the line to the right, starting at the
 current data position, creating an empty gap of N codepoints"
-  (add-undo (list 'ICH n (get-line-cur buf) (get-pd-cur buf)))
+  ;;(add-undo (list 'ICH n (get-line-cur buf) (get-pd-cur buf)))
 
   (let ([str (get-line-cur buf)]
         [pd (get-pd-cur buf)])
@@ -421,11 +429,11 @@ current data position, creating an empty gap of N codepoints"
                (>= (get-pd-mark) (get-pd-cur)))
       (set-pd-mark! (+ (get-pd-mark) n)))))
 
-(define-method (insert-line (buf <CBuffer> n))
+(define-method (insert-line (buf <CBuffer>) n)
   "Move the current line and the n-1 following lines down N lines.
 The resulting cap is erased.  The cursor is placed at the home
 position of the first new empty line."
-  (add-undo buf (list 'IL n (get-line-cur) (get-pd-cur)))
+  ;;(add-undo buf (list 'IL n (get-line-cur) (get-pd-cur)))
 
   (let ([txt (get-text buf)]
         [L (get-line-cur buf)])
@@ -440,6 +448,34 @@ position of the first new empty line."
     (when (and (is-mark-set? buf)
                (>= (get-line-mark) L))
       (set-line-mark! (+ (get-line-mark) n)))))
+
+(define-method (insert-nel (buf <CBuffer>) c)
+  "Removes the text between the active position and the end of the
+line from the current line, and places it in a new line inserted after
+the current line.  The active position is moved to the beginning of
+the new line."
+  (let ([txt (get-text buf)]
+        [txtcur (get-text-cur buf)]
+        [pd (get-pd-cur buf)]
+        [L (get-line-cur buf)])
+    (set-text! buf (append (take txt (max 0 (1- L)))
+                           (string-take txtcur pd)
+                           (string-drop txtcur pd)
+                           (drop txt L)))
+    ;; Move the mark down, if necessary
+    (when (is-mark-set? buf)
+      (cond
+       [(and (= (get-line-mark buf) L) (>= (get-pd-mark buf) pd))
+        (set-line-mark! buf (1+ L))
+        (set-pd-mark! buf (- (get-pd-mark) pd))]
+       [(>= (get-line-mark buf) L)
+        (set-line-mark! buf (1+ l))]))
+
+    (set-pd-cur! 0)
+    (set-pp-cur! 0)
+    (set-pp-goal! 0)
+    (set-line-cur! (1+ L))))
+
 
 (define-method (line-position-absolute (buf <CBuffer>) n)
   "Move the active data position to the n-th line"
@@ -490,21 +526,144 @@ overwriting the current character.  If DEVICE is 'data, the current
 codepoint is replaced with C.  If DEVICE is 'presentation, those
 graphemes that would be wholly or partly overwritten by this grapheme
 will be erased before this grapheme is added."
-  
-  #t)
+  (cond
+   [(eq? device 'data)
+    (let ([txt (get-text-cur buf)]
+          [pd (get-pd-cur buf)])
+      (set-text-cur! buf (string-append (string-take txt pd)
+                                        (string c)
+                                        (string-drop txt (min (string-length txt) (1+ pd)))))
+      ;; Clear the mark if we're overwriting the mark
+      (when (and (is-mark-enabled? buf)
+                 (= (get-pd-mark buf) (get-pd-cur buf))
+                 (= (get-line-cur buf) (get-line-mark buf)))
+        (set-mark-flag! buf #f))
+      ;; Move the cursor forward
+      (set-pd-cur! buf (1+ (get-pd-cur buf)))
+      (set-pp-cur! buf (get-pp-from-pd-cur buf))
+      (set-pp-goal! buf (get-pp-cur buf)))]
 
-(define-method (write-tab (buf <CBuffer>) c device)
-  "Writes a tab at the current position, overwritting the current character.
-If DEVICE is 'data, the current codepoint is replace with a tab.
-If DEVICE is 'presentation, those graphemes that would be wholly or partly
-overwritten by this tab will be erased before the tab is added."
-  #t)
+   [(eqv? device 'presentation)
+    (let* ([ppList (compute-pp-list-from-string (get-text-cur buf)
+                                                (get-tab-size buf))]
+           ;; Presentation position of start
+           [pp-start (get-pp-cur buf)]
+           ;; Presentation position of next
+           [pp-end (+ pp-start (wcwidth c))]
 
-(define-method (write-next-line (buf <CBuffer>) c)
-  "Removes the text between the active position and the end of the
-line from the current line, and places it in a new line inserted after
-the current line"
-  #t)
+           ;; Data position of start of char, being careful to include
+           ;; the beginning of wide characters
+           [pd1 (list-index (lambda (x) (> x pp-start)) ppList)]
+           [pd-start (if pd1
+                         (max 0 (1- pd1))
+                         ;; else
+                         (last ppList))]
+
+           ;; Data position of end of char
+           [pd2 (list-index (lambda (x) (> x pp-end)) ppList)]
+           [pd3 (if pd2
+                    (max 0 (1- pd2))
+                    ;; else
+                    (last ppList))]
+           [pd-end (min (last ppList) (if (= pd3 pd-start)
+                                          (1+ pd-start)
+                                          pd3))]
+
+           ;; Presentation of start of characters overwritten by char,
+           ;; including padding for wide characters
+           [space-before-char (- (get-pp-cur buf) (list-ref ppList pd-start))]
+           [space-after-char (max 0 (- (list-ref ppList pd-end) pp-end))]
+           [txt (get-text-cur buf)])
+
+      (format #t "write-char pd-cur ~s pd-start ~s pd-end ~s pp-cur ~s pp-start ~s pp-end ~s space ~s;~s~%" (get-pd-cur buf) pd-start pd-end (get-pp-cur buf) pp-start pp-end space-before-char space-after-char)
+      ;; Replace the tab characters with spaces
+      (set-text-cur! buf (string-append (string-take txt pd-start)
+                                        (make-string space-before-char #\space)
+                                        (string c)
+                                        (make-string space-after-char #\space)
+                                        (string-drop txt pd-end)))
+      (set-pd-cur! buf (+ pd-start 1))
+      (set-pp-cur! buf (get-pp-from-pd-cur buf))
+      (set-pp-goal! buf (get-pp-cur buf)))]))
+
+
+(define-method (write-tabulation (buf <CBuffer>) device)
+  "Writes a tab at the current position, overwriting the current character.
+If DEVICE is 'data, the current codepoint is replace with a tab.  If
+DEVICE is 'presentation, those graphemes that would be wholly or
+partly overwritten by this tab will be erased before the tab is
+added."
+  (cond
+
+   ;; If we're overwriting a tab with a tab
+   [(and (< (get-pd-cur buf) (string-length (get-text-cur buf)))
+         (eqv? #\tab (string-ref (get-text-cur buf) (get-pd-cur buf))))
+    ;; Clear the mark if we're overwriting the mark
+    (when (and (is-mark-enabled? buf)
+               (= (get-pd-mark buf) (get-pd-cur buf))
+               (= (get-line-cur buf) (get-line-mark buf)))
+      (set-mark-flag! buf #f))
+    ;; Don't replace anything, but move the cursor forward
+    (set-pd-cur! buf (1+ (get-pd-cur buf)))
+    (set-pp-cur! buf (get-pp-from-pd-cur buf))
+    (set-pp-goal! buf (get-pp-cur buf))]
+
+   [(eqv? device 'data)
+    (let ([txt (get-text-cur buf)]
+          [pd (get-pd-cur buf)])
+      (set-text-cur! buf (string-append (string-take txt pd)
+                                        (string #\tab)
+                                        (string-drop txt (min (string-length txt) (1+ pd)))))
+      ;; Clear the mark if we're overwriting the mark
+      (when (and (is-mark-enabled? buf)
+                 (= (get-pd-mark buf) (get-pd-cur buf))
+                 (= (get-line-cur buf) (get-line-mark buf)))
+        (set-mark-flag! buf #f))
+      ;; Move the cursor forward
+      (set-pd-cur! buf (1+ (get-pd-cur buf)))
+      (set-pp-cur! buf (get-pp-from-pd-cur buf))
+      (set-pp-goal! buf (get-pp-cur buf)))]
+
+   [(eqv? device 'presentation)
+    (let* ([ppList (compute-pp-list-from-string (get-text-cur buf)
+                                                (get-tab-size buf))]
+           [tabsize (get-tab-size buf)]
+           ;; Presentation position of start of tab
+           [pp-start (get-pp-cur buf)]
+           ;; Presentation position of next tab stop
+           [pp-end (* tabsize (quotient (+ pp-start tabsize) tabsize))]
+           ;; if we've moved past the end of the line...
+           [pp3 (min pp-end (last ppList))]
+
+           ;; Data position of start of tab, being careful to include
+           ;; the beginning of wide characters
+           [pd1 (list-index (lambda (x) (> x pp-start)) ppList)]
+           [pd-start (if pd1
+                         (max 0 (1- pd1))
+                         ;; else
+                         (last ppList))]
+
+           ;; Data position of end of tab
+           [pd2 (list-index (lambda (x) (> x pp3)) ppList)]
+           [pd-end (if pd2
+                       (max 0 (1- pd2))
+                       ;; else
+                       (last ppList))]
+
+           ;; Presentation of start of tab, including padding for wide
+           ;; characters
+           [pp-adj-start (list-ref ppList pd-start)]
+           [pp-adj-end (max pp-end (list-ref ppList pd-end))]
+           [space-num (- pp-adj-end pp-adj-start)]
+           [txt (get-text-cur buf)])
+
+      ;; Replace the tab characters with spaces
+      (set-text-cur! buf (string-append (string-take txt pd-start)
+                                        (make-string space-num #\space)
+                                        (string-drop txt pd-end)))
+      (set-pd-cur! buf (+ pd-start space-num))
+      (set-pp-cur! buf pp-adj-end)
+      (set-pp-goal! buf pp-adj-end))]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; UTILITIES
@@ -539,7 +698,7 @@ the current line"
         [x xstart])
     (do ([i 0 (1+ i)]) ([>= i iLim])
       (set! x (+ x (count-cells-in-char (string-ref str i) x tabsize))))
-    (format (current-error-port) "CountCellsInString: str ~s count ~s~%" str x)
+    ;; (format (current-error-port) "CountCellsInString: str ~s count ~s~%" str x)
     (- x xstart)))
 
 (define (count-cells-in-substring str n xstart tabsize)
