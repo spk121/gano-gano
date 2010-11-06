@@ -5,7 +5,7 @@
   #:use-module (gano chars)
   #:use-module (gano utils)
   #:use-module (srfi srfi-1)
-  #:use-module (rnrs control)
+  ;; #:use-module (rnrs control)
   #:use-module ((ncurses extra) #:select (wcwidth))
   #:export (
             <CBuffer>
@@ -498,6 +498,31 @@ the new line."
     (set-pp-cur! (list-ref ppList (get-pd-cur)))
     (set-pp-goal! (get-pp-cur))))
 
+(define-method (render-frame (buf <CBufffer>) device)
+  "Returns a list of strings that contain the text that is visible in
+the current frame.  If double-width initial or terminal characters
+would straddle the frame, they are replaced with spaces.  If device is
+'data, the strings will contain tabulation characters.  If device is
+'presentation, the tabs will be converted into spaces and the end of
+the lines will be padded with spaces to fill the frame."
+  (cond
+   [(eq? device 'data)
+    (let* ([lines-num (length (get-text (buf)))]
+	   [Lstart (get-line-frame buf)]
+	   [Lend (+ Lstart (get-frame-lines-num buf))])
+	  
+      (do ([L Lstart (1+ L)]) ([>= L Lend])
+	(let* ([txt (get-text-cur buf)]
+	       [ppList (compute-pp-list-from-string (get-text-cur buf)
+						    (get-tab-size buf))]
+	       ;; 
+	       
+	       
+	       (set! x (+ x (count-cells-in-char (string-ref str i) x tabsize))))
+      ;; (format (current-error-port) "CountCellsInString: str ~s count ~s~%" str x)
+      (- x xstart)))
+    
+
 (define-method (scroll-down (buf <CBuffer>) n)
   "Moves the presentation component N line positions such that the
 data appear to move down; the active presentation position is not
@@ -720,6 +745,15 @@ current line."
   "#t if this is an ISO control character"
   (char-set-contains? char-set:iso-control c))
 
+(define (make-framed-substring str pp-start pp-end device)
+  "Return the substring of STR that is bounded by the
+presentation locations pp-start and pp-end, inclusive.  Double-width
+characters that would straddle pp-start or pp-end will be replaced with
+spaces.  If device is 'data, tabulation characters are are included
+in the output string.  If device is 'presentation, tabulation characters
+are converted into spaces, and the end of the string will be padded
+with spaces if it wouldn't otherwise reach pp-end"
+  #f)
 
 (define (AppendBufferMagicLine)
   (SetBufferLines! (append (GetBufferLines)
