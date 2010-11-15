@@ -4,7 +4,8 @@
 (use-modules (gano CBuffer)
              (oop goops)
              (oop goops describe)
-             (rnrs control))
+	     (gano config)
+             (gano control))
 
 (set! (@@ (gano global) vTabSize) 8)
 
@@ -53,16 +54,17 @@
              (string=? (get-text-cur buf) string-ascii))
   (error "backspace at home"))
 
-;; CJK test: backspace moves the data position back 1, but, the presentation
-;; position takes into account the width of a character
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 10)
-(backspace buf)
-(unless (and (= 9 (get-pd-cur buf))
-             (= 18 (get-pp-cur buf))
-             (= 18 (get-pp-goal buf))
-             (string=? (get-text-cur buf) string-hanzi))
-  (error "CJK text: backspace"))
+(when %have-ucs4
+      ;; CJK test: backspace moves the data position back 1, but, the presentation
+      ;; position takes into account the width of a character
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 10)
+      (backspace buf)
+      (unless (and (= 9 (get-pd-cur buf))
+		   (= 18 (get-pp-cur buf))
+		   (= 18 (get-pp-goal buf))
+		   (string=? (get-text-cur buf) string-hanzi))
+	      (error "CJK text: backspace")))
 
 ;; Tabs test: backspace takes into account the width of tabs
 (init-buf! buf string-tab-letter)
@@ -72,7 +74,7 @@
              (= 9 (get-pp-cur buf))
              (= 9 (get-pp-goal buf))
              (string=? (get-text-cur buf) string-tab-letter))
-  (error "Tab text: backspace"))
+	(error "Tab text: backspace"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CURSOR BACKWARDS TABULATION
@@ -122,41 +124,42 @@
   (error "limits test: backtab"))
 
 ;; CJK test: backtab
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 11)
-(format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
-(cursor-backward-tabulation buf 1)
-(format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
-(unless (and (= 8 (get-pd-cur buf))
-             (= 16 (get-pp-cur buf))
-             (= 16 (get-pp-goal buf))
-             (string=? (get-text-cur buf) string-hanzi))
-  (error "CJK text: backtab"))
+(when %have-ucs4
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 11)
+      (format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
+      (cursor-backward-tabulation buf 1)
+      (format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
+      (unless (and (= 8 (get-pd-cur buf))
+		   (= 16 (get-pp-cur buf))
+		   (= 16 (get-pp-goal buf))
+		   (string=? (get-text-cur buf) string-hanzi))
+	      (error "CJK text: backtab"))
 
-;; CJK test: backtab when cursor isn't char aligned
-(set-pp-cur! buf 11)
-(set-pd-cur! buf 5)
-(format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
-(cursor-backward-tabulation buf 1)
-(format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
-(unless (and (= 4 (get-pd-cur buf))
-             (= 8 (get-pp-cur buf))
-             (= 8 (get-pp-goal buf))
-             (string=? (get-text-cur buf) string-hanzi))
-  (error "CJK text: backtab with half char"))
-
-;; CJK test: backtab over odd hanzi
-(init-buf! buf string-hanzi-odd)
-(set-pp-cur! buf 11)
-(set-pd-cur! buf 5)
-(format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
-(cursor-backward-tabulation buf 1)
-(format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
-(unless (and (= 4 (get-pd-cur buf))
-             (= 7 (get-pp-cur buf))
-             (= 8 (get-pp-goal buf))
-             (string=? (get-text-cur buf) string-hanzi-odd))
-  (error "CJK text: backtab with half char 2"))
+      ;; CJK test: backtab when cursor isn't char aligned
+      (set-pp-cur! buf 11)
+      (set-pd-cur! buf 5)
+      (format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
+      (cursor-backward-tabulation buf 1)
+      (format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
+      (unless (and (= 4 (get-pd-cur buf))
+		   (= 8 (get-pp-cur buf))
+		   (= 8 (get-pp-goal buf))
+		   (string=? (get-text-cur buf) string-hanzi))
+	      (error "CJK text: backtab with half char"))
+      
+      ;; CJK test: backtab over odd hanzi
+      (init-buf! buf string-hanzi-odd)
+      (set-pp-cur! buf 11)
+      (set-pd-cur! buf 5)
+      (format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
+      (cursor-backward-tabulation buf 1)
+      (format #t "~a ~a ~a ~%" (get-pd-cur buf) (get-pp-cur buf) (get-pp-goal buf))
+      (unless (and (= 4 (get-pd-cur buf))
+		   (= 7 (get-pp-cur buf))
+		   (= 8 (get-pp-goal buf))
+		   (string=? (get-text-cur buf) string-hanzi-odd))
+	      (error "CJK text: backtab with half char 2")))
 
 ;; Tabs test: backtab takes into account the width of tabs
 (init-buf! buf string-tab-letter)
@@ -209,27 +212,28 @@
   (error "latin text: absolute positionining after limit"))
 
 ;; CJK test
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 0)
-(print-pos buf)
-(cursor-character-absolute buf 10)
-(print-pos buf)
-(unless (and (= 5 (get-pd-cur buf))
-             (= 10 (get-pp-cur buf))
-             (= 10 (get-pp-goal buf))
-             (string=? (get-text-cur buf) string-hanzi))
-  (error "CJK text: absolute positioning"))
-
-;; CJK-odd test
-(init-buf! buf string-hanzi-odd)
-(print-pos buf)
-(cursor-character-absolute buf 10)
-(print-pos buf)
-(unless (and (= 5 (get-pd-cur buf))
-             (= 9 (get-pp-cur buf))
-             (= 10 (get-pp-goal buf))
-             (string=? (get-text-cur buf) string-hanzi-odd))
-  (error "CJK-odd text: absolute positioning"))
+(when %have-ucs4
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 0)
+      (print-pos buf)
+      (cursor-character-absolute buf 10)
+      (print-pos buf)
+      (unless (and (= 5 (get-pd-cur buf))
+		   (= 10 (get-pp-cur buf))
+		   (= 10 (get-pp-goal buf))
+		   (string=? (get-text-cur buf) string-hanzi))
+	      (error "CJK text: absolute positioning"))
+      
+      ;; CJK-odd test
+      (init-buf! buf string-hanzi-odd)
+      (print-pos buf)
+      (cursor-character-absolute buf 10)
+      (print-pos buf)
+      (unless (and (= 5 (get-pd-cur buf))
+		   (= 9 (get-pp-cur buf))
+		   (= 10 (get-pp-goal buf))
+		   (string=? (get-text-cur buf) string-hanzi-odd))
+	      (error "CJK-odd text: absolute positioning")))
 
 ;; Tabs test
 (init-buf! buf string-tab-letter)
@@ -279,72 +283,73 @@
 (write (get-text-cur buf))
 (newline)
 
-;; Hanzi test: data: start of line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 0)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
+(when %have-ucs4
+      ;; Hanzi test: data: start of line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 0)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi test: data: in line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 1)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
 
-;; Hanzi test: data: in line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 1)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
+      ;; Hanzi test: data: end of line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 11)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
 
-;; Hanzi test: data: end of line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 11)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-
-;; Hanzi-Odd test: data: start of line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 0)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi-Odd test: data: in line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 1)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi-Odd test: data: end of line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 11)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
+      
+      ;; Hanzi-Odd test: data: start of line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 0)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi-Odd test: data: in line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 1)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi-Odd test: data: end of line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 11)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline))
 
 ;; Latin test: presentation: start of line
 (init-buf! buf string-ascii)
@@ -379,73 +384,74 @@
 (write (get-text-cur buf))
 (newline)
 
-;; Hanzi test: presentation: start of line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 0)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
+(when %have-ucs4
+      ;; Hanzi test: presentation: start of line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 0)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
 
-;; Hanzi test: presentation: in line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 1)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
+      ;; Hanzi test: presentation: in line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 1)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
 
-;; Hanzi test: presentation: end of line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 11)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
+      ;; Hanzi test: presentation: end of line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 11)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
 
-
-;; Hanzi-Odd test: presentation: start of line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 0)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi-Odd test: presentation: in line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 1)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi-Odd test: presentation: end of line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 11)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-tabulation buf 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
+      
+      ;; Hanzi-Odd test: presentation: start of line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 0)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi-Odd test: presentation: in line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 1)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi-Odd test: presentation: end of line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 11)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-tabulation buf 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline))
+      
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; WRITE CHARACTER
@@ -483,73 +489,74 @@
 (write (get-text-cur buf))
 (newline)
 
-;; Hanzi test: data: start of line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 0)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi test: data: in line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 1)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi test: data: end of line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 11)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-
-;; Hanzi-Odd test: data: start of line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 0)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi-Odd test: data: in line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 1)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi-Odd test: data: end of line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 11)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'data)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
+(when %have-ucs4
+      ;; Hanzi test: data: start of line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 0)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi test: data: in line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 1)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi test: data: end of line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 11)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      
+      ;; Hanzi-Odd test: data: start of line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 0)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi-Odd test: data: in line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 1)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi-Odd test: data: end of line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 11)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'data)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline))
+      
 ;; Latin test: presentation: start of line
 (init-buf! buf string-ascii)
 (set-data-pos! buf 0)
@@ -583,70 +590,71 @@
 (write (get-text-cur buf))
 (newline)
 
-;; Hanzi test: presentation: start of line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 0)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi test: presentation: in line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 1)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi test: presentation: end of line
-(init-buf! buf string-hanzi)
-(set-data-pos! buf 11)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-
-;; Hanzi-Odd test: presentation: start of line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 0)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi-Odd test: presentation: in line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 1)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
-
-;; Hanzi-Odd test: presentation: end of line
-(init-buf! buf string-hanzi-odd)
-(set-data-pos! buf 11)
-(print-pos buf)
-(write (get-text-cur buf))
-(write-character buf #\x 'presentation)
-(newline)
-(print-pos buf)
-(write (get-text-cur buf))
-(newline)
+(when %have-ucs4
+      ;; Hanzi test: presentation: start of line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 0)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi test: presentation: in line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 1)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi test: presentation: end of line
+      (init-buf! buf string-hanzi)
+      (set-data-pos! buf 11)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      
+      ;; Hanzi-Odd test: presentation: start of line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 0)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi-Odd test: presentation: in line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 1)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline)
+      
+      ;; Hanzi-Odd test: presentation: end of line
+      (init-buf! buf string-hanzi-odd)
+      (set-data-pos! buf 11)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (write-character buf #\x 'presentation)
+      (newline)
+      (print-pos buf)
+      (write (get-text-cur buf))
+      (newline))
 

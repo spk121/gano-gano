@@ -5,7 +5,7 @@
   #:use-module (gano chars)
   #:use-module (gano utils)
   #:use-module (srfi srfi-1)
-  #:use-module (rnrs control)
+  ;; #:use-module (rnrs control)
   #:use-module ((ncurses extra) #:select (wcwidth))
   #:export (
             <CBuffer>
@@ -880,6 +880,7 @@ the presentation position XSTART with a given TABSIZE"
 (define (is-control-char? c)
   "#t if this is an ISO control character"
   (char-set-contains? char-set:iso-control c))
+
 
 (define (AppendBufferMagicLine)
   (SetBufferLines! (append (GetBufferLines)
