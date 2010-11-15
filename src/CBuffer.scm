@@ -24,29 +24,39 @@
             cursor-next-line
             cursor-position
             cursor-preceding-line
+	    cursor-right
             cursor-up
             insert-line
             line-position-absolute
             line-position-backward
             line-position-forward
+	    render-frame
             scroll-down
             scroll-up
             write-character
             write-tabulation
 
+            get-line-cur
             get-pd-cur
             get-pp-cur
             get-pp-from-pd-cur
             get-pp-goal
             get-text-cur
             increase-pd-cur!
+            render-line
             set-line-cur!
             set-line-frame!
+            set-line-frame-size!
             set-pd-cur!
+            set-positions!
             set-pp-cur!
+            set-pp-frame!
+            set-pp-frame-size!
             set-pp-goal!
+            set-tab-size!
             set-text!
             set-text-cur!
+            update-pp-list!
             ))
 
 (if %have-rnrs-control
@@ -54,39 +64,216 @@
     (use-modules (gano control)))
 
 (define-class <CBuffer> ()
-    (m_fileName #:init-value "")
-    (m_rgText #:init-value '("") #:getter get-text #:setter set-text!)
-    (m_LFrame #:init-value 0 #:getter get-line-frame #:setter set-line-frame!)
-    (m_LCur #:init-value 0 #:getter get-line-cur #:setter set-line-cur!)
-    (m_totalSize #:init-value 0)
-    (m_tabSize #:init-value 8 #:getter get-tab-size #:setter set-tab-size!)
-    (m_PdCur #:init-value 0 #:getter get-pd-cur #:setter set-pd-cur!)
-    (m_PpCur #:init-value 0 #:getter get-pp-cur #:setter set-pp-cur!)
-    (m_PpGoal #:init-value 0 #:getter get-pp-goal #:setter set-pp-goal!)
-    (m_fModified #:init-value #f)
-    (m_fMarkSet #:init-value #f #:getter is-mark-enabled? #:setter set-mark-flag!)
-    (m_LMark #:init-value 0)
-    (m_PdMark #:init-value 0)
-    (m_fileFormat #:init-value 'nix)
-    (m_statCur #:init-value #f)
-    (m_undo #:init-value '())
-    (m_iUndoCur #:init-value 0)
-    (m_lastAction #:init-value 'other))
+  ;; The file
+  (m_fileName #:init-value "")
+  (m_fileFormat #:init-value 'nix)
+  (m_fModified #:init-value #f)
+
+  ;; The text
+  ;; A list of strings
+  (m_rgText #:init-value '("") #:getter get-text #:setter set-text!)
+  ;; A list of the presentation positions of the characters of the current line
+  (m_rgPpList #:init-value '() #:getter get-pp-list #:setter set-pp-list!)
+  ;; The current line number
+  (m_LCur #:init-value 0 #:getter get-line-cur #:setter %set-line-cur!)
+  ;; The current data position
+  (m_PdCur #:init-value 0 #:getter get-pd-cur #:setter set-pd-cur!)
+  ;; The current presentation position
+  (m_PpCur #:init-value 0 #:getter get-pp-cur #:setter set-pp-cur!)
+  ;; The desired presentation position
+  (m_PpGoal #:init-value 0 #:getter get-pp-goal #:setter set-pp-goal!)
+  ;; The number of spaces per between tab stops
+  (m_tabSize #:init-value 8 #:getter get-tab-size #:setter set-tab-size!)
+
+  ;; The mark
+  (m_fMarkSet #:init-value #f #:getter is-mark-enabled? #:setter set-mark-flag!)
+  (m_LMark #:init-value 0)
+  (m_PdMark #:init-value 0)
+
+  ;; The Frame
+  (m_LFrame #:init-value 0 #:getter get-line-frame #:setter set-line-frame!)
+  (m_PpFrame #:init-value 0 #:getter get-pp-frame #:setter set-pp-frame!)
+  (m_LFrameSize #:init-value 25 #:getter get-line-frame-size #:setter set-line-frame-size!)
+  (m_PpFrameSize #:init-value 80 #:getter get-pp-frame-size #:setter set-pp-frame-size!)
+
+  ;;(m_totalSize #:init-value 0)
+
+  ;;(m_statCur #:init-value #f)
+  ;;(m_undo #:init-value '()))
+  )
 
 ;; PRIMITIVES
 
+(define-method (bracket-line (buf <CBuffer>) L)
+  "Return L if it is a valid line number for the current buffer, or
+the nearest valid line number of L is out of range."
+  (max 0
+       (min L
+	    (1- (get-line-count buf)))))
+
+(define-method (bracket-pd (buf <CBuffer>) pd)
+  "Return pd if it is valid data position for the active line, or the
+nearest valid data position for the active line if pd is out of
+range."
+  (max 0 
+       (min pd 
+	    (get-text-cur-length buf))))
+
 (define-method (get-line-count (buf <CBuffer>))
-  "Return the number of lines in the buffer"
-  (length (get-text)))
+  "Return the number of line in the buffer"
+  (length (get-text buf)))
+
+(define-method (get-pp-from-pd-cur (buf <CBuffer>))
+  "Find the presentation position of the active data position for the
+current line."
+  (count-cells-in-substring (get-text-cur buf) (get-pd-cur buf) 0 (get-tab-size buf)))
+
+(define-method (get-pp-max (buf <CBuffer>))
+  (last (get-pp-list buf)))
 
 (define-method (get-text-cur (buf <CBuffer>))
+  "Return the text of the active line"
   (list-ref (get-text buf) (get-line-cur buf)))
+
+(define-method (get-text-cur-length (buf <CBuffer>))
+  "Return the number of codepoints in the active line"
+  (string-length (get-text-cur buf)))
 
 (define-method (increase-pd-cur! (buf <CBuffer>) n)
   (set-pd-cur! buf (+ (get-pd-cur buf) n)))
 
+(define (render-line str tabsize pp-start pp-length)
+  "Return the substring of str constrained by the presentation columns.
+Tabs are converted to spaces, and characters that would be clipped by
+the edges are replaced with spaces."
+  (let* ([pp-end (+ pp-start pp-length)]
+	 [pp-list (compute-pp-list-from-string str tabsize)]
+	 ;; The index of the first character past the start of the window
+	 [i-start (list-index (lambda (x) (>= x pp-start)) pp-list)]
+	 ;; The index of the first character past endthe window
+	 [i-end (list-index (lambda (x) (> x pp-end)) pp-list)]
+	 ;; The number of left-side spaces needed
+	 [left-padding (min pp-length
+			    (if i-start
+				(- (list-ref pp-list i-start) pp-start)
+				pp-length))]
+	 ;; #t if the last character straddles the frame
+	 [truncated-p (and i-end (> (list-ref pp-list i-end) pp-end))]
+	 ;; The number of cells that the windowed string occupies
+	 [str-pp-size (cond
+		       [(and (not i-start) (not i-end))
+			;; window starts after string
+			0]
+		       [(and i-start (not i-end))
+			;; string starts in window and ends before window
+			(- (last pp-list) (list-ref pp-list i-start))]
+		       [(= i-start i-end)
+			;; string starts after window
+			0]
+		       [(and (= i-start (1- i-end))
+			     truncated-p)
+			;; the only character is truncated
+			0]
+		       [else
+			;; the normal case
+			(if truncated-p
+			    (- (list-ref pp-list (1- i-end))
+			       (list-ref pp-list i-start))
+			    ;; else
+			    (- (list-ref pp-list i-end)
+			       (list-ref pp-list i-start)))])]
+	 [right-padding (- pp-length (+ left-padding str-pp-size))])
+			
+    (format #t "~s ~s ~s~%" left-padding str-pp-size right-padding)
+    (string-append
+     ;; Space padding for initial truncated characters
+     (make-string left-padding #\space)
+     ;; Main list
+     (cond
+      [(not i-start)
+       ""]
+      [i-start
+       (let ([inner-str ""])
+	 (do ([i i-start (1+ i)]) ([>= i (1- (or i-end (length pp-list)))])
+	   (if (char=? #\tab (string-ref str i))
+	       (set! inner-str (string-append inner-str (make-string (- (list-ref pp-list (1+ i)) (list-ref pp-list i)) #\space)))
+	       (set! inner-str (string-append inner-str (string (string-ref str i))))))
+	 inner-str)])
+     ;; End of line space padding
+     (make-string right-padding #\space))))
+
+(define-method (set-line-cur! (buf <CBuffer>) n)
+  (%set-line-cur! buf n)
+  (update-pp-list! buf))
+
+(define-method (set-positions! (buf <CBuffer>) n device)
+  "When device is 'data, set the active data position to N and the
+active presentation position and presentation position goal to the
+beginning of grapheme at data position N.  When device is
+'presentation, set the presentation position goal to N, the active
+presentation position to the beginning of the grapheme at presentation
+position N, and the active data position to the data position of that
+grapheme."
+  (cond
+   [(eq? device 'data)
+    (set-pd-cur! buf n)
+    (update-pp-cur! buf)
+    (synchronize-pp! buf)]
+   [(eq? device 'presentation)
+    (let ([ind (list-index (lambda (x) (> x n)) (get-pp-list buf))])
+      (set-pp-goal! buf n)
+      (if ind
+	  (set-pd-cur! buf (max 0 (1- ind)))
+	  ;; else
+	  (set-pd-cur! buf (last (get-pp-list buf))))
+      (update-pp-cur! buf))]
+   [else
+    (error "FIXME !!#!")]))
+
 (define-method (set-text-cur! (buf <CBuffer>) str)
   (list-set! (get-text buf) (get-line-cur buf) str))
+
+(define-method (synchronize-pp! (buf <CBuffer>))
+  "Set the presentation position goal to the active presentation
+position"
+  (set-pp-goal! buf (get-pp-cur buf)))
+
+(define (compute-tab-column pos tabsize n)
+  "If N is positive, compute the presentation position of the nth next
+forward tabulation.  If N is negative, compute the position of the
+backward tabulation.  This function does not do bracketing."
+  (cond
+   [(< n 0)
+    ;; Back up n tabsizes
+    (let* ([pp1 (+ pos (* n tabsize))]
+	   ;; Move forward to a tab stop
+	   [pp2 (cond 
+		 [(zero? (remainder pp1 tabsize))
+		  pp1]
+		 [(> pp1 0)
+		  (* tabsize (1+ (quotient pp1 tabsize)))]
+		 [(< pp1 0)
+		  (* tabsize (quotient pp1 tabsize))])])
+      pp2)]
+   [(= n 0)
+    pos]
+   [(> n 0)
+    ;; Advance n tabsizes
+    (let* ([pp1 (+ pos (* n tabsize))]
+           ;; Move backward to a tab stop
+           [pp2 (* tabsize (quotient pp1 tabsize))])
+      (format #t "~a!!!~%" pp2)
+      pp2)]))
+
+(define-method (update-pp-cur! (buf <CBuffer>))
+  "Sets the active presentation position to the match the beginning
+of the character at the active data position"
+  (set-pp-cur! buf (list-ref (get-pp-list buf) (get-pd-cur buf))))
+
+(define-method (update-pp-list! (buf <CBuffer>))
+  (set-pp-list! buf 
+		(compute-pp-list-from-string (get-text-cur buf) 
+					     (get-tab-size buf))))
 
 ;; METHODS
 
@@ -94,119 +281,60 @@
   "Move the active data position to the previous data position"
   (when (> (get-pd-cur buf) 0)
     (increase-pd-cur! buf -1))
-  (set-pp-cur! buf (get-pp-from-pd-cur buf))
-  (set-pp-goal! buf (get-pp-cur buf)))
+  (update-pp-cur! buf)
+  (synchronize-pp! buf))
 
 (define-method (carriage-return (buf <CBuffer>))
   "Move the active presentation position to the line home position of
-the same line in the presentation component"
-  (set-pd-cur! buf 0)
-  (set-pp-cur! buf 0)
-  (set-pp-goal! buf 0))
+the same line"
+  (set-positions! buf 0 'data))
 
 (define-method (character-position-absolute (buf <CBuffer>) n)
   "Move the active data position to the n-th codepoint in the active
 line"
-  (let* ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
-         [pd (max 0 (min n (last ppList)))]
-         [pp (list-ref ppList pd)])
-    (set-pd-cur! buf pd)
-    (set-pp-cur! buf pp)
-    (set-pp-goal! buf pp)))
+  (let* ([pd (bracket-pd buf n)])
+    (set-positions! buf pd 'data)))
 
 (define-method (character-position-backward (buf <CBuffer>) n)
   "Move the active data position backward n codepoints"
-  (let* ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
-         [pd (max 0
-                  (min (- (get-pos-cur buf) n)
-                       (last ppList)))]
-         [pp (list-ref ppList pd)])
-    (set-pd-cur! buf pd)
-    (set-pp-cur! buf pp)
-    (set-pp-goal! buf pp)))
+  (let* ([pd (bracket-pd buf (- (get-pos-cur buf) n))])
+    (set-positions! buf pd 'data)))
 
 (define-method (character-position-forward (buf <CBuffer>) n)
   "Move the active data position forward n codepoints"
-  (let* ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
-         [pd (max 0
-                  (min (+ (get-pos-cur buf) n)
-                       (last ppList)))]
-         [pp (list-ref ppList pd)])
-    (set-pd-cur! buf pd)
-    (set-pp-cur! buf pp)
-    (set-pp-goal! buf pp)))
+  (let* ([pd (bracket-pd (+ (get-pos-cur buf) n))])
+    (set-positions! buf pd 'data)))
 
 (define-method (character-and-line-position (buf <CBuffer>) n m)
   "Moves the active data position to the n-th line position m-th
 character position"
-  (set-line-cur! (max 0 (min (get-line-max buf) n)))
+  (set-line-cur! (bracket-line buf n))
+  (update-pp-list! buf)
   (character-position-absolute (buf m)))
 
 (define-method (cursor-backward-tabulation (buf <CBuffer>) n)
     "Move the active presentation position to the character position
 corresponding to the n-th preceding character tabulation stop in the
 presentation component"
-    (let* ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
-           [ppCur (get-pp-cur buf)]
+    (let* ([ppCur (get-pp-cur buf)]
            [tabsize (get-tab-size buf)]
            ;; Back up n tabsizes
-           [pp1 (- ppCur (* n tabsize))]
-           ;; Move forward to a tab stop, or to line home position if
-           ;; we've moved too far left
-           [pp2 (if (zero? (remainder pp1 tabsize))
-                    (max 0 pp1)
-                    ;; else
-                    (max 0 (* tabsize (1+ (quotient pp1 tabsize)))))]
-           ;; Move forward if we're in the middle of a double-width
-           ;; character
-           [pd (max 0 (1- (list-index (lambda (x) (> x pp2)) ppList)))]
-           [pp3 (list-ref ppList pd)])
-      (format (current-error-port) "backtab: start-pp ~a num_tabs ~a back_pp ~a forward_pp ~a~%"
-              ppCur n pp1 pp2)
-      (set-pd-cur! buf pd)
-      (set-pp-cur! buf pp3)
-      (set-pp-goal! buf pp2)))
+           [pp1 (max 0 (compute-tab-column ppCur tabsize (- n)))])
+      (set-positions! buf pp1 'presentation)))
 
 (define-method (cursor-character-absolute (buf <CBuffer>) n)
     "Move the active presentation position to character position n in
 the active line in the presentation component"
-    (let* ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
-           ;; Find the data position of the character at presentation
-           ;; position N
-           [pd-next (list-index (lambda (x) (> x n)) ppList)]
-           [pd (if pd-next
-                   (max 0 (1- pd-next))
-                   ;; else
-                   (last ppList))]
-           ;; Adjust the presentation position if we're in the middle of
-           ;; a double-width character
-           [pp (list-ref ppList pd)])
-      (set-pd-cur! buf pd)
-      (set-pp-cur! buf pp)
-      (set-pp-goal! buf (max 0 n))))
+    (set-positions! buf n 'presentation))
 
 (define-method (cursor-down (buf <CBuffer>) n)
   "Move the active presentation position downwards in the presentation
 component by N line positions"
-  (let* ([LCur (get-line-cur buf)]
-         ;; Move forward n lines, or to the end of the buffer
-         [L1 (min (+ LCur n) (1- (get-line-count buf)))])
+  (let* ( ;; Move forward n lines, or to the end of the buffer
+         [L1 (bracket-line buf (+ (get-line-cur buf) n))])
     (set-line-cur! buf L1)
-    (let ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
-          ;; Find the data position of the character at the current
-          ;; presentation position.
-          [pd-next (list-index (lambda (x) (> x n)) ppList)]
-          [pd (if pd-next
-                  (max 0 (1- pd-next))
-                  ;; else
-                  (last ppList))]
-          ;; Adjust the presentation position if we're in the middle of
-          ;; a double-width character
-          [pp (list-ref ppList pd)])
-      (set-pd-cur! buf pd)
-      (set-pp-cur! buf pp)
-      ;; The goal column remains unchanged
-      )))
+    (update-pp-list! buf)
+    (set-positions! buf (get-pp-cur buf) 'presentation)))
 
 (define-method (cursor-forward-tabulation (buf <CBuffer>) n)
     "Move the active presentation position to the character position
@@ -215,117 +343,137 @@ presentation component"
     (let* ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
            ;; Move forward n tabsizes
            [tabsize (get-tab-size buf)]
-           [pp1 (+ (get-pp-cur buf) (* n tabsize))]
-           ;; Move backward to a tab stop
-           [pp2 (* tabsize (quotient pp1 tabsize))]
-           ;; if we've moved past the end of the line...
-           [pp3 (min pp2 (last ppList))]
-           ;; Then move backward if we're in the middle of a double-width
-           ;; character
-           [pd-next (list-index (lambda (x) (> x pp3)) ppList)]
-           [pd (if pd-next
-                   (max 0 (1- pd-next))
-                   ;; else
-                   (last ppList))]
-           [pp4 (list-ref ppList pd)])
-      (set-pd-cur! buf pd)
-      (set-pp-cur! buf pp4)
-      (set-pp-goal! buf pp2)))
+           [pp (compute-tab-column (get-pp-cur buf) tabsize n)])
+      (set-positions! buf pp 'presentation)))
 
-(define (cursor-left buf n)
+(define-method (cursor-left (buf <CBuffer>) n)
   "Move the active presentation position leftwards in the presentation
 component by n character positions"
-    (let* ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
-           [ppCur (get-pp-cur buf)]
-           ;; Back up n cells
-           [pp1 (- ppCur n)]
-           ;; Move backward if we're in the middle of a double-width
-           ;; character
-           [pd (max 0 (1- (list-index (lambda (x) (> x pp1)) ppList)))]
-           [pp2 (list-ref ppList pd)])
-      (set-pd-cur! buf pd)
-      (set-pp-cur! buf pp2)
-      (set-pp-goal! buf pp1)))
+  (set-positions! buf (max 0 (- (get-pp-goal buf) n)) 'presentation))
 
 (define (cursor-next-line buf n)
   "Move the active presentation position to the 1st character position
 of the n-th following line in the presentation component"
   (let* ([LCur (get-line-cur buf)]
          ;; Move forward n lines, or to the end of the buffer
-         [L1 (min (+ LCur n) (1- (get-line-count buf)))])
-    (set-line-cur! buf L1)
-    (set-pd-cur! buf 0)
-    (set-pp-cur! buf 0)
-    (set-pp-goal! buf 0)))
-
+         [L1 (bracket-line buf (+ LCur n))])
+    (when (> L1 (get-line-cur buf))
+	  (set-line-cur! buf L1)
+	  (update-pp-list! buf)
+	  (set-positions! buf 0 'data))))
 
 (define (cursor-preceding-line buf n)
   "Move the active presentation position to the 1st character position
 of the n-th preceding line in the presentation component"
   (let* ([LCur (get-line-cur buf)]
          ;; Move backward n lines, or to the beginning of the buffer
-         [L1 (max 0 (- LCur n))])
-    (set-line-cur! buf L1)
-    (set-pd-cur! buf 0)
-    (set-pp-cur! buf 0)
-    (set-pp-goal! buf 0)))
+         [L1 (bracket-line buf (- LCur n))])
+    (when (< L1 (get-line-cur buf))
+	  (set-line-cur! buf L1)
+	  (update-pp-list! buf)
+	  (set-positions! buf 0 'data))))
 
 (define (cursor-right buf n)
   "Move the active presentation position rightwards in the
 presentation component by n character positions"
-  (let* ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
-         [ppCur (get-pp-cur buf)]
-         ;; Move forward n cells
-         [pp1 (+ ppCur n)]
-         ;; Move backward if we're in the middle of a double-width
-         ;; character
-         [pd (max 0 (1- (list-index (lambda (x) (> x pp1)) ppList)))]
-         [pp2 (list-ref ppList pd)])
-    (set-pd-cur! buf pd)
-    (set-pp-cur! buf pp2)
-    (set-pp-goal! buf pp1)))
+  (set-positions! buf (min (get-pp-max buf)
+			   (+ (get-pp-goal buf) n))
+		  'presentation))
 
 (define (cursor-position buf n m)
   "Move the active presentation position to the n-th line and m-th
 character position in the presentation component"
-  (set-line-cur! buf (min (get-line buf) (1- (get-line-count buf))))
-  (cursor-character-absolute buf m))
+  (set-line-cur! buf (bracket-line buf n))
+  (update-pp-list! buf)
+  (set-positions! buf m 'position))
 
 (define (cursor-up buf n)
   "Move the active presentation positions upwards in the presentation
 component by N line positions"
-  (let* ([LCur (get-line-cur buf)]
+  (let* (
          ;; Move backward n lines, or to the top of the buffer
-         [L1 (max (+ LCur n) 0)])
+         [L1 (bracket-line buf (- (get-line-cur buf) n))])
     (set-line-cur! buf L1)
-    (let ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
-          ;; Find the data position of the character at the current
-          ;; presentation position.
-          [pd-next (list-index (lambda (x) (> x n)) ppList)]
-          [pd (if pd-next
-                  (max 0 (1- pd-next))
-                  ;; else
-                  (last ppList))]
-          ;; Adjust the presentation position if we're in the middle of
-          ;; a double-width character
-          [pp (list-ref ppList pd)])
-      (set-pd-cur! buf pd)
-      (set-pp-cur! buf pp)
-      ;; The goal column remains unchanged
-      )))
+    (update-pp-list! buf)
+    (set-positions! buf (get-pp-cur buf) 'presentation)))
 
-(define-method (delete-character buf device)
-  #t)
 
-(define-method (delete-in-line buf device)
-  #t)
+(define-method (delete-character buf)
+  "This removes the character at the active data position.  The
+characters to the right of the active data position are moved left to
+fill in the gap.  If the active data position it at the end of the
+line, nothing happens."
+  (let ([txt (get-text-cur buf)]
+	[pd (get-pd-cur buf)]
+	[len (get-text-cur-length)])
+    (cond
+     [(= len 0)
+      *unspecified*]
+     [(= pd len)
+      *unspecified*]
+     [(= pd 0)
+      (set-text-cur! buf (string-drop txt 1))]
+     [else
+      (set-text-cur! buf (string-append (string-take txt (1- pd))
+					(string-drop txt pd)))])
+    (update-pd-list! buf)
+    (set-positions! buf pd 'data)))
+
+(define-method (delete-in-line buf P)
+  "This removes some or all of the characters in the current line.
+If P is zero, the active position through the end of the line are
+deleted.  If P is one, the beginning of the line through the active
+position are deleted; the remaining characters in the line are shifted
+left to fill in the gap; and, the cursor is placed at the beginning of
+the line.  If P is two, all the characters in the line are removed,
+and the cursor is placed at the beginning of the now-empty line."
+  (let ([txt (get-text-cur buf)]
+	[pd (get-pd-cur buf)])
+    (cond
+     [(= P 0)
+      (set-text-cur! buf (string-take txt pd))
+      (update-pd-list! buf)
+      (set-positions! buf pd 'data)]
+     [(= P 1)
+      (set-text-cur! buf (string-drop (1+ pd)))
+      (update-pd-list! buf)
+      (set-positions! buf 0 'data)]
+     [(= P 2)
+      (set-text-cur! buf "")
+      (update-pd-list! buf)
+      (set-positions! buf 0 'data)]
+     [else
+      (error "FIXME")])))
 
 (define-method (erase-character buf device)
-  "This replaces the character at the active data postion with the space
-character.  If DEVICE is 'presentation, multi-cell graphemes will be
-replaced with multiple space characters.  If DEVICE is 'data, the current
-codepoint will be replaced with a single space character."
-  #t)
+  "This replaces the character at the active data postion with the
+space character.  If DEVICE is 'presentation, multi-cell graphemes
+will be replaced with multiple space characters.  If DEVICE is 'data,
+the current codepoint will be replaced with a single space character."
+  (let ([txt (get-text-cur buf)]
+	[pd (get-pd-cur buf)]
+	[len (get-text-cur-length buf)])
+    (cond
+     [(string-null? txt)
+      *unspecified*]
+     [(= pd len)
+      *unspecified*]
+     [(eq? device 'data)
+      (set-text-cur! buf (string-set! txt pd #\space))]
+     [(eq? device 'presentation)
+      (let ([ch (string-ref txt pd)])
+	(if (char=? ch #\tab)
+	    (set-text-cur! buf (string-append (string-take txt pd)
+					      (make-string (- (compute-tab-column pd (get-tab-size buf) 1)
+							      pd)
+							   #\space)
+					      (string-drop txt (1+ pd))))
+	    ;; else
+	    (set-text-cur! buf (string-append (string-take txt pd)
+					      (make-string (wcwidth (string-ref txt pd)) #\space)
+					      (string-drop txt (1+pd))))))])
+    (update-pd-list! buf)
+    (set-positions! buf 0 'presentation)))
 
 (define-method (erase-in-line buf device P)
   "This sets some or all of the characters in the current line to
@@ -414,7 +562,7 @@ This may change the visual presentation of the line"
       (set-pp-goal! pd-cur)])))
 
 
-(define-method (insert-character (buf <CBuffer>) n)
+(define-method (insert-character-space (buf <CBuffer>) n)
   "Shift the contents of the line to the right, starting at the
 current data position, creating an empty gap of N codepoints"
   ;;(add-undo (list 'ICH n (get-line-cur buf) (get-pd-cur buf)))
@@ -429,7 +577,7 @@ current data position, creating an empty gap of N codepoints"
                (>= (get-pd-mark) (get-pd-cur)))
       (set-pd-mark! (+ (get-pd-mark) n)))))
 
-(define-method (insert-line (buf <CBuffer>) n)
+(define-method (insert-line-space (buf <CBuffer>) n)
   "Move the current line and the n-1 following lines down N lines.
 The resulting cap is erased.  The cursor is placed at the home
 position of the first new empty line."
@@ -497,6 +645,24 @@ the new line."
   (let ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))])
     (set-pp-cur! (list-ref ppList (get-pd-cur)))
     (set-pp-goal! (get-pp-cur))))
+
+(define-method (render-frame (buf <CBuffer>))
+  "Return a list of strings of the characters that are visible
+in the current frame.  Tabs will be converted to spaces.
+Lines will be space-padded to contain as many cells as the 
+frame"
+  (let* ([L-size (get-line-frame-size buf)]
+	 [L-start (get-line-frame buf)]
+	 [L-end (min (get-line-count buf) (+ L-start L-size))]
+	 [tabsize (get-tab-size buf)]
+	 [data-txt (get-text buf)]
+	 [pp-start (get-pp-frame buf)]
+	 [pp-size (get-pp-frame-size buf)]
+	 [frame-txt (make-list L-size (make-string (get-pp-frame-size buf) #\space))])
+    (do ([L (max 0 L-start) (1+ L)]) ([>= L L-end])
+      (list-set! frame-txt (- L L-start)
+		 (render-line (list-ref data-txt L) tabsize pp-start pp-size)))
+    frame-txt))
 
 (define-method (scroll-down (buf <CBuffer>) n)
   "Moves the presentation component N line positions such that the
@@ -711,15 +877,9 @@ the presentation position XSTART with a given TABSIZE"
   "The character to use when displaying controls in \"^X\" form"
   (integer->char (+ (char->integer c) 64)))
 
-(define-method (get-pp-from-pd-cur (buf <CBuffer>))
-  "Find the presentation position of the active data position for the
-current line."
-  (count-cells-in-substring (get-text-cur buf) (get-pd-cur buf) 0 (get-tab-size buf)))
-
 (define (is-control-char? c)
   "#t if this is an ISO control character"
   (char-set-contains? char-set:iso-control c))
-
 
 (define (AppendBufferMagicLine)
   (SetBufferLines! (append (GetBufferLines)
