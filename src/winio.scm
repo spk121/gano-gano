@@ -31,6 +31,7 @@
   #:use-module (gano global)
   #:use-module (gano nano-h)
   #:use-module (gano utils)
+  #:use-module (rnrs control)
   #:use-module (ncurses curses)
   #:use-module (ncurses extra)
   #:export (
@@ -52,11 +53,6 @@
             set_modified
             update_line
             ))
-
-(if %have-rnrs-control
-    (use-modules (rnrs control))
-    ;; else
-    (use-modules (gano control)))
 
 (define PACKAGE_STRING "Gano 0.0")
 
@@ -340,9 +336,11 @@
 ;; Initialize the three window portions that nano uses.
 (define (InitWindow)
   (set! editwinrows (+ (lines) -5 (no_more_space) (no_help)))
+  (format (current-error-port) "Editor window ~a by ~a~%" (cols) editwinrows)
+  (format (current-error-port) "Minimum size ~a by ~a~%" MIN_EDITOR_COLS MIN_EDITOR_ROWS)
   (when (or (< (cols) MIN_EDITOR_COLS)
             (< editwinrows MIN_EDITOR_ROWS))
-    (error (_ "Window size is too small for nano...~%")))
+	(error "Window size is too small for nano...~%"))
 
   ;; Set up fill column, based on the screen width
   (set! viColFill viColWrap)

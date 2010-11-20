@@ -50,6 +50,6 @@ script_sources = nano.scm
 
 ifeq (GUILE_VERSION, 1.8)
 include guile-1.8.mk
-else (GUILE_VERSION, 2.0)
+else # (GUILE_VERSION, 2.0)
 include guile-2.0.mk
 endif

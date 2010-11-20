@@ -26,23 +26,20 @@
   #:use-module (gano config)
   #:use-module (gano utils)
   #:use-module (gano global)
+  #:use-module (rnrs control)
   #:export (
 	    LoadRcFile
 	    ))
-
-(if %have-rnrs-control
-    (use-modules (rnrs control))
-    ;;else
-    (use-modules (gano control)))
 
 ;; The main rcfile function.  It tried to open the system-wide rcfile, followed
 ;; by the current user's rcfile.
 (define (LoadRcFile)
   "Parse the system-wide rcfile, followed by the current user's rcfile"
-  (let* ([systemRc (string-append vDirSysConf "/ganorc")])
+  (let* ([systemRc (string-append %vDirSysConf "/ganorc")])
 
     (when (IsRegularFile? systemRc)
-      (primitive-load systemRc)))
+	  (format #t "Is ~a a regular file? ~a~%" systemRc (IsRegularFile? systemRc))
+	  (primitive-load systemRc)))
 
   ;; We already read the system ganorc, if it's there.  If we're root,
   ;; and --disable-wrapping-as-root is used, turn wrapping off anew.
@@ -56,7 +53,7 @@
       ;; else
       (let ([ganoRc (string-append vDirHome "/.nanorc")])
         (when (IsRegularFile? ganoRc)
-          (primitive-load ganoRc)))))
+	      (primitive-load ganoRc)))))
 
 ;; Returns #t if FILENAME is a regular file
 (define (IsRegularFile? fileName)

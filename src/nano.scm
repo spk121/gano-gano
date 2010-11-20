@@ -49,11 +49,12 @@
              (ice-9 getopt-long)
              (ncurses curses)
              (ncurses extra)
+	     (rnrs control)
              (srfi srfi-1))
 
-(if %have-rnrs-control
-    (use-modules (rnrs control))
-    (use-modules (gano control)))
+;; (if %have-rnrs-control
+;;     (use-modules (rnrs control))
+;;     (use-modules (gano control)))
 (if %have-ucs4
     (use-modules (ice-9 i18n)))
 
@@ -69,55 +70,6 @@
 (define vTerminalPort 0)
 ;; Used to set up all out fun signal handlers
 (define act #f)
-
-#!
-;; Make a copy of a filestruct node.
-(define (copy_node src)
-  (if (not src) (error "assertion failed, src != #f"))
-
-  (let ((dst (make-filestruct)))
-    (filestruct-data-set! dst (filestruct-data src))
-    (filestruct-next-set! dst (filestruct-next src))
-    (filestruct-prev-set! dst (filestruct-prev src))
-    (filestruct-lineno-set! dst (filestruct-lineno src))
-    (filestruct-multidata-set! dst #f)
-
-    dst))
-!#
-
-#!
-;; Splice a node into an existing filestruct
-(define (splice_node begin newnode end)
-  (when (not newnode) (error "assertion failed: newnode != #f"))
-  (when (not begin) (error "assertion failed: begin != #f"))
-  (filestruct-next-set! newnode end)
-  (filestruct-prev-set! newnode begin)
-  (filestruct-next-set! begin newnode)
-  (when end
-    (filestruct-prev-set! end newnode)))
-
-;; Unlink a node from the rest of the filestruct
-(define (unlink_node fileptr)
-  (when (not fileptr) (error "assertion failed: fileptr != #f"))
-  (when (filestruct-prev fileptr)
-    (filestruct-next-set! (filestruct-prev fileptr) (filestruct-next fileptr)))
-  (when (filestruct-next fileptr)
-    (filestruct-prev-set! (filestruct-next fileptr) (filestruct-prev fileptr))))
-
-;; Delete a node from the filestruct
-(define-syntax delete_node
-  (syntax-rules ()
-    ((_ fileptr)
-     (begin
-       (when (not fileptr) (error "assertion failed: fileptr != #f"))
-       (when (not (filestruct-data fileptr)) (error "assertion failed: fileptr->data != #f"))
-       (when (filestruct-data fileptr)
-         (filestruct-data-set! fileptr #f))
-       (when (filestruct-multidata fileptr)
-         (filestruct-multidata-set! fileptr #f))
-
-       (set! fileptr #f)))))
-!#
 
 ;; Display a warning about a key disabled in view mode
 (define (print_view_warning)
@@ -657,13 +609,13 @@
       ;; invalid files like directories or if there were no command line
       ;; arguments given.  In this case, we have to load a blank buffer.
       ;; Also, we unset view mode to allow editing
-      (when (not (Buf?))
-        (format (current-error-port) "load blank buffer~%")
-        (OpenBuffer "" #f)
-        (UNSET VIEW_MODE))
+      (when (null? vrgBuffers)
+	    (format (current-error-port) "load blank buffer~%")
+	    (OpenBuffer "" #f)
+	    (UNSET VIEW_MODE))
 
-      (when (or (not (Buf?)) (null? vrgBuffers))
-        (error "no buffer"))
+      (when (null? vrgBuffers)
+	    (error "no buffer"))
 
       (unless fMultibufferSav
         (UNSET MULTIBUFFER))

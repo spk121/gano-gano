@@ -36,7 +36,7 @@ xfail_tests = $(addprefix $(testdir)/,$(xfail_test_sources))
 
 # ALL: compile the entire program.  Do not rebuild and documentation
 # files.
-all: $(objects)
+all: $(lib_objects) nano
 
 # INSTALL: compile the program and copy the executables, libraries.
 # Create all the directories in which files are to be installed, if
@@ -183,13 +183,17 @@ check: $(tests)
 	info dist check
 ########################
 
+nano : nano.scm
+	ln -s $^ $@
+	chmod 755 $@
+
 nano.go : nano
 	GUILE_AUTO_COMPILE=0 \
-	guile-tools compile $(GUILE_WARNINGS) -L . --output="$@" "$<"
+	$(GUILECOMPILE) $(GUILECOMPILEFLAGS) -L . --output="$@" "$<"
 
 %.go : %.scm
 	GUILE_AUTO_COMPILE=0 \
-	guile-tools compile $(GUILE_WARNINGS) -L . --output="$@" "$<"
+	$(GUILECOMPILE) $(GUILECOMPILEFLAGS) -L . --output="$@" "$<"
 
 
 # If stdout is a non-dumb tty, use colors.  If test -t is not supported,

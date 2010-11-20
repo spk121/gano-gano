@@ -30,6 +30,7 @@
   #:use-module (gano text)
   #:use-module (ncurses curses)
   #:use-module (srfi srfi-1)
+  #:use-module (rnrs control)
   #:export (
             vDirOperating
 	    vrgSearchHistory
@@ -77,9 +78,9 @@
             GetFuncIdNameFromFuncId
             ))
 
-(if %have-rnrs-control
-    (use-modules (rnrs control))
-    (use-modules (gano control)))
+;; (if %have-rnrs-control
+;;     (use-modules (rnrs control))
+;;     (use-modules (gano control)))
 
 ;; Used to return to either main or the unjustify routing
 ;; in do justify after a SIGWINCH
@@ -510,9 +511,10 @@ the \"Uncut\" key with the \"Unjustify\" command"
     (AddFunction DO_INDENT_VOID MMAIN (N_ "Indent Text") nano_indent_msg #f NOVIEW)
     (AddFunction DO_UNINDENT MMAIN (N_ "Unindent Text") nano_unindent_msg #f NOVIEW)
 
-    (when (ISSET UNDOABLE)
-      (AddFunction DO_UNDO MMAIN (N_ "Undo") nano_undo_msg #f NOVIEW)
-      (AddFunction DO_REDO MMAIN (N_ "Redo") nano_redo_msg #t NOVIEW))
+    (if (ISSET UNDOABLE)
+	(begin
+	  (AddFunction DO_UNDO MMAIN (N_ "Undo") nano_undo_msg #f NOVIEW)
+	  (AddFunction DO_REDO MMAIN (N_ "Redo") nano_redo_msg #t NOVIEW)))
 
     (AddFunction DO_RIGHT MMAIN (N_ "Forward") nano_forward_msg #f VIEW)
     (AddFunction DO_RIGHT MBROWSER (N_ "Forward") nano_forwardfile_msg #f VIEW)
@@ -757,9 +759,10 @@ the \"Uncut\" key with the \"Unjustify\" command"
     (AddShortcut MMAIN "M-6" DO_COPY_TEXT 0 #t)
     (AddShortcut MMAIN "M-\x7D" DO_INDENT_VOID 0 #t)
     (AddShortcut MMAIN "M-\x7B" DO_UNINDENT 0 #t)
-    (when (ISSET UNDOABLE)
-      (AddShortcut MMAIN "M-U" DO_UNDO 0 #t)
-      (AddShortcut MMAIN "M-E" DO_REDO 0 #t))
+    (if (ISSET UNDOABLE)
+	(begin
+	  (AddShortcut MMAIN "M-U" DO_UNDO 0 #t)
+	  (AddShortcut MMAIN "M-E" DO_REDO 0 #t)))
     (AddShortcut MALL "^F" DO_RIGHT 0 #t)
     (AddShortcut MALL "^B" DO_LEFT 0 #t)
     (AddShortcut MMAIN "^Space" DO_NEXT_WORD_VOID 0 #t)

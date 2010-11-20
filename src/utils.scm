@@ -28,6 +28,7 @@
   #:use-module (gano chars)
   #:use-module (gano nano-h)
   #:use-module (gano global)
+  #:use-module (rnrs control)
   #:use-module (ncurses curses)
   #:export (
             GetIndexFromStringCell
@@ -38,11 +39,6 @@
 	    InitDirHome
 	    ParseLineColumn
             ))
-
-(if %have-rnrs-control
-    (use-modules (rnrs control))
-    ;; else
-    (use-modules (gano control)))
 
 ;; Return the index in s of the character displayed at the given]
 ;; column, i.e. the largest value such that strnlenpt(s, actual_x(s,
