@@ -32,6 +32,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (rnrs control)
   #:export (
+	    vBuffer
             vDirOperating
 	    vrgSearchHistory
 	    syntaxes
@@ -81,6 +82,9 @@
 ;; (if %have-rnrs-control
 ;;     (use-modules (rnrs control))
 ;;     (use-modules (gano control)))
+
+
+(define vBuffer #f)
 
 ;; Used to return to either main or the unjustify routing
 ;; in do justify after a SIGWINCH

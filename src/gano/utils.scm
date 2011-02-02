@@ -35,7 +35,6 @@
             CountCellsInString
             CountCellsInSubstring
             get_page_start
-            GetPpFromBufferPdCur
 	    InitDirHome
 	    ParseLineColumn
             ))
@@ -88,16 +87,6 @@
     (+ column -7 (- (remainder (- column 7) (- (cols) 8)))))
    (else
     (- column (- (cols) 2)))))
-
-;; Return the placewewant associated with current_x, i.e. the zero-based
-;; column position of the cursor.  The value will be no smaller than
-;; current_x.
-(define (GetPpFromBufferPdCur)
-  (let* ([st (GetBufferLineCur)]
-         [x (GetBufferPdCur)]
-         [goal (CountCellsInSubstring (GetBufferLineCur) x)])
-    (format (current-error-port) "GetBufferXGoal... st ~s x ~s goal ~s~%" st x goal)
-    goal))
 
 ;; Initialize the global variable containing the user's home
 ;; directory.  We use $HOME, else fall back to the home directory of

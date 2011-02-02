@@ -11,7 +11,8 @@ srcdir = .
 ##########################
 # SOURCES
 
-vpath %.scm gano
+vpath %.scm src
+vpath %.scm src/gano
 
 sources = $(lib_sources) $(script_sources)
 
@@ -36,7 +37,7 @@ xfail_tests = $(addprefix $(testdir)/,$(xfail_test_sources))
 
 # ALL: compile the entire program.  Do not rebuild and documentation
 # files.
-all: $(lib_objects) nano
+all: $(lib_objects)
 
 # INSTALL: compile the program and copy the executables, libraries.
 # Create all the directories in which files are to be installed, if

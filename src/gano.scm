@@ -1,6 +1,4 @@
-#!/usr/local/bin/guile -s
-!#
-;;; nano.scm
+;;; gano.scm
 ;;;
 ;;; Copyright (C) 2010 Michael L. Gran
 ;;; Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
@@ -22,41 +20,38 @@
 
 ;;; This file incorporates code from GNU Nano
 
+(define-module (gano)
+  #:use-module (gano config)
+  #:use-module (gano CBuffer)
+  #:use-module (gano CBuffer)
+  #:use-module (gano CFunction)
+  #:use-module (gano CShortcut)
+  #:use-module (gano chars)
+  #:use-module (gano flags)
+  #:use-module (gano files)
+  #:use-module (gano global)
+  #:use-module (gano nano-h)
+  #:use-module (gano winio)
+  #:use-module (gano input)
+  #:use-module (gano utils)
+  #:use-module (gano nano-h)
+  #:use-module (gano text)
+  #:use-module (gano rcfile)
+  #:use-module (gano cut)
+  #:use-module (gano color)
+  #:use-module (gano config)
+  #:use-module (gano api)
+  #:use-module (gano help)
+  #:use-module (ice-9 getopt-long)
+  #:use-module (ice-9 i18n)
+  #:use-module (ncurses curses)
+  #:use-module (ncurses extra)
+  #:use-module (rnrs control)
+  #:use-module (srfi srfi-1)
+ 
+  #:export (Main))
+
 (setlocale LC_ALL "")
-
-(use-modules (gano config)
-	     (gano CBuffer)
-             (gano CFunction)
-             (gano CShortcut)
-             (gano chars)
-             (gano flags)
-             (gano files)
-             (gano global)
-             (gano nano-h)
-             (gano winio)
-             (gano input)
-             (gano utils)
-             (gano nano-h)
-             (gano text)
-             ;;(gano prompt)
-             ;;(gano search)
-             (gano rcfile)
-             (gano cut)
-             (gano color)
-             (gano config)
-             (gano api)
-             (gano help)
-             (ice-9 getopt-long)
-             (ncurses curses)
-             (ncurses extra)
-	     (rnrs control)
-             (srfi srfi-1))
-
-;; (if %have-rnrs-control
-;;     (use-modules (rnrs control))
-;;     (use-modules (gano control)))
-(if %have-ucs4
-    (use-modules (ice-9 i18n)))
 
 ;; Used to store the user's original mouse click interval
 (define oldinterval -1)
@@ -99,7 +94,7 @@
 ;; Explain how to properly use nano's command line options
 (define (usage)
   (format #t "Usage: nano (OPTIONS} ((+LINE,COLUMN) FILE)...~%~%")
-  (format #t (_ "Option\t\tGNU long option\t\tMeaning~%"))
+  (format #t "Option\t\tGNU long option\t\tMeaning~%")
 
   (print_opt "-h, -?" "--help" (N_ "Show this message"))
   (print_opt (_ "+LINE,COLUMN") "" (N_ "Start at line LINE, column COLUMN"))
@@ -171,11 +166,11 @@
 ;; compiled, contact information for it, and the configuration options
 ;; it was compiled with.
 (define (version)
-  (format #t (_  "GNU nano version ~A (compiled ~A, ~A)~%")
+  (format #t "GNU nano version ~A (compiled ~A, ~A)~%"
           "blah" "blah" "blah")
   (format #t " (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,~%")
   (format #t " 2008, 2009 Free Software Foundation, Inc.~%")
-  (format #t (_ " Email: nano@nano-editor.org Web: http://www.nano-editor.org~%"))
+  (format #t " Email: nano@nano-editor.org Web: http://www.nano-editor.org~%")
   (format #t "~%"))
 
 
@@ -376,7 +371,7 @@
         (when (or (not vTabSize)
                   (<= vTabSize 0))
           (format (current-error-port)
-                  (_ "Requested tab size \"~A\" is invalid~%")
+                  "Requested tab size \"~A\" is invalid~%"
                   tabsizestr)
           (exit 1))))
     (when (option-ref options 'quickblank #f)
@@ -609,12 +604,12 @@
       ;; invalid files like directories or if there were no command line
       ;; arguments given.  In this case, we have to load a blank buffer.
       ;; Also, we unset view mode to allow editing
-      (when (null? vrgBuffers)
+      (when (not vBuffer)
 	    (format (current-error-port) "load blank buffer~%")
 	    (OpenBuffer "" #f)
 	    (UNSET VIEW_MODE))
 
-      (when (null? vrgBuffers)
+      (when (not vBuffer)
 	    (error "no buffer"))
 
       (unless fMultibufferSav
@@ -797,7 +792,9 @@
 
               ;; If it is a regular character, output it
               (when (and (not have_shortcut) (not (eq? ERR input)))
-                (DoCharInsert input #f))
+		(insert-character-space vBuffer 1)
+		(write-character vBuffer input 'data)
+		(RefreshEditor))
 
               ;; If we got a shortcut or toggle, and it's not the
               ;; shortcut for verbatim input, turn off prepending
@@ -823,7 +820,7 @@
                       (print_view_warning))
 
                      (else
-                      (Dispatch funcId)))))))))))
+                      (Dispatch vBuffer funcId)))))))))))
 
       ;; If we aren't cutting or copying text, blow away the text in the
       ;; cutbuffer
@@ -863,7 +860,7 @@ so we can deal with them now."
     (InitMouse))
    ((or (= flag MORE_SPACE) (= flag NO_HELP))
     (InitWindow)
-    (total_refresh))
+    (RefreshAll))
    ((= flag SUSPEND)
     (InitSignal))
    ((= flag WHITESPACE_DISPLAY)
@@ -874,29 +871,27 @@ so we can deal with them now."
    ((= flag SOFTWRAP)
     (total_refresh))))
 
-(define (Dispatch funcId)
+(define (Dispatch buf funcId)
   "Given a function ID, call an API function"
   (format (current-error-port) "Dispatch: ~s~%" (GetFuncIdNameFromFuncId funcId))
   ;;(format (current-error-port) "~s~%" (with-output-to-string %DescribeBuffer))
   (cond
-   ((= funcId DO_ENTER) (DoEnter))
-   ((= funcId TOTAL_REFRESH) (DoTotalRefresh))
-   ((= funcId DO_FIRST_LINE) (DoLineFirst))
-   ((= funcId DO_LAST_LINE) (DoLineLast))
-   ((= funcId DO_SCROLL_UP) (DoScrollUp))
-   ((= funcId DO_SCROLL_DOWN) (DoScrollDown))
-   ((= funcId DO_UP_VOID) (DoLinePrev (ISSET SMOOTH_SCROLL)))
-   ((= funcId DO_DOWN_VOID) (DoLineNext (ISSET SMOOTH_SCROLL)))
-   ((= funcId DO_LEFT) (DoCharPrev))
-   ((= funcId DO_RIGHT) (DoCharNext))
-   ((= funcId DO_DELETE) (DoCharDelete))
-   ((= funcId DO_PAGE_UP) (DoPagePrev))
-   ((= funcId DO_PAGE_DOWN) (DoPageNext))
-   ((= funcId DO_END) (DoLineEnd))
-   ((= funcId DO_HOME) (DoLineBeginning))
-   ((= funcId DO_BACKSPACE) (DoCharDeleteLeft))
+   ((= funcId DO_ENTER) (DoEnter buf))
+   ((= funcId TOTAL_REFRESH) (DoTotalRefresh buf))
+   ((= funcId DO_FIRST_LINE) (DoLineFirst buf))
+   ((= funcId DO_LAST_LINE) (DoLineLast buf))
+   ((= funcId DO_SCROLL_UP) (DoScrollUp buf))
+   ((= funcId DO_SCROLL_DOWN) (DoScrollDown buf))
+   ((= funcId DO_UP_VOID) (DoLinePrev buf (ISSET SMOOTH_SCROLL)))
+   ((= funcId DO_DOWN_VOID) (DoLineNext buf (ISSET SMOOTH_SCROLL)))
+   ((= funcId DO_LEFT) (DoCharPrev buf))
+   ((= funcId DO_RIGHT) (DoCharNext buf))
+   ((= funcId DO_DELETE) (DoCharDelete buf))
+   ((= funcId DO_PAGE_UP) (DoPagePrev buf (ISSET SMOOTH_SCROLL)))
+   ((= funcId DO_PAGE_DOWN) (DoPageNext buf (ISSET SMOOTH_SCROLL)))
+   ((= funcId DO_END) (DoLineEnd buf))
+   ((= funcId DO_HOME) (DoLineBeginning buf))
+   ((= funcId DO_BACKSPACE) (DoCharDeleteLeft buf))
    ((= funcId DO_HELP_VOID)
     (DoHelp MMAIN)
-    (DoTotalRefresh))))
-
-(Main (command-line))
+    (DoTotalRefresh buf))))

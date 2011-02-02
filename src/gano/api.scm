@@ -11,6 +11,7 @@
   #:use-module (gano winio)
   #:use-module (srfi srfi-1)
   #:use-module (ncurses curses)
+  #:use-module (rnrs control)
   #:use-module (ice-9 optargs)
   #:export (
             %DoDumpDebugInfo
@@ -33,10 +34,6 @@
             DoScrollUp
             ))
 
-(if %have-rnrs-control
-    (use-modules (rnrs control))
-    (use-modules (gano control)))
-
 ;; STUBS
 (define (UpdateUndo a . b) #t)
 (define (DoWrap a) #t)
@@ -51,18 +48,17 @@
       (for-each (lambda (x) (write x) (newline))
                 (GetBufferLines)))))
 
-(define (DoCharDeleteLeft)
+(define (DoCharDeleteLeft buf)
   "Remove the character under the cursor"
   ;; Update Model
   (unless (and (= 0 (GetBufferLCur)) (= 0 (GetBufferPdCur)))
     (GoToCharPrevModel)
     (UpdateUndo 'del)
     (DeleteCharModel)
-    ;; FIXME: only need to update a couple of lines
     (RefreshEditor)
     (set! vfEditRefresh #f)))
 
-(define (DoCharDelete)
+(define (DoCharDelete buf)
   "Remove the character under the cursor"
   ;; Update Model
   (UpdateUndo 'del)
@@ -83,113 +79,152 @@
   (RefreshEditor)
   (set! vfEditRefresh #f))
 
-(define (DoCharNext)
+(define (DoCharNext buf)
   "Move the cursor to the next character"
   ;; Update Model
-  (GoToCharNextModel)
+  (character-position-forward buf 1)
   ;; Update View
   ;; FIXME: only need to update a couple of lines
   (RefreshEditor)
   (set! vfEditRefresh #f))
 
-(define (DoCharPrev)
+(define (DoCharPrev buf)
   "Move the cursor to the previous character"
   ;; Update Model
-  (GoToCharPrevModel)
+  (character-position-backward buf 1)
   ;; Update View
   ;; FIXME: only need to update a couple of lines
   (RefreshEditor)
   (set! vfEditRefresh #f))
 
-(define* (DoEnter #:optional (fUndoing #f))
+(define* (DoEnter buf #:optional (fUndoing #f))
   "Insert a newline at the cursor"
 
   ;; When autoindent is enabled, DoEnter also indents the line
   (let ([indent (if (ISSET AUTOINDENT)
-                    (min (GetBufferPdCur) (GetIndentILim (GetBufferLineCur)))
+                    (min (get-pd-cur buf) (GetIndentILim (get-text-cur buf)))
                     0)])
-    ;; Update Model
-    (unless fUndoing
-      (UpdateUndo 'enter))
-    (InsertEnterModel)
-    (do ([i 0 (1+ i)]) ([= i indent])
-      (InsertCharModel #\space))
+    (insert-nel buf)
+    (insert-character-space buf indent)
 
     ;; Update View
     (RefreshEditor)
     (set! vfEditRefresh #f)))
 
-(define (DoLineBeginning)
-  (GoToLineBeginningModel)
+(define (DoLineBeginning buf)
+  (carriage-return buf)
+  (center-frame-position buf)
   (RefreshEditor))
 
-(define (DoLineEnd)
-  (GoToLineEndModel)
+(define (DoLineEnd buf)
+  (character-position-absolute buf (string-length (get-text-cur buf)))
+  (center-frame-position buf)
   (RefreshEditor))
 
-(define (DoLineFirst)
+(define (DoLineFirst buf)
   "Move to the first line of the file"
 
   ;; Update Model
-  (GoToLineFirstModel)
+  (character-and-line-position buf 0 0)
+  (unless (is-position-in-frame? buf)
+    (center-frame-line buf)
+    (center-frame-position buf))
   ;; Update View
-  (RefreshEditor)
-  (set! vfEditRefresh #f))
+  (RefreshEditor))
 
-(define (DoLineLast)
+(define (DoLineLast buf)
   "Move to the last line of the file"
-
+  
   ;; Update Model
-  (GoToLineLastModel)
+  (line-position-absolute buf (max 0 (1- (get-line-count buf))))
+  (character-position-absolute buf (get-text-cur-length buf))
+  
   ;; Update View
-  (RefreshEditor)
-  (set! vfEditRefresh #f))
+  (RefreshEditor))
 
-(define* (DoLineNext #:optional fSmoothScroll)
+(define* (DoLineNext buf #:optional fSmoothScroll)
   "Move down one line"
   ;; Update Model
-  (GoToLineNextModel)
+  (let ([pp-goal (get-pp-goal buf)])
+    (cursor-next-line buf 1)
+    (cursor-character-absolute buf pp-goal))
   ;; If we're at or after the bottom line of the edit window, scroll
   ;; down.
-  (when (>= (GetBufferLCur) (+ editwinrows (GetBufferLFrame)))
+  (unless (is-position-in-frame? buf)
     (if fSmoothScroll
-        (ScrollDownModel)
+        (scroll-down buf 1)
         ;; else
-        (ScrollDownModel (1+ (quotient editwinrows 2)))))
-
+        (scroll-down buf (1+ (quotient editwinrows 2)))))
   ;; Update View
   ;; FIXME: replace this with a scrl and targeted updates
   (RefreshEditor)
   (set! vfEditRefresh #f))
 
-(define* (DoLinePrev #:optional fSmoothScroll)
+(define* (DoLinePrev buf #:optional fSmoothScroll)
   "Move up one line"
   ;; Update Model
-  (GoToLinePrevModel)
+  (let ([pp-goal (get-pp-goal buf)])
+    (cursor-preceding-line buf 1)
+    (cursor-character-absolute buf pp-goal))
   ;; If we're at or before the top of the edit window, scroll up.
-  (when (<= (GetBufferLCur) (GetBufferLFrame))
+  (unless (is-position-in-frame? buf)
     (if fSmoothScroll
-        (ScrollUpModel)
+        (scroll-up buf 1)
         ;; else
-        (ScrollUpModel (1+ (quotient editwinrows 2)))))
+        (scroll-up buf (1+ (quotient editwinrows 2)))))
 
   ;; Update View
   ;; FIXME: replace this with a scrl and targeted updates
   (RefreshEditor)
   (set! vfEditRefresh #f))
 
-(define (DoPagePrev)
+(define (DoPagePrev buf fSmoothScroll)
   "Move up one page"
   ;; Update Model
-  (GoToPagePrevModel)
+  
+  (cond
+   ;; If we're already on the top page, move to the beginning of
+   ;; buffer
+   ((= (get-line-frame buf) 0)
+    (DoLineFirst buf))
+   ;; If we're not in smooth scrolling mode, put the cursor at the 
+   ;; beginning of the top line of the edit window
+   ((not fSmoothScroll)
+    (cursor-preceding-line buf (max 1 (- (get-line-frame-size buf) 2)))
+    (move-frame-line buf)
+    (center-frame-position buf))
+   ;; If we are in smooth scrolling mode, move up line by line
+   (else
+    (let ([n (max 1 (- (get-line-frame-size buf) 2))])
+      (let loop ([i 0])
+	(when (< i n)
+	  (DoLinePrev buf)
+	  (loop (1+ i)))))))
   ;; Update View
   (RefreshEditor)
   (set! vfEditRefresh #f))
 
-(define (DoPageNext)
+(define (DoPageNext buf fSmoothScroll)
   "Move down one page"
-  ;; Update Model
-  (GoToPageNextModel)
+  (cond
+   ;; If we're already on the bottom page, move to the end of
+   ;; buffer
+   ((>= (+ (get-line-frame-size buf) (get-line-cur buf) -2)
+	(get-line-frame buf))
+    (DoLineLast buf))
+   ;; If we're not in smooth scrolling mode, put the cursor at the 
+   ;; beginning of the top line of the edit window
+   ((not fSmoothScroll)
+    (cursor-next-line buf (max 1 (- (get-line-frame-size buf) 2)))
+    (move-frame-line buf)
+    (center-frame-position buf))
+   ;; If we are in smooth scrolling mode, move up line by line
+   (else
+    (let ([n (max 1 (- (get-line-frame-size buf) 2))])
+      (let loop ([i 0])
+	(when (< i n)
+	  (DoLineNext buf)
+	  (loop (1+ i)))))))
   ;; Update View
   (RefreshEditor)
   (set! vfEditRefresh #f))
@@ -212,7 +247,7 @@
   (RefreshEditor)
   (set! vfEditRefresh #f))
 
-(define (DoTotalRefresh)
+(define (DoTotalRefresh buf)
   "Unconditionally redraw the entire screen."
 
   (DisplayTitlebar "")

@@ -1,15 +1,12 @@
 (define-module (gano input)
   #:use-module (gano config)
   #:use-module (ncurses curses)
+  #:use-module (rnrs control)
   #:use-module (srfi srfi-1)
   #:export (
             get_kbinput
             ))
 
-(if %have-rnrs-control
-    (use-modules (rnrs control))
-    ;; else
-    (use-modules (gano control)))
 
 ;; The maximum number of bytes buffered at one time.
 (define MAX_TRIES 128)

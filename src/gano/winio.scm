@@ -247,7 +247,7 @@
       (set! state #f))
 
     (unless path
-      (set! state (if (IsBufferModified?)
+      (set! state (if (is-modified? vBuffer)
 		      "Modified"
 		      (if (ISSET VIEW_MODE)
 			  "View"
@@ -528,22 +528,22 @@
   (cond
    ;; If we haven't opened any files yet, put the cursor in the top
    ;; left corner of the edit window and get out.
-   [(null? vrgBuffers)
+   [(not vBuffer)
     (move vWinEdit 0 0)]
 
    [else
-    (let ([xpt (GetPpFromBufferPdCur)])
+    (let ([xpt (get-pp-from-pd-cur vBuffer)])
       (if (ISSET SOFTWRAP)
 	  (error "implement me!")
 	  ;; else
 	  (begin
             (format (current-error-port) "resetCursor: before YCur ~s ICur ~s ITop ~s xpt ~s~%"
-                    (GetBufferYCur) (GetBufferLCur) (GetBufferLFrame) xpt)
-	    (SetBufferYCur! (- (GetBufferLCur) (GetBufferLFrame)))
-	    (when (< (GetBufferYCur) editwinrows)
-	      (move vWinEdit (GetBufferYCur) (- xpt (get_page_start xpt))))
+                    (get-line-cur vBuffer) (get-line-cur vBuffer) (get-line-frame vBuffer) xpt)
+	    (set-line-cur! vBuffer (- (get-line-cur vBuffer) (get-line-frame vBuffer)))
+	    (when (< (get-line-cur vBuffer) editwinrows)
+	      (move vWinEdit (get-line-cur vBuffer) (- xpt (get_page_start xpt))))
             (format (current-error-port) "resetCursor: after YCur ~s ICur ~s ITop ~s~%"
-                    (GetBufferYCur) (GetBufferLCur) (GetBufferLFrame)))))]))
+                    (get-line-cur vBuffer) (get-line-cur vBuffer) (get-line-frame vBuffer)))))]))
 
 
 
@@ -551,25 +551,16 @@
 ;; this if we'ved moved and changed text.
 
 (define (RefreshEditor)
-  (let ([cn (GetBufferLCur)]
-        [en (GetBufferLFrame)]
-        [maxrows (ComputeMaxRows)]
+  (let ([strings (render-frame vBuffer)]
+	[maxrows (ComputeMaxRows)]
         [nblanks 0])
-    (when (or (< cn en) (>= cn (+ en maxrows)))
-      ;; Put the top line of the edit window in range of the current line
-      (edit_update CENTER))
-
-    (do ([nlines 0 nlines] [index (GetBufferLFrame) (1+ index)])
-        ([or (>= nlines editwinrows) (>= index (GetBufferLLim))])
-      (set! nlines (+ nlines (update_line index (if (= index (GetBufferLCur))
-                                                    (GetBufferPdCur)
-                                                    0))))
-      (set! nblanks nlines))
-    (do ([nblanks nblanks (1+ nblanks)]) ([>= nblanks editwinrows])
-      (BlankLine vWinEdit nblanks 0 (cols)))
-
+    (map
+     (lambda (y) 
+       (addstr vWinEdit (list-ref strings y) #:x 0 #:y y))
+     (iota maxrows))
+    (refresh vWinEdit)
     (reset_cursor)
-    (noutrefresh vWinEdit)))
+    (refresh vWinEdit)))
 
 ;; Move edittop to put it in range of current, keeping current in the
 ;; same place.  location determines how we move it: if it's CENTER, we
@@ -588,21 +579,21 @@
   (let ([goal (if (eq? location CENTER)
 		  (quotient editwinrows 2)
 		  ;; else
-		  (min (GetBufferYCur)
+		  (min (get-line-cur vBuffer)
 		       (1- editwinrows)))]
-	[index (GetBufferLCur)])
+	[index (get-line-cur vBuffer)])
 
     (while (and (> goal 0) (>= index 0))
       (set! index (1- index))
       (set! goal (1- goal))
       ;; Reduce the goal line to account for wrapped lines
       (when (ISSET SOFTWRAP)
-	(set! goal (- goal (quotient (CountCellsInString (GetBufferLine index)) (cols))))))
+	(set! goal (- goal (quotient (CountCellsInString (get-line-text vBuffer  index)) (cols))))))
 
     (SetBufferLFrame! index)
 
     (format (current-error-port) "edit_update(), setting edittop to lineno ~a~%"
-	    (GetBufferLFrame))
+	    (get-line-frame vBuffer))
     (set! vfEditRefresh #t)))
 
 ;; Just update the Nth line of the document if it is on the screen.
@@ -618,16 +609,16 @@
     (if (ISSET SOFTWRAP)
         ;; Find the screen line number of this line, taking into account
         ;; the fact that some lines could have wrapped
-        (let loop ((buffer-index (GetBufferLFrame))
+        (let loop ((buffer-index (get-line-frame vBuffer))
                    (screen-line 0))
-	  (if (and (< buffer-index (GetBufferLLim))
+	  (if (and (< buffer-index (get-line-count vBuffer))
 		   (< buffer-index n))
-	      (loop (1+ buffer-index) (quotient (CountCellsInString (GetBufferLine index))
+	      (loop (1+ buffer-index) (quotient (CountCellsInString (get-line-text vBuffer  index))
 						(cols)))
 	      ;; else
 	      (set! line screen-line)))
         ;;else
-        (set! line (- n (GetBufferLFrame))))
+        (set! line (- n (get-line-frame vBuffer))))
 
     (unless (or (< line 0) (>= line editwinrows))
       ;; First, blank out the line.
@@ -639,7 +630,7 @@
     (if (ISSET SOFTWRAP)
 	(set! index 0)
 	;; else
-	(set! index (CountCellsInSubstring (GetBufferLine n) index)))
+	(set! index (CountCellsInSubstring (get-line-text vBuffer  n) index)))
     (set! page_start (get_page_start index))
 
     ;; Expand the line, replacing tabs with spaces and control chars
@@ -649,10 +640,10 @@
 	    n page_start (cols))
     (format (current-error-port)
 	    "before edit_draw: orig_string = ~s~%"
-	    (GetBufferLine n))
+	    (get-line-text vBuffer  n))
     (set!
      converted
-     (display_string (GetBufferLine n)
+     (display_string (get-line-text vBuffer  n)
 		     page_start
 		     (cols)
 		     (not (ISSET SOFTWRAP))))
@@ -668,7 +659,7 @@
 	(begin
 	  (when (> page_start 0)
 	    (addch vWinEdit (normal #\$) #:y line #:x 0))
-	  (when (> (CountCellsInString (GetBufferLine n))
+	  (when (> (CountCellsInString (get-line-text vBuffer  n))
 		   (+ page_start (cols)))
 	    (addch vWinEdit (normal #\$) #:y line #:x (- (cols) 1))))
 	;; else
@@ -703,15 +694,15 @@
     ;; N is the line of the screen
     ;; INDEX is the line  of the file
     (let ([n 0]
-	  [index (GetBufferLFrame)]
-	  [eof (GetBufferLLim)]
+	  [index (get-line-frame vBuffer)]
+	  [eof (get-line-count vBuffer)]
           [maxrows 0])
       (while #t
 	(if (and (< n editwinrows)
 		 (< index eof))
 	    (begin
 	      (set! maxrows (+ maxrows 1))
-	      (set! n (+ n (CountCellsInString (GetBufferLine index))))
+	      (set! n (+ n (CountCellsInString (get-line-text vBuffer  index))))
 	      (set! index (+ index 1)))
 	    ;; else
 	    (break)))
@@ -770,7 +761,7 @@
 ;; Mark the current file as modified if it isn't already, and then
 ;; update the titlebar to display the file's new status.
 (define (set_modified)
-  (when (not (IsBufferModified?))
+  (when (not (is-modified? vBuffer))
     (SetBufferModified! #t)
     (DisplayTitlebar "")))
 
@@ -782,13 +773,13 @@
 ;; display the current cursor position next time.
 (define (do_cursorpos constant)
   (unless (and constant disable_cursorpos)
-    (let* ((line-cur (GetBufferLCur))
-	   (line-max (GetBufferLLim))
+    (let* ((line-cur (get-line-cur vBuffer))
+	   (line-max (get-line-count vBuffer))
 	   (line-ratio (if (zero? line-max)
 			   0
 			   (quotient (* 100 line-cur) line-max)))
-	   (col-cur (1+ (GetPpFromBufferPdCur)))
-	   (col-max (1+ (CountCellsInString (GetBufferLineCur))))
+	   (col-cur (1+ (get-pp-from-pd-cur vBuffer)))
+	   (col-max (1+ (CountCellsInString (get-text-cur vBuffer))))
 	   (col-ratio (if (zero? col-max)
 			  0
 			  (quotient (* 100 col-cur) col-max)))
@@ -816,9 +807,9 @@
 ;; This function needs optimization to be more like nano's function.
 (define (ScrollEditor direction n)
   (let ([nLines (cond [(eqv? direction 'up)
-                       (max n (GetBufferLFrame))]
+                       (max n (get-line-frame vBuffer))]
                       [(eqv? direction 'down)
-                       (min n (- (GetBufferLLim) (GetBufferLFrame)))])])
+                       (min n (- (get-line-count vBuffer) (get-line-frame vBuffer)))])])
     (IncreaseBufferLFrame! (if (eq? direction 'up) (- n) n))
     (set! vfEditRefresh #t)))
 ;; Return 1 if the MORE_SPACE flag is set, and 0 otherwise.  This is

@@ -8,15 +8,11 @@
   #:use-module (gano nano-h)
   #:use-module (gano winio)
   #:use-module (ncurses curses)
+  #:use-module (rnrs control)
   #:use-module (srfi srfi-1)
   #:export (
             DoHelp
             ))
-
-(if %have-rnrs-control
-    (use-modules (rnrs control))
-    (use-modules (gano control)))
-
 (define textHelpMain 
   '(
     "Main gano help text"

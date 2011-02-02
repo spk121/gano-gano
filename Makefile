@@ -41,11 +41,8 @@ srcdir = .
 ##########################
 # SHARED SOURCES
 
-lib_sources = chars.scm files.scm flags.scm global.scm input.scm	\
-	nano-c.scm nano-h.scm rcfile.scm text.scm utils.scm	\
-	winio.scm CBuffer.scm CText.scm CFunction.scm CShortcut.scm	\
-	api.scm help.scm
-script_sources = nano.scm
+lib_sources = gano.scm
+script_sources = gano-editor.scm
 
 
 ifeq (GUILE_VERSION, 1.8)

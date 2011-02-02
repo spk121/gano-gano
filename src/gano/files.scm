@@ -31,6 +31,7 @@
   #:use-module (gano nano-h)
   #:use-module (gano nano-c)
   #:use-module (gano utils)
+  #:use-module (rnrs control)
   #:use-module (ncurses curses)
   #:export (
             OpenBuffer
@@ -40,15 +41,11 @@
 	    InitBackupDir
             ))
 
-(if %have-rnrs-control
-    (use-modules (rnrs control))
-    (use-modules (gano control)))
 
 ;; If it is not "", filename is a file to open.  We make a new buffer
 ;; if necessary, and then open and read the file, if applicable
 (define (OpenBuffer fileName fUndoable)
-  (Buf!)
-  (let ([fBufferNew (or (null? vrgBuffers) (ISSET MULTIBUFFER))]
+  (let ([fBufferNew (or (not vBuffer) (ISSET MULTIBUFFER))]
         [f #f]
         [returnCode 0])       ; -2 means new file. -1 open failure. 0 success.
 
@@ -67,16 +64,16 @@
       ;; If we're loading into a new buffer, add a new entry to
       ;; openfile.
       (when fBufferNew
-	(set! vrgBuffers (list (make <CBuffer>))))
+	(set! vBuffer (make <CBuffer>)))
 
-      (write vrgBuffers)
+      (write vBuffer)
       (newline)
-      (describe (car vrgBuffers))
+      (describe vBuffer)
       (newline)
       ;; If we have a file, and we're loading into a new buffer, update
       ;; the filename
       (when (and fBufferNew (not (= returnCode -1)))
-        (SetBufferFileName! fileName))
+        (set-file-name! vBuffer fileName))
 
       ;; If we have a non-new file, read it in.  The, if the buffer has no
       ;; stat, update the stat, if applicable.
@@ -86,9 +83,10 @@
       ;; If we have a file, and we're loading into a new buffer, move
       ;; back to the beginning of the first line of the buffer.
       (when (and (not (= returnCode -1)) fBufferNew)
-        (SetBufferLCur! 0)
-        (SetBufferPdCur! 0)
-        (SetBufferPpGoal! 0))
+        (set-line-cur! vBuffer 0)
+        (set-pd-cur! vBuffer 0)
+	(set-pp-cur! vBuffer 0)
+        (set-pp-goal! vBuffer 0))
 
       ;; If we're loading into a new buffer, update the colorto account
       ;; for it, if applicable
@@ -131,15 +129,15 @@
 	    (DisplayStatusbar (_ "New File"))
 	    -2)
 	   (else
-	    (DisplayStatusbar (format #f (_ "\"~a\" not found") filename))
+	    (DisplayStatusbar (format #f "\"~a\" not found" filename))
 	    (beep)
 	    -1))))
 
        ((member (stat:type fileinfo) '(directory block-special char-special))
 	;; Don't open directories, character files, or block files
 	(if (eq? 'directory (stat:type fileinfo))
-	    (DisplayStatusbar (format #f (_ "\"~a\" is a directory") filename))
-	    (DisplayStatusbar (format #f (_ "\"~a\" is a device file") filename)))
+	    (DisplayStatusbar (format #f "\"~a\" is a directory" filename))
+	    (DisplayStatusbar (format #f "\"~a\" is a device file" filename)))
 	(beep)
 	-1)
 
@@ -148,7 +146,7 @@
 	(let ((port (false-if-exception (open-file full_filename "r"))))
 	  (if (not port)
 	      (begin
-		(DisplayStatusbar (format #f (_ "Error reading ~a") filename))
+		(DisplayStatusbar (format #f "Error reading ~a" filename))
 		;; FIXME: can I have a more detailed error message?
 		(beep)
 		-1)

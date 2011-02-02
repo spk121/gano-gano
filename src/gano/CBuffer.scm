@@ -31,6 +31,7 @@
 	    delete-character		; DCH
 	    delete-line 		; DL
 	    erase-character		; ECH
+	    erase-in-line		; EL
 	    center-frame-line
 	    center-frame-position
             character-position-absolute
@@ -113,6 +114,7 @@
   (m_HomeType #:init-value 'data #:getter get-home-type #:setter set-home-type!)
   (m_PLimit #:init-value 1024 #:getter get-limit-pos #:setter set-limit-pos!)
   (m_LimitType #:init-value 'data #:getter get-limit-type #:setter set-limit-type!) 
+  (m_pageHome #:init-value 0 #:getter get-page-home-line #:setter set-page-home-line!)
 
   ;; The mark
   (m_fMarkSet #:init-value #f #:getter is-mark-set? #:setter set-mark-flag!)
@@ -457,7 +459,7 @@ following line tabulation stop in the presentation component."
            [tabsize (get-vert-tab-size buf)]
            [L (compute-tab-column (get-line-cur buf) tabsize n)])
       (set-line-cur! buf (bracket-line buf L))
-      (set-positions! buf (get-pp-cur buf) 'presentation))))
+      (set-positions! buf (get-pp-cur buf) 'presentation)))
 
 ;; DA
 (define-method (device-attributes (buf <CBuffer>))
@@ -624,6 +626,7 @@ the current codepoint will be replaced with a single space character."
     ;; (update-pd-list! buf)
     (set-positions! buf 0 'presentation)))
 
+;; EL
 (define-method (erase-in-line buf device P)
   "This sets some or all of the characters in the current line to
 spaces. If P is zero, the active position through end of the line are
@@ -710,6 +713,19 @@ This may change the visual presentation of the line"
       (set-pp-cur! buf pd-cur)
       (set-pp-goal! buf pd-cur)])))
 
+;; FF
+(define-method (form-feed (buf <CBuffer>))
+  "FF causes the frame to be moved one frame-size down toward the end
+of the buffer.  The active presentation position to be moved to the
+corresponding character position of the line at the page home position
+of that next page in the presentation component."
+  (when
+      ;; If there is at least a  partial page below this one
+      (< (+ (get-line-frame buf) (get-line-frame-size buf))
+	 (get-line-count buf))
+    (set-line-frame! buf (+ (get-line-frame buf) (get-line-frame-size buf)))
+    (set-line-cur! buf (min (get-line-count buf)
+			    (+ (get-line-frame buf) (get-page-home-line buf))))))
 
 (define-method (insert-character-space (buf <CBuffer>) n)
   "Shift the contents of the line to the right, starting at the
@@ -921,7 +937,7 @@ will be erased before this grapheme is added."
                                         (string-drop txt pd-end)))
       (set-pd-cur! buf (+ pd-start 1))
       (set-pp-cur! buf (get-pp-from-pd-cur buf))
-      (set-pp-goal! buf (get-pp-cur buf))]))
+      (set-pp-goal! buf (get-pp-cur buf)))]))
 
 
 (define-method (write-tabulation (buf <CBuffer>) device)
