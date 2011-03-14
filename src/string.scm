@@ -233,3 +233,87 @@ returns #f."
 (define (string-cell-length str tabsize)
   "Returns the number of cells that the string occupies."
   (last (string-compute-x-cell-list-from-string str tabsize)))
+
+(define (%string-render-line-tabs str tabsize)
+  "Return a copy of STR with each tab expanded into
+an appropriate number of spaces."
+  (let* ([x-cell-list (string-compute-x-cell-list-from-string str tabsize)]
+         [str2 ""])
+    (string-for-each-index
+     (lambda (i)
+       (if (char=? (string-ref str i) #\tab)
+           (set! str2 (string-append str2 (make-string (- (list-ref x-cell-list (+ i 1))
+                                                          (list-ref x-cell-list i))
+                                                       #\space)))
+           (set! str2 (string-append str2 (string (string-ref str i))))))
+     str)
+    str2))
+
+(define (string-render-line str tabsize x-cell-start x-width)
+  "Return the substring of str beginning at the x-cell cell position
+and having x-width cells.  Tabs are converted to spaces, and
+characters that would be clipped by the edges are replaced with
+spaces."
+  (let* ([str (%string-render-line-tabs str tabsize)]
+         [x-cell-end (+ x-cell-start x-width)]
+         [x-cell-list (string-compute-x-cell-list-from-string str tabsize)]
+         ;; The index of the first character past the start of the window
+         [i-start (list-index (lambda (x) (>= x x-cell-start)) x-cell-list)]
+         ;; The index of the first character past the end of the window
+         [i-end (list-index (lambda (x) (> x x-cell-end)) x-cell-list)]
+         ;; The number of left-side spaces needed
+         [left-padding (min x-width
+                            (if i-start
+                                (- (list-ref x-cell-list i-start) x-cell-start)
+                                0))]
+         ;; #t if the last character straddles the frame
+         [truncated-p (and i-end (> (list-ref x-cell-list i-end) x-cell-end))]
+         ;; The number of cells that the windowed string occupies
+         [str-x-size (cond
+                      [(and (not i-start) (not i-end))
+                       ;; window starts after string
+                       0]
+                      [(and i-start (not i-end))
+                       ;; string starts in window and ends before window
+                       (- (last x-cell-list) (list-ref x-cell-list i-start))]
+                      [(= i-start i-end)
+                       ;; string starts after window
+                       0]
+                      [(and (= i-start (- i-end 1))
+                            truncated-p)
+                       ;; the only character is truncated
+                       0]
+                      [else
+                       ;; the normal case
+                       (if truncated-p
+                           (- (list-ref x-cell-list (- i-end 1))
+                              (list-ref x-cell-list i-start))
+                           ;; else
+                           (- (list-ref x-cell-list i-end)
+                              (list-ref x-cell-list i-start)))])]
+         ;;[right-padding (- x-width (+ left-padding str-x-size))]
+         [right-padding (if truncated-p
+                            (- x-width (+ left-padding str-x-size))
+                            ;; else
+                            0)])
+
+    ;; (format (current-error-port) "~s ~s ~s~%" left-padding str-pp-size right-padding)
+    (string-append
+     ;; Space padding for initial truncated characters
+     (make-string left-padding #\space)
+     ;; Main list
+     (cond
+      [(not i-start)
+       ""]
+      [i-start
+       (let ([inner-str ""])
+         (do ([i i-start (+ i 1)]) ([>= i (- (or i-end (length x-cell-list)) 1)])
+           (if (char=? #\tab (string-ref str i))
+               (set! inner-str (string-append
+                                inner-str
+                                (make-string (- (list-ref x-cell-list (+ i 1))
+                                                (list-ref x-cell-list i)) #\space)))
+               (set! inner-str (string-append inner-str (string (string-ref str i))))))
+         inner-str)])
+     ;; End of line space padding
+     (make-string right-padding #\space))))

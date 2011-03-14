@@ -1,5 +1,3 @@
-
-
 ;;;; A Character-Cell Buffer
 
 ;;; These are functions that act on a character cell buffer:
@@ -133,7 +131,8 @@
 (define CBUF_BELL 17)
 (define CBUF_AMBIGUOUS_WIDTH 18)
 (define CBUF_CUTBUFFER 19)
-(define CBUF_LENGTH (+ 1 CBUF_CUTBUFFER))
+(define CBUF_MODIFIED 20)
+(define CBUF_LENGTH (+ 1 CBUF_MODIFIED))
 
 
 (define (cbuf-make-buffer)
@@ -159,6 +158,7 @@
     (vector-set! cbuf CBUF_BELL #f)
     (vector-set! cbuf CBUF_AMBIGUOUS_WIDTH 1)
     (vector-set! cbuf CBUF_CUTBUFFER #f)
+    (vector-set! cbuf CBUF_MODIFIED #f)
     cbuf))
 
 ;; The text
@@ -183,6 +183,7 @@
 (define (cbuf-get-vert-tab-size cbuf) (vector-ref cbuf CBUF_VERTTABSIZE))
 ;;
 (define (cbuf-get-form-size cbuf)     (vector-ref cbuf CBUF_FORMSIZE))
+(define (cbuf-get-page-size cbuf)     (vector-ref cbuf CBUF_FORMSIZE))
 
 ;; Home and Limit
 (define (cbuf-get-home-pos cbuf)      (vector-ref cbuf CBUF_PHOME))
@@ -205,6 +206,7 @@
 ;; ambiguous characters are width 1 when most text is not East Asian
 ;; and is 2 when most text is East Asian
 (define (cbuf-get-ambiguous-width cbuf) (vector-ref cbuf CBUF_AMBIGUOUS_WIDTH))
+(define (cbuf-get-modified cbuf)      (vector-ref cbuf CBUF_MODIFIED))
 
 (define (cbuf-set-text! cbuf val)          (vector-set! cbuf CBUF_TEXT val))
 (define (cbuf-set-pp-list! cbuf val)       (vector-set! cbuf CBUF_PPLIST val))
@@ -217,6 +219,7 @@
 (define (cbuf-set-x-goal! cbuf val)        (vector-set! cbuf CBUF_PPGOAL val))
 (define (cbuf-set-tab-size! cbuf val)      (vector-set! cbuf CBUF_TABSIZE val))
 (define (cbuf-set-vert-tab-size! cbuf val) (vector-set! cbuf CBUF_VERTTABSIZE val))
+(define (cbuf-set-page-size! cbuf val)     (vector-set! cbuf CBUF_FORMSIZE val))
 (define (cbuf-set-home-pos! cbuf val)      (vector-set! cbuf CBUF_PHOME val))
 (define (cbuf-set-limit-pos! cbuf val)     (vector-set! cbuf CBUF_PLIMIT val))
 (define (cbuf-set-limit-type! cbuf val)    (vector-set! cbuf CBUF_LIMITTYPE val))
@@ -229,23 +232,23 @@
 (define (cbuf-set-undo-list! cbuf val)     (vector-set! cbuf CBUF_UNDOLIST val))
 (define (cbuf-set-bell! cbuf val)          (vector-set! cbuf CBUF_BELL val))
 (define (cbuf-set-ambiguous-width! cbuf val) (vector-set! cbuf CBUF_AMBIGUOUS_WIDTH val))
+(define (cbuf-set-modified! cbuf val)      (vector-set! cbuf CBUF_MODIFIED val))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; PRIMITIVES
 
 (define (cbuf-get-x-index buf)
-  (let ([base-indices (string-base-indices (cbuf-get-text-cur buf))]
-        [x-data (cbuf-get-x-data buf)])
-    (list-ref base-indices x-data)))
+  (string-x-data->x-index (cbuf-get-x-data buf)
+                          (cbuf-get-text-cur buf)))
 
 (define (cbuf-get-x-cell buf)
-  ;; (format #t "cbuf-get-x-cell x-data ~a text-cur ~s tabsize ~a -> x-cell ~a~%"
-  ;;         (cbuf-get-x-data buf)
-  ;;         (cbuf-get-text-cur buf)
-  ;;         (cbuf-get-tab-size buf)
-  ;;         (string-x-data->x-cell (cbuf-get-x-data buf)
-  ;;                                (cbuf-get-text-cur buf)
-  ;;                                (cbuf-get-tab-size buf)))
+   ;; (format #t "cbuf-get-x-cell x-data ~a text-cur ~s tabsize ~a -> x-cell ~a~%"
+   ;;         (cbuf-get-x-data buf)
+   ;;         (cbuf-get-text-cur buf)
+   ;;         (cbuf-get-tab-size buf)
+   ;;         (string-x-data->x-cell (cbuf-get-x-data buf)
+   ;;                                (cbuf-get-text-cur buf)
+   ;;                                (cbuf-get-tab-size buf)))
   (string-x-data->x-cell (cbuf-get-x-data buf)
                          (cbuf-get-text-cur buf)
                          (cbuf-get-tab-size buf)))
@@ -346,7 +349,7 @@ the edges are replaced with spaces."
                                (list-ref pp-list i-start)))])]
          [right-padding (- pp-length (+ left-padding str-pp-size))])
 
-    (format (current-error-port) "~s ~s ~s~%" left-padding str-pp-size right-padding)
+    ;; (format (current-error-port) "~s ~s ~s~%" left-padding str-pp-size right-padding)
     (string-append
      ;; Space padding for initial truncated characters
      (make-string left-padding #\space)
@@ -367,6 +370,7 @@ the edges are replaced with spaces."
 (define (cbuf-set-line-cur! buf n)
   (%cbuf-set-line-cur! buf n)
   (cbuf-update-pp-list! buf))
+
 (define (cbuf-set-y! buf n)
   (%cbuf-set-y! buf n)
   (cbuf-update-pp-list! buf))
@@ -412,34 +416,23 @@ x-data will point to the data position of the base character at that
 cell position."
   (cond
    [(eq? type 'index)
-    (cbuf-set-x-data! buf
-                      (string-count-base-codepoints-in-substring
-                       (cbuf-get-text-cur buf) 0 x))
-    (cbuf-synchronize-x-goal! buf)]
+    (cbuf-set-x-data! buf (string-x-index->x-data x (cbuf-get-text-cur buf)))
+    (cbuf-synchronize-x-goal! buf)
+    #t]
 
    [(eq? type 'data)
     (cbuf-set-x-data! buf x)
     (cbuf-synchronize-x-goal! buf)]
 
    [(eq? type 'cell)
-    (let* ([txt (cbuf-get-text-cur buf)]
-           [base-cell-list (string-compute-x-cell-list-from-string
-                            (string-base txt)
-                            (cbuf-get-tab-size buf))]
-           [one-past-index (list-index (lambda (i) (> i x))
-                                       base-cell-list)])
-      (cond
-       ;; We found a corresponding base character data location.
-       [one-past-index
-        (cbuf-set-x-data! buf (- one-past-index 1))
-        (cbuf-set-x-goal! buf x)]
-       ;; Otherwise, this x-index points to either the last
-       ;; character of the string or past the end of the string.
-       [(= x (last base-cell-list))
-        (cbuf-set-x-data! buf (last base-cell-list))
-        (cbuf-set-x-goal! buf x)]
-       [else
-        (raise (condition (&error)))]))]
+    (let ([x-data (string-x-cell->x-data x (cbuf-get-text-cur buf) (cbuf-get-tab-size buf))])
+      (if x-data
+          (begin
+            (cbuf-set-x-data! buf x-data)
+            (cbuf-synchronize-x-goal! buf))
+          (begin
+            (cbuf-set-x-data! buf (string-base-length (cbuf-get-text-cur buf)))
+            (cbuf-set-x-goal! buf x))))]
    [else
     (error "bad cbuf-set-x! type" type)]))
 
@@ -893,7 +886,7 @@ character consisting of a base character and combining marks."
   #f)
 
 ;; [CPY]
-(define (cbuf-copy buf device undoable)
+(define (cbuf-copy buf undoable)
   "If the mark is set, it makes a copy of all the text from the mark
 to the active position and places it in the copy/paste buffer.  If the
 mark is before the data position, the copy includes the character at
@@ -925,96 +918,96 @@ character consisting of a base character and combining marks."
 ;; BEL
 (define (cbuf-bell buf)
   "Sets the alarm state"
-  (or (cbuf-get-bell buf)
-      (begin
-        (cbuf-set-bell! buf #t)
-        (and undoable
-             (cbuf-append-undo-list! buf '(%CBL))))))
+  (unless (cbuf-get-bell buf)
+    (cbuf-set-bell! buf #t)))
+
 ;; BS
-(define (cbuf-backspace buf undoable)
+(define (cbuf-backspace buf)
   "Move the active data position to the previous data position.  If
 the previous character is a multi-codepoint character with a base
 character and combining marks, the position is moved to the base
-codepoint of the previous character."
-  (let ([pp (cbuf-get-pp-cur buf)]
-        [pd (cbuf-get-pd-cur buf)]
-        [pp-goal (cbuf-get-pp-goal buf)])
-    (and (> pd 0)
-         (begin
-           (cbuf-increase-pd-cur! buf -1)
-           (cbuf-update-pp-cur! buf)
-           (cbuf-synchronize-pp! buf)
-           (and undoable
-                (cbuf-append-undo-list! buf `(%POS ,pd ,pp ,pp-goal)))))))
+codepoint of the previous character.  If the active position is at the
+beginning of the line, a backspace will throw a beginning-of-line
+error, and the active position will not be moved."
+  (let ([x-data (cbuf-get-x-data buf)]
+        [y (cbuf-get-y buf)])
+    (if (> x-data 0)
+        (cbuf-set-x! buf (+ -1 x-data) 'data)
+        ;; else
+        (begin
+          (raise (condition (&cbuf-beginning-of-line)))))))
 
 ;; CAN
 (define (cbuf-cancel buf)
   "Cancel the previous command"
   (%undo buf))
 
-;; [%CBL]
-(define (%clear-bell buf undoable)
+;; [CBL]
+(define (cbuf-clear-bell buf)
   "Clears the alarm state"
-  (and (cbuf-get-bell buf)
-       (begin
-         (cbuf-set-bell! buf #f)
-         (and undoable
-              (cbuf-append-undo-list! buf '(BEL))))))
+  (when (cbuf-get-bell buf)
+    (cbuf-set-bell! buf #f)))
 
 ;; CBT
-(define (cbuf-cursor-backward-tabulation buf n undoable)
+(define (cbuf-cursor-backward-tabulation buf n)
   "Move the active presentation position to the character position
 corresponding to the n-th preceding character tabulation stop in the
-presentation component"
-  (let* ([ppCur (cbuf-get-pp-cur buf)]
-         [pdCur (cbuf-get-pd-cur buf)]
-         [ppGoal (cbuf-get-pp-goal buf)]
+presentation component.  If this operation would move the active
+position before the beginning of the line, a beginning-of-line error
+with be thrown and the active position will be set to the beginning of
+the line."
+  (let* ([x-cell (cbuf-get-x-cell buf)]
          [tabsize (cbuf-get-tab-size buf)]
          ;; Back up n tabsizes
-         [pp1 (max 0 (cbuf-compute-tab-column ppCur tabsize (- n)))])
-    (or (= pp1 ppCur)
-        (begin
-          (cbuf-set-positions! buf pp1 'presentation)
-          (and undoable
-               (cbuf-append-undo-list! buf `(%POS ,pdCur ,ppCur ,ppGoal)))))))
+         [x (cbuf-compute-tab-column x-cell tabsize (- n))])
+    (cond
+     [(< x 0)
+      (cbuf-set-x! buf 0 'cell)
+      (raise (condition (&cbuf-beginning-of-line)))]
+     [else
+      (cbuf-set-x! buf x 'cell)])))
 
 ;; CCH - UNIMPLEMENTED
-(define (cancel buf)
+(define (cbuf-cancel-character buf)
   "Undo the previous graphic character"
-  #f)
+  (cbuf-undo buf))
 
 ;; CHA
-(define (cbuf-cursor-character-absolute buf n undoable)
+(define (cbuf-cursor-character-absolute buf n)
   "Move the active presentation position to character position n in
 the active line in the presentation component"
-  (let ([pp (cbuf-get-pp-cur buf)]
-        [pd (cbuf-get-pd-cur buf)]
-        [pp-goal (cbuf-get-pp-goal buf)])
-    (or (and (= n pp) (= n pp-goal))
-        (begin
-          (cbuf-set-positions! buf n 'presentation)
-          (and undoable
-               (cbuf-append-undo-list! buf `(%POS ,pd ,pp ,pp-goal)))))))
+  (let* ([txt (cbuf-get-text-cur buf)])
+    (cond
+     [(< n 0)
+      (cbuf-set-x! buf 0 'cell)
+      (raise (condition (&cbuf-beginning-of-line)))]
+     [(> n (string-cell-length txt (cbuf-get-tab-size buf)))
+      (raise (condition (&cbuf-end-of-line)))]
+     [else
+      (cbuf-set-x! buf 0 'cell)])))
 
 ;; CHT
-(define (cbuf-cursor-forward-tabulation buf n undoable)
+(define (cbuf-cursor-forward-tabulation buf n)
   "Move the active presentation position to the character position
 corresponding to the n-th following character tabulation stop in the
 presentation component"
-  (let* ([ppCur (cbuf-get-pp-cur buf)]
-         [pdCur (cbuf-get-pd-cur buf)]
-         [ppGoal (cbuf-get-pp-goal buf)]
+  (let* ([txt (cbuf-get-text-cur buf)]
          [tabsize (cbuf-get-tab-size buf)]
          ;; Move forward n tabsizes
-         [pp1 (cbuf-compute-tab-column ppCur tabsize n)])
-    (or (= pp1 ppCur)
-        (begin
-          (cbuf-set-positions! buf pp1 'presentation)
-          (and undoable
-               (cbuf-append-undo-list! buf `(%POS ,pdCur ,ppCur ,ppGoal)))))))
+         [x-cell (cbuf-compute-tab-column (cbuf-get-x-cell buf) tabsize n)])
+    ;; (format #t "In CHT: txt ~s tabsize ~s x-cell ~s~%" txt tabsize x-cell)
+    (cond
+     [(< x-cell 0)
+      (cbuf-set-x! buf 0 'cell)
+      (raise (condition (&cbuf-beginning-of-line)))]
+     [(> x-cell (string-cell-length txt tabsize))
+      (cbuf-set-x! buf (string-cell-length txt tabsize) 'cell)
+      (raise (condition (&cbuf-end-of-line)))]
+     [else
+      (cbuf-set-x! buf x-cell 'cell)])))
 
 ;; CNL
-(define (cbuf-cursor-next-line buf n undoable)
+(define (cbuf-cursor-next-line buf n)
   "Move the active presentation position to the 1st character position
 of the n-th following line in the presentation component"
   (let* ([LCur (cbuf-get-line-cur buf)]
@@ -1026,12 +1019,10 @@ of the n-th following line in the presentation component"
                [ppGoal (cbuf-get-pp-goal buf)])
            (cbuf-set-line-cur! buf L1)
            (cbuf-update-pp-list! buf)
-           (cbuf-set-positions! buf 0 'data)
-           (and undoable
-                (cbuf-append-undo-list! buf `(%LPOS ,LCur ,pdCur ,ppCur ,ppGoal)))))))
+           (cbuf-set-positions! buf 0 'data)))))
 
 ;; CPL
-(define (cbuf-cursor-preceding-line buf n undoable)
+(define (cbuf-cursor-preceding-line buf n)
   "Move the active presentation position to the 1st character position
 of the n-th preceding line in the presentation component"
   (let* ([LCur (cbuf-get-line-cur buf)]
@@ -1043,26 +1034,16 @@ of the n-th preceding line in the presentation component"
                [ppGoal (cbuf-get-pp-goal buf)])
            (cbuf-set-line-cur! buf L1)
            (cbuf-update-pp-list! buf)
-           (cbuf-set-positions! buf 0 'data)
-           (and undoable
-                (cbuf-append-undo-list! buf `(%LPOS ,LCur ,pdCur ,ppCur ,ppGoal)))))))
+           (cbuf-set-positions! buf 0 'data)))))
 
 ;; CR
-(define (cbuf-carriage-return buf undoable)
+(define (cbuf-carriage-return buf)
   "Move the active presentation position to the line home position of
 the same line.  The line home position can be set using `set-line-home'
 and by setting the Device Control Select Mode (DCSM) using `set-mode'"
   (let ([home-type (cbuf-get-limit-type buf)]
-        [home-pos (cbuf-get-home-pos buf)]
-        [pd (cbuf-get-pd-cur buf)]
-        [pp (cbuf-get-pp-cur buf)]
-        [ppGoal (cbuf-get-pp-goal buf)])
-    (and (not (or (and (eq? home-type 'data) (= pd home-pos))
-                  (and (eq? home-type 'presentation) (= pp home-pos))))
-         (begin
-           (cbuf-set-positions! buf home-pos home-type)
-           (and undoable
-                (cbuf-append-undo-list! buf `(%POS ,pd ,pp ,ppGoal)))))))
+        [home-pos (cbuf-get-home-pos buf)])
+    (cbuf-set-positions! buf home-pos home-type)))
 
 ;; CTC
 (define (cbuf-cursor-tabulation-control buf n)
@@ -1070,7 +1051,7 @@ and by setting the Device Control Select Mode (DCSM) using `set-mode'"
   (cbuf-set-tab-size! buf n))
 
 ;; CUB
-(define (cbuf-cursor-left buf n undoable)
+(define (cbuf-cursor-left buf n)
   "Move the active presentation position leftwards in the presentation
 component by n character positions"
   (let ([pd (cbuf-get-pd-cur buf)]
@@ -1078,12 +1059,10 @@ component by n character positions"
         [ppGoal (cbuf-get-pp-goal buf)])
     (and (not (= pp 0))
          (begin
-           (cbuf-set-positions! buf (max 0 (- pp n)) 'presentation)
-           (and undoable
-                (cbuf-append-undo-list! buf `(%POS ,pd ,pp ,ppGoal)))))))
+           (cbuf-set-positions! buf (max 0 (- pp n)) 'presentation)))))
 
 ;; CUD
-(define (cbuf-cursor-down buf n undoable)
+(define (cbuf-cursor-down buf n)
   "Move the active presentation position downwards in the presentation
 component by N line positions"
   (let ([pd (cbuf-get-pd-cur buf)]
@@ -1094,12 +1073,10 @@ component by N line positions"
          (begin
            (cbuf-set-line-cur! buf (cbuf-bracket-line buf (+ LCur n)))
            (cbuf-update-pp-list! buf)
-           (cbuf-set-positions! buf ppGoal 'presentation)
-           (and undoable
-                (cbuf-append-undo-list! buf `(%LPOS ,LCur ,pd ,pp ,ppGoal)))))))
+           (cbuf-set-positions! buf ppGoal 'presentation)))))
 
 ;; CUF
-(define (cbuf-cursor-right buf n undoable)
+(define (cbuf-cursor-right buf n)
   "Move the active presentation position rightwards in the
 presentation component by N character cells.  If N character position
 will place the active position in a non-initial cell of a multi-cell
@@ -1110,9 +1087,7 @@ character and the goal position will be set to that Nth cell."
         [ppGoal (cbuf-get-pp-goal buf)])
     (and (not (= pp (cbuf-get-pp-max buf)))
          (begin
-           (cbuf-set-positions! buf (min (cbuf-get-pp-max buf) (+ pp n)) 'presentation)
-           (and undoable
-                (cbuf-append-undo-list! buf `(%POS ,pd ,pp ,ppGoal)))))))
+           (cbuf-set-positions! buf (min (cbuf-get-pp-max buf) (+ pp n)) 'presentation)))))
 
 ;; CUP
 (define (cbuf-cursor-position buf n m)
@@ -1162,7 +1137,7 @@ error will be thrown."
       (raise (condition (&cbuf-end-of-buffer)))])))
 
 ;; CUU
-(define (cbuf-cursor-up buf n undoable)
+(define (cbuf-cursor-up buf n)
   "Move the active presentation positions upwards in the presentation
 component by N line positions"
   (let ([pd (cbuf-get-pd-cur buf)]
@@ -1173,12 +1148,10 @@ component by N line positions"
          (begin
            (cbuf-set-line-cur! buf (cbuf-bracket-line buf (- LCur n)))
            (cbuf-update-pp-list! buf)
-           (cbuf-set-positions! buf ppGoal 'presentation)
-           (and undoable
-                (cbuf-append-undo-list! buf `(%LPOS ,LCur ,pd ,pp ,ppGoal)))))))
+           (cbuf-set-positions! buf ppGoal 'presentation)))))
 
 ;; CVT
-(define (cbuf-cursor-line-tabulation buf n undoable)
+(define (cbuf-cursor-line-tabulation buf n)
   "Causes the active position to be moved to the corresponding goal
 position of the line corresponding to the n-th following line
 tabulation stop in the presentation component.  If that line is too
@@ -1529,7 +1502,7 @@ saved."
     (when undoable
       (cbuf-append-undo-list! buf `(%XEL2 ,y ,x-data txt n-space)))))
 
-(define (erase-in-line buf device P cut undoable)
+(define (cbuf-erase-in-line buf device P cut undoable)
   "This sets some or all of the characters in the current line to
 spaces. If P is zero, the active position through end of the line are
 erased.  If P is one, the beginning of the line through the active
@@ -1559,13 +1532,20 @@ saved."
       (%cbuf-erase-in-line buf device cut undoable)]))
 
 ;; FF
-(define (cbuf-form-feed buf undoable)
+(define (cbuf-form-feed buf)
   "FF causes the active presentation position to be moved to the
 corresponding character position of the line at the page home position
 of that next page in the presentation component.
 
 It does not insert a form feed character into the text."
-  #f)
+  (let* ([y (cbuf-get-y buf)]
+         [ps (cbuf-get-page-size buf)]
+         [y-on-page (remainder y ps)]
+         [y-start-of-page (cbuf-compute-tab-column y ps 1)]
+         ;;[home-type (cbuf-get-limit-type buf)]
+         ;;[home-pos (cbuf-get-home-pos buf)])
+         )
+    (cbuf-cursor-position buf (+ y-start-of-page y-on-page) 0)))
 
 ;; HPA
 (define (cbuf-character-position-absolute buf n)
@@ -1634,7 +1614,10 @@ and a &cbuf-end-of-line error is thrown."
       (raise (condition (&cbuf-end-of-line)))])))
 
 ;; HT
+;; Does all the tabluation align stuff, but, for now just is
 ;; shorthand for cursor-forward-tabulation 1
+(define (cbuf-character-tabulation buf)
+  (cbuf-cursor-forward-tabulation buf 1))
 
 ;; HTJ
 ;; wait until we have fully generic tab stops
@@ -1716,12 +1699,57 @@ If UNDOABLE is true, undo information is placed in the undo buffer."
 
 ;; LF  - line feed
 ;; shorthand for cursor down 1
+(define (cbuf-line-feed buf)
+  (cbuf-cursor-down buf 1))
 
 ;; NEL - next line
+(define (cbuf-next-line buf)
+  "Move to the home position in the next line.
 
-;; REP - repeat
+Throws end-of-buffer if there is no next line.  If the next line has
+fewer character than the line home position, it is space padded to the
+line home position."
+  (cbuf-carriage-return buf)
+  (cbuf-line-feed buf))
+
+;;; PPA - page position absolute
+(define (cbuf-page-position-absolute buf n)
+  "Move to the corresponding data position on the Nth page."
+  (let* ([y-on-page (remainder (cbuf-get-y buf) (cbuf-get-page-size buf))]
+         [y (+ y-on-page (* n (cbuf-get-page-size buf)))])
+    (cbuf-cursor-position buf y (cbuf-get-x-cell buf))))
+
+;;; PPB - page position backward
+(define (cbuf-page-position-backward buf n)
+  "Move to the corresponding data position on the Nth previous page."
+  (let* ([y (cbuf-get-y buf)]
+         [ps (cbuf-get-page-size buf)]
+         [y-on-page (remainder y ps)]
+         [y-start-of-page (cbuf-compute-tab-column y ps (- n))]
+         [new-y (+ y-start-of-page y-on-page)])
+    (if (>= new-y 0)
+        (cbuf-cursor-position buf (+ y-start-of-page y-on-page)  (cbuf-get-x-cell buf))
+        ;; else
+        ;;  don't move cursor and raise error
+        (raise (condition (&cbuf-beginning-of-buffer))))))
+
+;;; PPR - page position backward
+(define (cbuf-page-position-forward buf n)
+  "Move to the corresponding data position on the Nth following page."
+  (let* ([y (cbuf-get-y buf)]
+         [ps (cbuf-get-page-size buf)]
+         [y-on-page (remainder y ps)]
+         [y-start-of-page (cbuf-compute-tab-column y ps n)]
+         [new-y (+ y-on-page y-start-of-page)])
+    (if (< new-y (cbuf-get-line-count buf))
+        (cbuf-cursor-position buf (+ y-start-of-page y-on-page)  (cbuf-get-x-cell buf))
+        ;; else
+        ;; Don't move the cursor and raise error
+        (raise (condition (&cbuf-end-of-buffer))))))
 
 ;; RI - reverse line feed
+(define (cbuf-reverse-line-feed buf)
+  (cbuf-cursor-up buf 1))
 
 ;; RM - reset mode
 
@@ -1817,6 +1845,11 @@ it moves to the last character in the buffer and throws an exception."
 
 ;; VT
 ;; do one line tabulation
+(define (cbuf-line-tabulation buf)
+  "VT causes the active presentation position to be moved in the
+presentation component to the corresponding character position on the
+line at which the following line tabulation stop is set."
+  (cbuf-cursor-line-tabulation buf 1))
 
 ;; VTS
 ;; line tabulation set
@@ -1828,9 +1861,9 @@ it moves to the last character in the buffer and throws an exception."
 (define (dispatch-undo buf cmd . args)
   (case cmd
     ((BEL)
-     (cbuf-bell buf #f))
+     (cbuf-bell buf))
     ((%CBL)
-     (%clear-bell buf #f))
+     (clear-bell buf))
     ((%POS)
      (%set-positions buf (first args) (second args) (third args) #f))
     ((%LPOS)
@@ -1945,30 +1978,6 @@ called."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Dispatchers
 
-(define (ascii-input-dispatch buf ch)
-  "This dispatcher receives ASCII characters and applies them to the
-buffer.  Some of the C0 controls and format effectors are mapped to
-control functions."
-  (cond
-   ((= ch #\alarm)
-    (cbuf-bell buf #t))
-   ((= ch #\backspace)
-    (cbuf-character-position-backward buf 1)
-    (cbuf-delete-character buf 1 'data #t))
-   ;;((= ch #\tab)
-    ;;(cbuf-write-horizontal-tabulation buf #t))
-   ;;((= ch #\newline)
-    ;;(cbuf-write-newline buf #t))
-   ;;((= ch #\vtab)
-   ;; (cbuf-write-vertical-tabulation buf #t))
-   ((= ch #\return)
-    (cbuf-carriage-return buf #t))
-   ((= ch #\delete)
-    (cbuf-delete-character buf 1 'data #t))
-   ;;((and (char>=? ch #\space) (char<=? ch #\~))
-   ;; (cbuf-write-character buf ch #t))
-   ))
-
 (define (delete-in-line buf P)
   "This removes some or all of the characters in the current line.
 If P is zero, the active position through the end of the line are
@@ -2022,3 +2031,7 @@ and the cursor is placed at the beginning of the now-empty line."
 characters of a string, assuming that the first string character is a
 the presentation position XSTART with a given TABSIZE"
   (cbuf-count-cells-in-string (substring str 0 n) xstart tabsize))
+
+;; FIXME: this is wrong because it presumes a column and tabsize
+(define (CountCellsInString str)
+  (cbuf-count-cells-in-string str 0 8))
