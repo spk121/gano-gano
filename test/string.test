@@ -341,6 +341,10 @@
 (multi-test-equal "'\ta'"
                   (lambda (i) (string-x-data->x-cell i "\ta" tabsize))
                   '(0 1 2 3)
+(multi-test-equal "tab + 'Once upon'"
+                  (lambda (i) (string-x-data->x-cell i "\tOnce upon" tabsize))
+                  '(0 1 2  3  4  5  6  7  8  9 10 11)
+                  '(0 8 9 10 11 12 13 14 15 16 17 #f))
                   '(0 8 9 #f))
 
 ;; ASCII + zero-width space
@@ -393,6 +397,7 @@
                   (lambda (i) (string-x-data->x-cell i (string-normalize-nfd str-hiragana-2) tabsize))
                   '(0 1 2 3  4  5  6  7)
                   '(0 2 4 8 10 12 14 #f))
+
 (test-end "string-x-data->x-cell")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -547,6 +552,136 @@
                   '(0 0 1 1 2 2 2 2 3 3 4  4  5  5  6  #f))
 (test-end "string-x-cell->x-data")
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; string-render-line
+(test-begin "string-render-line")
+
+(define (multi-position-render-test name str start width result)
+  (for-each (lambda (s w r)
+              (test-equal (format #f "~a:~a:~a" name s w)
+                          r
+                          (string-render-line str 8 s w)))
+            start
+            width
+            result))
+
+;; ASCII
+(multi-position-render-test "(null)" "" '(0 1 2) '(40 40 40) '("" "" ""))
+(multi-position-render-test "'abc'" "abc" '(0 1 2 3) '(40 40 40 40) '("abc" "bc" "c" ""))
+(multi-position-render-test "'abcdefghijklm'" "abcdefghijklm"
+                            '(0 1 2 3 4 5) '(5 5 5 5 5)
+                            '("abcde" "bcdef" "cdefg" "defgh" "efghi" "fghij"))
+
+;; ASCII + tab
+(multi-position-render-test "tab + 'a'" "\ta"
+                            '(0 1 2 3 4 5 6 7 8 9)
+                            '(8 8 8 8 8 8 8 8 8 8)
+                            '("        "
+                              "       a"
+                              "      a"
+                              "     a"
+                              "    a"
+                              "   a"
+                              "  a"
+                              " a"
+                              "a"
+                              ""))
+(multi-position-render-test "tab + 'a'" "\ta"
+                            '(0 1 2 3 4 5 6 7 8 9)
+                            '(2 2 2 2 2 2 2 2 2 2)
+                            '("  "
+                              "  "
+                              "  "
+                              "  "
+                              "  "
+                              "  "
+                              "  "
+                              " a"
+                              "a"
+                              ""))
+;; ASCII + zero-width space
+(define str-ascii+zwbs (string #\u (integer->char #x200B) #\v))
+(multi-position-render-test "u + zwbs + v" str-ascii+zwbs
+                            '(0 1 2 3 0 1 2 3)
+                            '(1 1 1 1 8 8 8 8)
+                            (list (string #\u)
+                                  (string (integer->char #x200B) #\v)
+                                  ""
+                                  ""
+                                  (string #\u (integer->char #x200B) #\v)
+                                  (string (integer->char #x200B) #\v)
+                                  ""
+                                  ""))
+
+;; Latin-1 and its NFD
+(multi-position-render-test "NFC 'José'" "José"
+                            '(0 1 2 3 4 0 1 2 3 4)
+                            '(2 2 2 2 2 8 8 8 8 8)
+                            '("Jo" "os" "sé" "é" ""
+                              "José" "osé" "sé" "é"  ""))
+(define s (string-normalize-nfd "José"))
+(multi-position-render-test "NFD 'José'" s
+                            '(0 1 2 3 4 0 1 2 3 4)
+                            '(2 2 2 2 2 8 8 8 8 8)
+                            (list (string #\J #\o)
+                                  (string #\o #\s)
+                                  (string #\s #\e #\◌́)
+                                  (string #\e #\◌́)
+                                  ""
+                                  (string #\J #\o #\s #\e #\◌́)
+                                  (string #\o #\s #\e #\◌́)
+                                  (string #\s #\e #\◌́)
+                                  (string #\e #\◌́)
+                                  ""))
+
+;; Latin-1 + tab and its NFD
+(define str-latin-2 "más\taño")
+(multi-position-render-test "NFC 'más' + tab + 'año'" "más\taño"
+                            '(0 1 2 3 4 0 1 2 3 4)
+                            '(2 2 2 2 2 8 8 8 8 8)
+                            '("má" "ás" "s " "  " "  "
+                              "más     "
+                              "ás     a"
+                              "s     añ"
+                              "     año"
+                              "    año"))
+(multi-position-render-test "NFD 'más' + tab + 'año'" (string-normalize-nfd "más\taño")
+                            '(0 1 2 3 4 0 1 2 3 4)
+                            '(2 2 2 2 2 8 8 8 8 8)
+                            (list (string #\m #\a #\◌́ )
+                                  (string #\a #\◌́  #\s )
+                                  (string #\s #\space)
+                                  (string #\space #\space)
+                                  (string #\m #\a #\◌́  #\s #\space #\space #\space #\space #\space)
+                                  (string #\a #\◌́  #\s #\space #\space #\space #\space #\space #\a)
+                                  (string #\s #\space #\space #\space #\space #\space #\a #\n #\◌̃ )
+                                  (string #\space #\space #\space #\space #\space #\a #\n #\◌̃ #\o)
+                                  (string #\space #\space #\space #\space #\a #\n #\◌̃ #\o)))
+
+;; Hiragana and its NFD
+(define str-hiragana-1 "ぐるなび")
+(multi-position-render-test "NFC 'ぐるなび'" "ぐるなび"
+                            '(0 1 2 3 4 0 1 2 3 4)
+                            '(2 2 2 2 2 8 8 8 8 8)
+                            '("ぐ"       "  "      "る"     "  "    "な"
+                              "ぐるなび" " るなび" "るなび" " なび" "なび"))
+(multi-position-render-test "NFD 'ぐるなび'" (string-normalize-nfd "ぐるなび")
+                            '(0 1 2 3 4 0 1 2 3 4)
+                            '(2 2 2 2 2 8 8 8 8 8)
+                            '((string #\く #\x3099) "  "      "る"     "  "    "な"
+                              (string-normalize-nfd "ぐるなび") " るなび" "るなび" " なび" "なび"))
+
+;; Hiragana + tab and its NFD
+(define str-hiragana-2 "まど\tみちお")
+(multi-position-render-test "NFC 'まど' + tab + 'みちお'" "まど\tみちお"
+                            '(0 1 2 3 4)
+                            '(8 8 8 8 8)
+                            '("まど    "
+                              " ど     "
+                              "ど    み"
+                              "     み "
+                              "    みち"))
+(test-begin "string-render-line")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (test-end "string")

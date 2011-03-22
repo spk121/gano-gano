@@ -418,11 +418,13 @@
                     (loop (cdr list)))))))))
 
 (define (%test-write-result1 pair port)
-  (display "  " port)
-  (display (car pair) port)
-  (display ": " port)
-  (write (cdr pair) port)
-  (newline port))
+  ;;(display "  " port)
+  (let ((s1 (format #f "~a" (car pair))))
+    (display (make-string (max 0 (- 18 (string-length s1))) #\space) port)
+    (display s1 port)
+    (display ": " port)
+    (write (cdr pair) port)
+    (newline port)))
 
 (define (assq-set alist key val)
   (if (null? alist)

@@ -1,0 +1,43 @@
+;;; -*- mode: scheme; coding: utf-8 -*-
+;;; dispatch.demo - a command loop that is an editor without
+;;;   using curses
+
+(setlocale LC_ALL "en_US.utf8")
+(use-modules (ice-9 pretty-print))
+(include "test/common.test")
+
+(define buf (cbuf-make-buffer))
+(define frame (frame-make-frame))
+(define state (dsp-make-state))
+
+(define (init-buf! buf str)
+  (cbuf-set-text! buf (if (list? str) str (list str)))
+  ;; (set-line-frame! buf 0)
+  (cbuf-set-line-cur! buf 0)
+  (cbuf-set-tab-size! buf 8)
+  (cbuf-set-vert-tab-size! buf 6)
+  (cbuf-set-page-size! buf 20)
+  (cbuf-update-pp-list! buf)
+  (cbuf-set-positions! buf 0 'data))
+
+(define (print-pos buf)
+  (format #t "Pd ~a Pp ~a Pp-Goal ~a~%"
+          (cbuf-get-pd-cur buf) (cbuf-get-pp-cur buf) (cbuf-get-pp-goal buf)))
+
+(define (main)
+  (let ([state (dsp-make-state)])
+    (init-buf! buf text-ascii-long)
+    (let loop ([ch (read-char (current-input-port))])
+      (format #t "Input: ~s~%" ch)
+      ;;(format #t "Buf: ~s~%" buf)
+      (format #t "Frame: ~s~%" frame)
+      (format #t "State: ~s~%" state)
+      (set! state (dsp-dispatch ch buf frame state))
+      ;;(pretty-print (cbuf-get-text buf))
+      (map (lambda (txt)
+             (write (string-render-line txt 8 0 80))
+             (newline))
+           (cbuf-get-text buf))
+      (format #t "Cursor: ~a,~a~%" (cbuf-get-y buf) (cbuf-get-x-cell buf))
+      (loop (read-char (current-input-port)))))
+  #t)

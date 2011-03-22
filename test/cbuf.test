@@ -15,8 +15,165 @@
   (format #t "Pd ~a Pp ~a Pp-Goal ~a~%"
           (cbuf-get-pd-cur buf) (cbuf-get-pp-cur buf) (cbuf-get-pp-goal buf)))
 
+(define (multi-test-equal name test in out)
+  (for-each (lambda (i o)
+              (test-equal (format #f "~a:~a" name i)
+                          o
+                          (test i)))
+            in
+            out))
 
 (test-begin "cbuf")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; PRIMITIVES
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; cbuf-set-x!
+(test-begin "cbuf-set-x! index -> index")
+
+;; ASCII NULL
+(init-buf! buf "")
+(multi-test-equal "(null)"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0)
+                  '(0))
+(init-buf! buf "a")
+(multi-test-equal "'a'"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1)
+                  '(0 1))
+(init-buf! buf "ab")
+(multi-test-equal "'ab'"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2)
+                  '(0 1 2))
+
+;; ASCII + tab
+(init-buf! buf "\ta")
+(multi-test-equal "'\ta'"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2)
+                  '(0 1 2))
+
+(init-buf! buf "\tOnce upon")
+(multi-test-equal "tab + 'Once upon'"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2 3 4 5 6 7 8 9 10)
+                  '(0 1 2 3 4 5 6 7 8 9 10))
+
+;; ASCII + zero-width space
+(define str-ascii+zwbs (string #\u (integer->char #x200B) #\v))
+(init-buf! buf str-ascii+zwbs)
+(multi-test-equal "u + zwbs + v"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2 3)
+                  '(0 1 2 3))
+
+;; Latin-1 and its NFD
+(define str-latin-1 "José")
+(init-buf! buf (string-normalize-nfc str-latin-1))
+(multi-test-equal (format #f "NFC '~a'" (string-normalize-nfc str-latin-1))
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2 3 4)
+                  '(0 1 2 3 4))
+(init-buf! buf (string-normalize-nfd str-latin-1))
+(multi-test-equal (format #f "NFD '~a'" (string-normalize-nfd str-latin-1))
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2 3 4 5)
+                  '(0 1 2 3 3 5))       ; Should return index of 'e' not accent
+
+(test-end "cbuf-set-x! index->index")
+
+
+(test-begin "cbuf-set-x! cell->data")
+;; ASCII NULL
+(init-buf! buf "")
+(multi-test-equal "(null)"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0)
+                  '(0))
+(init-buf! buf "a")
+(multi-test-equal "'a'"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1)
+                  '(0 1))
+(init-buf! buf "ab")
+(multi-test-equal "'ab'"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1 2)
+                  '(0 1 2))
+
+;; ASCII + tab
+(init-buf! buf "\ta")
+(multi-test-equal "'\ta'"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1 2 3 4 5 6 7 8 9 ) ; Tab occupies 8 cell
+                  '(0 0 0 0 0 0 0 0 1 2))
+
+(init-buf! buf "\tOnce upon")
+(multi-test-equal "tab + 'Once upon'"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  ;; Tab occupies 8 cells
+                  '(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17)
+                  '(0 0 0 0 0 0 0 0 1 2  3  4  5  6  7  8  9 10))
+
+;; ASCII + zero-width space
+(define str-ascii+zwbs (string #\u (integer->char #x200B) #\v))
+(init-buf! buf str-ascii+zwbs)
+(multi-test-equal "u + zwbs + v"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1 2)
+                  '(0 1 3))             ; zwbs takes up no space
+
+;; Latin-1 and its NFD
+(define str-latin-1 "José")
+(init-buf! buf (string-normalize-nfc str-latin-1))
+(multi-test-equal (format #f "NFC '~a'" (string-normalize-nfc str-latin-1))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1 2 3 4)
+                  '(0 1 2 3 4))
+
+(init-buf! buf (string-normalize-nfd str-latin-1))
+(multi-test-equal (format #f "NFD '~a'" (string-normalize-nfd str-latin-1))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1 2 3 4)
+                  '(0 1 2 3 4))       ; Should treat accent as part of base char
+
+;; Latin-1 + tab and its NFD
+(define str-latin-2 "más\taño")
+(init-buf! buf (string-normalize-nfc str-latin-2))
+(multi-test-equal (format #f "NFC '~a'" (string-normalize-nfc str-latin-2))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  ;; 5 spaces for tab
+                  '(0 1 2 3 4 5 6 7 8 9 10 11)
+                  '(0 1 2 3 3 3 3 3 4 5  6  7))
+
+(init-buf! buf (string-normalize-nfd str-latin-2))
+(multi-test-equal (format #f "NFD '~a'" (string-normalize-nfd str-latin-2))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  ;; 5 spaces for tab. Treat accent/tilde as part of base
+                  '(0 1 2 3 4 5 6 7 8 9 10 11)
+                  '(0 1 2 3 3 3 3 3 4 5  6  7))
+
+(define str-hiragana-1 "ぐるなび")
+(init-buf! buf (string-normalize-nfc str-hiragana-1))
+(multi-test-equal (format #f "NFC '~a'" (string-normalize-nfc str-hiragana-1))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  ;; 2 cells per char
+                  '(0 1 2 3 4 5 6 7 8)
+                  '(0 0 1 1 2 2 3 3 4))
+
+(init-buf! buf (string-normalize-nfd str-hiragana-1))
+(multi-test-equal (format #f "NFD '~a'" (string-normalize-nfd str-hiragana-1))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  ;; 2 cells per char. Accents treated as part of base.
+                  '(0 1 2 3 4 5 6 7 8)
+                  '(0 0 1 1 2 2 3 3 4))
+
+
+(test-end "cbuf-set-x! cell->data")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -293,75 +450,31 @@
 
 (test-begin "cbuf-bell")
 (cbuf-set-bell! buf #f)
-(cbuf-bell buf #f)
+(cbuf-bell buf)
 (test-assert "set bell" (cbuf-get-bell buf))
 (test-end "cbuf-bell")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; BS
 (test-begin "cbuf-backspace")
-(test-begin "ASCII")
 
-                                        ;---
-(test-begin "backspace from col 24")
-(init-buf! buf string-data-ascii)
-(cbuf-set-positions! buf 24 'data)
-(cbuf-backspace buf #t)
-(test-equal "data position" 23 (cbuf-get-pd-cur buf))
-(test-equal "presentation position" 23 (cbuf-get-pp-cur buf))
-(test-equal "goal column" 23 (cbuf-get-pp-goal buf))
-(test-equal "current-line" string-data-ascii (cbuf-get-text-cur buf))
-(test-end "backspace from col 24")
+(test-begin "backspace over (null)")
+(init-buf! buf "")
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-beginning-of-line? err) #t)
+                     (else #f))
+                    (cbuf-backspace buf)))
+(test-equal "x" 0 (cbuf-get-x-data buf))
+(test-end "backspace over (null)")
 
-(test-begin "undo backspace")
-(%undo buf)
-(test-equal "data position" 24 (cbuf-get-pd-cur buf))
-(test-equal "presentation position" 24 (cbuf-get-pp-cur buf))
-(test-equal "goal column" 24 (cbuf-get-pp-goal buf))
-(test-equal "current-line" string-data-ascii (cbuf-get-text-cur buf))
-(test-end "undo backspace")
+(test-begin "backspace over 'a'")
+(init-buf! buf "a")
+(cbuf-set-x! buf 1 'data)
+(cbuf-backspace buf)
+(test-equal "x" 0 (cbuf-get-x-data buf))
+(test-end "backspace over 'a'")
 
-(test-end "ASCII")
-
-(test-begin "Hanzi")
-
-(test-begin "backspace from 24th col")
-(init-buf! buf string-data-hanzi)
-(cbuf-set-positions! buf 12 'data)
-(cbuf-backspace buf #t)
-(test-equal "data position" 11 (cbuf-get-pd-cur buf))
-(test-equal "presentation position" 22 (cbuf-get-pp-cur buf))
-(test-equal "goal column" 22 (cbuf-get-pp-goal buf))
-(test-equal "current-line" string-data-hanzi (cbuf-get-text-cur buf))
-(test-end "backspace from 24th col")
-
-(test-begin "undo backspace")
-(%undo buf)
-(test-equal "data position" 12 (cbuf-get-pd-cur buf))
-(test-equal "presentation position" 24 (cbuf-get-pp-cur buf))
-(test-equal "goal column" 24 (cbuf-get-pp-goal buf))
-(test-equal "current-line" string-data-hanzi (cbuf-get-text-cur buf))
-(test-end "undo backspace")
-
-(test-begin "backspace from 25th col")
-(init-buf! buf string-data-hanzi)
-(cbuf-set-positions! buf 25 'presentation)
-(cbuf-backspace buf #t)
-(test-equal "data position" 11 (cbuf-get-pd-cur buf))
-(test-equal "presentation position" 22 (cbuf-get-pp-cur buf))
-(test-equal "goal column" 22 (cbuf-get-pp-goal buf))
-(test-equal "current-line" string-data-hanzi (cbuf-get-text-cur buf))
-(test-end "backspace from 25th col")
-
-(test-begin "undo backspace")
-(%undo buf)
-(test-equal "data position" 12 (cbuf-get-pd-cur buf))
-(test-equal "presentation position" 24 (cbuf-get-pp-cur buf))
-(test-equal "goal column" 25 (cbuf-get-pp-goal buf))
-(test-equal "current-line" string-data-hanzi (cbuf-get-text-cur buf))
-(test-end "undo backspace")
-
-(test-end "Hanzi")
 (test-end "cbuf-backspace")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -378,7 +491,7 @@
 (init-buf! buf string-data-ascii)
 (cbuf-set-positions! buf 25 'data)
 (cbuf-set-tab-size! buf 8)
-(cbuf-cursor-backward-tabulation buf 1 #t)
+(cbuf-cursor-backward-tabulation buf 1)
 (test-equal "data position" 24 (cbuf-get-pd-cur buf))
 (test-equal "presentation position" 24 (cbuf-get-pp-cur buf))
 (test-equal "goal column" 24 (cbuf-get-pp-goal buf))
@@ -394,7 +507,7 @@
 
 (test-begin "backtab twice from col 25")
 (cbuf-set-positions! buf 25 'data)
-(cbuf-cursor-backward-tabulation buf 2 #t)
+(cbuf-cursor-backward-tabulation buf 2)
 (test-equal "data position" 16 (cbuf-get-pd-cur buf))
 (test-equal "presentation position" 16 (cbuf-get-pp-cur buf))
 (test-equal "goal column" 16 (cbuf-get-pp-goal buf))
@@ -424,7 +537,7 @@
 (test-begin "move to col 23")
 (init-buf! buf string-data-ascii)
 (cbuf-set-positions! buf 0 'data)
-(cbuf-cursor-character-absolute buf 23 #t)
+(cbuf-cursor-character-absolute buf 23)
 (test-equal "data position" 23 (cbuf-get-pd-cur buf))
 (test-equal "presentation position" 23 (cbuf-get-pp-cur buf))
 (test-equal "goal column" 23 (cbuf-get-pp-goal buf))
@@ -445,7 +558,7 @@
 (test-begin "move to col 23")
 (init-buf! buf string-data-hanzi)
 (cbuf-set-positions! buf 0 'data)
-(cbuf-cursor-character-absolute buf 23 #t)
+(cbuf-cursor-character-absolute buf 23)
 (test-equal "data position" 11 (cbuf-get-pd-cur buf))
 (test-equal "presentation position" 22 (cbuf-get-pp-cur buf))
 (test-equal "goal column" 23 (cbuf-get-pp-goal buf))
