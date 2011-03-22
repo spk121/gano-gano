@@ -1,0 +1,151 @@
+#! /bin/bash
+
+srcdir=
+srcdirset=0
+srcfile=src/gano.scm
+buildtype=`build-aux/config.guess`
+buildtypeset=0
+
+
+. build-aux/getopt.sh
+while getoptex "srcdir: prefix: exec-prefix: bindir: sbindir: libexecdir: sysconfdir: sharedstatedir: localstatedir: libdir: includedir: oldincludedir: datarootdir: datadir: infodir: localedir: mandir: docdir: htmldir: dvidir: pdfdir: psdir: build: host: target:" "$@"
+do
+  echo "Option <$OPTOPT> ${OPTARG:+has an arg <$OPTARG>}"
+  if [[ $OPTOPT = "srcdir" ]]; then
+      srcdir=$OPTARG
+      srcdirset=1
+  elif [[ $OPTOPT = "build" ]]; then
+      buildtypetmp=$(build-aux/config.sub $OPTARG 2> /dev/null)
+      if [[ -n $buildtypetmp ]]; then
+	  if [[ $OPTARG != $buildtypetmp ]]; then
+	      echo "Using canonical build type " $buildtypetmp "instead of" $OPTARG
+	  fi
+	  buildtype=$buildtypetmp
+	  buildtypeset=1
+      else
+	  echo "Unknown host type: " $OPTARG
+	  exit 1
+      fi
+  elif [[ $OPTOPT = "prefix" ]]; then
+      prefix=$OPTARG
+  elif [[ $OPTOPT = "exec_prefix" ]]; then
+      exec_prefix=$OPTARG
+  elif [[ $OPTOPT = "bindir" ]]; then
+      bindir=$OPTARG
+  elif [[ $OPTOPT = "sbindir" ]]; then
+      sbindir=$OPTARG
+  elif [[ $OPTOPT = "libexecdir" ]]; then
+      libexec=$OPTARG
+  elif [[ $OPTOPT = "datarootdir" ]]; then
+      datarootdir=$OPTARG
+  elif [[ $OPTOPT = "datadir" ]]; then
+      datadir=$OPTARG
+  elif [[ $OPTOPT = "sysconfdir" ]]; then
+      sysconfdir=$OPTARG
+  elif [[ $OPTOPT = "sharedstatedir" ]]; then
+      sharedstatedir=$OPTARG
+  elif [[ $OPTOPT = "localstatedir" ]]; then
+      localstatedir=$OPTARG
+  elif [[ $OPTOPT = "includedir" ]]; then
+      includedir=$OPTARG
+  elif [[ $OPTOPT = "docdir" ]]; then
+      docdir=$OPTARG
+  elif [[ $OPTOPT = "infodir" ]]; then
+      infodir=$OPTARG
+  elif [[ $OPTOPT = "htmldir" ]]; then
+      htmldir=$OPTARG
+  elif [[ $OPTOPT = "pdfdir" ]]; then
+      pdfdir=$OPTARG
+  elif [[ $OPTOPT = "psdir" ]]; then
+      psdir=$OPTARG
+  elif [[ $OPTOPT = "libdir" ]]; then
+      libdir=$OPTARG
+  elif [[ $OPTOPT = "lispdir" ]]; then
+      lispdir=$OPTARG
+  elif [[ $OPTOPT = "localedir" ]]; then
+      localedir=$OPTARG
+  fi
+done
+shift $[OPTIND-1]
+echo "Number " $#
+for arg in "$@"
+do
+  echo "Non option argument <$arg>"
+
+  # config.sub can tell you if this argument is a valid build type
+  buildtypetmp=$(build-aux/config.sub $arg 2> /dev/null)
+  if [[ -n $buildtypetmp ]]; then
+      if [[ $buildtypetmp != $arg ]]; then
+	  echo "Using canonical build type" $buildtypetmp "instead of" $arg
+      fi
+      buildtype=$buildtypetmp
+      buildtypeset=1
+  fi
+done
+
+# If srcdir has not been given, look for source in this directory and
+# the parent directory.
+if [[ -z $srcdir ]]; then
+    if [[ -r ../$srcfile ]]; then
+	srcdir=..
+    elif [[ -r $srcfile ]]; then
+	srcdir=.
+    else
+	echo "Can't find" $srcfile "in current directory"
+	exit 1
+    fi
+else
+    if [[ ! -r $srcdir/$srcfile ]]; then
+	echo "Can't find" $srcfile "in" $srcdir "directory"
+	exit 1
+    fi
+fi
+
+if [[ -z $prefix ]]; then prefix=/usr/local; fi
+package=gano
+if [[ -z $exec_prefix ]]; then exec_prefix=$prefix; fi
+if [[ -z $bindir ]]; then bindir=$exec_prefix/bin; fi
+if [[ -z $sbindir ]]; then sbindir=$exec_prefix/sbin; fi
+if [[ -z $libexecdir ]]; then libexecdir=$exec_prefix/libexec; fi
+if [[ -z $datarootdir ]]; then datarootdir=$prefix/share; fi
+if [[ -z $datadir ]]; then datadir=$datarootdir; fi
+if [[ -z $sysconfdir ]]; then sysconfdir=$prefix/etc; fi
+if [[ -z $sharedstatedir ]]; then sharedstatedir=$prefix/com; fi
+if [[ -z $localstatedir ]]; then localstatedir=$prefix/var; fi
+if [[ -z $includedir ]]; then includedir=$prefix/include; fi
+if [[ -z $docdir ]]; then docdir=$datarootdir/doc/$package; fi
+if [[ -z $infodir ]]; then infodir=$datarootdir/info; fi
+if [[ -z $htmldir ]]; then htmldir=$docdir; fi
+if [[ -z $pdfdir ]]; then pdfdir=$docdir; fi
+if [[ -z $dvidir ]]; then dvidir=$docdir; fi
+if [[ -z $psdir ]]; then psdir=$docdir; fi
+if [[ -z $libdir ]]; then libdir=$exec_prefix/lib; fi
+if [[ -z $lispdir ]]; then lispdir=$datarootdir/emacs/site-lisp; fi
+if [[ -z $localedir ]]; then localedir=$datarootdir/locale; fi
+
+echo "
+# This file was generated automatically by the configure script
+
+srcdir=$srcdir
+prefix=$prefix
+exec_prefix=$exec_prefix
+bindir=$bindir
+sbindir=$sbindir
+libexecdir=$libexecdir
+sysconfdir=$sysconfdir
+sharedstatedir=$sharedstatedir
+localstatedir=$localstatedir
+libdir=$libdir
+includedir=$includedir
+datarootdir=$datarootdir
+datadir=$datadir
+infodir=$infodir
+localedir=$localedir
+docdir=$docdir
+htmldir=$htmldir
+dvidir=$dvidir
+pdfdir=$pdfdir
+psdir=$psdir
+" > paths.mk
+
+echo "done"
