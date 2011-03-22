@@ -493,7 +493,7 @@
     (format (current-error-port) "Main: set up windows~%")
 
     ;; Initialize all the windows based on the current screen dimensions
-    (InitWindow)
+    (winio-init-window)
 
     ;; Set up the signal handlers
     ;; (InitSignal)
@@ -815,7 +815,7 @@ so we can deal with them now."
    ((= flag USE_MOUSE)
     (InitMouse))
    ((or (= flag MORE_SPACE) (= flag NO_HELP))
-    (InitWindow)
+    (winio-init-window)
     (RefreshAll))
    ((= flag SUSPEND)
     (InitSignal))
@@ -843,29 +843,133 @@ so we can deal with them now."
       2
       0))
 
+;; This procedure is where the device-free and the device-specific
+;; dispatches are bound togeter.
 
+;; dsp-id-dispatch takes care of changing the text buffer, the frame
+;; and the device-free flags, but, does not deal with anything
+;; beyond the text and its abstract frame.  It also doesn't deal with
+;; the filename, the CRLF type
+
+;; Afterward, functions having to deal with curses are called
 (define (gano-dispatch buf funcId)
-  "Given a function ID, call an API function"
-  (log-debug (format #f "gano-dispatch: ~s~%" (GetFuncIdNameFromFuncId funcId)))
-  (cond
-   ((= funcId DO_ENTER)
-    (dsp-id-dispatch! 'INL (openfile-BFS))
-    (winio-edit-refresh))
-   ((= funcId TOTAL_REFRESH) (DoTotalRefresh buf))
-   ((= funcId DO_FIRST_LINE) (DoLineFirst buf))
-   ((= funcId DO_LAST_LINE) (DoLineLast buf))
-   ((= funcId DO_SCROLL_UP) (DoScrollUp buf))
-   ((= funcId DO_SCROLL_DOWN) (DoScrollDown buf))
-   ((= funcId DO_UP_VOID) (DoLinePrev buf (ISSET SMOOTH_SCROLL)))
-   ((= funcId DO_DOWN_VOID) (DoLineNext buf (ISSET SMOOTH_SCROLL)))
-   ((= funcId DO_LEFT) (DoCharPrev buf))
-   ((= funcId DO_RIGHT) (DoCharNext buf))
-   ((= funcId DO_DELETE) (DoCharDelete buf))
-   ((= funcId DO_PAGE_UP) (DoPagePrev buf (ISSET SMOOTH_SCROLL)))
-   ((= funcId DO_PAGE_DOWN) (DoPageNext buf (ISSET SMOOTH_SCROLL)))
-   ((= funcId DO_END) (DoLineEnd buf))
-   ((= funcId DO_HOME) (DoLineBeginning buf))
-   ((= funcId DO_BACKSPACE) (DoCharDeleteLeft buf))
-   ((= funcId DO_HELP_VOID)
-    (DoHelp MMAIN)
-    (DoTotalRefresh buf))))
+  (let ([buf (openfile-buffer)]
+	[BFS (openfile-BFS)])
+    "Given a function ID, call an API function"
+    (log-debug (format #f "gano-dispatch: ~s~%" (GetFuncIdNameFromFuncId funcId)))
+    (cond
+     ;; Format effectors
+     ((= funcId DO_ENTER)
+      (dsp-id-dispatch! 'INL BFS)
+      (winio-edit-refresh))
+     
+     ;; Pico functions
+     [(= funcId DO_HELP_VOID)
+      (help-do-help-menu MMAIN)
+      (winio-total-refresh)]
+     [(= funcId DO_RIGHT)
+      ;; At the end of the buffer, do nothing
+      ;; At the end of the line, move to the beginning of next line
+      ;; Otherwise, move right
+      (unless (cbuf-end-of-buffer? buf)
+	      (cond
+	       [(cbuf-end-of-line? buf)
+		(dsp-id-dispatch! 'CNL BFS)
+		(winio-total-refresh)]
+	       [else
+		(dsp-id-dispatch! 'HPR BFS)
+		(winio-total-refresh)]))]
+     [(= funcId DO_LEFT)
+      ;; At the beginning of the buffer, do nothing
+      ;; At the beginning of a line, move to the end of the previous line
+      ;; Otherwise, move left
+      (unless (cbuf-beginning-of-buffer? buf)
+	      (cond
+	       [(cbuf-beginning-of-line? buf)
+		(dsp-id-dispatch! 'CPL BFS)
+		(dsp-id-dispatch! 'HPAn BFS (cbuf-get-text-cur-base-length buf))
+		(winio-total-refresh)]
+	       [else
+		(dsp-id-dispatch! 'HPB BFS)
+		(winio-total-refresh)]))]
+
+     [(= funcId DO_UP_VOID)
+      ;; In the first line of the buffer, do nothing
+      ;; Otherwise, move up to the goal column or end of the line,
+      ;; whichever is less.  Don't change the goal column when moving up.
+      (unless (= 0 (cbuf-get-y buf))
+	      (dsp-id-dispatch! 'CUU BFS)
+	      (winio-total-refresh))]
+
+     [(= funcId DO_DOWN_VOID)
+      ;; In the last line of the buffer, do nothing
+      ;; Otherwise, move down to the goal column or end of line, whichever
+      ;; is less.  Don't change the goal column when moving up.
+      (unless (= (cbuf-get-y buf) (cbuf-get-line-count buf))
+	      (dsp-id-dispatch! 'CUD BFS)
+	      (winio-total-refresh))]
+
+     [(= funcId DO_HOME)
+      (dsp-id-dispatch! 'HPA BFS)
+      (winio-total-refresh)]
+
+     [(= funcId DO_END)
+      (dsp-id-dispatch! 'HPAn BFS (cbuf-get-text-cur-base-length buf))
+      (winio-total-refresh)]
+
+     [(= funcId DO_PAGE_DOWN)
+      (unless (cbuf-on-last-page? buf)
+	      (dsp-id-dispatch! 'PPR BFS)
+	      (winio-total-refresh))]
+
+     [(= funcId DO_PAGE_UP)
+      (unless (cbuf-on-first-page? buf)
+	      (dsp-id-dispatch! 'PPB BFS)
+	      (winio-total-refresh))]
+
+     [(= funcId TOTAL_REFRESH) (winio-total-refresh)]
+
+     [(= funcId DO_DELETE) 
+      ;; If at the end of buffer, do nothing
+      ;; If at the end of line, join line below to this line
+      ;; Otherwise, remove the character at the active data
+      ;; position
+      (unless (cbuf-end-of-buffer? buf)
+	      (cond
+	       [(cbuf-end-of-line? buf)
+		(dsp-id-dispatch! 'DNL BFS)
+		(winio-total-refresh)]
+	       [else
+		(dsp-id-dispatch! 'DCH BFS)
+		(winio-total-refresh)]))]
+     ((= funcId DO_FIRST_LINE)
+      (dsp-id-dispatch! 'CUP (openfile-BFS))
+      (winio-edit-refresh))
+     ((= funcId DO_LAST_LINE) (DoLineLast buf))
+     ((= funcId DO_SCROLL_UP) (DoScrollUp buf))
+     ((= funcId DO_SCROLL_DOWN) (DoScrollDown buf))
+     ((= funcId DO_DELETE) (DoCharDelete buf))
+     ((= funcId DO_PAGE_UP) (DoPagePrev buf (ISSET SMOOTH_SCROLL)))
+     ((= funcId DO_END) (DoLineEnd buf))
+     ((= funcId DO_BACKSPACE) (DoCharDeleteLeft buf))
+     [(= funcId DO_EXIT)
+      (gano-do-exit)]
+     )))
+
+(define (gano-do-exit)
+  "If the current file buffer has been modified, and the TEMP_FILE flag
+isn't set, ask whether or not to save the file buffer.  If the
+TEMP_FILE flag is set, save it unconditionally.  Then, if more than
+one file buffer is open, close the current file buffer and switch to
+the next one.  If only one file buffer is open, exit from nano."
+  (let ([save? (or (not (cbuf-get-modified (openfile-buffer)))
+                   (ISSET TEMP_FILE)
+                   (do-yesno-prompt #f "Save modified buffer (ANSWERING \"No\" WILL DESTROY CHANGES)? "))])
+    (if (or (not save?) (do-writeout #t))
+        (if (not (close-buffer))
+            (finish))
+        ;; else
+        (unless save?
+          (winio-statusbar "Cancelled")))
+    (winio-shortcut-init #f)
+    (display-main-list)))

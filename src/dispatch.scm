@@ -311,7 +311,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; METHODS
 
-(define* (dsp-id-dispatch! id BFS #:optional x)
+(define* (dsp-id-dispatch! id BFS #:optional x x2)
   "Given a function ID and a buffer/frame/state (which are the three
 components that make up a character cell buffer's
 model/view/controller) apply the corresponding function to the
@@ -351,13 +351,14 @@ BFS."
     [(CNL) (cbuf-cursor-next-line buf 1) (D)]
     [(CPL) (cbuf-cursor-preceding-line buf 1) (D)]
     [(CR)  (cbuf-carriage-return buf) (D)]
-    [(CUB) (cbuf-cursor-left buf) (D)]
-    [(CUD) (cbuf-cursor-down buf) (D)]
+    [(CUB) (cbuf-cursor-left buf 1) (D)]
+    [(CUD) (cbuf-cursor-down buf 1) (D)]
     [(CUF) (cbuf-cursor-right buf 1) (D)]
     [(CUP) (cbuf-cursor-position buf 0 0) (D)]
     [(CUU) (cbuf-cursor-up buf 1) (D)]
     [(CVT) (cbuf-cursor-line-tabulation buf 1) (D)]
     [(DCH) (cbuf-delete-character buf 1 'presentation #t #t) (D)]
+    [(DNL) (cbuf-delete-newline buf #t) (D)]
     [(DL)  (cbuf-delete-line buf 1 #t #t) (D)]
     [(ECH) (cbuf-erase-character buf 'presentation 1 #t #t) (D)]
     [(EL0) (cbuf-erase-in-line buf 'presentation 0 #t #t) (D)]
@@ -365,6 +366,7 @@ BFS."
     [(EL2) (cbuf-erase-in-line buf 'presentation 2 #t #t) (D)]
     [(FF)  (cbuf-form-feed buf) (D)]
     [(HPA) (cbuf-character-position-absolute buf 0) (D)]
+    [(HPAn) (cbuf-character-position-absolute buf x) (D)]
     [(HPB) (cbuf-character-position-backward buf 1) (D)]
     [(HPR) (cbuf-character-position-forward buf 1) (D)]
     [(ICH) (cbuf-insert-character buf 1 #t) (D)]

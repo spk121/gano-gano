@@ -62,7 +62,7 @@ portion of the window."
    ((ISSET NO_HELP)
     #t)
    (else
-    (let* ((slen (min MAIN_VISIBLE (CountEntriesInMenu menu)))
+    (let* ((slen (min MAIN_VISIBLE (func-count-entries-in-menu menu)))
            ;; There will be this many characters per column, except
            ;; for the last two, which will be longer by (COLS %
            ;; colwidth) columns so as to not waste space.  We need at
@@ -70,37 +70,35 @@ portion of the window."
            (xLim (cadr (getmaxyx vWinMain)))
            (colwidth (quotient xLim (+ (quotient slen 2) (remainder slen 2)))))
       (winio-blank-bottombars)
-
-      (format (current-error-port) "In bottombars, and cols == \"~a\" (should be 80)~%" xLim)
-      (format (current-error-port) "In bottombars, and slen == \"~a\" (should be 12)~%" slen)
-      (format (current-error-port) "In bottombars, and colwidth == \"~a\" (should be 13)~%" colwidth)
+      (log-debug
+       (format #f "winio-bottombars: total cols ~a, num entries ~a, colwidth ~a"
+               xLim slen colwidth))
       (let loop ((i 0)
                  (n 0))
         (if (and (< n (length *functions*))
                  (< i slen))
             (begin
               (let ((func (list-ref *functions* n)))
-
-                (format (current-error-port) "Checking menu item....~%");
-
                 (if (and (logtest menu (GetFunctionMenus func))
                          (GetFunctionDesc func)
                          (not (string-null? (GetFunctionDesc func))))
                     (begin
-                      (format (current-error-port) "found one! f->menus = ~a, desc = \"~a\"~%"
-                              (GetFunctionMenus func) (GetFunctionDesc func))
-                      (let ((s (FindFirstShortcut menu (GetFunctionId func))))
+                      (log-debug
+                       (format #f "winio-bottombars: found menu item ~a in conext ~a"
+                               (func-get-description func)
+                               (func-get-context func)))
+                      (let ((s (FindFirstShortcut menu (func-get-id func))))
                         (begin
                           (if (not s)
                               (begin
-                                (format (current-error-port) "Whoops, gues not, no shortcut key found fo func!~%")
+                                (log-warning
+                                 (format #f "winio-bottombars: no shortcut key for func ~a"
+                                         (GetFunctionDesc func)))
                                 (loop i (+ n 1)))
                               ;; else
                               (begin
                                 (move vWinBottom (+ 1 (remainder i 2))
                                       (* colwidth (quotient i 2)))
-                                (format (current-error-port) "Calling onekey with keystr \"~a\" and desc \"~a\"~%"
-                                        (GetShortcutKeyStr s) (GetFunctionDesc func))
                                 (onekey (GetShortcutKeyStr s) (GetFunctionDesc func)
                                         (+ colwidth (remainder (cols) colwidth)))
                                 (loop (+ i 1) (+ n 1)))))))
@@ -300,10 +298,13 @@ portion of the window."
     (noutrefresh vWinEdit)))
 
 ;; Initialize the three window portions that nano uses.
-(define (InitWindow)
+(define (winio-init-window)
   (set! editwinrows (+ (lines) -5 (gano-no-more-space) (gano-no-help)))
-  (format (current-error-port) "Editor window ~a by ~a~%" (cols) editwinrows)
-  (format (current-error-port) "Minimum size ~a by ~a~%" MIN_EDITOR_COLS MIN_EDITOR_ROWS)
+  (log-debug
+   (format #f "winio-init-window: Editor window ~a by ~a" (cols) editwinrows))
+  (log-debug
+   (format #f "winio-init-window: minimum size ~a by ~a" MIN_EDITOR_COLS
+                     MIN_EDITOR_ROWS))
   (when (or (< (cols) MIN_EDITOR_COLS)
             (< editwinrows MIN_EDITOR_ROWS))
     (error "Window size is too small for nano...~%"))
@@ -802,3 +803,14 @@ frame"
     (set! vfEditRefresh #t)))
 
 
+(define (winio-total-refresh)
+  "Unconditionally redraw the entire screen."
+
+  (winio-titlebar "")
+  (winio-edit-refresh)
+  (winio-bottombars vMenuCur)
+  (refresh vWinTop)
+  (refresh vWinEdit)
+  (refresh vWinBottom)
+  ;;(refresh vWinMain)
+  )

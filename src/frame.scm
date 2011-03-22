@@ -49,12 +49,12 @@
 (define FRAME_RIGHT_PADDING 6)
 (define FRAME_LENGTH (+ 1 FRAME_RIGHT_PADDING))
 
-(define (frame-make-frame)
+(define (frame-make-frame width height)
   "Create a frame."
   (let ((frame (make-vector FRAME_LENGTH #f)))
     (vector-set! frame 0 'frame)
-    (vector-set! frame FRAME_WIDTH 80)
-    (vector-set! frame FRAME_HEIGHT 24)
+    (vector-set! frame FRAME_WIDTH width)
+    (vector-set! frame FRAME_HEIGHT height)
     (vector-set! frame FRAME_X_START 0)
     (vector-set! frame FRAME_Y_START 0)
     (vector-set! frame FRAME_LEFT_PADDING #\$)
@@ -167,8 +167,27 @@ move right."
   (frame-set-x-start! frame (- (frame-get-x-start frame) n)))
 
 (define (frame-update-frame buf frame)
-  "Adjust the frame so that the cursor is present"
-  #f)
+  "Adjust the frame so that the cursor is present. If the cursor
+is beyond the view of the current frame, the frame is adjusted
+so the cursor is one-third of the distance to the edge of the frame."
+  (let ([x-frame (frame-get-x-start frame)]
+        [y-frame (frame-get-y-start frame)]
+        [height (frame-get-height frame)]
+        [width (frame-get-width frame)]
+        [x-cell (cbuf-get-x-cell buf)]
+        [y (cbuf-get-y buf)])
+    (when (>= y (+ y-frame height))
+      (let ([y-frame-target (- y (floor (* 2/3 height)))])
+        (frame-set-y-start! frame (max 0 y-frame-target))))
+    (when (< y y-frame)
+      (let ([y-frame-target (- y (floor (* 1/3 height)))])
+        (frame-set-y-start! frame (max 0 y-frame-target))))
+    (when (>= x-cell (+ x-frame width))
+      (let ([x-frame-target (- x-cell (floor (* 2/3 width)))])
+        (frame-set-x-start! frame (max 0 x-frame-target))))
+    (when (< x-cell x-frame)
+      (let ([x-frame-target (- x-cell (floor (* 1/3 width)))])
+        (frame-set-x-start! frame (max 0 x-frame-target))))))
 
 (define (frame-render-frame buf frame)
   (let ([txt (cbuf-get-text buf)]
@@ -180,7 +199,10 @@ move right."
     (map (lambda (i)
            (let ([y (+ i y-frame)])
              (if (< y (length txt))
-                 (string-render-line (list-ref txt y) tabsize x-frame width)
+                 (string-render-line (list-ref txt y)
+                                     #:tabsize tabsize
+                                     #:x-cell-start x-frame
+                                     #:x-width width)
                  ;; else
                  (make-string width #\space))))
 

@@ -52,7 +52,7 @@
   (let ((x (make-vector OPENFILE_LENGTH #f)))
     (vector-set! x 0 'openfile)
     (openfile-set-buffer! x (cbuf-make-buffer))
-    (openfile-set-frame! x (frame-make-frame))
+    (openfile-set-frame! x (frame-make-frame (cols) editwinrows))
     (openfile-set-state! x (dsp-make-state))
     x))
 
@@ -297,3 +297,15 @@
 
 (define (CheckOperatingDir? path allow_tabcomp)
   #f)
+
+(define (files-do-writeout exiting?)
+  "Write the current file to disk.  If the mark is on,
+write the current marked selection to disk.  If exiting is #t,
+write the file to disk regardless of whether the mark is on,
+and without prompting if the TEMP_FILE is set.  Return #t on
+success and #f on error"
+  (set! vMenuCur MWRITEFILE)
+  (when (and exiting?
+             (not (string-null? (openfile-filename)))
+             (ISSET TEMP_FILE))
+    (write-file (openfile-filename) "" #f #t #f)))

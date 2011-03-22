@@ -62,7 +62,16 @@
   "Adds information about a function to the global function list."
   (let ([fn (func-create-function func context description help fBlankAfter fViewOk)])
     (set! *functions* (append! *functions* (list fn)))
-    (log-debug (format #f "Added func \"~a\"" description))))
+    (log-debug (format #f "func-add-function: Added func \"~a\"" description))))
+
+(define (func-count-entries-in-menu menu)
+  "Return the number of entries in the shortcut list S for
+a given menu"
+  (count (lambda (fn)
+           (logtest (func-get-context fn) menu))
+         *functions*))
+
+
 
 (define (GetFunctionMenus fn) (func-get-context fn))
 (define (GetFunctionDesc fn) (func-get-description fn))

@@ -160,22 +160,16 @@
 (define vDirHome #f)
 
 (define vMenuCur #f)
-;; Return the number of entries in the shortcut list S for
-;; a given menu
-(define (CountEntriesInMenu menu)
-  (count (lambda (fn)
-           (logtest (GetFunctionMenus fn) menu))
-         *functions*))
 
 (define (FindFirstShortcut menu funcId)
   (let ([nonMetaSc (find (lambda (sc)
                            (and (DoesShortcutMatchMenuAndFuncId? sc menu funcId)
                                 (not (sc-does-shortcut-use-meta-key? sc))))
-                         vrgShortcuts)]
+                         *shortcuts*)]
         [metaSc (find (lambda (sc)
                         (and (DoesShortcutMatchMenuAndFuncId? sc menu funcId)
                              (sc-does-shortcut-use-meta-key? sc)))
-                      vrgShortcuts)])
+                      *shortcuts*)])
     (or nonMetaSc
         metaSc)))
 

@@ -249,11 +249,13 @@ an appropriate number of spaces."
      str)
     str2))
 
-(define (string-render-line str tabsize x-cell-start x-width)
+(define* (string-render-line str #:key (tabsize 8)
+                             (x-cell-start 0) (x-width 80)
+                             (pad? #t))
   "Return the substring of str beginning at the x-cell cell position
 and having x-width cells.  Tabs are converted to spaces, and
 characters that would be clipped by the edges are replaced with
-spaces."
+spaces.  If PAD is true, the end of the line is padded with spaces."
   (let* ([str (%string-render-line-tabs str tabsize)]
          [x-cell-end (+ x-cell-start x-width)]
          [x-cell-list (string-compute-x-cell-list-from-string str tabsize)]
@@ -291,8 +293,7 @@ spaces."
                            ;; else
                            (- (list-ref x-cell-list i-end)
                               (list-ref x-cell-list i-start)))])]
-         ;;[right-padding (- x-width (+ left-padding str-x-size))]
-         [right-padding (if truncated-p
+         [right-padding (if (or pad? truncated-p)
                             (- x-width (+ left-padding str-x-size))
                             ;; else
                             0)])

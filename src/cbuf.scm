@@ -93,16 +93,16 @@
 ;; Error codes for CBUF
 
 (define-condition-type &cbuf-beginning-of-buffer &condition
-  cbuf-beginning-of-buffer?)
+  cbuf-beginning-of-buffer-error?)
 
 (define-condition-type &cbuf-end-of-buffer &condition
-  cbuf-end-of-buffer?)
+  cbuf-end-of-buffer-error?)
 
 (define-condition-type &cbuf-beginning-of-line &condition
-  cbuf-beginning-of-line?)
+  cbuf-beginning-of-line-error?)
 
 (define-condition-type &cbuf-end-of-line &condition
-  cbuf-end-of-line?)
+  cbuf-end-of-line-error?)
 
 (define-condition-type &cbuf-combining-mark-error &serious
   cbuf-combining-mark-error?
@@ -270,14 +270,14 @@ nearest valid data position for the active line if pd is out of
 range."
   (max 0
        (min pd
-            (string-base-length (cbuf-get-text-cur buf)))))
+            (cbuf-get-text-cur-base-length buf))))
 
 (define (cbuf-bracket-x-data buf x-data)
   "Return x-data if it is a valid data position for the active line, or
 the nearest valid data position if x-data is out of range"
   (max 0
        (min x-data
-            (string-base-length (cbuf-get-text-cur buf)))))
+            (cbuf-get-text-cur-base-length buf))))
 
 (define (cbuf-get-line-count buf)
   "Return the number of lines in the buffer"
@@ -303,6 +303,12 @@ current line."
 (define (cbuf-get-text-cur-length buf)
   "Return the number of codepoints in the active line"
   (string-length (cbuf-get-text-cur buf)))
+
+(define (cbuf-get-text-cur-base-length buf)
+  "Return the number of characters in the active line.  Complex
+characters formed as a combination of a base character plus
+one or more combining characters are counted as a single character."
+  (string-base-length (cbuf-get-text-cur buf)))
 
 (define (cbuf-increase-pd-cur! buf n)
   (cbuf-set-pd-cur! buf (+ (cbuf-get-pd-cur buf) n)))
@@ -431,7 +437,7 @@ cell position."
             (cbuf-set-x-data! buf x-data)
             (cbuf-synchronize-x-goal! buf))
           (begin
-            (cbuf-set-x-data! buf (string-base-length (cbuf-get-text-cur buf)))
+            (cbuf-set-x-data! buf (cbuf-get-text-cur-base-length buf))
             (cbuf-set-x-goal! buf x))))]
    [else
     (error "bad cbuf-set-x! type" type)]))
@@ -488,6 +494,43 @@ of the character at the active data position"
                      (cbuf-compute-pp-list-from-string (cbuf-get-text-cur buf)
                                                        (cbuf-get-tab-size buf))))
 
+(define (cbuf-beginning-of-line? buf)
+  "Return #t if the active data position of BUF is at the beginning of
+the buffer"
+  (= (cbuf-get-x-data buf) 0))
+
+(define (cbuf-end-of-line? buf)
+  "Return #t if the active data position of BUF is at the end of a line"
+  (let ([txt (cbuf-get-text-cur buf)])
+    (= (string-base-length txt)
+       (cbuf-get-x-data buf))))
+
+(define (cbuf-on-first-page? buf)
+  "Return #t if the active data position of BUF is on the first page"
+  (< (cbuf-get-y buf) (cbuf-get-page-size buf)))
+
+(define (cbuf-on-last-page? buf)
+  "Return #t if the active data position of BUF is on the last page"
+  (let* ([y (cbuf-get-y buf)]
+         [ps (cbuf-get-page-size buf)]
+         [y-on-page (remainder y ps)]
+         [y-start-of-page (cbuf-compute-tab-column y ps 1)]
+         [new-y (+ y-on-page y-start-of-page)])
+    (> new-y (cbuf-get-line-count buf))))
+
+(define (cbuf-beginning-of-buffer? buf)
+  "Return #t if the active data position of BUF is at the beginning of
+the buffer"
+  (and (= (cbuf-get-x-data buf) 0)
+       (= (cbuf-get-y buf) 0)))
+
+(define (cbuf-end-of-buffer? buf)
+  "Return #t if the active data position of BUF is at the end of the buffer."
+  (let ([txt (cbuf-get-text-cur buf)])
+    (and (= (string-base-length txt)
+            (cbuf-get-x-data buf))
+         (= (cbuf-get-y buf)
+            (1- (cbuf-get-line-count buf))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; KEYPRESS METHODS
@@ -866,6 +909,45 @@ The mark will be moved if necessary."
     (when undoable
       (cbuf-append-undo-list! buf `(%JOIN ,y)))))
 
+;; DNL
+(define (cbuf-delete-newline buf undoable)
+  "Combines the current line and the following line.  If
+UNDOABLE it #t, undo information will be added to the
+undo ring.  The position of the cursor is unchanged.
+If this is the last line in a buffer, an end of buffer
+error is thrown."
+  (let ([y (cbuf-get-y buf)]
+        [y-count (cbuf-get-line-count buf)]
+        [txt-width (cbuf-get-text-cur-base-length buf)])
+    (cond
+     [(= y (1- (cbuf-get-line-count buf)))
+      (raise (condition (&cbuf-end-of-buffer)))]
+     [else
+      (when (cbuf-is-mark-set? buf)
+            (let ([y-mark (cbuf-get-y-mark buf)])
+              (cond
+               ;; If the mark was at the end of the line, it is
+               ;; cleared
+               [(and (= y y-mark)
+                       (= x-data txt-width))
+                (cbuf-set-mark-flag! buf #f)]
+
+               ;; If the mark was in the following line,
+               [(= y (- y-mark 1))
+                (cbuf-set-y-mark! buf y)
+                (cbuf-set-x-mark! buf (+ txt-width (cbuf-get-x-mark buf)))]
+
+               ;; If the mark beyond that
+               [(= y (- y-mark 2))
+                (cbuf-set-y-mark! buf (- y-mark 1))])))
+
+      (let ([txt (cbuf-get-text buf)])
+        (cbuf-set-text! buf (append (take txt y)
+                                    (list (string-append (list-ref txt y)
+                                                         (list-ref txt (+ y 1))))
+                                    (drop txt (+ y 2)))))
+      (when undoable
+            (cbuf-append-undo-list! buf `(%INL ,txt-width ,y)))])))
 ;; [DEL]
 (define (cbuf-del buf copy undoable)
   "If the mark is set, it deletes all the text from the mark to the
@@ -1200,6 +1282,7 @@ the last available line and an end-of-buffer error will be thrown.
   "Returns a string identifying this class"
   "CBuffer 0.0")
 
+
 ;; DCH
 (define (cbuf-delete-character buf n device cut undoable)
   "This removes the cells or characters at the active data position
@@ -1223,7 +1306,71 @@ continuation marks will be counted as a single character.
 If CUT is true, the deleted text is placed in the cut buffer.
 
 If UNDOABLE is true, undo information for this operation is stored."
-#f)
+  (let* ([txt (cbuf-get-text-cur buf)]
+         [y (cbuf-get-y buf)]
+         [x-data (cbuf-get-x-data buf)]
+         [x-data-len (string-base-length txt)])
+    (cond
+     [(= x-data x-data-len)
+      *unspecified*]
+     [(eq? device 'data)
+      (let* ([x-index (string-find-index-of-nth-base-codepoint txt x-data)]
+             [x-index-next (string-find-index-of-nth-base-codepoint txt (+ x-data 1))]
+             [txt-cut (substring txt x-index x-index-next)])
+        (cbuf-set-text-cur! buf (string-append (substring txt 0 x-index)
+                                               (substring txt x-index-next)))
+        (cbuf-set-x! buf x-data 'data)
+        ;; Clear the mark if its position has been erased
+        (when (and (cbuf-is-mark-set? buf)
+                   (= (cbuf-get-y-mark buf) y)
+                   (>= (cbuf-get-x-mark buf) x-data)
+                   (< (cbuf-get-x-mark buf) (+ x-data n)))
+          (cbuf-set-mark-flag! buf #f))
+        ;; If the mark is to the right of the active position, update
+        ;; the mark's x position when an erased character takes up
+        ;; multiple spaces
+        (when (and (cbuf-is-mark-set? buf)
+                   (= (cbuf-get-y-mark buf) y)
+                   (>= (cbuf-get-x-mark buf) (+ x-data n)))
+          (cbuf-set-x-mark! buf (+ (cbuf-get-x-mark buf) (- n 1))))
+        ;; Store the erase text to the cut buffer, if necessary
+        (when cut
+          (cbuf-set-cut-buffer! buf (list txt-cut)))
+        ;; Add undo information
+        (when undoable
+          (cbuf-append-undo-list! buf `(%XDCH ,y ,x-data txt-cut))))]
+      [(eq? device 'presentation)
+      (let* ([x-cell (cbuf-get-x-cell buf)]
+             [x-index (string-find-index-of-nth-base-codepoint txt x-data)]
+             [x-cell-next (min (wcwidth txt) (+ x-cell n))]
+             [x-index-next (string-find-index-of-nth-cell txt x-cell-next (cbuf-get-tab-size buf))]
+             [x-data-next (string-x-cell->x-data x-cell-next txt (cbuf-get-tab-size buf))])
+        (cbuf-set-text-cur! buf (string-append (substring txt 0 x-index)
+                                               (substring txt x-index-next)))
+        (cbuf-set-x! buf x-cell 'cell)
+        ;; Clear the mark if its position has been erased
+        (when (and (cbuf-is-mark-set? buf)
+                   (= (cbuf-get-y-mark buf) y)
+                   (>= (cbuf-get-x-mark buf) x-data)
+                   (< (cbuf-get-x-mark buf) x-data-next))
+          (cbuf-set-mark-flag! buf #f))
+        ;; If the mark is to the right of the active position, update
+        ;; the mark's x position when an erased character takes up
+        ;; multiple spaces
+        (when (and (cbuf-is-mark-set? buf)
+                   (= (cbuf-get-y-mark buf) y)
+                   (>= (cbuf-get-x-mark buf) (+ x-data n)))
+          (cbuf-set-x-mark! buf (+ (cbuf-get-x-mark buf) (- n 1))))
+        ;; Store the erase text to the cut buffer, if necessary
+        (when cut
+          ;;FIXME: define txt-cut
+          ;; (cbuf-set-cut-buffer! buf (list txt-cut))
+          #t)
+        ;; Add undo information
+        (when undoable
+          (cbuf-append-undo-list! buf `(%XDCH ,y ,x-data txt-cut))))]
+
+)))
 ;; (let* ([txt (cbuf-get-text-cur buf)]
 ;;        [y (cbuf-get-y buf)]
 ;;        [x-data (cbuf-get-x-data buf)]
@@ -1560,7 +1707,7 @@ character.
 If the move would put the active position beyond the limits of the
 line, a &cbuf-end-of-line error is thrown."
   (let* ([x-data (cbuf-get-x-data buf)]
-         [x-length (string-base-length (cbuf-get-text-cur buf))])
+         [x-length (cbuf-get-text-cur-base-length buf)])
     (cond
      [(and (>= n 0) (<= n x-length))
       (cbuf-set-x! buf n 'data)]
@@ -1605,7 +1752,7 @@ If the move would put the active position past the end of the
 line, the active data position is set to the end of the line,
 and a &cbuf-end-of-line error is thrown."
   (let* ([x-data (cbuf-get-x-data buf)]
-         [x-length (string-base-length (cbuf-get-text-cur buf))])
+         [x-length (cbuf-get-text-cur-base-length buf)])
     (cond
      [(<= (+ x-data n) x-length)
       (cbuf-set-x! buf (+ x-data n) 'data)]
