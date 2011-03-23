@@ -14,8 +14,7 @@ SHELL = /bin/sh
 .SUFFIXES:
 .SUFFIXES: .scm .go
 
-include paths.mk
-VPATH = $(srcdir)/src
+srcdir=src
 
 M4_FLAGS = --fatal-warnings --debug --prefix-builtins
 # __INLINE__: if defined, source files will be inline copied into the
@@ -32,6 +31,9 @@ SCHEME_INTERPRETER = guile -s
 INSTALL_PROGRAM = $(INSTALL)
 INSTALL_DATA = ${INSTALL} -m 644
 
+include $(wildcard config.mk)
+VPATH = $(srcdir)
+
 ########################################################################
 # TARGETS
 
@@ -40,7 +42,15 @@ SRC = gano.scm char.scm cbuf.scm string.scm wcwidth.scm \
 	flags.scm shortcut.scm files.scm winio.scm utils.scm
 
 .PHONY: all
-all: gano
+all: gano config.mk
+
+config.mk:
+	@echo "ERROR: You need to run 'configure' before running 'make'."
+	@echo
+	@echo "Running 'configure' generates 'config.mk', which is a makefile"
+	@echo "fragment that contains path information."
+	@echo
+	@exit 1
 
 gano: gano.m4 $(SRC)
 	m4 $(M4_FLAGS) $(M4_DEFS) gano.m4 > $@
