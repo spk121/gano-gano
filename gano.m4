@@ -14,6 +14,7 @@ m4_changequote(`{', `}')m4_dnl
              (rnrs control)
 	     (ice-9 format)
              (ice-9 getopt-long)
+	     (ice-9 rdelim)
              (ncurses curses)
 	     (ncurses extra))
 m4_define({_m4_inline},
