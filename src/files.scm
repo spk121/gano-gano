@@ -77,6 +77,11 @@
       #f
       (openfile-get-state (first *openfile-list*))))
 
+(define (openfile-filename)
+  (if (null? *openfile-list*)
+      #f
+      (openfile-get-filename (first *openfile-list*))))
+
 (define (openfile-BFS)
   "Buffer, frame, and state of top open file"
   (let* ([of (first *openfile-list*)]
@@ -113,12 +118,12 @@
 
       ;; If we have a file, and we're loading into a new buffer, update
       ;; the filename
-      (when (and fBufferNew (not (= returnCode -1)))
+      (when (and fBufferNew (not (equal? returnCode -1)))
         (openfile-set-filename! (first *openfile-list*) fileName))
 
       ;; If we have a non-new file, read it in.  The, if the buffer has no
       ;; stat, update the stat, if applicable.
-      (when (> returnCode 0)
+      (when (port? returnCode)
         (ReadFile f returnCode fileName fUndoable fBufferNew))
 
       ;; If we're loading into a new buffer, update the colorto account
@@ -133,7 +138,7 @@
 ;; Return -2 if we say "New File", -1 if the file isn't opened, and
 ;; the fd opened otherwise.  The file might still have an error while
 ;; reading with a 0 return value.  *f is set to the opened file.
-(define (open_file filename newfie f)
+(define (OpenFile filename newfie f)
   (let ((full_filename (get_full_path filename)))
 
     ;; Okay, if we can't check the full path due to a component's
@@ -187,6 +192,15 @@
               (begin
                 (winio-statusbar (_ "Reading File"))
                 port))))))))
+
+(define (ReadFile f prt fileName fUndoable fBufferNew)
+  (let ([buf (openfile-buffer)])
+    (let loop ([line (read-line prt)])
+      (unless (eof-object? line)
+        (cbuf-set-text! buf
+                        (append (cbuf-get-text buf)
+                                (list line)))
+        (loop (read-line prt))))))
 
 ;; Get the full path from a relative path
 (define (get_full_path origpath)
@@ -305,7 +319,11 @@ write the file to disk regardless of whether the mark is on,
 and without prompting if the TEMP_FILE is set.  Return #t on
 success and #f on error"
   (set! vMenuCur MWRITEFILE)
-  (when (and exiting?
+  (if (and exiting?
              (not (string-null? (openfile-filename)))
              (ISSET TEMP_FILE))
-    (write-file (openfile-filename) "" #f #t #f)))
+      (begin
+        (write-file (openfile-filename) "" #f #t #f)
+        #t)
+      #t))
+

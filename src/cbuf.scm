@@ -590,6 +590,7 @@ the right."
       ;; Move the cursor forward.
       (cbuf-set-x! buf (+ 1 x-data) 'data)])
 
+    (cbuf-set-modified! buf #t)
     (when undoable
       (cbuf-append-undo-list! buf `(%DC ,x-data))
       (cbuf-append-undo-list! buf `(%POS ,x-data ,x-cell ,x-goal)))))
@@ -878,7 +879,6 @@ The mark will be moved if necessary."
   (let* ([txt (cbuf-get-text-cur buf)]
          [x-data (cbuf-get-x-data buf)]
          [x-index (string-x-data->x-index x-data txt)]
-         [x-cell (cbuf-get-x-cell buf)]
          [y (cbuf-get-y buf)]
          [txt-list (cbuf-get-text buf)]
          [len (string-length txt)]
@@ -906,6 +906,8 @@ The mark will be moved if necessary."
          [(and (= y-mark y) (>= x-mark x-data))
           (cbuf-set-x-mark! buf (- x-mark x-data))
           (cbuf-set-y-mark! buf (+ y-mark 1))])))
+
+    (cbuf-set-modified! buf #t)
     (when undoable
       (cbuf-append-undo-list! buf `(%JOIN ,y)))))
 
@@ -917,7 +919,7 @@ undo ring.  The position of the cursor is unchanged.
 If this is the last line in a buffer, an end of buffer
 error is thrown."
   (let ([y (cbuf-get-y buf)]
-        [y-count (cbuf-get-line-count buf)]
+        [x-data (cbuf-get-x-data buf)]
         [txt-width (cbuf-get-text-cur-base-length buf)])
     (cond
      [(= y (1- (cbuf-get-line-count buf)))
@@ -946,6 +948,7 @@ error is thrown."
                                     (list (string-append (list-ref txt y)
                                                          (list-ref txt (+ y 1))))
                                     (drop txt (+ y 2)))))
+      (cbuf-set-modified! buf #t)
       (when undoable
             (cbuf-append-undo-list! buf `(%INL ,txt-width ,y)))])))
 ;; [DEL]
@@ -1011,8 +1014,7 @@ character and combining marks, the position is moved to the base
 codepoint of the previous character.  If the active position is at the
 beginning of the line, a backspace will throw a beginning-of-line
 error, and the active position will not be moved."
-  (let ([x-data (cbuf-get-x-data buf)]
-        [y (cbuf-get-y buf)])
+  (let ([x-data (cbuf-get-x-data buf)])
     (if (> x-data 0)
         (cbuf-set-x! buf (+ -1 x-data) 'data)
         ;; else
@@ -1096,12 +1098,9 @@ of the n-th following line in the presentation component"
          ;; Move forward n lines, or to the end of the buffer
          [L1 (cbuf-bracket-line buf (+ LCur n))])
     (and (> L1 (cbuf-get-line-cur buf))
-         (let ([ppCur (cbuf-get-pp-cur buf)]
-               [pdCur (cbuf-get-pd-cur buf)]
-               [ppGoal (cbuf-get-pp-goal buf)])
-           (cbuf-set-line-cur! buf L1)
-           (cbuf-update-pp-list! buf)
-           (cbuf-set-positions! buf 0 'data)))))
+         (cbuf-set-line-cur! buf L1)
+         (cbuf-update-pp-list! buf)
+         (cbuf-set-positions! buf 0 'data))))
 
 ;; CPL
 (define (cbuf-cursor-preceding-line buf n)
@@ -1111,12 +1110,9 @@ of the n-th preceding line in the presentation component"
          ;; Move backward n lines, or to the beginning of the buffer
          [L1 (cbuf-bracket-line buf (- LCur n))])
     (and (< L1 (cbuf-get-line-cur buf))
-         (let ([ppCur (cbuf-get-pp-cur buf)]
-               [pdCur (cbuf-get-pd-cur buf)]
-               [ppGoal (cbuf-get-pp-goal buf)])
-           (cbuf-set-line-cur! buf L1)
-           (cbuf-update-pp-list! buf)
-           (cbuf-set-positions! buf 0 'data)))))
+         (cbuf-set-line-cur! buf L1)
+         (cbuf-update-pp-list! buf)
+         (cbuf-set-positions! buf 0 'data))))
 
 ;; CR
 (define (cbuf-carriage-return buf)
@@ -1136,9 +1132,7 @@ and by setting the Device Control Select Mode (DCSM) using `set-mode'"
 (define (cbuf-cursor-left buf n)
   "Move the active presentation position leftwards in the presentation
 component by n character positions"
-  (let ([pd (cbuf-get-pd-cur buf)]
-        [pp (cbuf-get-pp-cur buf)]
-        [ppGoal (cbuf-get-pp-goal buf)])
+  (let ([pp (cbuf-get-pp-cur buf)])
     (and (not (= pp 0))
          (begin
            (cbuf-set-positions! buf (max 0 (- pp n)) 'presentation)))))
@@ -1147,9 +1141,7 @@ component by n character positions"
 (define (cbuf-cursor-down buf n)
   "Move the active presentation position downwards in the presentation
 component by N line positions"
-  (let ([pd (cbuf-get-pd-cur buf)]
-        [pp (cbuf-get-pp-cur buf)]
-        [ppGoal (cbuf-get-pp-goal buf)]
+  (let ([ppGoal (cbuf-get-pp-goal buf)]
         [LCur (cbuf-get-line-cur buf)])
     (and (< LCur (+ -1 (cbuf-get-line-count buf)))
          (begin
@@ -1164,9 +1156,7 @@ presentation component by N character cells.  If N character position
 will place the active position in a non-initial cell of a multi-cell
 character, the active position will be set to the beginning of the
 character and the goal position will be set to that Nth cell."
-  (let ([pd (cbuf-get-pd-cur buf)]
-        [pp (cbuf-get-pp-cur buf)]
-        [ppGoal (cbuf-get-pp-goal buf)])
+  (let ([pp (cbuf-get-pp-cur buf)])
     (and (not (= pp (cbuf-get-pp-max buf)))
          (begin
            (cbuf-set-positions! buf (min (cbuf-get-pp-max buf) (+ pp n)) 'presentation)))))
@@ -1188,10 +1178,7 @@ If N is beyond the end of the buffer, and M is beyond the end of the
 last line, the active position will be set to the end of the last
 line; the goal column will be set to the Mth cell, and an end-of-buffer
 error will be thrown."
-  (let ([y (cbuf-get-y buf)]
-        [x-cell (cbuf-get-x-cell buf)]
-        [x-goal (cbuf-get-x-goal buf)]
-        [y-length (cbuf-get-line-count buf)]
+  (let ( [y-length (cbuf-get-line-count buf)]
         [tabsize (cbuf-get-tab-size buf)])
     (cond
      [(and (< n y-length)
@@ -1222,9 +1209,7 @@ error will be thrown."
 (define (cbuf-cursor-up buf n)
   "Move the active presentation positions upwards in the presentation
 component by N line positions"
-  (let ([pd (cbuf-get-pd-cur buf)]
-        [pp (cbuf-get-pp-cur buf)]
-        [ppGoal (cbuf-get-pp-goal buf)]
+  (let ([ppGoal (cbuf-get-pp-goal buf)]
         [LCur (cbuf-get-line-cur buf)])
     (and (> LCur 0)
          (begin
@@ -1245,9 +1230,7 @@ If the n-th following line tab stop is beyond the end of the buffer,
 the active position will be set to the corresponding cell position in
 the last available line and an end-of-buffer error will be thrown.
 "
-  (let* ([x-data (cbuf-get-x-data buf)]
-         [x-cell (cbuf-get-x-cell buf)]
-         [x-goal (cbuf-get-x-goal buf)]
+  (let* ([x-goal (cbuf-get-x-goal buf)]
          [y (cbuf-get-y buf)]
          [tabsize (cbuf-get-vert-tab-size buf)]
          [y2 (cbuf-compute-tab-column y tabsize n)])
@@ -1426,11 +1409,7 @@ If CUT is true, the deleted text is placed in the cut buffer.
 
 If UNDOABLE is true, undo information is saved for this operation."
   (let* ([txt-list (cbuf-get-text buf)]
-         [txt-len (length txt-list)]
          [y (cbuf-get-y buf)]
-         [y-cut-length (min n (- (length txt-list) y))]
-         [x-data (cbuf-get-x-data buf)]
-         [x-cell (cbuf-get-x-cell buf)]
          [err #f])
     (when (> (+ y n) (length txt-list))
       (set! err 'eob))
@@ -1706,8 +1685,7 @@ character.
 
 If the move would put the active position beyond the limits of the
 line, a &cbuf-end-of-line error is thrown."
-  (let* ([x-data (cbuf-get-x-data buf)]
-         [x-length (cbuf-get-text-cur-base-length buf)])
+  (let* ([x-length (cbuf-get-text-cur-base-length buf)])
     (cond
      [(and (>= n 0) (<= n x-length))
       (cbuf-set-x! buf n 'data)]
@@ -1829,8 +1807,7 @@ The mark is moved, if necessary.
 If UNDOABLE is true, undo information is placed in the undo buffer."
   (let ([txt (cbuf-get-text buf)]
         [y (cbuf-get-y buf)]
-        [x-data (cbuf-get-x-data buf)]
-        [x-goal (cbuf-get-x-goal buf)])
+        [x-data (cbuf-get-x-data buf)])
     (cbuf-set-text! buf (append (take txt y)
                                 (make-list n "")
                                 (drop txt y)))
@@ -1927,7 +1904,6 @@ the line.
 If this motion causes the active position to move past then end of the
 buffer, it throws an end-of-buffer exception."
   (let* ([x-data (cbuf-get-x-data buf)]
-         [y (cbuf-get-y buf)]
          [text-list (cbuf-get-text buf)]
          [y-max (+ -1 (length text-list))])
 
@@ -1953,9 +1929,7 @@ If moving N lines puts the active position before the beginning of the
 buffer, it moves to the first character in the buffer and throws an
 exception."
   (let* ([x-data (cbuf-get-x-data buf)]
-         [y (cbuf-get-y buf)]
-         [text-list (cbuf-get-text buf)])
-
+         [y (cbuf-get-y buf)])
     ;; Check if we're moving past before the beginning of the buffer
     (when (< (- y n) 0)
       (cbuf-set-y! buf 0)
@@ -2056,8 +2030,7 @@ dispatch-undo is not recommended."
 ;; [%XIL]
 (define (%undo-insert-line buf y n x-data)
   "Removes n lines from the buffer, starting at line y."
-  (let* ([txt-list (cbuf-get-text buf)]
-         [txt-len (length txt-list)])
+  (let* ([txt-list (cbuf-get-text buf)])
     (cbuf-set-text! buf (append (take txt-list y)
                                 (drop txt-list (+ y n))))
     (cbuf-set-y! buf y)

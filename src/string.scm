@@ -38,33 +38,32 @@ codepoints and combining-mark characters are counted as a single
 character.  If N is equal to the number of base characters in the
 string, the string length is returned.  If N is greater than the
 number of base characters in the string, #f is returned."
-  (let ([n-base (string-base-length str)])
-    (cond
-     [(> n (string-length str))
-      #f]
-     [(= n 0)
-      0]
-     [else
-      (let loop ([ch (string-ref str 0)]
-                 [rest (substring str 1)]
-                 [pos 0]
-                 [i 1])
-        ;; (format #t "char cur ~S next ~S base? ~S pos before op ~S"
-        ;;         ch
-        ;;         (if (string-null? rest) #f (string-ref rest 0))
-        ;;         (if (string-null? rest) #f (char-base? (string-ref rest 0)))
-        ;;         pos)
-        (if (or (string-null? rest)
-                (not (char-combining-mark? (string-ref rest 0))))
-            (set! pos (+ 1 pos)))
-        ;; (format #t " pos after op ~S~%" pos)
-        (if (= i n)
-            pos
-            ;; else
-            (loop (string-ref rest 0)
-                  (substring rest 1)
-                  pos
-                  (+ i 1))))])))
+  (cond
+   [(> n (string-length str))
+    #f]
+   [(= n 0)
+    0]
+   [else
+    (let loop ([ch (string-ref str 0)]
+               [rest (substring str 1)]
+               [pos 0]
+               [i 1])
+      ;; (format #t "char cur ~S next ~S base? ~S pos before op ~S"
+      ;;         ch
+      ;;         (if (string-null? rest) #f (string-ref rest 0))
+      ;;         (if (string-null? rest) #f (char-base? (string-ref rest 0)))
+      ;;         pos)
+      (if (or (string-null? rest)
+              (not (char-combining-mark? (string-ref rest 0))))
+          (set! pos (+ 1 pos)))
+      ;; (format #t " pos after op ~S~%" pos)
+      (if (= i n)
+          pos
+          ;; else
+          (loop (string-ref rest 0)
+                (substring rest 1)
+                pos
+                (+ i 1))))]))
 
 (define (string-x-index->x-cell n str tabsize)
   "Returns the character cell location of the Nth codepoint in the
@@ -78,45 +77,44 @@ base character that they are attached to.  But this isn't the case for
 all zero-width characters.  A non-combining zero width character that
 follows non-zero-width character will begin in a new cell, and then
 character that follows it will occupy the same cell."
-  (let ([n-base (string-base-length str)])
-    (cond
-     [(> n (string-length str))
-      #f]
-     [(= n 0)
-      0]
-     [else
-      (let loop ([ch (list (string-ref str 0))]
-                 [rest (substring str 1)]
-                 [cell 0]
-                 [i 1])
-        ;; (format #t "char cur ~S next ~S base? ~S cell before op ~S"
-        ;;         ch
-        ;;         (if (string-null? rest) #f (string-ref rest 0))
-        ;;         (if (string-null? rest) #f (char-base? (string-ref rest 0)))
-        ;;         cell)
-        (if (or (string-null? rest)
-                (not (char-combining-mark? (string-ref rest 0))))
-            ;; The next location is a new character, so sum of the width
-            ;; of this character, including its base character and any
-            ;; combining marks
-            (cond
-             [(char=? #\tab (car ch))
-              (set! cell (* tabsize (quotient (+ cell tabsize) tabsize)))
-              (set! ch '())]
-             [else
-              ;; Sum over the width of all the character in the previous
-              ;; character, which might be a base character plus combining
-              ;; marks, or which might be a standalone character.
-              (set! cell (+ cell (apply + (map wcwidth ch))))
-              (set! ch '())]))
-        ;; (format #t " cell after op ~S~%" cell)
-        (if (= i n)
-            cell
-            ;; else
-            (loop (append ch (list (string-ref rest 0)))
-                  (substring rest 1)
-                  cell
-                  (+ i 1))))])))
+  (cond
+   [(> n (string-length str))
+    #f]
+   [(= n 0)
+    0]
+   [else
+    (let loop ([ch (list (string-ref str 0))]
+               [rest (substring str 1)]
+               [cell 0]
+               [i 1])
+      ;; (format #t "char cur ~S next ~S base? ~S cell before op ~S"
+      ;;         ch
+      ;;         (if (string-null? rest) #f (string-ref rest 0))
+      ;;         (if (string-null? rest) #f (char-base? (string-ref rest 0)))
+      ;;         cell)
+      (if (or (string-null? rest)
+              (not (char-combining-mark? (string-ref rest 0))))
+          ;; The next location is a new character, so sum of the width
+          ;; of this character, including its base character and any
+          ;; combining marks
+          (cond
+           [(char=? #\tab (car ch))
+            (set! cell (* tabsize (quotient (+ cell tabsize) tabsize)))
+            (set! ch '())]
+           [else
+            ;; Sum over the width of all the character in the previous
+            ;; character, which might be a base character plus combining
+            ;; marks, or which might be a standalone character.
+            (set! cell (+ cell (apply + (map wcwidth ch))))
+            (set! ch '())]))
+      ;; (format #t " cell after op ~S~%" cell)
+      (if (= i n)
+          cell
+          ;; else
+          (loop (append ch (list (string-ref rest 0)))
+                (substring rest 1)
+                cell
+                (+ i 1))))]))
 
 ;; aka string-find-index-of-nth-base-codepoint
 (define (string-x-data->x-index n str)

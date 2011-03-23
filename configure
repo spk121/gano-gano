@@ -28,6 +28,7 @@ Installation directories:
 Some influential environment variables:
   GUILE_CFLAGS           Guile scheme compiler flags, e.g. -W unused-variable
   GUILE_LOAD_PATH        add a directory to the front of Guile's load path
+  PKG_CONFIG_PATH        add a directory to the pkg-config search path
 "
 exit 0
 }
@@ -68,6 +69,7 @@ pdfdir=$pdfdir
 psdir=$psdir
 $guile_cflags
 $guile_load_path
+$pkg_config_path
 " >> $1
 }
 
@@ -93,6 +95,7 @@ lispdir_set=0
 localedir_set=0
 localstatedir_set=0
 pdfdir_set=0
+pkg_config_path_set=0
 prefix_set=0
 psdir_set=0
 sbindir_set=0
@@ -188,17 +191,17 @@ do
   fi
 done
 shift $[OPTIND-1]
-echo "Number " $#
 for arg in "$@"
 do
-  echo "Non option argument <$arg>"
-
   if expr $arg : "GUILE_CFLAGS="; then
       guile_cflags=$arg
       guile_cflags_set=1;
   elif expr $arg : "GUILE_LOAD_PATH="; then
       guile_load_path=$arg
       guile_load_path_set=1
+  elif expr $arg : "PKG_CONFIG_PATH="; then
+      pkg_config_path=$arg
+      pkg_config_path_set=1
   else
   # config.sub can tell you if this argument is a valid build type
       buildtypetmp=$(build-aux/config.sub $arg 2> /dev/null)
@@ -255,7 +258,7 @@ if [ -z $lispdir ]; then lispdir=$datarootdir/emacs/site-lisp; fi
 if [ -z $localedir ]; then localedir=$datarootdir/locale; fi
 
 # Write path variables to a makefile
-
+echo "Generating config.mk"
 if [ -f config.mk ]; then
     rm config.mk
 fi
@@ -265,6 +268,7 @@ echo >> config.mk
 # Generate config.status, a shell script that describes
 # the configuration options and regenerates generated files
 
+echo "Generating config.status"
 echo "#!/bin/sh
 # This file was generated automatically by the configure script.
 # Run this to regenerate configured files.
@@ -291,6 +295,7 @@ if [ $lispdir_set -eq 1 ]; then echo "# --lispdir=$lispdir" >> config.status; fi
 if [ $localedir_set -eq 1 ]; then echo "# --localedir=$localedir" >> config.status; fi
 if [ $guile_cflags_set -eq 1 ]; then echo "# $guile_cflags" >> config.status; fi
 if [ $guile_load_path_set -eq 1 ]; then echo "# $guile_load_path" >> config.status; fi
+if [ $pkg_config_path_set -eq 1 ]; then echo "# $pkg_config_path" >> config.status; fi
 
 echo "" >> config.status
 
@@ -301,4 +306,4 @@ echo -n "echo \"" >> config.status
 do_path_info config.status
 echo "\" > config.mk" >> config.status
 chmod 755 config.status
-echo "done"
+echo "Configuration complete"

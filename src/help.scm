@@ -118,7 +118,6 @@
 
 (define (DoInputForHelp)
   (let ([meta_key #f]
-        [input #f]
         [kbinput (input-get-kbinput vWinEdit)])
     (cond
      [(not kbinput)
@@ -141,8 +140,7 @@
                ;; If we have a shortcut from the main list, or a
                ;; "universal" edit window shortcut, set
                ;; have_shortcut to true
-               [have_shortcut (not (not s))]
-               [funcId (if s (sc-get-function-id s) 0)])
+               [have_shortcut (not (not s))])
           (cond
            ;; If this wasn't a shortcut, quit
            [(not have_shortcut)

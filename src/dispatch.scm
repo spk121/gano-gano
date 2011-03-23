@@ -281,8 +281,7 @@
   "Repeat the last command N times"
   (let* ([cmd (vector-ref state DSP_PREV_SEQUENCE)]
          [ch (if (null? cmd) #f (last cmd))]
-         [seq (if (< (length cmd) 2) '() (drop-right cmd 1))]
-         [state2 (vector-copy state)])
+         [seq (if (< (length cmd) 2) '() (drop-right cmd 1))])
     (if (not (null? cmd))
         (let loop ([i 0] [state2 (vector-copy state)])
           (if (< i n)

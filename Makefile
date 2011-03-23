@@ -28,6 +28,9 @@ M4_FLAGS = --fatal-warnings --debug --prefix-builtins
 
 SCHEME_INTERPRETER = guile -s
 
+GUILE_CFLAGS = -W unsupported-warning -W unused-variable -W unused-toplevel\
+  -W unbound-variable -W format
+
 INSTALL_PROGRAM = $(INSTALL)
 INSTALL_DATA = ${INSTALL} -m 644
 
@@ -53,7 +56,46 @@ config.mk:
 	@exit 1
 
 gano: gano.m4 $(SRC)
-	m4 $(M4_FLAGS) $(M4_DEFS) gano.m4 > $@
+	m4 $(M4_FLAGS) $(M4_DEFS) $< > $@
+
+install: gano
+	$(INSTALL) $< $(DESTDIR)$(bindir)/gano
+
+uninstall:
+	-rm $(DESTDIR)$(bindir)/gano
+
+install-strip: install
+
+clean:
+	-rm gano gano.go *~ *.log gano-0.0.tar gano-0.0.tar.gz
+
+distclean:
+	-rm config.mk
+
+mostlyclean: clean
+maintainer-clean: distclean
+
+TAGS:
+	etags $(srcdir)/*.scm
+
+info:
+dvi:
+html:
+pdf:
+ps:
+
+dist: $(SRC) $(TEST) $(EXTRA)
+	-mkdir gano-0.0
+	cp --parents $^ gano-0.0
+	tar --create --file=gano-0.0.tar gano-0.0
+	rm -rf gano-0.0
+	gzip gano-0.0.tar
+
+lint: gano.go
+
+gano.go: gano
+	guile-tools compile $(GUILE_CFLAGS) -o "$@" "$<"
+	rm gano.go
 
 check: CBUF_TEST
 
@@ -70,8 +112,8 @@ STRING_TEST: gano.m4 $(SRC) test/string.test
 	guile -s gano.test
 
 .PHONY: CBUF_TEST
-CBUF_TEST: 
+CBUF_TEST: gano.m4
 	m4 $(M4_FLAGS) $(M4_DEFS) \
 	  -D __EXTRA__=test/common.test -D __TEST__=test/cbuf.test \
-	  gano.m4 > gano.test
+	  $< > gano.test
 	guile -s gano.test

@@ -223,8 +223,7 @@
 
 (define (main args)
   "Main entry point for the Gano editor"
-  (let* ((optchr #f)
-         ;; Line to try and start at, beginning at 1.
+  (let* (;; Line to try and start at, beginning at 1.
          (rowStart 1)
          ;; Column to try and start at, beginning at 1.
          (colStart 1)
@@ -519,8 +518,7 @@
         (set! optind (+ optind 1)))
 
       (when (and (< optind argc)
-                 (not (string=? (list-ref argv optind)
-                                "-")))
+                 (string=? (list-ref argv optind) "-"))
         (stdin_pager)
         (set_modified)
         (set! optind (+ optind 1)))
@@ -594,37 +592,34 @@
         (tcsetattr! vTerminalPort TCSANOW vTermAttr)
         (exit 0))
 
-      (let ((meta_key #f)
-            (ran_func #f)
-            (finished #f))
-        (while #t
-          ;; Make sure cursor is in the edit window
-          (winio-reset-cursor)
-          (noutrefresh vWinEdit)
+      (while #t
+        ;; Make sure cursor is in the edit window
+        (winio-reset-cursor)
+        (noutrefresh vWinEdit)
 
-          (unless jump_buf_main
-            ;; If we haven't already, we're going to set
-            ;; jump_buf so that we return here after a
-            ;; SIGWINCH.  Indicate this.
-            (set! jump_buf_main #t)
-            ;; Return here after a sigwinch
-            ;;(sigsetjump jump_buf 1)
-            )
+        (unless jump_buf_main
+          ;; If we haven't already, we're going to set
+          ;; jump_buf so that we return here after a
+          ;; SIGWINCH.  Indicate this.
+          (set! jump_buf_main #t)
+          ;; Return here after a sigwinch
+          ;;(sigsetjump jump_buf 1)
+          )
 
-          ;; Just in case we were at the statusbar prompt, make sure that
-          ;; the statusbar cursor position is reset
-          ;; (do_prompt_abort)
+        ;; Just in case we were at the statusbar prompt, make sure that
+        ;; the statusbar cursor position is reset
+        ;; (do_prompt_abort)
 
-          ;; If constant cursor position display is on, and there are no
-          ;; keys waiting in the input buffer, display the current
-          ;; cursor position on the statusbar
-          (when (ISSET CONST_UPDATE)
-            (do_cursorpos #t))
+        ;; If constant cursor position display is on, and there are no
+        ;; keys waiting in the input buffer, display the current
+        ;; cursor position on the statusbar
+        (when (ISSET CONST_UPDATE)
+          (do_cursorpos #t))
 
-          (set! vMenuCur MMAIN)
+        (set! vMenuCur MMAIN)
 
-          ;; Read and interpret characters
-          (gano-do-input #t)))
+        ;; Read and interpret characters
+        (gano-do-input #t))
 
 
       ;; We should never get here
@@ -703,7 +698,7 @@
 ;; If allow_funcs is FALSE, don't actually run any functions
 ;; associated with shortcut keys.
 (define (gano-do-input allow_funcs)
-  (let ([meta_key #f] [input #f] [ran_func #f] [cut_copy #f] [kbinput #f])
+  (let ([meta_key #f]  [ran_func #f] [cut_copy #f])
 
     ;; Read in a character.  get_kbinput returns a qualifier and a key.
     ;; The qualifier is either 'raw or 'meta.  The key is
@@ -854,7 +849,7 @@ so we can deal with them now."
 ;; Afterward, functions having to deal with curses are called
 (define (gano-dispatch buf funcId)
   (let ([buf (openfile-buffer)]
-	[BFS (openfile-BFS)])
+        [BFS (openfile-BFS)])
     "Given a function ID, call an API function"
     (log-debug (format #f "gano-dispatch: ~s~%" (GetFuncIdNameFromFuncId funcId)))
     (cond
@@ -862,7 +857,7 @@ so we can deal with them now."
      ((= funcId DO_ENTER)
       (dsp-id-dispatch! 'INL BFS)
       (winio-edit-refresh))
-     
+
      ;; Pico functions
      [(= funcId DO_HELP_VOID)
       (help-do-help-menu MMAIN)
@@ -872,42 +867,42 @@ so we can deal with them now."
       ;; At the end of the line, move to the beginning of next line
       ;; Otherwise, move right
       (unless (cbuf-end-of-buffer? buf)
-	      (cond
-	       [(cbuf-end-of-line? buf)
-		(dsp-id-dispatch! 'CNL BFS)
-		(winio-total-refresh)]
-	       [else
-		(dsp-id-dispatch! 'HPR BFS)
-		(winio-total-refresh)]))]
+              (cond
+               [(cbuf-end-of-line? buf)
+                (dsp-id-dispatch! 'CNL BFS)
+                (winio-total-refresh)]
+               [else
+                (dsp-id-dispatch! 'HPR BFS)
+                (winio-total-refresh)]))]
      [(= funcId DO_LEFT)
       ;; At the beginning of the buffer, do nothing
       ;; At the beginning of a line, move to the end of the previous line
       ;; Otherwise, move left
       (unless (cbuf-beginning-of-buffer? buf)
-	      (cond
-	       [(cbuf-beginning-of-line? buf)
-		(dsp-id-dispatch! 'CPL BFS)
-		(dsp-id-dispatch! 'HPAn BFS (cbuf-get-text-cur-base-length buf))
-		(winio-total-refresh)]
-	       [else
-		(dsp-id-dispatch! 'HPB BFS)
-		(winio-total-refresh)]))]
+              (cond
+               [(cbuf-beginning-of-line? buf)
+                (dsp-id-dispatch! 'CPL BFS)
+                (dsp-id-dispatch! 'HPAn BFS (cbuf-get-text-cur-base-length buf))
+                (winio-total-refresh)]
+               [else
+                (dsp-id-dispatch! 'HPB BFS)
+                (winio-total-refresh)]))]
 
      [(= funcId DO_UP_VOID)
       ;; In the first line of the buffer, do nothing
       ;; Otherwise, move up to the goal column or end of the line,
       ;; whichever is less.  Don't change the goal column when moving up.
       (unless (= 0 (cbuf-get-y buf))
-	      (dsp-id-dispatch! 'CUU BFS)
-	      (winio-total-refresh))]
+              (dsp-id-dispatch! 'CUU BFS)
+              (winio-total-refresh))]
 
      [(= funcId DO_DOWN_VOID)
       ;; In the last line of the buffer, do nothing
       ;; Otherwise, move down to the goal column or end of line, whichever
       ;; is less.  Don't change the goal column when moving up.
       (unless (= (cbuf-get-y buf) (cbuf-get-line-count buf))
-	      (dsp-id-dispatch! 'CUD BFS)
-	      (winio-total-refresh))]
+              (dsp-id-dispatch! 'CUD BFS)
+              (winio-total-refresh))]
 
      [(= funcId DO_HOME)
       (dsp-id-dispatch! 'HPA BFS)
@@ -919,29 +914,29 @@ so we can deal with them now."
 
      [(= funcId DO_PAGE_DOWN)
       (unless (cbuf-on-last-page? buf)
-	      (dsp-id-dispatch! 'PPR BFS)
-	      (winio-total-refresh))]
+              (dsp-id-dispatch! 'PPR BFS)
+              (winio-total-refresh))]
 
      [(= funcId DO_PAGE_UP)
       (unless (cbuf-on-first-page? buf)
-	      (dsp-id-dispatch! 'PPB BFS)
-	      (winio-total-refresh))]
+              (dsp-id-dispatch! 'PPB BFS)
+              (winio-total-refresh))]
 
      [(= funcId TOTAL_REFRESH) (winio-total-refresh)]
 
-     [(= funcId DO_DELETE) 
+     [(= funcId DO_DELETE)
       ;; If at the end of buffer, do nothing
       ;; If at the end of line, join line below to this line
       ;; Otherwise, remove the character at the active data
       ;; position
       (unless (cbuf-end-of-buffer? buf)
-	      (cond
-	       [(cbuf-end-of-line? buf)
-		(dsp-id-dispatch! 'DNL BFS)
-		(winio-total-refresh)]
-	       [else
-		(dsp-id-dispatch! 'DCH BFS)
-		(winio-total-refresh)]))]
+              (cond
+               [(cbuf-end-of-line? buf)
+                (dsp-id-dispatch! 'DNL BFS)
+                (winio-total-refresh)]
+               [else
+                (dsp-id-dispatch! 'DCH BFS)
+                (winio-total-refresh)]))]
      ((= funcId DO_FIRST_LINE)
       (dsp-id-dispatch! 'CUP (openfile-BFS))
       (winio-edit-refresh))
@@ -964,12 +959,18 @@ one file buffer is open, close the current file buffer and switch to
 the next one.  If only one file buffer is open, exit from nano."
   (let ([save? (or (not (cbuf-get-modified (openfile-buffer)))
                    (ISSET TEMP_FILE)
-                   (do-yesno-prompt #f "Save modified buffer (ANSWERING \"No\" WILL DESTROY CHANGES)? "))])
-    (if (or (not save?) (do-writeout #t))
-        (if (not (close-buffer))
-            (finish))
+                   (prompt-do-yesno-prompt #f "Save modified buffer (ANSWERING \"No\" WILL DESTROY CHANGES)? "))])
+    (if (or (eq? save? 'yes) (files-do-writeout #t))
+        (gano-finish)
         ;; else
         (unless save?
           (winio-statusbar "Cancelled")))
     (winio-shortcut-init #f)
     (display-main-list)))
+
+(define (gano-finish)
+  (unless (ISSET NO_HELP)
+    (winio-blank-bottombars))
+  (refresh vWinBottom)
+  (endwin)
+  (exit 0))

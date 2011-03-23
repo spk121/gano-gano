@@ -535,8 +535,7 @@ frame"
 (define (winio-edit-refresh)
   (let ([strings (frame-render-frame (openfile-buffer)
                                      (openfile-frame))]
-        [maxrows (winio-compute-maxrows)]
-        [nblanks 0])
+        [maxrows (winio-compute-maxrows)])
     (log-debug (format #f "winio-edit-refresh: refresh editor, maxrows ~a" maxrows))
     (map
      (lambda (y)
@@ -586,11 +585,9 @@ frame"
 ;; additional lines consumed (needed for SOFTWRAP)
 (define (update_line n x)
   (let ((line 0)
-        (extralinesused 0)
         (converted #f)
         (page_start #f)
-        (index 0)
-        (tmp #f))
+        (index 0))
     (if (ISSET SOFTWRAP)
         ;; Find the screen line number of this line, taking into account
         ;; the fact that some lines could have wrapped
@@ -795,12 +792,8 @@ frame"
 
 ;; This function needs optimization to be more like nano's function.
 (define (winio-edit-scroll direction n)
-  (let ([nLines (cond [(eqv? direction 'up)
-                       (max n (frame-get-y-start (openfile-buffer)))]
-                      [(eqv? direction 'down)
-                       (min n (- (get-line-count (openfile-buffer)) (frame-get-y-start (openfile-buffer))))])])
-    (IncreaseBufferLFrame! (if (eq? direction 'up) (- n) n))
-    (set! vfEditRefresh #t)))
+  (IncreaseBufferLFrame! (if (eq? direction 'up) (- n) n))
+  (set! vfEditRefresh #t))
 
 
 (define (winio-total-refresh)
