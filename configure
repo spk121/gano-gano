@@ -1,130 +1,50 @@
-#! /bin/bash
+#!/bin/sh
 
-srcdir=
-srcdirset=0
-srcfile=src/gano.scm
-buildtype=`build-aux/config.guess`
-buildtypeset=0
+# This function display the help text
+do_help () {
+echo "'configure' configures the building and installation of gano.
 
+Usage: ./configure [OPTION]... [VAR=VALUE]
 
-. build-aux/getopt.sh
-while getoptex "srcdir: prefix: exec-prefix: bindir: sbindir: libexecdir: sysconfdir: sharedstatedir: localstatedir: libdir: includedir: oldincludedir: datarootdir: datadir: infodir: localedir: mandir: docdir: htmldir: dvidir: pdfdir: psdir: build: host: target:" "$@"
-do
-  echo "Option <$OPTOPT> ${OPTARG:+has an arg <$OPTARG>}"
-  if [[ $OPTOPT = "srcdir" ]]; then
-      srcdir=$OPTARG
-      srcdirset=1
-  elif [[ $OPTOPT = "build" ]]; then
-      buildtypetmp=$(build-aux/config.sub $OPTARG 2> /dev/null)
-      if [[ -n $buildtypetmp ]]; then
-	  if [[ $OPTARG != $buildtypetmp ]]; then
-	      echo "Using canonical build type " $buildtypetmp "instead of" $OPTARG
-	  fi
-	  buildtype=$buildtypetmp
-	  buildtypeset=1
-      else
-	  echo "Unknown host type: " $OPTARG
-	  exit 1
-      fi
-  elif [[ $OPTOPT = "prefix" ]]; then
-      prefix=$OPTARG
-  elif [[ $OPTOPT = "exec_prefix" ]]; then
-      exec_prefix=$OPTARG
-  elif [[ $OPTOPT = "bindir" ]]; then
-      bindir=$OPTARG
-  elif [[ $OPTOPT = "sbindir" ]]; then
-      sbindir=$OPTARG
-  elif [[ $OPTOPT = "libexecdir" ]]; then
-      libexec=$OPTARG
-  elif [[ $OPTOPT = "datarootdir" ]]; then
-      datarootdir=$OPTARG
-  elif [[ $OPTOPT = "datadir" ]]; then
-      datadir=$OPTARG
-  elif [[ $OPTOPT = "sysconfdir" ]]; then
-      sysconfdir=$OPTARG
-  elif [[ $OPTOPT = "sharedstatedir" ]]; then
-      sharedstatedir=$OPTARG
-  elif [[ $OPTOPT = "localstatedir" ]]; then
-      localstatedir=$OPTARG
-  elif [[ $OPTOPT = "includedir" ]]; then
-      includedir=$OPTARG
-  elif [[ $OPTOPT = "docdir" ]]; then
-      docdir=$OPTARG
-  elif [[ $OPTOPT = "infodir" ]]; then
-      infodir=$OPTARG
-  elif [[ $OPTOPT = "htmldir" ]]; then
-      htmldir=$OPTARG
-  elif [[ $OPTOPT = "pdfdir" ]]; then
-      pdfdir=$OPTARG
-  elif [[ $OPTOPT = "psdir" ]]; then
-      psdir=$OPTARG
-  elif [[ $OPTOPT = "libdir" ]]; then
-      libdir=$OPTARG
-  elif [[ $OPTOPT = "lispdir" ]]; then
-      lispdir=$OPTARG
-  elif [[ $OPTOPT = "localedir" ]]; then
-      localedir=$OPTARG
-  fi
-done
-shift $[OPTIND-1]
-echo "Number " $#
-for arg in "$@"
-do
-  echo "Non option argument <$arg>"
+To assign environment variables (e.g., GUILE_CFLAGS) specify them
+as VAR=VALUE.  See below for descriptions of some of the useful variables.
 
-  # config.sub can tell you if this argument is a valid build type
-  buildtypetmp=$(build-aux/config.sub $arg 2> /dev/null)
-  if [[ -n $buildtypetmp ]]; then
-      if [[ $buildtypetmp != $arg ]]; then
-	  echo "Using canonical build type" $buildtypetmp "instead of" $arg
-      fi
-      buildtype=$buildtypetmp
-      buildtypeset=1
-  fi
-done
+Configuration:
+  --help           display this help and exit
+  --version        display version information and exit
+  --srcdir=DIR     find the sources in DIR
 
-# If srcdir has not been given, look for source in this directory and
-# the parent directory.
-if [[ -z $srcdir ]]; then
-    if [[ -r ../$srcfile ]]; then
-	srcdir=..
-    elif [[ -r $srcfile ]]; then
-	srcdir=.
-    else
-	echo "Can't find" $srcfile "in current directory"
-	exit 1
-    fi
-else
-    if [[ ! -r $srcdir/$srcfile ]]; then
-	echo "Can't find" $srcfile "in" $srcdir "directory"
-	exit 1
-    fi
-fi
+Installation directories:
+  --prefix=PREFIX        install architecture-independent files in PREFIX
+                         [/usr/local]
+  --exec-prefix=EPREFIX  install architecture-dependent files in EPREFIX
+                         [/usr/local]
+  --bindir=DIR           user executable directory [EPREFIX/bin]
+  --datarootdir=DIR      read-only architecture-independent data [PREFIX/share]
+  --docdir=DIR           documentation root [DATAROOTDIR/doc/gano]
+  --htmldir=DIR          html documentation [DOCDIR]
+  --guilesitedir=DIR     guile site libraries [DATAROOTDIR/guile/site/gano]
 
-if [[ -z $prefix ]]; then prefix=/usr/local; fi
-package=gano
-if [[ -z $exec_prefix ]]; then exec_prefix=$prefix; fi
-if [[ -z $bindir ]]; then bindir=$exec_prefix/bin; fi
-if [[ -z $sbindir ]]; then sbindir=$exec_prefix/sbin; fi
-if [[ -z $libexecdir ]]; then libexecdir=$exec_prefix/libexec; fi
-if [[ -z $datarootdir ]]; then datarootdir=$prefix/share; fi
-if [[ -z $datadir ]]; then datadir=$datarootdir; fi
-if [[ -z $sysconfdir ]]; then sysconfdir=$prefix/etc; fi
-if [[ -z $sharedstatedir ]]; then sharedstatedir=$prefix/com; fi
-if [[ -z $localstatedir ]]; then localstatedir=$prefix/var; fi
-if [[ -z $includedir ]]; then includedir=$prefix/include; fi
-if [[ -z $docdir ]]; then docdir=$datarootdir/doc/$package; fi
-if [[ -z $infodir ]]; then infodir=$datarootdir/info; fi
-if [[ -z $htmldir ]]; then htmldir=$docdir; fi
-if [[ -z $pdfdir ]]; then pdfdir=$docdir; fi
-if [[ -z $dvidir ]]; then dvidir=$docdir; fi
-if [[ -z $psdir ]]; then psdir=$docdir; fi
-if [[ -z $libdir ]]; then libdir=$exec_prefix/lib; fi
-if [[ -z $lispdir ]]; then lispdir=$datarootdir/emacs/site-lisp; fi
-if [[ -z $localedir ]]; then localedir=$datarootdir/locale; fi
+Some influential environment variables:
+  GUILE_CFLAGS           Guile scheme compiler flags, e.g. -W unused-variable
+  GUILE_LOAD_PATH        add a directory to the front of Guile's load path
+"
+exit 0
+}
 
-echo "
-# This file was generated automatically by the configure script
+# This function displays the version info
+do_version () {
+echo "gano configure 0.0
+
+Copyright (C) 2011 Michael L. Gran
+This configure script is free software."
+exit 0
+}
+
+# This function writes configuration-generated paths to a file
+# with the filename $1
+do_path_info () {
+echo "# This file was generated automatically by the configure script
 
 srcdir=$srcdir
 prefix=$prefix
@@ -146,6 +66,239 @@ htmldir=$htmldir
 dvidir=$dvidir
 pdfdir=$pdfdir
 psdir=$psdir
-" > paths.mk
+$guile_cflags
+$guile_load_path
+" >> $1
+}
 
+# Initialize local variables
+bindir_set=0
+buildtype=`build-aux/config.guess`
+buildtype_set=0
+datadir_set=0
+datarootdir_set=0
+docdir_set=0
+dvidir_set=0
+exec_prefix_set=0
+guile_cflags=""
+guile_cflags_set=0
+guile_load_path=""
+guile_load_path_set=0
+htmldir_set=0
+includedir_set=0
+infodir_set=0
+libdir_set=0
+libexecdir_set=0
+lispdir_set=0
+localedir_set=0
+localstatedir_set=0
+pdfdir_set=0
+prefix_set=0
+psdir_set=0
+sbindir_set=0
+sharedstatedir_set=0
+srcdir=src
+srcdir_set=0
+srcfile=gano.m4
+sysconfdir_set=0
+
+
+. build-aux/getopt.sh
+while getoptex "help version srcdir: prefix: exec-prefix: bindir: sbindir: libexecdir: sysconfdir: sharedstatedir: localstatedir: libdir: includedir: oldincludedir: datarootdir: datadir: infodir: localedir: mandir: docdir: htmldir: dvidir: pdfdir: psdir: build: host: target:" "$@"
+do
+  if [ $OPTOPT = "help" ]; then
+      do_help
+  elif [ $OPTOPT = "version" ]; then
+      do_version
+  elif [ $OPTOPT = "srcdir" ]; then
+      srcdir=$OPTARG
+      srcdir_set=1
+  elif [ $OPTOPT = "build" ]; then
+      buildtypetmp=$(build-aux/config.sub $OPTARG 2> /dev/null)
+      if [ -n $buildtypetmp ]; then
+	  if [ $OPTARG != $buildtypetmp ]; then
+	      echo "Using canonical build type " $buildtypetmp "instead of" $OPTARG
+	  fi
+	  buildtype=$buildtypetmp
+	  buildtype_set=1
+      else
+	  echo "Unknown host type: " $OPTARG
+	  exit 1
+      fi
+  elif [ $OPTOPT = "prefix" ]; then
+      prefix=$OPTARG
+      prefix_set=1
+  elif [ $OPTOPT = "exec_prefix" ]; then
+      exec_prefix=$OPTARG
+      exec_prefix_set=1
+  elif [ $OPTOPT = "bindir" ]; then
+      bindir=$OPTARG
+      bindir_set=1
+  elif [ $OPTOPT = "sbindir" ]; then
+      sbindir=$OPTARG
+      sbindir_set=1
+  elif [ $OPTOPT = "libexecdir" ]; then
+      libexecdir=$OPTARG
+      libexecdir_set=1
+  elif [ $OPTOPT = "datarootdir" ]; then
+      datarootdir=$OPTARG
+      datarootdir_set=1
+  elif [ $OPTOPT = "datadir" ]; then
+      datadir=$OPTARG
+      datadir_set=1
+  elif [ $OPTOPT = "sysconfdir" ]; then
+      sysconfdir=$OPTARG
+      sysconfdir_set=1
+  elif [ $OPTOPT = "sharedstatedir" ]; then
+      sharedstatedir=$OPTARG
+      sharedstatedir_set=1
+  elif [ $OPTOPT = "localstatedir" ]; then
+      localstatedir=$OPTARG
+      localstatedir_set=1
+  elif [ $OPTOPT = "includedir" ]; then
+      includedir=$OPTARG
+      includedir_set=1
+  elif [ $OPTOPT = "docdir" ]; then
+      docdir=$OPTARG
+      docdir_set=1
+  elif [ $OPTOPT = "infodir" ]; then
+      infodir=$OPTARG
+      infodir_set=1
+  elif [ $OPTOPT = "htmldir" ]; then
+      htmldir=$OPTARG
+      htmldir_set=1
+  elif [ $OPTOPT = "dvidir" ]; then
+      dvidir=$OPTARG
+      dvidir_set=1
+  elif [ $OPTOPT = "pdfdir" ]; then
+      pdfdir=$OPTARG
+      pdfdir_set=1
+  elif [ $OPTOPT = "psdir" ]; then
+      psdir=$OPTARG
+      psdir_set=1
+  elif [ $OPTOPT = "libdir" ]; then
+      libdir=$OPTARG
+      libdir_set=1
+  elif [ $OPTOPT = "lispdir" ]; then
+      lispdir=$OPTARG
+      lispdir_set=1
+  elif [ $OPTOPT = "localedir" ]; then
+      localedir=$OPTARG
+      localedir_set=1
+  fi
+done
+shift $[OPTIND-1]
+echo "Number " $#
+for arg in "$@"
+do
+  echo "Non option argument <$arg>"
+
+  if expr $arg : "GUILE_CFLAGS="; then
+      guile_cflags=$arg
+      guile_cflags_set=1;
+  elif expr $arg : "GUILE_LOAD_PATH="; then
+      guile_load_path=$arg
+      guile_load_path_set=1
+  else
+  # config.sub can tell you if this argument is a valid build type
+      buildtypetmp=$(build-aux/config.sub $arg 2> /dev/null)
+      if [ -n $buildtypetmp ]; then
+	  if [ $buildtypetmp != $arg ]; then
+	      echo "Using canonical build type" $buildtypetmp "instead of" $arg
+	  fi
+	  buildtype=$buildtypetmp
+	  buildtype_set=1
+      fi
+  fi
+done
+
+# If srcdir has not been given, look for source in this directory and
+# the parent directory.
+if [ -z $srcdir ]; then
+    if [ -r ../$srcfile ]; then
+	srcdir=..
+	srcdir_found=1
+    elif [ -r $srcfile ]; then
+	srcdir=.
+	srcdir_found=1
+    else
+	echo "Can't find" $srcfile "in current directory or parent directory"
+	exit 1
+    fi
+else
+    if [ ! -r $srcdir/$srcfile ]; then
+	echo "Can't find" $srcfile "in" $srcdir "directory"
+	exit 1
+    fi
+fi
+
+if [ -z $prefix ]; then prefix=/usr/local; fi
+package=gano
+if [ -z $exec_prefix ]; then exec_prefix=$prefix; fi
+if [ -z $bindir ]; then bindir=$exec_prefix/bin; fi
+if [ -z $sbindir ]; then sbindir=$exec_prefix/sbin; fi
+if [ -z $libexecdir ]; then libexecdir=$exec_prefix/libexec; fi
+if [ -z $datarootdir ]; then datarootdir=$prefix/share; fi
+if [ -z $datadir ]; then datadir=$datarootdir; fi
+if [ -z $sysconfdir ]; then sysconfdir=$prefix/etc; fi
+if [ -z $sharedstatedir ]; then sharedstatedir=$prefix/com; fi
+if [ -z $localstatedir ]; then localstatedir=$prefix/var; fi
+if [ -z $includedir ]; then includedir=$prefix/include; fi
+if [ -z $docdir ]; then docdir=$datarootdir/doc/$package; fi
+if [ -z $infodir ]; then infodir=$datarootdir/info; fi
+if [ -z $htmldir ]; then htmldir=$docdir; fi
+if [ -z $pdfdir ]; then pdfdir=$docdir; fi
+if [ -z $dvidir ]; then dvidir=$docdir; fi
+if [ -z $psdir ]; then psdir=$docdir; fi
+if [ -z $libdir ]; then libdir=$exec_prefix/lib; fi
+if [ -z $lispdir ]; then lispdir=$datarootdir/emacs/site-lisp; fi
+if [ -z $localedir ]; then localedir=$datarootdir/locale; fi
+
+# Write path variables to a makefile
+
+if [ -f config.mk ]; then
+    rm config.mk
+fi
+do_path_info config.mk
+echo >> config.mk
+
+# Generate config.status, a shell script that describes
+# the configuration options and regenerates generated files
+
+echo "#!/bin/sh
+# This file was generated automatically by the configure script.
+# Run this to regenerate configured files.
+" > config.status
+if [ $prefix_set -eq 1 ]; then echo "# --prefix=$prefix" >> config.status; fi
+if [ $exec_prefix_set -eq 1 ]; then echo "# --exec_prefix=$exec_prefix" >> config.status; fi
+if [ $bindir_set -eq 1 ]; then echo "# --bindir=$bindir" >> config.status; fi
+if [ $sbindir_set -eq 1 ]; then echo "# --sbindir=$sbindir" >> config.status; fi
+if [ $libexecdir_set -eq 1 ]; then echo "# --libexecdir=$libexecdir" >> config.status; fi
+if [ $datarootdir_set -eq 1 ]; then echo "# --datarootdir=$datarootdir" >> config.status; fi
+if [ $datadir_set -eq 1 ]; then echo "# --datadir=$datadir" >> config.status; fi
+if [ $sysconfdir_set -eq 1 ]; then echo "# --sysconfdir=$sysconfdir" >> config.status; fi
+if [ $sharedstatedir_set -eq 1 ]; then echo "# --sharedstatedir=$sharedstatedir" >> config.status; fi
+if [ $localstatedir_set -eq 1 ]; then echo "# --localstatedir=$localstatedir" >> config.status; fi
+if [ $includedir_set -eq 1 ]; then echo "# --includedir=$includedir" >> config.status; fi
+if [ $docdir_set -eq 1 ]; then echo "# --docdir=$docdir" >> config.status; fi
+if [ $infodir_set -eq 1 ]; then echo "# --infodir=$infodir" >> config.status; fi
+if [ $htmldir_set -eq 1 ]; then echo "# --htmldir=$htmldir" >> config.status; fi
+if [ $pdfdir_set -eq 1 ]; then echo "# --pdfdir=$pdfdir" >> config.status; fi
+if [ $dvidir_set -eq 1 ]; then echo "# --dvidir=$dvidir" >> config.status; fi
+if [ $psdir_set -eq 1 ]; then echo "# --psdir=$psdir" >> config.status; fi
+if [ $libdir_set -eq 1 ]; then echo "# --libdir=$libdir" >> config.status; fi
+if [ $lispdir_set -eq 1 ]; then echo "# --lispdir=$lispdir" >> config.status; fi
+if [ $localedir_set -eq 1 ]; then echo "# --localedir=$localedir" >> config.status; fi
+if [ $guile_cflags_set -eq 1 ]; then echo "# $guile_cflags" >> config.status; fi
+if [ $guile_load_path_set -eq 1 ]; then echo "# $guile_load_path" >> config.status; fi
+
+echo "" >> config.status
+
+# Now add a config.mk regenerating script into config.status.
+# This is so meta-LOL.
+echo "if [ -f config.mk ]; then rm config.mk; fi" >> config.status
+echo -n "echo \"" >> config.status
+do_path_info config.status
+echo "\" > config.mk" >> config.status
+chmod 755 config.status
 echo "done"
