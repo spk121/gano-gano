@@ -221,6 +221,20 @@
 
   )
 
+(define-syntax gano
+  (syntax-rules (start stop)
+    ((gano start state)
+     (begin
+       ;; Call the state's initializer
+       ((assoc-ref state 'setup))
+       ;; Do first draw
+       ((assoc-ref state 'draw))
+       ;; start the main loop
+       (let loop ([s ((assoc-ref state 'update))])
+         (when s
+           ((assoc-ref state 'draw))
+           (loop ((assoc-ref state 'update)))))))))
+
 (define (main args)
   "Main entry point for the Gano editor"
   (let* (;; Line to try and start at, beginning at 1.
@@ -554,6 +568,11 @@
                     iLine
                     iCol))))
 
+
+      ;; Now we create the top-level state-loop.  This loop
+      ;; displays the spash screen and a simple menu, and then
+      ;; runs the rest of the program.  It never returns.
+      (gano start (main-state))
 
       ;; Read the first file on the command line into either the current buffer
       ;; or a new buffer, depending on whether multibuffer mode is enabled
