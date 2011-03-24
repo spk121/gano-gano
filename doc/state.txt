@@ -1,0 +1,24 @@
+Any keypress-driven program is, in essence, a state machine.
+
+At any given time, the editor will be running in a state-loop.
+
+A basic state-loop in an object with 3 main methods
+
+#:setup  ; called once on entry. Can be null.
+#:update ; called once per tick, program logic goes here. Can be null.
+#:draw   ; called after update is complete.  drawing goes here
+
+It has a :switch-state method that runs setup then does the update/draw loop
+
+The #:update can punt to a different state loop
+
+There is the main state loops
+
+Splash
+Edit
+Search
+Spell
+Output
+Insert
+Exit 
+Help
