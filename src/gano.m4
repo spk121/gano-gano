@@ -37,6 +37,7 @@ _m4_insert_file({src/log.scm})
 (log-debug "START OF PROGRAM")
 
 _m4_insert_file({src/nano-h.scm})
+_m4_insert_file({src/gano.scm})
 
 _m4_insert_file({src/cbuf.scm})
 _m4_insert_file({src/char.scm})
@@ -50,13 +51,13 @@ _m4_insert_file({src/help.scm})
 _m4_insert_file({src/input.scm})
 _m4_insert_file({src/prompt.scm})
 _m4_insert_file({src/s-main.scm})
+_m4_insert_file({src/s-edit.scm})
 _m4_insert_file({src/shortcut.scm})
 _m4_insert_file({src/string.scm})
 _m4_insert_file({src/utils.scm})
 _m4_insert_file({src/wcwidth.scm})
 _m4_insert_file({src/winio.scm})
 
-_m4_insert_file({src/gano.scm})
 
 m4_ifdef({__EXTRA__},{_m4_insert_file(__EXTRA__)})
 m4_ifdef({__TEST__},

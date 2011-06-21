@@ -162,12 +162,12 @@ portion of the window."
 ;; NULL, we're in the file browser, and path contains the directory to
 ;; start the file browser in, so display the current version of nano
 ;; and the contents of path on the titlebar
-(define (winio-titlebar path)
+(define (winio-titlebar path filename is-modified is-view)
   (when (string-null? path)
     (set! path #f))
   (let ((space (cols))      ; The space we have available for display.
         ;; The length of the version message in columns, plus one for padding.
-        (verlen (+ 1 (CountCellsInString PACKAGE_STRING)))
+        (verlen (+ 1 (string-cell-length PACKAGE_STRING vTabSize)))
         ;; "DIR:", "File:", or "New Buffer".  Goes before filename.
         (prefix #f)
         ;; The length of the prefix in columns, plus one for padding.
@@ -184,7 +184,7 @@ portion of the window."
         (newfie #f)
         ;; Do we put ellipsis before the path?
         (dots #f))
-    (attr-on! vWinTop vAttrReverse)
+    (attr-on! vWinTop A_REVERSE)
     (winio-blank-titlebar)
 
     ;; space has to be at least 4: two spaces before the version
@@ -201,7 +201,8 @@ portion of the window."
     (when (>= space 4)
       ;; Add a space after the version message, and account for both it and
       ;; the two spaces before it
-      (addstr vWinTop PACKAGE_STRING #:y 0 #:x 2 #:n (GetIndexFromStringCell PACKAGE_STRING verlen))
+      (addstr vWinTop PACKAGE_STRING #:y 0 #:x 2
+              #:n (GetIndexFromStringCell PACKAGE_STRING verlen))
       (set! verlen (+ verlen 3))
       ;; Account for the full length of the version message.
       (set! space (- space verlen)))
@@ -211,9 +212,9 @@ portion of the window."
       (set! state #f))
 
     (unless path
-      (set! state (if (cbuf-get-modified (openfile-buffer))
+      (set! state (if (eq? is-modified 'modified)
                       "Modified"
-                      (if (ISSET VIEW_MODE)
+                      (if (eq? is-view 'view)
                           "View"
                           ""))))
     (set! statelen (CountCellsInString (if (and (string=? "" state) (not path))
@@ -226,7 +227,7 @@ portion of the window."
       (set! statelen (+ 1 statelen)))
 
      (else
-      (if (string-null? (GetBufferFileName))
+      (if (string-null? filename)
           (begin
             (set! prefix "New Buffer")
             (set! newfie #t))
@@ -241,7 +242,7 @@ portion of the window."
       ;; If we're not int he file browser, set path to the current
       ;; filename
       (unless path
-        (set! path (GetBufferFileName)))
+        (set! path filename))
 
       ;; Account for the full lengths of the prefix and state
       (if (>= space (+ prefixlen statelen))
@@ -270,7 +271,8 @@ portion of the window."
       ;; "file: ...ename"
       (if dots
           (begin
-            (addstr vWinTop prefix #:x (1- verlen) #:y 0 #:n (GetIndexFromStringCell prefix prefixlen))
+            (addstr vWinTop prefix #:x (1- verlen) #:y 0
+                    #:n (GetIndexFromStringCell prefix prefixlen))
             (if (not (or (<= space -3) newfie))
                 (begin
                   (addch vWinTop (normal #\space))
@@ -483,8 +485,6 @@ portion of the window."
         (set! start_index (+ start_index 1)))
 
       ;; Make sure converted takes up no more than len columns
-      (format (current-error-port) "before trunc: str ~s len ~s~%"
-              converted len)
       (set! converted (string-take converted (GetIndexFromStringCell converted len)))
       converted))))
 

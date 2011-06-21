@@ -1,4 +1,4 @@
-;;;; A command dispatch loop
+;;;; A command dispatch loop -*- coding: utf-8 -*-
 
 ;;; This buffer contains procedures that parse input and call
 ;;; character-cell buffer and window commands.

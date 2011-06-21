@@ -35,9 +35,9 @@ to the editor or file browser."
              (let ([c (getch vWinMain)])
                (cond
                 [(char-ci=? c #\n)
-                 (gano start (edit-state))]
+                 (gano (edit-state))]
                 [(char-ci=? c #\f)
-                 (gano start file-browser-state)]
+                 (gano file-browser-state)]
                 [(char-ci=? c #\q)
                  #f]
                 [else

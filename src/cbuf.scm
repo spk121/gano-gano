@@ -304,6 +304,11 @@ current line."
   "Return the number of codepoints in the active line"
   (string-length (cbuf-get-text-cur buf)))
 
+(define (cbuf-get-text-cur-cell-length buf)
+  "Return the number of codepoints in the active line"
+  (string-cell-length (cbuf-get-text-cur buf)
+                      (cbuf-get-tab-size buf)))
+
 (define (cbuf-get-text-cur-base-length buf)
   "Return the number of characters in the active line.  Complex
 characters formed as a combination of a base character plus
