@@ -551,16 +551,17 @@
 ;; this if we'ved moved and changed text.
 
 (define (RefreshEditor)
-  (let ([strings (render-frame vBuffer)]
-	[maxrows (ComputeMaxRows)]
-        [nblanks 0])
+  (let* ([strings (render-frame vBuffer)]
+	 [maxrows (min (length strings) (ComputeMaxRows))]
+	 [nblanks 0])
     (map
      (lambda (y) 
        (addstr vWinEdit (list-ref strings y) #:x 0 #:y y))
      (iota maxrows))
     (refresh vWinEdit)
-    (reset_cursor)
-    (refresh vWinEdit)))
+    ;; (reset_cursor)
+    ;; (refresh vWinEdit)
+    ))
 
 ;; Move edittop to put it in range of current, keeping current in the
 ;; same place.  location determines how we move it: if it's CENTER, we

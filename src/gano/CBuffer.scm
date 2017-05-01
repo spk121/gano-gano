@@ -61,6 +61,7 @@
             get-pp-cur
             get-pp-from-pd-cur
             get-pp-goal
+	    get-text-cur
             get-text-cur-length
 	    get-line-text
             increase-pd-cur!
@@ -362,7 +363,8 @@ the active line in the presentation component"
     "Move the active presentation position to the character position
 corresponding to the n-th following character tabulation stop in the
 presentation component"
-    (let* ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
+    (let* ([ppList (compute-pp-list-from-string (get-text-cur buf)
+						(get-tab-size buf))]
            ;; Move forward n tabsizes
            [tabsize (get-tab-size buf)]
            [pp (compute-tab-column (get-pp-cur buf) tabsize n)])
@@ -397,9 +399,9 @@ of the n-th preceding line in the presentation component"
 the same line"
   (cond
    ((eq? (get-home-type buf) 'data)
-    (set-position! buf (get-home-pos buf) 'data))
+    (set-positions! buf (get-home-pos buf) 'data))
    (else
-    (set-position! buf (get-home-pos buf) 'presentation))))
+    (set-positions! buf (get-home-pos buf) 'presentation))))
 
 ;; CTC
 (define-method (cursor-tabulation-control (buf <CBuffer>) n)
@@ -522,7 +524,6 @@ all the lines to the end of the buffer had been deleted, a new empty line is
 added to the end of the buffer."
   (error "fixme"))
   
-
 (define-method (center-frame-line (buf <CBuffer>))
   "Vertically center the frame around the active presentation position"
   (let ([L (- (get-line-cur buf) (floor (/ (get-line-frame-size buf) 2)))])
@@ -642,7 +643,7 @@ will be replaced with a single space character.  The active data
 position remains the same but the presentation position may change.
 This may change the visual presentation of the line"
 
-  ;;(add-undo (list 'EL device P (get-line-cur buf) (get-pd-cur buf) (get-line-text buf)))
+  ;;(add-undo (list 'EL device P (get-text-cur buf) (get-pd-cur buf) (get-line-text buf)))
 
   (let ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))]
         [pp-cur (get-pp-cur buf)]
@@ -730,11 +731,14 @@ of that next page in the presentation component."
 (define-method (insert-character-space (buf <CBuffer>) n)
   "Shift the contents of the line to the right, starting at the
 current data position, creating an empty gap of N codepoints"
-  ;;(add-undo (list 'ICH n (get-line-cur buf) (get-pd-cur buf)))
+  ;;(add-undo (list 'ICH n (get-text-cur buf) (get-pd-cur buf)))
 
   (let ([str (get-text-cur buf)]
         [pd (get-pd-cur buf)])
-    (set-text-cur! buf (string-append (string-take str pd) (make-string n #\space) (string-drop str pd)))
+    (set-text-cur! buf
+		   (string-append (string-take str pd)
+				  (make-string n #\space)
+				  (string-drop str pd)))
 
     ;; Move the mark right, if necessary
     (when (and (is-mark-set? buf)
@@ -746,7 +750,7 @@ current data position, creating an empty gap of N codepoints"
   "Move the current line and the n-1 following lines down N lines.
 The resulting cap is erased.  The cursor is placed at the home
 position of the first new empty line."
-  ;;(add-undo buf (list 'IL n (get-line-cur) (get-pd-cur)))
+  ;;(add-undo buf (list 'IL n (get-text-cur) (get-pd-cur)))
 
   (let ([txt (get-text buf)]
         [L (get-line-cur buf)])
@@ -772,7 +776,6 @@ the new line."
         [pd (get-pd-cur buf)]
         [L (get-line-cur buf)])
     (format (current-error-port) "insert-nel: before txtcur ~a pd ~a L ~a~%" txtcur pd L)
-    ;; (pretty-print (render-frame buf))
     (set-text! buf (append (take txt L)
                            (list (string-take txtcur pd))
                            (list (string-drop txtcur pd))
@@ -791,7 +794,6 @@ the new line."
     (set-pp-goal! buf 0)
     (set-line-cur! buf (1+ L))
     (format (current-error-port) "insert-nel: after txtcur ~a pd ~a L ~a~%" (get-text-cur buf) (get-pd-cur buf) (get-line-cur buf))
-    ;;(pretty-print (render-frame buf))
     ))
 
 (define-method (is-position-in-frame? (buf <CBuffer>))

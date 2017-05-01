@@ -234,7 +234,7 @@
 (define (AddFunction func menus description help fBlankAfter fViewOk)
   (let ([fn (CreateFunction func menus description help fBlankAfter fViewOk)])
     (set! vrgFunctions (append! vrgFunctions (list fn)))
-    (format (current-error-port) "Added func \"~a\"" description)))
+    (format (current-error-port) "AddFunction \"~a\"~%" description)))
 
 (define (FindFirstShortcut menu funcId)
   (let ([nonMetaSc (find (lambda (sc)
@@ -248,6 +248,24 @@
     (or nonMetaSc
         metaSc)))
 
+(define (ListMenusFromBitmask x)
+  (string-trim-right
+   (string-append
+    (if (logtest x MMAIN) "MAIN " "")
+    (if (logtest x MWHEREIS) "WHEREIS " "")
+    (if (logtest x MREPLACE) "REPLACE " "")
+    (if (logtest x MREPLACE2) "REPLACE2 " "")
+    (if (logtest x MGOTOLINE) "GOTOLINE " "")
+    (if (logtest x MWRITEFILE) "WRITEFILE " "")
+    (if (logtest x MINSERTFILE) "INSERFILE" "")
+    (if (logtest x MEXTCMD) "EXTCMD " "")
+    (if (logtest x MHELP) "HELP " "")
+    (if (logtest x MSPELL) "SPELL " "")
+    (if (logtest x MBROWSER) "BROWSER " "")
+    (if (logtest x MWHEREISFILE) "WHEREISFILE " "")
+    (if (logtest x MGOTODIR) "GOTODIR " "")
+    (if (logtest x MYESNO) "YESNO " ""))))
+
 ;; Add a string to the new shortcut list implementation.
 (define (AddShortcut menu keyStr funcId toggleId fExecute)
   ;; (format (current-error-port) "AddShortcut shortcut_list ~s~%" vrgShortcuts)
@@ -257,14 +275,22 @@
                              (DoesShortcutMatchMenuAndFuncId? sc menu funcId))
                            vrgShortcuts)])
     (format (current-error-port)
-            "AddShortcut menu ~s keyStr ~s funcId ~s toggleId ~s fExecute ~s~%"
-            menu keyStr (GetFuncIdNameFromFuncId funcId) toggleId fExecute)
+            "AddShortcut ~s ~s ~s ~s ~s~%"
+	    (GetFuncIdNameFromFuncId funcId)
+	    keyStr
+            (ListMenusFromBitmask menu)
+	    toggleId
+	    fExecute)
     (format (current-error-port)
             "AddShortcut meta ~s key ~s~%" (DoesShortcutUseMetaKey? sc)
             (keyname (GetShortcutKey sc)))
     (when matchingSc
-      (format (current-error-port) "~s is duplicate shortcut ~s on menu ~s and function ~s~%"
-              (GetShortcutKeyStr matchingSc) keyStr menu funcId))
+      (format (current-error-port)
+	      "~s is duplicate shortcut ~s on menu ~s and function ~s~%"
+              (GetShortcutKeyStr matchingSc)
+	      keyStr
+	      (ListMenusFromBitmask menu)
+	      (GetFuncIdNameFromFuncId funcId)))
 
     (set! vrgShortcuts (append! vrgShortcuts (list sc)))))
 

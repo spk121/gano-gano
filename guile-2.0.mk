@@ -1,7 +1,7 @@
 # Makefile
 .SUFFIXES: .scm .go
 
-GUILECOMPILE = guile-tools compile
+GUILECOMPILE = guild compile
 GUILECOMPILEFLAGS = -Wunsupported-warning -Wunbound-variable -Warity-mismatch \
 	-Wformat
 
@@ -194,7 +194,7 @@ nano.go : nano
 
 %.go : %.scm
 	GUILE_AUTO_COMPILE=0 \
-	$(GUILECOMPILE) $(GUILECOMPILEFLAGS) -L . --output="$@" "$<"
+	$(GUILECOMPILE) $(GUILECOMPILEFLAGS) -L . -L src --output="$@" "$<"
 
 
 # If stdout is a non-dumb tty, use colors.  If test -t is not supported,

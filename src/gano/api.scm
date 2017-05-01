@@ -106,6 +106,9 @@
                     0)])
     (insert-nel buf)
     (insert-character-space buf indent)
+    ;;(unless (is-position-in-frame? buf)
+	;;    (center-frame-line buf))
+    (center-frame-line buf)
 
     ;; Update View
     (RefreshEditor)

@@ -322,6 +322,7 @@
 ;; This really isnt all but close enough
 (define	MALL				(logior MMAIN MWHEREIS MREPLACE MREPLACE2 MGOTOLINE MWRITEFILE MINSERTFILE MEXTCMD MSPELL MBROWSER MWHEREISFILE MGOTODIR MHELP))
 
+
 ;; Control key sequences.  Changing these would be very, very bad.
 (define NANO_CONTROL_SPACE 0)
 (define NANO_CONTROL_A 1)
