@@ -1,0 +1,17 @@
+What if I used sigils and twigils?
+
+That would really annoy people.
+
+Perl6 Class Sigils
+
+& code  - e.g. var that contains lambda
+$ item - scalar
+@ list
+@@ slice
+% hash
+
+! private
+. public
+
+$! scalar private
+$. scalar public

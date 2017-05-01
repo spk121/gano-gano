@@ -1,0 +1,18 @@
+(use-modules (ncurses curses)
+	     (gano input))
+
+(let ((win (initscr)))
+  (cbreak!)
+  (noecho!)
+  (nonl!)
+  (intrflush! #f)
+  (keypad! win #t)
+  (scrollok! win #t)
+  (addstr win (format #f "Go~%"))
+  (let loop ((lst (get-kbinput win)))
+    (addstr win "--> ")
+    (when loop
+      (if (char? (cadr lst))
+	  (addstr win (format #f "~s ~s ~%" (car lst) (cadr lst)))
+	  (addstr win (format #f "~s ~s ~%" (car lst) (keyname (cadr lst)))))
+      (loop (get-kbinput win)))))

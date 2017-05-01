@@ -1,0 +1,45 @@
+Primitives in ECMA-48 that mention the active data position.
+
+active area
+active field
+active line
+active page
+line home position (data)
+line limit position (data)
+page home position (data)
+page limit position (data)
+
+when active data position moves the active presentation position
+this is called indirect movement
+
+the movement of the active data position after after a graphic character
+is received ro after a control function that requies a graphical representation
+is implicit movement
+
+When you're in an invalid area, implicit movement may fail in one of several
+implementation-dependent ways.
+
+The movment of the active data position by a control fuction that,
+when executed, causes the active data position to be moved to a specified
+character position in the data component is called explicit movement.
+
+formatter functions vs editor functions
+
+formatter functions may be part of the data stream. The describe how the
+originator of the data stream wished the information to be presented or
+formatted.  When overstrike is possible, only formatter functions can be used
+to create them.. Editor function cannot be used to overstrike.
+
+Editor functions happen immediately and do not get stored in the data stream.
+
+SELECT AND QUALIFIED AREAS
+
+are only important for buffered input, so they don't apply. SSA, ESA, and
+DAQ are all irrelevant.  Protected and guarded areas, too, GATM, SPA, EPA, etc
+
+The SEND/RECEIVE mode is simultaneous.  The media copy MC is irrelevant.
+
+
+
+
+

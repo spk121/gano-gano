@@ -1,0 +1,42 @@
+The pseudo-application has
+- a load method
+- a save method
+- a buffer
+- a set of modes
+  Each mode has
+  - Some actions
+  - Keybindings to those actions
+  - a command loop
+  - a view which renders the current state into the graphical primitives
+
+(Some actions in a loop can switch modes.)
+
+Separate from the pseudo-application are the graphical primitives
+- a title bar
+- a status bar
+- a menu area
+- a main area
+
+- It is the role of the graphical primitives to figure out the minimum
+amount of redraw for each update.
+
+
+================================================================
+Line endings
+
+When parsing a text file, need to be able to split text into lines
+
+See Unicode TR14.
+
+Mandatory breaks
+
+U+000C Form Feed (FF)
+U+000B Line Tabulation (VT)
+U+2028 Line Separator (LS)
+U+2029 Paragraph Separator (PS)
+
+CR by itself, not followed by LF
+CR+LF
+LF by itself
+NL by itself
+
