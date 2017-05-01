@@ -20,38 +20,6 @@
 
 ;;; This file incorporates code from GNU Nano
 
-(define-module (gano)
-  #:use-module (gano config)
-  #:use-module (gano CBuffer)
-  #:use-module (gano CBuffer)
-  #:use-module (gano CFunction)
-  #:use-module (gano CShortcut)
-  #:use-module (gano chars)
-  #:use-module (gano flags)
-  #:use-module (gano files)
-  #:use-module (gano global)
-  #:use-module (gano nano-h)
-  #:use-module (gano winio)
-  #:use-module (gano input)
-  #:use-module (gano utils)
-  #:use-module (gano nano-h)
-  #:use-module (gano text)
-  #:use-module (gano rcfile)
-  #:use-module (gano cut)
-  #:use-module (gano color)
-  #:use-module (gano config)
-  #:use-module (gano api)
-  #:use-module (gano help)
-  #:use-module (ice-9 getopt-long)
-  #:use-module (ice-9 i18n)
-  #:use-module (ncurses curses)
-  #:use-module (ncurses extra)
-  #:use-module (rnrs control)
-  #:use-module (srfi srfi-1)
- 
-  #:export (Main))
-
-(setlocale LC_ALL "")
 
 ;; Used to store the user's original mouse click interval
 (define oldinterval -1)
@@ -68,7 +36,7 @@
 
 ;; Display a warning about a key disabled in view mode
 (define (print_view_warning)
-  (DisplayStatusbar (_ "Key invalid in view mode")))
+  (winio-statusbar (_ "Key invalid in view mode")))
 
 
 ;; Print one usage string to the screen.  This cuts down on duplicate
@@ -186,7 +154,7 @@
 
   ;; Trap SIGWINCH because we want to handle window resizes.
   (sigaction SIGWINCH handle_sigwinch)
-  (allow_pending_sigwinch #f)
+  (gano-allow-pending-sigwinch #f)
 
   ;; Trap normal suspend (^Z) so we can handle it ourselves.
   (cond ((¬ (ISSET SUSPEND))
@@ -247,16 +215,27 @@
   (curs-set 1)
 
   ;; Redraw the contents of the windows that need it.
-  (BlankStatusbar)
+  (winio-blank-statusbar)
   (noutrefresh vWinBottom)
   (total_refresh)
 
   )
 
-(define (Main args)
+(define (gano state)
+  (begin
+    ;; Call the state's initializer
+    ((assoc-ref state 'setup))
+    ;; Do first draw
+    ((assoc-ref state 'draw))
+    ;; start the main loop
+    (let loop ([s ((assoc-ref state 'update))])
+      (when s
+        ((assoc-ref state 'draw))
+        (loop ((assoc-ref state 'update)))))))
+
+(define (main args)
   "Main entry point for the Gano editor"
-  (let* ((optchr #f)
-         ;; Line to try and start at, beginning at 1.
+  (let* (;; Line to try and start at, beginning at 1.
          (rowStart 1)
          ;; Column to try and start at, beginning at 1.
          (colStart 1)
@@ -307,14 +286,7 @@
             (cut (single-char #\k) (value #f))
             (softwrap (single-char #\$) (value #f))
             (rundebug (single-char #\e) (value #t))))
-         (options (getopt-long args rgOptionsLong))
-         (locale (setlocale LC_ALL "")))
-
-    ;; If the locale set exists and uses UTF-8, we should use UTF-8
-    (if %have-ucs4
-	  (if (and locale
-		     (string-ci=? (locale-encoding) "UTF-8"))
-		(InitUtf8)))
+         (options (getopt-long args rgOptionsLong)))
 
     ;;(bindtextdomain vPackage vDirLocale)
     ;;(textdomain vPackage)
@@ -334,7 +306,8 @@
       (set! fRcFileEnable #f))
     (when (and (not (char=? #\r (string-ref (first args) 0)))
                fRcFileEnable)
-      (LoadRcFile))
+      ;;(LoadRcFile)
+      #f)
 
     ;; Command line options
     (when (option-ref options 'smarthome #f)
@@ -531,7 +504,7 @@
     (format (current-error-port) "Main: set up windows~%")
 
     ;; Initialize all the windows based on the current screen dimensions
-    (InitWindow)
+    (winio-init-window)
 
     ;; Set up the signal handlers
     ;; (InitSignal)
@@ -557,8 +530,7 @@
         (set! optind (+ optind 1)))
 
       (when (and (< optind argc)
-                 (not (string=? (list-ref argv optind)
-                                "-")))
+                 (string=? (list-ref argv optind) "-"))
         (stdin_pager)
         (set_modified)
         (set! optind (+ optind 1)))
@@ -595,6 +567,11 @@
                     iCol))))
 
 
+      ;; Now we create the top-level state-loop.  This loop
+      ;; displays the spash screen and a simple menu, and then
+      ;; runs the rest of the program.  It never returns.
+      (gano (main-state))
+
       ;; Read the first file on the command line into either the current buffer
       ;; or a new buffer, depending on whether multibuffer mode is enabled
       (if (< optind argc)
@@ -604,13 +581,10 @@
       ;; invalid files like directories or if there were no command line
       ;; arguments given.  In this case, we have to load a blank buffer.
       ;; Also, we unset view mode to allow editing
-      (when (not vBuffer)
-	    (format (current-error-port) "load blank buffer~%")
-	    (OpenBuffer "" #f)
-	    (UNSET VIEW_MODE))
-
-      (when (not vBuffer)
-	    (error "no buffer"))
+      (when (null? *openfile-list*)
+            (format (current-error-port) "load blank buffer~%")
+            (OpenBuffer "" #f)
+            (UNSET VIEW_MODE))
 
       (unless fMultibufferSav
         (UNSET MULTIBUFFER))
@@ -625,7 +599,7 @@
       (when (or (> rowStart 1) (> colStart 1))
         (GoToLineColumn rowStart colStart #f #f #f #f))
 
-      (DisplayShortcutList MMAIN)
+      (winio-bottombars MMAIN)
       (DisplayBuffer)
 
       ;; Run the debug script
@@ -635,37 +609,34 @@
         (tcsetattr! vTerminalPort TCSANOW vTermAttr)
         (exit 0))
 
-      (let ((meta_key #f)
-            (ran_func #f)
-            (finished #f))
-        (while #t
-          ;; Make sure cursor is in the edit window
-          (reset_cursor)
-          (noutrefresh vWinEdit)
+      (while #t
+        ;; Make sure cursor is in the edit window
+        (winio-reset-cursor)
+        (noutrefresh vWinEdit)
 
-          (unless jump_buf_main
-            ;; If we haven't already, we're going to set
-            ;; jump_buf so that we return here after a
-            ;; SIGWINCH.  Indicate this.
-            (set! jump_buf_main #t)
-            ;; Return here after a sigwinch
-            ;;(sigsetjump jump_buf 1)
-            )
+        (unless jump_buf_main
+          ;; If we haven't already, we're going to set
+          ;; jump_buf so that we return here after a
+          ;; SIGWINCH.  Indicate this.
+          (set! jump_buf_main #t)
+          ;; Return here after a sigwinch
+          ;;(sigsetjump jump_buf 1)
+          )
 
-          ;; Just in case we were at the statusbar prompt, make sure that
-          ;; the statusbar cursor position is reset
-          ;; (do_prompt_abort)
+        ;; Just in case we were at the statusbar prompt, make sure that
+        ;; the statusbar cursor position is reset
+        ;; (do_prompt_abort)
 
-          ;; If constant cursor position display is on, and there are no
-          ;; keys waiting in the input buffer, display the current
-          ;; cursor position on the statusbar
-          (when (ISSET CONST_UPDATE)
-            (do_cursorpos #t))
+        ;; If constant cursor position display is on, and there are no
+        ;; keys waiting in the input buffer, display the current
+        ;; cursor position on the statusbar
+        (when (ISSET CONST_UPDATE)
+          (do_cursorpos #t))
 
-          (set! vMenuCur MMAIN)
+        (set! vMenuCur MMAIN)
 
-          ;; Read and interpret characters
-          (do_input #t)))
+        ;; Read and interpret characters
+        (gano-do-input #t))
 
 
       ;; We should never get here
@@ -743,46 +714,42 @@
 ;; running or trying to run a function associated with a shortcut key.
 ;; If allow_funcs is FALSE, don't actually run any functions
 ;; associated with shortcut keys.
-(define (do_input allow_funcs)
-  (let ((meta_key #f)
-        (input #f)
-        (ran_func #f)
-        (cut_copy #f)
-        (kbinput #f))
+(define (gano-do-input allow_funcs)
+  (let ([meta_key #f]  [ran_func #f] [cut_copy #f])
 
     ;; Read in a character.  get_kbinput returns a qualifier and a key.
     ;; The qualifier is either 'raw or 'meta.  The key is
     ;; either a char or a ncurses keycode.
-    (let ((kbinput (get_kbinput vWinEdit)))
+    (let ([kbinput (input-get-kbinput vWinEdit)])
+      (log-debug (format #f "gano-do-input: received kbinput \"~s\"" kbinput))
       (cond
-       ((not kbinput)
+       [(not kbinput)
         ;; no valid input.  We're done
-        #f)
+        #f]
 
-       (else
-        (let ((qualifier (first kbinput))
-              (input (second kbinput)))
-
-          (if (eq? qualifier 'meta)
-              (set! meta_key #t)
-              (set! meta_key #f))
+       [else
+        (let ([qualifier (first kbinput)]
+              [input (second kbinput)])
+          (set! meta_key (eq? qualifier 'meta))
 
           ;; Meta keys are not case sensitive
-          (when (and (eq? qualifier 'meta) (char? input))
+          (when (and meta_key (char? input))
             (set! input (char-downcase input)))
 
+          (log-debug (format #f "gano-do-input: qualifier \"~s\" input \"~s\"" qualifier input))
           ;; Check for a shortcut in the main list
-          (let* ((s (GetShortcutFromMenuKey MMAIN input meta_key))
+          (let* ([s (winio-get-shortcut MMAIN input meta_key)]
                  ;; If we have a shortcut from the main list, or a
                  ;; "universal" edit window shortcut, set
                  ;; have_shortcut to true
-                 (have_shortcut (not (not s)))
-                 (funcId (if s (GetShortcutFuncId s) 0)))
+                 [have_shortcut (not (not s))]
+                 [funcId (if s (sc-get-function-id s) 0)])
 
+            (log-debug (format #f "gano-do-input: have_shortcut \"~s\" funcId \"~s\"" s funcId))
             ;; If this wasn't a shortcut, and it isn't a regular character, quit
             (unless have_shortcut
               (when (or meta_key (not (char? input)))
-                (DisplayStatusbar "Unknown Command")
+                (winio-statusbar "Unknown Command")
                 (beep)
                 (set! meta_key #f)
                 (set! input ERR)))
@@ -792,16 +759,16 @@
 
               ;; If it is a regular character, output it
               (when (and (not have_shortcut) (not (eq? ERR input)))
-		(insert-character-space vBuffer 1)
-		(write-character vBuffer input 'data)
-		(RefreshEditor))
+                (log-debug (format #f "gano-do-input: dispatch ICP ~s" input))
+                (dsp-id-dispatch! 'ICP (openfile-BFS) input)
+                (winio-edit-refresh))
 
               ;; If we got a shortcut or toggle, and it's not the
               ;; shortcut for verbatim input, turn off prepending
               ;; of wrapped text.
-              (when (and have_shortcut
-                         (not (eq? funcId DO_VERBATIM_INPUT)))
-                (ResetWrap))
+              ;; (when (and have_shortcut
+              ;;            (not (eq? funcId DO_VERBATIM_INPUT)))
+              ;;   (ResetWrap))
 
               ;; Finally, process the shortcuts
               (when have_shortcut
@@ -813,19 +780,20 @@
                   (set! cut_copy #t))
 
                 (when (and funcId (not (zero? funcId)))
-                  (let ((f funcId))
+                  (let ([f funcId])
                     (set! ran_func #t)
                     (cond
-                     ((and (ISSET VIEW_MODE) f (not (IsFunctionReadOnly? f)))
-                      (print_view_warning))
+                     [(and (ISSET VIEW_MODE) f (not (IsFunctionReadOnly? f)))
+                      (print_view_warning)]
 
-                     (else
-                      (Dispatch vBuffer funcId)))))))))))
+                     [else
+                      (gano-dispatch vBuffer funcId)])))))))])
 
-      ;; If we aren't cutting or copying text, blow away the text in the
+    ;; If we aren't cutting or copying text, blow away the text in the
       ;; cutbuffer
       (unless cut_copy
-        (cutbuffer_reset)))))
+        ;;(cutbuffer_reset)
+        #t))))
 
 #!
 ;; The user typed the character 'CH'.  Add them to the edit buffer,
@@ -840,7 +808,7 @@
     DoCharInsert c)))
 !#
 
-(define (allow_pending_sigwinch allow)
+(define (gano-allow-pending-sigwinch allow)
   "If allow is true, block any SIGWINCH signal that we get, so that we
 can deal with them later.  If allow is #f, unblock an SIGWINCH signals
 so we can deal with them now."
@@ -859,39 +827,167 @@ so we can deal with them now."
    ((= flag USE_MOUSE)
     (InitMouse))
    ((or (= flag MORE_SPACE) (= flag NO_HELP))
-    (InitWindow)
+    (winio-init-window)
     (RefreshAll))
    ((= flag SUSPEND)
     (InitSignal))
    ((= flag WHITESPACE_DISPLAY)
-    (DisplayTitlebar #f)
-    (RefreshEditor))
+    (winio-titlebar #f)
+    (winio-edit-refresh))
    ((= flag NO_COLOR_SYNTAX)
-    (RefreshEditor))
+    (winio-edit-refresh))
    ((= flag SOFTWRAP)
     (total_refresh))))
 
-(define (Dispatch buf funcId)
-  "Given a function ID, call an API function"
-  (format (current-error-port) "Dispatch: ~s~%" (GetFuncIdNameFromFuncId funcId))
-  ;;(format (current-error-port) "~s~%" (with-output-to-string %DescribeBuffer))
-  (cond
-   ((= funcId DO_ENTER) (DoEnter buf))
-   ((= funcId TOTAL_REFRESH) (DoTotalRefresh buf))
-   ((= funcId DO_FIRST_LINE) (DoLineFirst buf))
-   ((= funcId DO_LAST_LINE) (DoLineLast buf))
-   ((= funcId DO_SCROLL_UP) (DoScrollUp buf))
-   ((= funcId DO_SCROLL_DOWN) (DoScrollDown buf))
-   ((= funcId DO_UP_VOID) (DoLinePrev buf (ISSET SMOOTH_SCROLL)))
-   ((= funcId DO_DOWN_VOID) (DoLineNext buf (ISSET SMOOTH_SCROLL)))
-   ((= funcId DO_LEFT) (DoCharPrev buf))
-   ((= funcId DO_RIGHT) (DoCharNext buf))
-   ((= funcId DO_DELETE) (DoCharDelete buf))
-   ((= funcId DO_PAGE_UP) (DoPagePrev buf (ISSET SMOOTH_SCROLL)))
-   ((= funcId DO_PAGE_DOWN) (DoPageNext buf (ISSET SMOOTH_SCROLL)))
-   ((= funcId DO_END) (DoLineEnd buf))
-   ((= funcId DO_HOME) (DoLineBeginning buf))
-   ((= funcId DO_BACKSPACE) (DoCharDeleteLeft buf))
-   ((= funcId DO_HELP_VOID)
-    (DoHelp MMAIN)
-    (DoTotalRefresh buf))))
+;; Return 1 if the MORE_SPACE flag is set, and 0 otherwise.  This is
+;; used to calculate the relative screen position while taking this
+;; flag into account, since it adds one line to the edit window.
+(define (gano-no-more-space)
+  (if (ISSET MORE_SPACE)
+      1
+      0))
+
+;; Return 2 if the NO_HELP flag is set, and 0 otherwise.  This is used
+;; to calculate the relative screen position while taking this flag
+;; into account, since it removes two lines from the edit window.
+(define (gano-no-help)
+  (if (ISSET NO_HELP)
+      2
+      0))
+
+;; This procedure is where the device-free and the device-specific
+;; dispatches are bound togeter.
+
+;; dsp-id-dispatch takes care of changing the text buffer, the frame
+;; and the device-free flags, but, does not deal with anything
+;; beyond the text and its abstract frame.  It also doesn't deal with
+;; the filename, the CRLF type
+
+;; Afterward, functions having to deal with curses are called
+(define (gano-dispatch buf funcId)
+  (let ([buf (openfile-buffer)]
+        [BFS (openfile-BFS)])
+    "Given a function ID, call an API function"
+    (log-debug (format #f "gano-dispatch: ~s~%" (GetFuncIdNameFromFuncId funcId)))
+    (cond
+     ;; Format effectors
+     ((= funcId DO_ENTER)
+      (dsp-id-dispatch! 'INL BFS)
+      (winio-edit-refresh))
+
+     ;; Pico functions
+     [(= funcId DO_HELP_VOID)
+      (help-do-help-menu MMAIN)
+      (winio-total-refresh)]
+     [(= funcId DO_RIGHT)
+      ;; At the end of the buffer, do nothing
+      ;; At the end of the line, move to the beginning of next line
+      ;; Otherwise, move right
+      (unless (cbuf-end-of-buffer? buf)
+              (cond
+               [(cbuf-end-of-line? buf)
+                (dsp-id-dispatch! 'CNL BFS)
+                (winio-total-refresh)]
+               [else
+                (dsp-id-dispatch! 'HPR BFS)
+                (winio-total-refresh)]))]
+     [(= funcId DO_LEFT)
+      ;; At the beginning of the buffer, do nothing
+      ;; At the beginning of a line, move to the end of the previous line
+      ;; Otherwise, move left
+      (unless (cbuf-beginning-of-buffer? buf)
+              (cond
+               [(cbuf-beginning-of-line? buf)
+                (dsp-id-dispatch! 'CPL BFS)
+                (dsp-id-dispatch! 'HPAn BFS (cbuf-get-text-cur-base-length buf))
+                (winio-total-refresh)]
+               [else
+                (dsp-id-dispatch! 'HPB BFS)
+                (winio-total-refresh)]))]
+
+     [(= funcId DO_UP_VOID)
+      ;; In the first line of the buffer, do nothing
+      ;; Otherwise, move up to the goal column or end of the line,
+      ;; whichever is less.  Don't change the goal column when moving up.
+      (unless (= 0 (cbuf-get-y buf))
+              (dsp-id-dispatch! 'CUU BFS)
+              (winio-total-refresh))]
+
+     [(= funcId DO_DOWN_VOID)
+      ;; In the last line of the buffer, do nothing
+      ;; Otherwise, move down to the goal column or end of line, whichever
+      ;; is less.  Don't change the goal column when moving up.
+      (unless (= (cbuf-get-y buf) (cbuf-get-line-count buf))
+              (dsp-id-dispatch! 'CUD BFS)
+              (winio-total-refresh))]
+
+     [(= funcId DO_HOME)
+      (dsp-id-dispatch! 'HPA BFS)
+      (winio-total-refresh)]
+
+     [(= funcId DO_END)
+      (dsp-id-dispatch! 'HPAn BFS (cbuf-get-text-cur-base-length buf))
+      (winio-total-refresh)]
+
+     [(= funcId DO_PAGE_DOWN)
+      (unless (cbuf-on-last-page? buf)
+              (dsp-id-dispatch! 'PPR BFS)
+              (winio-total-refresh))]
+
+     [(= funcId DO_PAGE_UP)
+      (unless (cbuf-on-first-page? buf)
+              (dsp-id-dispatch! 'PPB BFS)
+              (winio-total-refresh))]
+
+     [(= funcId TOTAL_REFRESH) (winio-total-refresh)]
+
+     [(= funcId DO_DELETE)
+      ;; If at the end of buffer, do nothing
+      ;; If at the end of line, join line below to this line
+      ;; Otherwise, remove the character at the active data
+      ;; position
+      (unless (cbuf-end-of-buffer? buf)
+              (cond
+               [(cbuf-end-of-line? buf)
+                (dsp-id-dispatch! 'DNL BFS)
+                (winio-total-refresh)]
+               [else
+                (dsp-id-dispatch! 'DCH BFS)
+                (winio-total-refresh)]))]
+     ((= funcId DO_FIRST_LINE)
+      (dsp-id-dispatch! 'CUP (openfile-BFS))
+      (winio-edit-refresh))
+     ((= funcId DO_LAST_LINE) (DoLineLast buf))
+     ((= funcId DO_SCROLL_UP) (DoScrollUp buf))
+     ((= funcId DO_SCROLL_DOWN) (DoScrollDown buf))
+     ((= funcId DO_DELETE) (DoCharDelete buf))
+     ((= funcId DO_PAGE_UP) (DoPagePrev buf (ISSET SMOOTH_SCROLL)))
+     ((= funcId DO_END) (DoLineEnd buf))
+     ((= funcId DO_BACKSPACE) (DoCharDeleteLeft buf))
+     [(= funcId DO_EXIT)
+      (gano-do-exit)]
+     )))
+
+(define (gano-do-exit)
+  "If the current file buffer has been modified, and the TEMP_FILE flag
+isn't set, ask whether or not to save the file buffer.  If the
+TEMP_FILE flag is set, save it unconditionally.  Then, if more than
+one file buffer is open, close the current file buffer and switch to
+the next one.  If only one file buffer is open, exit from nano."
+  (let ([save? (or (not (cbuf-get-modified (openfile-buffer)))
+                   (ISSET TEMP_FILE)
+                   (prompt-do-yesno-prompt #f "Save modified buffer (ANSWERING \"No\" WILL DESTROY CHANGES)? "))])
+    (if (or (eq? save? 'yes) (files-do-writeout #t))
+        (gano-finish)
+        ;; else
+        (unless save?
+          (winio-statusbar "Cancelled")))
+    (winio-shortcut-init #f)
+    (display-main-list)))
+
+(define (gano-finish)
+  (unless (ISSET NO_HELP)
+    (winio-blank-bottombars))
+  (refresh vWinBottom)
+  (endwin)
+  (exit 0))

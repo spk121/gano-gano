@@ -1,0 +1,13 @@
+# Untracked files
+
+
+# Build products
+TAGS
+*.go
+
+ 
+# Temp files
+*~
+*.tmp
+*.log
+gano

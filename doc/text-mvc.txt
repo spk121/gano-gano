@@ -1,0 +1,55 @@
+	       The CBUF Low-Level Text Model-View-Controller
+
+
+The low-level text buffer is set up as a device-independent
+model-view-controller.  It is found in 3 source files.  
+
+Model: cbuf.scm - the text buffer, its mark, and its cursor
+
+View: frame.scm - a square window that defines a visible region of a 
+text buffer
+
+Controller: dispatch.scm - a controller state, including undo, shift
+and repeat information
+
+But both this 'view' and this 'controller' don't interface with
+NCurses or GTK.  That is left to higher level functions.
+
+Since this controller is a *device independent* MVC, it takes function
+IDs instead of keypresses.  Function IDs are integers. They are defined
+in 'function-ids.scm'.
+
+To create a CBUF, you need to make a model/view/controller triplet
+
+  cbuf-make-buffer - creates an empty text buffer
+  frame-make-frame - create a default-sized window frame
+  dsp-make-state - creates a default dispatch-loop state
+
+To modify a CBUF, you either use the main dispatch command or the codepoint
+insertion command
+
+  dsp-dispatch - given a function ID, it applies that operation to the
+    text buffer
+
+  dsp-insert-codepoint - given a codepoint, insert it at the current
+    cursor location
+
+  dsp-undo-dispatch - returns the MVC to the state it had before the last
+    operation that modified the text.  (It doesn't undo non-destructive 
+    operations.)
+
+To gather the view of a CBUF, you need a few parts
+
+   frame-render-buffer - a list of strings that is the visible part
+    of the buffer
+
+   frame-get-cursor - the position and state of the cursor in frame
+     coordinates
+
+   frame-get-mark - the beginning and end of any highlighted text, if
+     any
+
+   cbuf-get-position - the row and column of the cursor
+
+   cbuf-is-modified? - #t if the text has been modified from its
+     initial state

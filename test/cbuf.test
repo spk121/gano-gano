@@ -1,0 +1,2052 @@
+;;; -*- mode: scheme -*-
+;;; cbuf.test - test-script for Gano's character cell buffer
+
+(define buf (cbuf-make-buffer))
+
+(define (init-buf! buf str)
+  (cbuf-set-text! buf (if (list? str) str (list str)))
+  ;; (set-line-frame! buf 0)
+  (cbuf-set-line-cur! buf 0)
+  (cbuf-set-tab-size! buf 8)
+  (cbuf-update-pp-list! buf)
+  (cbuf-set-positions! buf 0 'data))
+
+(define (print-pos buf)
+  (format #t "Pd ~a Pp ~a Pp-Goal ~a~%"
+          (cbuf-get-pd-cur buf) (cbuf-get-pp-cur buf) (cbuf-get-pp-goal buf)))
+
+(define (multi-test-equal name test in out)
+  (for-each (lambda (i o)
+              (test-equal (format #f "~a:~a" name i)
+                          o
+                          (test i)))
+            in
+            out))
+
+(test-begin "cbuf")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; PRIMITIVES
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; cbuf-set-x!
+(test-begin "cbuf-set-x! index -> index")
+
+;; ASCII NULL
+(init-buf! buf "")
+(multi-test-equal "(null)"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0)
+                  '(0))
+(init-buf! buf "a")
+(multi-test-equal "'a'"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1)
+                  '(0 1))
+(init-buf! buf "ab")
+(multi-test-equal "'ab'"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2)
+                  '(0 1 2))
+
+;; ASCII + tab
+(init-buf! buf "\ta")
+(multi-test-equal "'\ta'"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2)
+                  '(0 1 2))
+
+(init-buf! buf "\tOnce upon")
+(multi-test-equal "tab + 'Once upon'"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2 3 4 5 6 7 8 9 10)
+                  '(0 1 2 3 4 5 6 7 8 9 10))
+
+;; ASCII + zero-width space
+(define str-ascii+zwbs (string #\u (integer->char #x200B) #\v))
+(init-buf! buf str-ascii+zwbs)
+(multi-test-equal "u + zwbs + v"
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2 3)
+                  '(0 1 2 3))
+
+;; Latin-1 and its NFD
+(define str-latin-1 "José")
+(init-buf! buf (string-normalize-nfc str-latin-1))
+(multi-test-equal (format #f "NFC '~a'" (string-normalize-nfc str-latin-1))
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2 3 4)
+                  '(0 1 2 3 4))
+(init-buf! buf (string-normalize-nfd str-latin-1))
+(multi-test-equal (format #f "NFD '~a'" (string-normalize-nfd str-latin-1))
+                  (lambda (i) (cbuf-set-x! buf i 'index) (cbuf-get-x-index buf))
+                  '(0 1 2 3 4 5)
+                  '(0 1 2 3 3 5))       ; Should return index of 'e' not accent
+
+(test-end "cbuf-set-x! index->index")
+
+
+(test-begin "cbuf-set-x! cell->data")
+;; ASCII NULL
+(init-buf! buf "")
+(multi-test-equal "(null)"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0)
+                  '(0))
+(init-buf! buf "a")
+(multi-test-equal "'a'"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1)
+                  '(0 1))
+(init-buf! buf "ab")
+(multi-test-equal "'ab'"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1 2)
+                  '(0 1 2))
+
+;; ASCII + tab
+(init-buf! buf "\ta")
+(multi-test-equal "'\ta'"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1 2 3 4 5 6 7 8 9 ) ; Tab occupies 8 cell
+                  '(0 0 0 0 0 0 0 0 1 2))
+
+(init-buf! buf "\tOnce upon")
+(multi-test-equal "tab + 'Once upon'"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  ;; Tab occupies 8 cells
+                  '(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17)
+                  '(0 0 0 0 0 0 0 0 1 2  3  4  5  6  7  8  9 10))
+
+;; ASCII + zero-width space
+(define str-ascii+zwbs (string #\u (integer->char #x200B) #\v))
+(init-buf! buf str-ascii+zwbs)
+(multi-test-equal "u + zwbs + v"
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1 2)
+                  '(0 1 3))             ; zwbs takes up no space
+
+;; Latin-1 and its NFD
+(define str-latin-1 "José")
+(init-buf! buf (string-normalize-nfc str-latin-1))
+(multi-test-equal (format #f "NFC '~a'" (string-normalize-nfc str-latin-1))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1 2 3 4)
+                  '(0 1 2 3 4))
+
+(init-buf! buf (string-normalize-nfd str-latin-1))
+(multi-test-equal (format #f "NFD '~a'" (string-normalize-nfd str-latin-1))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  '(0 1 2 3 4)
+                  '(0 1 2 3 4))       ; Should treat accent as part of base char
+
+;; Latin-1 + tab and its NFD
+(define str-latin-2 "más\taño")
+(init-buf! buf (string-normalize-nfc str-latin-2))
+(multi-test-equal (format #f "NFC '~a'" (string-normalize-nfc str-latin-2))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  ;; 5 spaces for tab
+                  '(0 1 2 3 4 5 6 7 8 9 10 11)
+                  '(0 1 2 3 3 3 3 3 4 5  6  7))
+
+(init-buf! buf (string-normalize-nfd str-latin-2))
+(multi-test-equal (format #f "NFD '~a'" (string-normalize-nfd str-latin-2))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  ;; 5 spaces for tab. Treat accent/tilde as part of base
+                  '(0 1 2 3 4 5 6 7 8 9 10 11)
+                  '(0 1 2 3 3 3 3 3 4 5  6  7))
+
+(define str-hiragana-1 "ぐるなび")
+(init-buf! buf (string-normalize-nfc str-hiragana-1))
+(multi-test-equal (format #f "NFC '~a'" (string-normalize-nfc str-hiragana-1))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  ;; 2 cells per char
+                  '(0 1 2 3 4 5 6 7 8)
+                  '(0 0 1 1 2 2 3 3 4))
+
+(init-buf! buf (string-normalize-nfd str-hiragana-1))
+(multi-test-equal (format #f "NFD '~a'" (string-normalize-nfd str-hiragana-1))
+                  (lambda (i) (cbuf-set-x! buf i 'cell) (cbuf-get-x-data buf))
+                  ;; 2 cells per char. Accents treated as part of base.
+                  '(0 1 2 3 4 5 6 7 8)
+                  '(0 0 1 1 2 2 3 3 4))
+
+
+(test-end "cbuf-set-x! cell->data")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; CODEPOINT METHODS
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ICP
+(test-begin "cbuf-insert-codepoint")
+
+;; ASCII
+(test-begin "(null) + 'a'")
+(init-buf! buf "")
+(cbuf-insert-codepoint buf #\a #f)
+(test-equal "text" '("a") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 1 (cbuf-get-x-data buf))
+(test-equal "x-cell" 1 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 1 (cbuf-get-x-goal buf))
+(test-end "(null) + 'a'")
+
+(test-begin "'b' after 'a'")
+(init-buf! buf "a")
+(cbuf-set-x! buf 1 'data)
+(cbuf-insert-codepoint buf #\b #f)
+(test-equal "text" '("ab") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 2 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 2 (cbuf-get-x-goal buf))
+(test-end "'b' after 'a'")
+
+(test-begin "'b' before 'a'")
+(init-buf! buf "a")
+(cbuf-set-x! buf 0 'data)
+(cbuf-insert-codepoint buf #\b #f)
+(test-equal "text" '("ba") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 1 (cbuf-get-x-data buf))
+(test-equal "x-cell" 1 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 1 (cbuf-get-x-goal buf))
+(test-end "'b' before 'a'")
+
+;; ASCII + tab
+(test-begin "'a' after tab")
+(init-buf! buf "\t")
+(cbuf-set-x! buf 1 'data)
+(cbuf-insert-codepoint buf #\a #f)
+(test-equal "text" '("\ta") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 9 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 9 (cbuf-get-x-goal buf))
+(test-end "'a' after tab")
+
+(test-begin "'a' before tab")
+(init-buf! buf "\t")
+(cbuf-set-x! buf 0 'data)
+(cbuf-insert-codepoint buf #\a #f)
+(test-equal "text" '("a\t") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 1 (cbuf-get-x-data buf))
+(test-equal "x-cell" 1 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 1 (cbuf-get-x-goal buf))
+(test-end "'a' before tab")
+
+;; ASCII + zero-width space
+(define str-ascii+zwbs (string #\u (integer->char #x200B) #\v))
+
+(test-begin "zero-width space after 'a'")
+(init-buf! buf "a")
+(cbuf-set-x! buf 1 'data)
+(cbuf-insert-codepoint buf (integer->char #x200B) #f)
+(test-equal "text" '("a\u200b") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 1 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 1 (cbuf-get-x-goal buf))
+(test-end "zero-width space after 'a'")
+
+(test-begin "zero-width space before 'a'")
+(init-buf! buf "a")
+(cbuf-set-x! buf 0 'data)
+(cbuf-insert-codepoint buf (integer->char #x200B) #f)
+(test-equal "text" '("\u200ba") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 1 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 1 (cbuf-get-x-goal buf))
+(test-end "zero-width space before 'a'")
+
+;; Latin-1 and its NFD
+(test-begin "NFC José")
+(init-buf! buf "")
+(cbuf-insert-codepoint buf #\J #f)
+(cbuf-insert-codepoint buf #\o #f)
+(cbuf-insert-codepoint buf #\s #f)
+(cbuf-insert-codepoint buf #\é #f)
+(test-equal "text" '("José") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 4 (cbuf-get-x-data buf))
+(test-equal "x-cell" 4 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 4 (cbuf-get-x-goal buf))
+(test-end "NFC José")
+
+(test-begin "NFD José")
+(init-buf! buf "")
+(cbuf-insert-codepoint buf #\J #f)
+(cbuf-insert-codepoint buf #\o #f)
+(cbuf-insert-codepoint buf #\s #f)
+(cbuf-insert-codepoint buf #\e #f)
+(cbuf-insert-codepoint buf #\x0301 #f)
+(test-equal "text" '("José") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 4 (cbuf-get-x-data buf))
+(test-equal "x-cell" 4 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 4 (cbuf-get-x-goal buf))
+(test-end "NFD José")
+
+;; Latin-1 + tab and its NFD
+(define str-latin-2 "más\taño")
+(test-begin "NFC 'más' + tab before 'año'")
+(init-buf! buf "")
+(cbuf-insert-codepoint buf #\a #f)
+(cbuf-insert-codepoint buf #\ñ #f)      ; U+00F1 LATIN SMALL LETTER N WITH TILDE
+(cbuf-insert-codepoint buf #\o #f)
+(cbuf-set-x! buf 0 'data)
+(cbuf-insert-codepoint buf #\m #f)
+(cbuf-insert-codepoint buf #\á #f)      ; U+00E1 LATIN SMALL LETTER A WITH ACUTE
+(cbuf-insert-codepoint buf #\s #f)
+(cbuf-insert-codepoint buf #\tab #f)
+(test-equal "text" '("más\taño") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 4 (cbuf-get-x-data buf))
+(test-equal "x-cell" 8 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 8 (cbuf-get-x-goal buf))
+(test-end "NFC 'más' + tab before 'año'")
+
+(test-begin "NFD 'más' + tab before 'año'")
+(init-buf! buf "")
+(cbuf-insert-codepoint buf #\a #f)
+(cbuf-insert-codepoint buf #\n #f)
+(cbuf-insert-codepoint buf #\x0303 #f)  ; U+0303 COMBINING TILDE
+(cbuf-insert-codepoint buf #\o #f)
+(cbuf-set-x! buf 0 'data)
+(cbuf-insert-codepoint buf #\m #f)
+(cbuf-insert-codepoint buf #\a #f)
+(cbuf-insert-codepoint buf #\x0301 #f)  ; U+0301 COMBINING ACUTE ACCENT
+(cbuf-insert-codepoint buf #\s #f)
+(cbuf-insert-codepoint buf #\tab #f)
+(test-equal "text" '("más\taño") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 4 (cbuf-get-x-data buf))
+(test-equal "x-cell" 8 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 8 (cbuf-get-x-goal buf))
+(test-end "NFD 'más' + tab before 'año'")
+
+;; Hiragana and its NFD
+(define str-hiragana-1 "ぐるなび")
+
+(test-begin "NFC 'ぐるなび'")
+(init-buf! buf "")
+(cbuf-insert-codepoint buf #\ぐ #f)     ; U+3050 HIRIGANA LETTER GU
+(cbuf-insert-codepoint buf #\る #f)     ; U+308B
+(cbuf-insert-codepoint buf #\な #f)     ; U+306A
+(cbuf-insert-codepoint buf #\び #f)     ; U+3073
+(test-equal "text" '("ぐるなび") (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 4 (cbuf-get-x-data buf))
+(test-equal "x-cell" 8 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 8 (cbuf-get-x-goal buf))
+(test-end "NFC 'ぐるなび'")
+
+(test-begin "NFD 'ぐるなび'")
+(init-buf! buf "")
+(cbuf-insert-codepoint buf #\く #f)     ; U+304F HIRAGANA LETTER KU
+(cbuf-insert-codepoint
+ buf (integer->char #x3099) #f)         ; U+3099 COMBINING
+                                        ; KATAKANA-HIRAGANA VOICED
+                                        ; SOUND MARK
+(cbuf-insert-codepoint buf #\る #f)     ; U+308B
+(cbuf-insert-codepoint buf #\な #f)     ; U+306A
+(cbuf-insert-codepoint buf #\び #f)     ; U+3073
+(test-equal "text" '("ぐるな")  (cbuf-get-text buf))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 4 (cbuf-get-x-data buf))
+(test-equal "x-cell" 8 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 8 (cbuf-get-x-goal buf))
+(test-end "NFC 'ぐるなび'")
+
+;; Hiragana + tab and its NFD
+(define str-hiragana-2 "まど\tみちお")
+(test-end "cbuf-insert-codepoint")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; INL
+(test-begin "cbuf-insert-newline")
+
+(test-begin "(null)+NL")
+(init-buf! buf "")
+(cbuf-insert-newline buf #f)
+(test-equal "text" '("" "")  (cbuf-get-text buf))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-end "(null)+NL")
+
+(test-begin "NL before NL")
+(init-buf! buf (list "" ""))
+(cbuf-set-y! buf 0)
+(cbuf-insert-newline buf #f)
+(test-equal "text" '("" "" "")  (cbuf-get-text buf))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-end "NL before NL")
+
+(test-begin "NL before 'ab'")
+(init-buf! buf (list "ab"))
+(cbuf-set-x! buf 0 'data)
+(cbuf-insert-newline buf #f)
+(test-equal "text" '("" "ab")  (cbuf-get-text buf))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-end "NL before 'ab'")
+
+(test-begin "NL between 'ab'")
+(init-buf! buf (list "ab"))
+(cbuf-set-x! buf 1 'data)
+(cbuf-insert-newline buf #f)
+(test-equal "text" '("a" "b")  (cbuf-get-text buf))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-end "NL between 'ab'")
+
+(test-begin "NL after 'ab'")
+(init-buf! buf (list "ab"))
+(cbuf-set-x! buf 2 'data)
+(cbuf-insert-newline buf #f)
+(test-equal "text" '("ab" "")  (cbuf-get-text buf))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-end "NL after 'ab'")
+
+(test-begin "NL between 'ab' and 'ab'")
+(init-buf! buf (list "ab" "ab"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 0 'data)
+(cbuf-insert-newline buf #f)
+(test-equal "text" '("ab" "" "ab")  (cbuf-get-text buf))
+(test-equal "y" 2 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-end "NL between 'ab' and 'ab'")
+
+(test-end "cbuf-insert-newline")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; CONTROL FUNCTIONS
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; BEL
+
+(test-begin "cbuf-bell")
+(cbuf-set-bell! buf #f)
+(cbuf-bell buf)
+(test-assert "set bell" (cbuf-get-bell buf))
+(test-end "cbuf-bell")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; BS
+(test-begin "cbuf-backspace")
+
+(test-begin "backspace over (null)")
+(init-buf! buf "")
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-beginning-of-line? err) #t)
+                     (else #f))
+                    (cbuf-backspace buf)))
+(test-equal "x" 0 (cbuf-get-x-data buf))
+(test-end "backspace over (null)")
+
+(test-begin "backspace over 'a'")
+(init-buf! buf "a")
+(cbuf-set-x! buf 1 'data)
+(cbuf-backspace buf)
+(test-equal "x" 0 (cbuf-get-x-data buf))
+(test-end "backspace over 'a'")
+
+(test-end "cbuf-backspace")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CAN")
+(test-assert "cancel" 'xfail)
+(test-end "CAN")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CBT")
+
+(test-begin "backtab once from col 25")
+;; Cursor backward tabulation moves the cursor to the nth previous tab
+;; column
+(init-buf! buf string-data-ascii)
+(cbuf-set-positions! buf 25 'data)
+(cbuf-set-tab-size! buf 8)
+(cbuf-cursor-backward-tabulation buf 1)
+(test-equal "data position" 24 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 24 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 24 (cbuf-get-pp-goal buf))
+(test-equal "current line" string-data-ascii (cbuf-get-text-cur buf))
+(test-end "backtab once from col 25")
+
+(test-begin "undo backtab once")
+(%undo buf)
+(test-equal "data position" 25 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 25 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 25 (cbuf-get-pp-goal buf))
+(test-end "undo backtab once")
+
+(test-begin "backtab twice from col 25")
+(cbuf-set-positions! buf 25 'data)
+(cbuf-cursor-backward-tabulation buf 2)
+(test-equal "data position" 16 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 16 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 16 (cbuf-get-pp-goal buf))
+(test-equal "current line" string-data-ascii (cbuf-get-text-cur buf))
+(test-end "backtab twice from col 25")
+
+(test-begin "undo backtab twice")
+(%undo buf)
+(test-equal "data position" 25 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 25 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 25 (cbuf-get-pp-goal buf))
+(test-end "undo backtab twice")
+
+(test-end "CBT")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CCH")
+(test-assert "cch" 'xfail)
+(test-end "CCH")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CHA")
+
+;;---
+(test-begin "ASCII")
+
+(test-begin "move to col 23")
+(init-buf! buf string-data-ascii)
+(cbuf-set-positions! buf 0 'data)
+(cbuf-cursor-character-absolute buf 23)
+(test-equal "data position" 23 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 23 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 23 (cbuf-get-pp-goal buf))
+(test-end "move to col 23")
+
+(test-begin "undo move to col 23")
+(%undo buf)
+(test-equal "data position" 0 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 0 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 0 (cbuf-get-pp-goal buf))
+(test-end "undo move to col 23")
+
+(test-end "ASCII")
+
+;;---
+(test-begin "Hanzi")
+
+(test-begin "move to col 23")
+(init-buf! buf string-data-hanzi)
+(cbuf-set-positions! buf 0 'data)
+(cbuf-cursor-character-absolute buf 23)
+(test-equal "data position" 11 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 22 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 23 (cbuf-get-pp-goal buf))
+(test-end "move to col 23")
+
+(test-begin "undo move to col 23")
+(%undo buf)
+(test-equal "data position" 0 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 0 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 0 (cbuf-get-pp-goal buf))
+(test-end "undo move to col 23")
+
+(test-end "Hanzi")
+
+(test-end "CHA")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CHT")
+
+(test-begin "tab once from col 3")
+(init-buf! buf string-data-ascii)
+(cbuf-set-positions! buf 3 'data)
+(cbuf-set-tab-size! buf 8)
+(cbuf-cursor-forward-tabulation buf 1 #t)
+(test-equal "data position" 8 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 8 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 8 (cbuf-get-pp-goal buf))
+(test-equal "current line" string-data-ascii (cbuf-get-text-cur buf))
+(test-end "tab once from col 3")
+
+(test-begin "undo tab once")
+(%undo buf)
+(test-equal "data position" 3 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 3 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 3 (cbuf-get-pp-goal buf))
+(test-end "undo tab once")
+
+(test-begin "tab twice from col 3")
+(cbuf-set-positions! buf 3 'data)
+(cbuf-cursor-forward-tabulation buf 2 #t)
+(test-equal "data position" 16 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 16 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 16 (cbuf-get-pp-goal buf))
+(test-equal "current line" string-data-ascii (cbuf-get-text-cur buf))
+(test-end "tab twice from col 3")
+
+(test-begin "undo tab twice")
+(%undo buf)
+(test-equal "data position" 3 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 3 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 3 (cbuf-get-pp-goal buf))
+(test-end "undo tab twice")
+
+(test-end "CHT")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CNL")
+(test-begin "ASCII")
+
+(init-buf! buf text-ascii-short)
+(cbuf-set-line-cur! buf 1)
+(cbuf-set-positions! buf 1 'data)
+
+(test-begin "next line from line 1")
+(cbuf-cursor-next-line buf 1 #t)
+(test-equal "line cur" 2 (cbuf-get-line-cur buf))
+(test-equal "data position" 0 (cbuf-get-pd-cur buf))
+(test-equal "presentation-position" 0 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 0 (cbuf-get-pp-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "as I pondered")
+(test-end "next line from line 1")
+
+(test-begin "undo next line")
+(%undo buf)
+(test-equal "line cur" 1 (cbuf-get-line-cur buf))
+(test-equal "data position" 1 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 1 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 1 (cbuf-get-pp-goal buf))
+(test-end "undo next line")
+
+(test-begin "next line x2 from line 1")
+(init-buf! buf text-ascii-short)
+(cbuf-set-line-cur! buf 1)
+(cbuf-set-positions! buf 1 'data)
+(cbuf-cursor-next-line buf 2 #t)
+(test-equal "line cur" 3 (cbuf-get-line-cur buf))
+(test-equal "data position" 0 (cbuf-get-pd-cur buf))
+(test-equal "presentation-position" 0 (cbuf-get-pp-cur buf))
+(test-equal "goal column"  0 (cbuf-get-pp-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "weak and weary")
+(test-end "next line x2 from line 1")
+
+(test-begin "undo next line x2")
+(%undo buf)
+(test-equal "line cur" 1 (cbuf-get-line-cur buf))
+(test-equal "data position" 1 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 1 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 1 (cbuf-get-pp-goal buf))
+(test-end "undo next line x2")
+
+(test-end "ASCII")
+(test-end "CNL")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CPL")
+(test-begin "ASCII")
+
+(init-buf! buf text-ascii-short)
+(cbuf-set-line-cur! buf 3)
+(cbuf-set-positions! buf 1 'data)
+
+(test-begin "preceding line from line 3")
+(cbuf-cursor-preceding-line buf 1 #t)
+(test-equal "line cur" 2 (cbuf-get-line-cur buf))
+(test-equal "data position" 0 (cbuf-get-pd-cur buf))
+(test-equal "presentation-position" 0 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 0 (cbuf-get-pp-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "as I pondered")
+(test-end "preceding line from line 3")
+
+(test-begin "undo preceding line")
+(%undo buf)
+(test-equal "line cur" 3 (cbuf-get-line-cur buf))
+(test-equal "data position" 1 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 1 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 1 (cbuf-get-pp-goal buf))
+(test-end "undo preceding line")
+
+(test-begin "preceding line x2 from line 3")
+(init-buf! buf text-ascii-short)
+(cbuf-set-line-cur! buf 3)
+(cbuf-set-positions! buf 1 'data)
+(cbuf-cursor-preceding-line buf 2 #t)
+(test-equal "line cur" 1 (cbuf-get-line-cur buf))
+(test-equal "data position" 0 (cbuf-get-pd-cur buf))
+(test-equal "presentation-position" 0 (cbuf-get-pp-cur buf))
+(test-equal "goal column"  0 (cbuf-get-pp-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "a midnight dreary")
+(test-end "preceding line x2 from line 3")
+
+;; (pretty-print (cbuf-get-undo-list buf))
+
+(test-begin "undo preceding line x2")
+(%undo buf)
+(test-equal "line cur" 3 (cbuf-get-line-cur buf))
+(test-equal "data position" 1 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 1 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 1 (cbuf-get-pp-goal buf))
+(test-end "undo preceding line x2")
+
+(test-end "ASCII")
+(test-end "CPL")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CR")
+(test-begin "ASCII")
+
+(init-buf! buf text-ascii-short)
+(cbuf-set-line-cur! buf 2)
+(cbuf-set-positions! buf 9 'data)
+
+(test-begin "carriage return with line-home = 0")
+(cbuf-set-line-home buf 0)
+(cbuf-carriage-return buf #t)
+(test-equal "line cur" 2 (cbuf-get-line-cur buf))
+(test-equal "data position" 0 (cbuf-get-pd-cur buf))
+(test-equal "presentation-position" 0 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 0 (cbuf-get-pp-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "as I pondered")
+(test-end "carriage return with line-home = 0")
+
+(test-begin "undo carriage return")
+(%undo buf)
+(test-equal "line cur" 2 (cbuf-get-line-cur buf))
+(test-equal "data position" 9 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 9 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 9 (cbuf-get-pp-goal buf))
+(test-end "undo carriage return")
+
+(test-begin "carriage return with line-home = 1")
+(cbuf-set-line-home buf 1)
+(cbuf-carriage-return buf #t)
+(test-equal "line cur" 2 (cbuf-get-line-cur buf))
+(test-equal "data position" 1 (cbuf-get-pd-cur buf))
+(test-equal "presentation-position" 1 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 1 (cbuf-get-pp-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "as I pondered")
+(test-end "carriage return with line-home = 1")
+
+(test-begin "undo carriage return")
+(%undo buf)
+(test-equal "line cur" 2 (cbuf-get-line-cur buf))
+(test-equal "data position" 9 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 9 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 9 (cbuf-get-pp-goal buf))
+(test-end "undo carriage return")
+
+(test-end "ASCII")
+(test-end "CR")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CTC")
+(test-begin "ASCII")
+
+(test-begin "two tabs of tabsize = 6")
+(init-buf! buf string-data-ascii)
+(cbuf-set-positions! buf 0 'data)
+(cbuf-cursor-tabulation-control buf 6)
+(cbuf-cursor-forward-tabulation buf 2 #t)
+(test-equal "data position" 12 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 12 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 12 (cbuf-get-pp-goal buf))
+(test-end "two tabs of tabsize = 6")
+
+(test-end "ASCII")
+(cbuf-cursor-tabulation-control buf 8)
+(test-end "CTC")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CUB")
+(test-begin "ASCII")
+
+                                        ;---
+(test-begin "cursor left 2 from col 24")
+(init-buf! buf string-data-ascii)
+(cbuf-set-positions! buf 24 'data)
+(cbuf-cursor-left buf 2 #t)
+(test-equal "data position" 22 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 22 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 22 (cbuf-get-pp-goal buf))
+(test-equal "current-line" string-data-ascii (cbuf-get-text-cur buf))
+(test-end "cursor left 2 from col 24")
+
+(test-begin "undo cursor left")
+(%undo buf)
+(test-equal "data position" 24 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 24 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 24 (cbuf-get-pp-goal buf))
+(test-equal "current-line" string-data-ascii (cbuf-get-text-cur buf))
+(test-end "undo cursor left")
+
+(test-end "ASCII")
+(test-end "CUB")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CUD")
+(test-begin "ASCII")
+
+(init-buf! buf text-ascii-short)
+(cbuf-set-line-cur! buf 1)
+(cbuf-set-positions! buf 1 'data)
+
+(test-begin "cursor down from line 1")
+(cbuf-cursor-down buf 1 #t)
+(test-equal "line cur" 2 (cbuf-get-line-cur buf))
+(test-equal "data position" 1 (cbuf-get-pd-cur buf))
+(test-equal "presentation-position" 1 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 1 (cbuf-get-pp-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "as I pondered")
+(test-end "cursor down from line 1")
+
+(test-begin "cursor down line")
+(%undo buf)
+(test-equal "line cur" 1 (cbuf-get-line-cur buf))
+(test-equal "data position" 1 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 1 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 1 (cbuf-get-pp-goal buf))
+(test-end "cursor down line")
+
+(test-begin "cursor down x2 from line 1")
+(init-buf! buf text-ascii-short)
+(cbuf-set-line-cur! buf 1)
+(cbuf-set-positions! buf 1 'data)
+(cbuf-cursor-down buf 2 #t)
+(test-equal "line cur" 3 (cbuf-get-line-cur buf))
+(test-equal "data position" 1 (cbuf-get-pd-cur buf))
+(test-equal "presentation-position" 1 (cbuf-get-pp-cur buf))
+(test-equal "goal column"  1 (cbuf-get-pp-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "weak and weary")
+(test-end "cursor down x2 from line 1")
+
+(test-begin "undo cursor down x2")
+(%undo buf)
+(test-equal "line cur" 1 (cbuf-get-line-cur buf))
+(test-equal "data position" 1 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 1 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 1 (cbuf-get-pp-goal buf))
+(test-end "undo cursor down x2")
+
+(test-end "ASCII")
+(test-end "CUD")
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CUF")
+(test-begin "ASCII")
+
+                                        ;---
+(test-begin "cursor right 2 from col 22")
+(init-buf! buf string-data-ascii)
+(cbuf-set-positions! buf 22 'data)
+(cbuf-cursor-right buf 2 #t)
+(test-equal "data position" 24 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 24 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 24 (cbuf-get-pp-goal buf))
+(test-equal "current-line" string-data-ascii (cbuf-get-text-cur buf))
+(test-end "cursor right 2 from col 22")
+
+(test-begin "undo cursor right")
+(%undo buf)
+(test-equal "data position" 22 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 22 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 22 (cbuf-get-pp-goal buf))
+(test-equal "current-line" string-data-ascii (cbuf-get-text-cur buf))
+(test-end "undo cursor right")
+
+(test-end "ASCII")
+(test-end "CUF")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "CUP")
+(test-begin "ASCII")
+
+(init-buf! buf text-ascii-short)
+(cbuf-set-line-cur! buf 1)
+(cbuf-set-positions! buf 4 'data)
+
+(test-begin "cursor position to line 2 col 3")
+(cbuf-cursor-position buf 2 3)
+(test-equal "line cur" 2 (cbuf-get-line-cur buf))
+(test-equal "data position" 3 (cbuf-get-pd-cur buf))
+(test-equal "presentation-position" 3 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 3 (cbuf-get-pp-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "as I pondered")
+(test-end "cursor position to line 2 col 3")
+
+(test-begin "undo cursor position")
+(%undo buf)
+(test-equal "line cur" 1 (cbuf-get-line-cur buf))
+(test-equal "data position" 4 (cbuf-get-pd-cur buf))
+(test-equal "presentation position" 4 (cbuf-get-pp-cur buf))
+(test-equal "goal column" 4 (cbuf-get-pp-goal buf))
+(test-end "undo cursor position")
+(test-end "ASCII")
+(test-end "CUP")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; CUP
+
+(test-begin "cbuf-cursor-position")
+(test-begin "ASCII")
+
+(init-buf! buf text-ascii-short)
+(cbuf-set-y! buf 3)
+(cbuf-set-x! buf 1 'data)
+
+(test-begin "cursor moved within range")
+(cbuf-cursor-position buf 2 1)
+(test-equal "y" 2 (cbuf-get-y buf))
+(test-equal "x-data" 1 (cbuf-get-x-data buf))
+(test-equal "x-cell" 1 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 1 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "as I pondered")
+(test-end "cursor moved within range")
+
+(test-begin "cursor moved too wide")
+(init-buf! buf text-ascii-short)
+(cbuf-set-y! buf 3)
+(cbuf-set-x! buf 1 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-end-of-line? err) #t)
+                     (else #f))
+                    (cbuf-cursor-position buf 1 40)))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" (string-base-length "a midnight-dreary") (cbuf-get-x-data buf))
+(test-equal "x-cell" (string-base-length "a midnight-dreary") (cbuf-get-x-cell buf))
+(test-equal "x-goal"  40 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "a midnight dreary")
+(test-end "cursor moved too wide")
+
+(test-begin "cursor moved too long")
+(init-buf! buf text-ascii-short)
+(cbuf-set-y! buf 3)
+(cbuf-set-x! buf 1 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-end-of-buffer? err) #t)
+                     (else #f))
+                    (cbuf-cursor-position buf 40 2)))
+(test-equal "y" (+ -1 (length (cbuf-get-text buf))) (cbuf-get-y buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 2 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 2 (cbuf-get-x-goal buf))
+(test-equal "current line" (last (cbuf-get-text buf)) (cbuf-get-text-cur buf))
+(test-end "cursor moved too long")
+
+(test-begin "cursor moved too long and too wide")
+(init-buf! buf text-ascii-short)
+(cbuf-set-y! buf 3)
+(cbuf-set-x! buf 1 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-end-of-buffer? err) #t)
+                     (else #f))
+                    (cbuf-cursor-position buf 40 40)))
+(test-equal "y" (+ -1 (length (cbuf-get-text buf))) (cbuf-get-y buf))
+(test-equal "x-data" (string-base-length (last (cbuf-get-text buf)))
+            (cbuf-get-x-data buf))
+(test-equal "x-cell" (string-base-length (last (cbuf-get-text buf))) (cbuf-get-x-cell buf))
+(test-equal "x-goal" 40 (cbuf-get-x-goal buf))
+(test-equal "current line" (last (cbuf-get-text buf)) (cbuf-get-text-cur buf))
+(test-end "cursor moved too long and too wide")
+
+(test-end "ASCII")
+(test-end "CUP")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; DA
+
+(test-begin "cbuf-device-attributes")
+(test-assert (string? (cbuf-device-attributes buf)))
+(test-end "cbuf-device-attributes")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; DCH
+
+(test-begin "cbuf-delete-character")
+
+(test-begin "delete chars from BOB")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 0)
+(cbuf-set-x! buf 0 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 0)
+(cbuf-set-x-mark! buf 0)
+(cbuf-delete-character buf 4 'data #t #t)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" "一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+(test-equal "second line" "にでも弾かれたように　飛び上がっ　た。" (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "老婆は、")
+            (cbuf-get-cut-buffer buf))
+(test-equal "mark" #t (cbuf-is-mark-set? buf))
+(test-equal "x-mark" 1 (cbuf-get-x-mark buf))
+(test-equal "y-mark" 0 (cbuf-get-y-mark buf))
+(test-end "delete chars from BOB")
+
+(define text-ascii-long
+  '("\tPreserve me, O God: for in thee do I put my trust."
+    "\tO my soul, thou has said unto the LORD, Thou art my Lord: my goodness"
+    "extendeth not to thee;"
+    "\tBut to the saints that are in the earth, and to the excellent, in whom"
+    "is all my delight."
+    "\tTheir sorrows shall be multiplied that hasten after another god: their"
+    "drink offerings of blood will I not offer, nor take up their names"
+    "into my lips."
+    "\tThe LORD is the portion of mine inheritance and of my cup: thou"
+    "maintainest my lot."
+    "\tThe lines are fallen unto me in pleasant places; yea, I have a goodly"
+    "heritage."
+    "\tI will bless the LORD, who hath given me counsel: my reins also"
+    "instruct me in the night seasons."
+    "\tI have set the LORD always before me: because he is at my right hand,"
+    "I shall not be moved."
+    "\tTherefore my heart is glad, and my glory rejoiceth: my flesh also"
+    "shall rest in hope."
+    "\tFor thou wilt not leave my soul in hell; neither wilt thou suffer"
+    "thine Holy One to see corruption."
+    "\tThou wilt shew me the path of life: in thy presence is fulness of joy;"
+    "at thy right hand there are pleasures for evermore."))
+
+
+(test-begin "delete chars from center of buffer")
+(init-buf! buf text-ascii-long)
+(cbuf-set-y! buf 6)
+(cbuf-set-x! buf 10 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 6)
+(cbuf-set-x-mark! buf 20)
+(cbuf-delete-character buf 5 'data #t #t)
+(test-equal "y" 6 (cbuf-get-y buf))
+(test-equal "x-data" 10 (cbuf-get-x-data buf))
+(test-equal "x-cell" 10 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 10 (cbuf-get-x-goal buf))
+(test-equal "first line" "\tPreserve me, O God: for in thee do I put my trust."
+            (first (cbuf-get-text buf)))
+;;                         "drink offerings of blood will I not offer, nor take up their names"
+(test-equal "current line" "drink offe of blood will I not offer, nor take up their names"
+            (cbuf-get-text-cur buf))
+(test-equal "cut buffer" (list "rings") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #t (cbuf-is-mark-set? buf))
+(test-equal "y mark" 6 (cbuf-get-y-mark buf))
+(test-equal "x mark" 15 (cbuf-get-y-mark buf))
+(test-end "delete chars from center of buffer")
+
+(test-begin "delete all chars")
+(init-buf! buf text-ascii-long)
+(cbuf-set-y! buf 6)
+(cbuf-set-x! buf 0 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 6)
+(cbuf-set-x-mark! buf 20)
+(cbuf-delete-character
+ buf (string-length "drink offerings of blood will I not offer, nor take up their names")
+ 'data #t #t)
+(test-equal "y" 6 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" "\tPreserve me, O God: for in thee do I put my trust."
+            (first (cbuf-get-text buf)))
+;;                         "drink offerings of blood will I not offer, nor take up their names"
+(test-equal "current line" "" (cbuf-get-text-cur buf))
+(test-equal "cut buffer" (list "drink offerings of blood will I not offer, nor take up their names") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #f (cbuf-is-mark-set? buf))
+(test-end "delete all chars")
+
+(test-begin "delete too many chars")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 0)
+(cbuf-set-x! buf 4 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 0)
+(cbuf-set-x-mark! buf 5)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-end-of-buffer? err) #t)
+                     (else #f))
+                    (cbuf-delete-character buf 1000 'data #t #t)))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 4 (cbuf-get-x-data buf))
+(test-equal "x-cell" 8 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 8 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、" (first (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "一目下人を見ると、まるで弩（いしゆみ）") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #f (cbuf-is-mark-set? buf))
+(test-end "delete too many chars")
+
+(test-end "cbuf-delete-character")
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; DL
+(test-begin "cbuf-delete-line")
+
+(test-begin "delete line from BOB")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 0)
+(cbuf-set-x! buf 3 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 0)
+(cbuf-set-x-mark! buf 5)
+(cbuf-delete-line buf 1 #t #t)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" "にでも弾かれたように　飛び上がっ　た。" (first (cbuf-get-text buf)))
+(test-equal "second line" "「おのれ、どこへ行く。」" (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）")
+            (cbuf-get-cut-buffer buf))
+(test-equal "mark" #f (cbuf-is-mark-set? buf))
+(test-end "delete line from BOB")
+
+
+(test-begin "delete lines from center of buffer")
+(init-buf! buf text-ascii-long)
+(cbuf-set-y! buf 5)
+(cbuf-set-x! buf 5 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 19)
+(cbuf-set-x-mark! buf 6)
+(cbuf-delete-line buf 10 #t #t)
+(test-equal "y" 5 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" "\tPreserve me, O God: for in thee do I put my trust."
+            (first (cbuf-get-text buf)))
+(test-equal "second line" "\tO my soul, thou has said unto the LORD, Thou art my Lord: my goodness"
+            (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "\tTheir sorrows shall be multiplied that hasten after another god: their"
+                               "drink offerings of blood will I not offer, nor take up their names"
+                               "into my lips."
+                               "\tThe LORD is the portion of mine inheritance and of my cup: thou"
+                               "maintainest my lot."
+                               "\tThe lines are fallen unto me in pleasant places; yea, I have a goodly"
+                               "heritage."
+                               "\tI will bless the LORD, who hath given me counsel: my reins also"
+                               "instruct me in the night seasons."
+                               "\tI have set the LORD always before me: because he is at my right hand,")
+            (cbuf-get-cut-buffer buf))
+(test-equal "mark" #t (cbuf-is-mark-set? buf))
+(test-equal "y mark" 9 (cbuf-get-y-mark buf))
+(test-end "delete lines from center of buffer")
+
+
+(test-begin "delete all lines")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 0)
+(cbuf-set-x! buf 3 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 0)
+(cbuf-set-x-mark! buf 5)
+(cbuf-delete-line buf 3 #t #t)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" "" (first (cbuf-get-text buf)))
+(test-equal "number of lines" 1 (length (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                               "にでも弾かれたように　飛び上がっ　た。"
+                               "「おのれ、どこへ行く。」")
+            (cbuf-get-cut-buffer buf))
+(test-equal "mark" #f (cbuf-is-mark-set? buf))
+(test-end "delete all lines")
+
+(test-begin "delete too many lines")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 0)
+(cbuf-set-x! buf 4 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 0)
+(cbuf-set-x-mark! buf 5)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-end-of-buffer? err) #t)
+                     (else #f))
+                    (cbuf-delete-line buf 4 #t #t)))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" "" (first (cbuf-get-text buf)))
+(test-equal "number of lines" 1 (length (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                               "にでも弾かれたように　飛び上がっ　た。"
+                               "「おのれ、どこへ行く。」")
+            (cbuf-get-cut-buffer buf))
+(test-equal "mark" #f (cbuf-is-mark-set? buf))
+(test-end "delete too many lines")
+
+
+(test-end "cbuf-delete-line")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; DSR
+
+(test-begin "cbuf-device-status-report")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 2)
+(cbuf-set-x! buf 3 'data)
+(test-equal "data y" 2 (car (cbuf-device-status-report buf 'data)))
+(test-equal "data x" 3 (cdr (cbuf-device-status-report buf 'data)))
+(test-equal "presentation y" 2(car (cbuf-device-status-report buf 'presentation)))
+(test-equal "presentation x" 6 (cdr (cbuf-device-status-report buf 'presentation)))
+(test-end "cbuf-device-status-report")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ECH
+
+(test-begin "cbuf-erase-character")
+
+(test-begin "erase Kanji data from bol")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 0 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 1)
+(cbuf-erase-character buf 'data 1 #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+(test-equal "second line" " でも弾かれたように　飛び上がっ　た。" (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "に") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #t (cbuf-is-mark-set? buf))
+(test-equal "x-mark" 1 (cbuf-get-x-mark buf))
+(test-end "erase Kanji data from bol")
+
+(test-begin "erase Kanji presentation from bol")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 0 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 1)
+(cbuf-erase-character buf 'presentation 1 #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+(test-equal "second line" "  でも弾かれたように　飛び上がっ　た。" (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "に") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #t (cbuf-is-mark-set? buf))
+(test-equal "x-mark" 2 (cbuf-get-x-mark buf))
+(test-end "erase Kanji presentation from bol")
+
+(test-end "cbuf-erase-character")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; EL
+
+(test-begin "cbuf-erase-in-line")
+
+;;------------------------------------
+(test-begin "%cbuf-erase-in-line-to-eol")
+
+(test-begin "erase Kanji data from bol")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 0 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 1)
+(%cbuf-erase-in-line-to-eol buf 'data #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+(test-equal "second line" (make-string 19 #\space) (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "にでも弾かれたように　飛び上がっ　た。") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #f (cbuf-is-mark-set? buf))
+(test-end "erase Kanji data from bol")
+
+(test-begin "erase Kanji presentation from bol")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 0 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 1)
+(%cbuf-erase-in-line-to-eol buf 'presentation #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+(test-equal "second line" (make-string 38 #\space) (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "にでも弾かれたように　飛び上がっ　た。") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #f (cbuf-is-mark-set? buf))
+(test-end "erase Kanji presentation from bol")
+
+(test-begin "erase Kanji data from center of line")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 9 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 1)
+(%cbuf-erase-in-line-to-eol buf 'data #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 9 (cbuf-get-x-data buf))
+(test-equal "x-cell" 18 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 18 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+(test-equal "second line" "にでも弾かれたよう          " (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "に　飛び上がっ　た。") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #t (cbuf-is-mark-set? buf))
+(test-equal "x-mark" 1 (cbuf-get-x-mark buf))
+(test-end "erase Kanji data from center of line")
+
+(test-begin "erase Kanji presentation from center of line")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 9 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 1)
+(%cbuf-erase-in-line-to-eol buf 'presentation #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 9 (cbuf-get-x-data buf))
+(test-equal "x-cell" 18 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 18 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+;;                        "にでも弾かれたように　飛び上がっ　た。"
+(test-equal "second line" "にでも弾かれたよう                    " (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "に　飛び上がっ　た。") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #t (cbuf-is-mark-set? buf))
+(test-equal "x-mark" 1 (cbuf-get-x-mark buf))
+(test-end "erase Kanji presentation from center of line")
+
+(test-end "%cbuf-erase-in-line-to-eol")
+
+;;------------------------------------
+(test-begin "%cbuf-erase-in-line-from-bol")
+
+(test-begin "erase Kanji data to eol")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 19 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 1)
+(%cbuf-erase-in-line-from-bol buf 'data #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 19 (cbuf-get-x-data buf))
+(test-equal "x-cell" 19 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 19 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+(test-equal "second line" (make-string 19 #\space) (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "にでも弾かれたように　飛び上がっ　た。") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #f (cbuf-is-mark-set? buf))
+(test-end "erase Kanji data to eol")
+
+(test-begin "erase Kanji presentation to eol")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 19 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 1)
+(%cbuf-erase-in-line-from-bol buf 'presentation #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 38 (cbuf-get-x-data buf))
+(test-equal "x-cell" 38 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 38 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+(test-equal "second line" (make-string 38 #\space) (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "にでも弾かれたように　飛び上がっ　た。") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #f (cbuf-is-mark-set? buf))
+(test-end "erase Kanji presentation to eol")
+
+(test-begin "erase Kanji data to center of line")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 9 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 10)
+(%cbuf-erase-in-line-from-bol buf 'data #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 9 (cbuf-get-x-data buf))
+(test-equal "x-cell" 9 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 9 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+(test-equal "second line" "         に　飛び上がっ　た。" (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "にでも弾かれたよう") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #t (cbuf-is-mark-set? buf))
+(test-equal "x-mark" 10 (cbuf-get-x-mark buf))
+(test-end "erase Kanji data to center of line")
+
+(test-begin "erase Kanji presentation to center of line")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 9 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 10)
+(%cbuf-erase-in-line-from-bol buf 'presentation #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 18 (cbuf-get-x-data buf))
+(test-equal "x-cell" 18 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 18 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+;;                        "にでも弾かれたように　飛び上がっ　た。"
+(test-equal "second line" "                  に　飛び上がっ　た。" (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "にでも弾かれたよう") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #t (cbuf-is-mark-set? buf))
+(test-equal "x-mark" 19 (cbuf-get-x-mark buf))
+(test-end "erase Kanji presentation to center of line")
+
+(test-end "%cbuf-erase-in-line-from-bol")
+
+;;------------------------------------
+(test-begin "%cbuf-erase-in-line")
+
+(test-begin "erase Kanji data")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 9 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 10)
+(%cbuf-erase-in-line buf 'data #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 9 (cbuf-get-x-data buf))
+(test-equal "x-cell" 9 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 9 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+(test-equal "second line" (make-string 19 #\space) (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "にでも弾かれたように　飛び上がっ　た。") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #f (cbuf-is-mark-set? buf))
+(test-end "erase Kanji data")
+
+(test-begin "erase Kanji presentation")
+(init-buf! buf (list "老婆は、一目下人を見ると、まるで弩（いしゆみ）"
+                     "にでも弾かれたように　飛び上がっ　た。"
+                     "「おのれ、どこへ行く。」"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 9 'data)
+(cbuf-set-mark-flag! buf #t)
+(cbuf-set-y-mark! buf 1)
+(cbuf-set-x-mark! buf 10)
+(%cbuf-erase-in-line buf 'presentation #t #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 18 (cbuf-get-x-data buf))
+(test-equal "x-cell" 18 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 18 (cbuf-get-x-goal buf))
+(test-equal "first line" "老婆は、一目下人を見ると、まるで弩（いしゆみ）" (first (cbuf-get-text buf)))
+(test-equal "second line" (make-string 38 #\space) (second (cbuf-get-text buf)))
+(test-equal "cut buffer" (list "にでも弾かれたように　飛び上がっ　た。") (cbuf-get-cut-buffer buf))
+(test-equal "mark" #f (cbuf-is-mark-set? buf))
+(test-end "erase Kanji presentation")
+(test-end "%cbuf-erase-in-line")
+
+(test-end "cbuf-erase-in-line")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; HPA
+
+(test-begin "cbuf-character-position-absolute")
+
+(test-begin "move to beginning of line")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(cbuf-character-position-absolute buf 0)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "move to beginning of line")
+
+(test-begin "move before beginning of line")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-beginning-of-line? err) #t)
+                     (else #f))
+                    (cbuf-character-position-absolute buf -1)))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "move before beginning of line")
+
+(test-begin "move to end of line")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(cbuf-character-position-absolute buf 6)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 6 (cbuf-get-x-data buf))
+(test-equal "x-cell" 6 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 6 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "move to end of line")
+
+(test-begin "move past end of line")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-end-of-line? err) #t)
+                     (else #f))
+                    (cbuf-character-position-absolute buf 7)))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 6 (cbuf-get-x-data buf))
+(test-equal "x-cell" 6 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 6 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "move past end of line")
+
+(test-end "cbuf-character-position-absolute")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; HPB
+
+(test-begin "cbuf-character-position-backward")
+
+(test-begin "move to beginning of line")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(cbuf-character-position-backward buf 1)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "move to beginning of line")
+
+(test-begin "move before beginning of line")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-beginning-of-line? err) #t)
+                     (else #f))
+                    (cbuf-character-position-backward buf 2)))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "move before beginning of line")
+
+(test-end "cbuf-character-position-backward")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; HPR
+
+(test-begin "cbuf-character-position-forward")
+
+(test-begin "move to end of line")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(cbuf-character-position-forward buf 5)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 6 (cbuf-get-x-data buf))
+(test-equal "x-cell" 6 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 6 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "move to end of line")
+
+(test-begin "move past end of line")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-end-of-line? err) #t)
+                     (else #f))
+                    (cbuf-character-position-forward buf 7)))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 6 (cbuf-get-x-data buf))
+(test-equal "x-cell" 6 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 6 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "move past end of line")
+
+(test-end "cbuf-character-position-forward")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; HVP
+
+(test-begin "cbuf-character-and-line-position")
+
+(test-begin "jump to beginning of buffer")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(cbuf-character-and-line-position buf 0 0)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "jump to beginning of buffer")
+
+(test-begin "jump to end of buffer")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(cbuf-character-and-line-position buf 1 6)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 6 (cbuf-get-x-data buf))
+(test-equal "x-cell" 6 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 6 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "jump to end of buffer")
+
+(test-begin "jump past end of buffer")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-end-of-line? err) #t)
+                     (else #f))
+                    (cbuf-character-and-line-position buf 1 7)))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 6 (cbuf-get-x-data buf))
+(test-equal "x-cell" 6 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 6 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "jump past end of buffer")
+
+(test-begin "jump past end of buffer #2")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 1 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-end-of-buffer? err) #t)
+                     (else #f))
+                    (cbuf-character-and-line-position buf 2 6)))
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "jump past end of buffer #2")
+
+
+(test-end "cbuf-character-and-line-position")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ICH
+
+(test-begin "cbuf-insert-character")
+
+(test-begin "insert character at beginning of line")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 0)
+(cbuf-set-x! buf 0 'data)
+(cbuf-insert-character buf 2 #t)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "  line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "insert character at beginning of line")
+
+(test-begin "undo insert character at beginning of line")
+(cbuf-undo buf)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "undo insert character at beginning of line")
+
+(test-begin "insert character at end of line")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 6 'data)
+(cbuf-insert-character buf 2 #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 6 (cbuf-get-x-data buf))
+(test-equal "x-cell" 6 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 6 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2  ")
+(test-end "insert character at end of line")
+
+(test-begin "undo insert character at end of line")
+(cbuf-undo buf)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 6 (cbuf-get-x-data buf))
+(test-equal "x-cell" 6 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 6 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-end "undo insert character at end of line")
+
+(test-end "cbuf-insert-character")
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; IL
+
+(test-begin "cbuf-insert-line")
+
+(test-begin "insert lines at beginning")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 0)
+(cbuf-set-x! buf 2 'data)
+(cbuf-insert-line buf 2 #t)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  0 (cbuf-get-x-goal buf))
+(test-equal "first line" (cbuf-get-text-cur buf) "")
+(test-equal "second line" (second (cbuf-get-text buf)) "")
+(test-equal "third line" (third (cbuf-get-text buf)) "line 1")
+(test-end "insert lines at beginning")
+
+(test-begin "undo insert lines at beginning")
+(cbuf-undo buf)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 2 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  2 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "line 2")
+(test-equal "line count" 2 (length (cbuf-get-text buf)))
+(test-end "undo insert lines at beginning")
+
+(test-begin "insert line at end")
+(init-buf! buf (list "line 1" "line 2"))
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 6 'data)
+(cbuf-insert-line buf 1 #t)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  0 (cbuf-get-x-goal buf))
+(test-equal "first line" (first (cbuf-get-text buf)) "line 1")
+(test-equal "second line" (second (cbuf-get-text buf)) "")
+(test-equal "third line" (third (cbuf-get-text buf)) "line 2")
+(test-end "insert line at end")
+
+(test-end "cbuf-insert-line")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; VPA
+
+(test-begin "cbuf-line-position-absolute")
+
+(test-begin "move to last line")
+(init-buf! buf text-ascii-short)
+(cbuf-set-y! buf 2)
+(cbuf-set-x! buf 2 'data)
+(cbuf-line-position-absolute buf 3)
+(test-equal "y" 3 (cbuf-get-y buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 2 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  2 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "weak and weary")
+(test-end "move to last line")
+
+(test-begin "move to first line")
+(init-buf! buf text-ascii-short)
+(cbuf-set-y! buf 3)
+(cbuf-set-x! buf 0 'data)
+(cbuf-line-position-absolute buf 0)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "\tOnce upon")
+(test-end "move to first line")
+
+(test-begin "move past end")
+(init-buf! buf text-ascii-short)
+(cbuf-set-line-cur! buf 1)
+(cbuf-set-positions! buf 1 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-end-of-buffer? err)
+                      #t)
+                     (else
+                      #f))
+                    (cbuf-line-position-absolute buf 4)))
+(test-equal "y" 3 (cbuf-get-y buf))
+(test-equal "x-data" 14 (cbuf-get-x-data buf))
+(test-equal "x-cell" 14 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 14 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "weak and weary")
+(test-end "move past end")
+
+(test-begin "move to a shorter line")
+(init-buf! buf '("abcde" "def" "ghijk"))
+(cbuf-set-y! buf 2)
+(cbuf-set-x! buf 5 'data)
+(cbuf-line-position-absolute buf 1)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 3 (cbuf-get-x-data buf))
+(test-equal "x-cell" 3 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  3 (cbuf-get-x-goal buf))
+(test-end "move to a shorter line")
+
+(test-begin "continuation marks")
+(init-buf! buf (list "aeiou"
+                     (string #\a #\◌́ #\e #\◌̂ #\◌̡ #\i #\◌̣ #\◌̅ #\o #\◌̆ #\u #\◌̐)))
+;; Move from the `i' in the second line to the `i' in the first line.
+(cbuf-set-line-cur! buf 1)
+(cbuf-set-x! buf 2 'data)
+(cbuf-line-position-absolute buf 0)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-index" 2 (cbuf-get-x-index buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 2 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  2 (cbuf-get-x-goal buf))
+(test-end "continuation marks")
+
+(test-end "cbuf-line-position-absolute")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; VPB
+
+(test-begin "cbuf-line-position-backward")
+
+(test-begin "backward from last line")
+(init-buf! buf text-ascii-short)
+(cbuf-set-y! buf 3)
+(cbuf-set-x! buf 2 'data)
+(cbuf-line-position-backward buf 2)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 2 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  2 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "a midnight dreary")
+(test-end "backward from last line")
+
+(test-begin "backward to beginning")
+(init-buf! buf text-ascii-short)
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 0 'data)
+(cbuf-line-position-backward buf 1)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "\tOnce upon")
+(test-end "backward to beginning")
+
+(test-begin "backward before beginning")
+(init-buf! buf text-ascii-short)
+(cbuf-set-line-cur! buf 1)
+(cbuf-set-positions! buf 1 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-beginning-of-buffer? err)
+                      #t)
+                     (else
+                      #f))
+                    (cbuf-line-position-backward buf 3)))
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-data" 0 (cbuf-get-x-data buf))
+(test-equal "x-cell" 0 (cbuf-get-x-cell buf))
+(test-equal "x-goal" 0 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "\tOnce upon")
+(test-end "backward before beginning")
+
+(test-begin "backward to a shorter line")
+(init-buf! buf '("abcde" "def" "ghijk"))
+(cbuf-set-y! buf 2)
+(cbuf-set-x! buf 5 'data)
+(cbuf-line-position-backward buf 1)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 3 (cbuf-get-x-data buf))
+(test-equal "x-cell" 3 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  3 (cbuf-get-x-goal buf))
+(test-end "backward to a shorter line")
+
+(test-begin "continuation marks")
+(init-buf! buf (list "aeiou"
+                     (string #\a #\◌́ #\e #\◌̂ #\◌̡ #\i #\◌̣ #\◌̅ #\o #\◌̆ #\u #\◌̐)))
+;; Move from the `i' in the second line to the `i' in the first line.
+(cbuf-set-line-cur! buf 1)
+(cbuf-set-x! buf 2 'data)
+(cbuf-line-position-backward buf 1)
+(test-equal "y" 0 (cbuf-get-y buf))
+(test-equal "x-index" 2 (cbuf-get-x-index buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 2 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  2 (cbuf-get-x-goal buf))
+(test-end "continuation marks")
+
+(test-end "cbuf-line-position-backward")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; VPR
+
+(test-begin "cbuf-line-position-forward")
+
+(test-begin "forward from beginning")
+(init-buf! buf text-ascii-short)
+(cbuf-set-y! buf 0)
+(cbuf-set-x! buf 2 'data)
+(cbuf-line-position-forward buf 2)
+(test-equal "y" 2 (cbuf-get-y buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 2 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  2 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "as I pondered")
+(test-end "forward from beginning")
+
+(test-begin "forward from middle")
+(init-buf! buf text-ascii-short)
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 2 'data)
+(cbuf-line-position-forward buf 2)
+(test-equal "y" 3 (cbuf-get-y buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 2 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  2 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "weak and weary")
+(test-end "forward from middle")
+
+(test-begin "forward to end")
+(init-buf! buf text-ascii-short)
+(cbuf-set-y! buf 1)
+(cbuf-set-x! buf 14 'data)
+(cbuf-line-position-forward buf 2)
+(test-equal "y" 3 (cbuf-get-y buf))
+(test-equal "x-data" 14 (cbuf-get-x-data buf))
+(test-equal "x-cell" 14 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  14 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "weak and weary")
+(test-end "forward to end")
+
+(test-begin "forward past end")
+(init-buf! buf text-ascii-short)
+(cbuf-set-line-cur! buf 1)
+(cbuf-set-positions! buf 14 'data)
+(test-assert "throws error"
+             (guard (err
+                     ((cbuf-end-of-buffer? err)
+                      #t)
+                     (else
+                      #f))
+                    (cbuf-line-position-forward buf 3)))
+(test-equal "y" 3 (cbuf-get-y buf))
+(test-equal "x-data" 14 (cbuf-get-x-data buf))
+(test-equal "x-cell" 14 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  14 (cbuf-get-x-goal buf))
+(test-equal "current line" (cbuf-get-text-cur buf) "weak and weary")
+(test-end "forward past end")
+
+(test-begin "forward to a shorter line")
+(init-buf! buf '("abcde" "def" "ghijk"))
+(cbuf-set-y! buf 0)
+(cbuf-set-x! buf 5 'data)
+(cbuf-line-position-forward buf 1)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-data" 3 (cbuf-get-x-data buf))
+(test-equal "x-cell" 3 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  3 (cbuf-get-x-goal buf))
+(test-end "forward to a shorter line")
+
+
+(test-begin "continuation marks")
+(init-buf! buf (list "aeiou"
+                     (string #\a #\◌́ #\e #\◌̂ #\◌̡ #\i #\◌̣ #\◌̅ #\o #\◌̆ #\u #\◌̐)))
+;; Move from the ASCII `i' in the first line to the decorated `#\ị̅'
+;; in the second line.
+(cbuf-set-line-cur! buf 0)
+(cbuf-set-x! buf 2 'data)
+(cbuf-line-position-forward buf 1)
+(test-equal "y" 1 (cbuf-get-y buf))
+(test-equal "x-index" 5 (cbuf-get-x-index buf))
+(test-equal "x-data" 2 (cbuf-get-x-data buf))
+(test-equal "x-cell" 2 (cbuf-get-x-cell buf))
+(test-equal "x-goal"  2 (cbuf-get-x-goal buf))
+(test-end "continuation marks")
+
+(test-end "cbuf-line-position-forward")
+(test-end "cbuf")
