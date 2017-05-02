@@ -10,4 +10,8 @@ TAGS
 *~
 *.tmp
 *.log
-gano
+
+Makefile.am
+Makefile.in
+configure
+

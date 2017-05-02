@@ -2,8 +2,8 @@
 ;;;   unit test for CBuffer
 ;;; ----------------------------------------------------------------
 (use-modules (gano CBuffer)
-	     (unit-test)
-	     (oop goops))
+             (unit-test)
+             (oop goops))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; make-empty-cbuffer
@@ -35,6 +35,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; carriage-return
+
 (define-class <test-carriage-return> (<test-case>))
 
 (define-method (test-carriage-return-one-pd (tc <test-carriage-return>))
@@ -48,7 +49,6 @@
     (write-character C #\x)
     (carriage-return C)
     (assert-equal 0 (get-line-cur C))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; write-character
 

@@ -27,16 +27,18 @@ SCM_LOG_COMPILER = guile
 AM_SCM_LOG_FLAGS = -L $(abs_top_srcdir) -s
 
 NOTERMTESTS = \
- cbuffer_bell.scm \
- cbuffer_bell_clear.scm \
- cbuffer_backspace_empty_line.scm \
- cbuffer_backspace_bol.scm \
- cbuffer_backspace.scm \
- cbuffer_cursor_backward_tabulation_empty_line.scm \
- cbuffer_cursor_backward_tabulation_bol.scm \
- cbuffer_cursor_backward_tabulation_column_1.scm \
- cbuffer_cursor_backward_tabulation_column_8.scm \
- cbuffer_cursor_backward_tabulation_column_9.scm
+ cbuffer.scm
+
+ # cbuffer_bell.scm \
+ # cbuffer_bell_clear.scm \
+ # cbuffer_backspace_empty_line.scm \
+ # cbuffer_backspace_bol.scm \
+ # cbuffer_backspace.scm \
+ # cbuffer_cursor_backward_tabulation_empty_line.scm \
+ # cbuffer_cursor_backward_tabulation_bol.scm \
+ # cbuffer_cursor_backward_tabulation_column_1.scm \
+ # cbuffer_cursor_backward_tabulation_column_8.scm \
+ # cbuffer_cursor_backward_tabulation_column_9.scm
 
 NARROWTESTS =
 WIDETESTS =
