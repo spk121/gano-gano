@@ -22,7 +22,7 @@
 	    pos-copy-lines
 	    pos-delete-lines
 	    
-	    pos-merged-lines
+	    pos-merge-lines
 	    pos-split-lines))
 
 (define (<> a b)

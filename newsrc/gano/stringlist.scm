@@ -9,7 +9,7 @@
             strlist-replace-in-line
             strlist-move-in-line
             strlist-copy-in-line
-            strlilst-delete-in-line
+            strlist-delete-in-line
 
             strlist-insert-lines
             strlist-replace-lines
@@ -132,15 +132,16 @@
        (cond
         ((< LMoveAfter LMoveStart)
          (append
-          (take strlist LMoveAfter)
-          (sublist strlist LMoveStart LMoveAfter)
+          (take strlist (1+ LMoveAfter))
+          (sublist strlist LMoveStart (1+ LMoveAfter))
           (sublist strlist LMoveAfter LMoveStart)
           (drop strlist LMoveEnd)))
         (else
-         (take strlist LMoveStart)
-         (sublist strlist LMoveEnd LMoveAfter)
-         (sublist strlist LMoveStart LMoveEnd)
-         (drop strlist LMoveAfter)))))))
+	 (append
+	  (take strlist LMoveStart)
+	  (sublist strlist LMoveEnd (1+ LMoveAfter))
+	  (sublist strlist LMoveStart LMoveEnd)
+	  (drop strlist LMoveAfter))))))))
 
 (define-syntax strlist-copy-lines
   (syntax-rules()
@@ -160,7 +161,7 @@
         (list (apply string-append (sublist strlist LMergeStart LMergeEnd)))
         (drop strlist LMergeEnd))))))
 
-(define-syntax strlist-split-lines
+(define-syntax strlist-split-line
   (syntax-rules()
     ((_ strlist LSplit PSplitAfter)
      (set! strlist
