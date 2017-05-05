@@ -137,11 +137,11 @@
           (sublist strlist LMoveAfter LMoveStart)
           (drop strlist LMoveEnd)))
         (else
-	 (append
-	  (take strlist LMoveStart)
-	  (sublist strlist LMoveEnd (1+ LMoveAfter))
-	  (sublist strlist LMoveStart LMoveEnd)
-	  (drop strlist LMoveAfter))))))))
+         (append
+          (take strlist LMoveStart)
+          (sublist strlist LMoveEnd (1+ LMoveAfter))
+          (sublist strlist LMoveStart LMoveEnd)
+          (drop strlist LMoveAfter))))))))
 
 (define-syntax strlist-copy-lines
   (syntax-rules()
@@ -170,3 +170,8 @@
         (list (string-take (list-ref strlist LSplit) PSplitAfter)
               (string-drop (list-ref strlist LSplit) PSplitAfter))
         (drop strlist (1+ LSplit)))))))
+
+;; Local Variables:
+;; coding: iso-latin-1-unix
+;; indent-tabs-mode: nil
+;; End:

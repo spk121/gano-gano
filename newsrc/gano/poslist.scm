@@ -352,3 +352,7 @@
       poslist))))
 
 
+;; Local Variables:
+;; coding: iso-latin-1-unix
+;; indent-tabs-mode: nil
+;; End:

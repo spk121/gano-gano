@@ -87,24 +87,24 @@ will move as text is inserted and deleted.
             get-text-cur
             get-text
             get-undo
-	    add-tag
-	    get-tags
-	    
+            add-tag
+            get-tags
+
             ;; Operations inspired by POSIX ED
             ed-append
-	    ed-change
-	    ed-delete
-	    ed-edit
-	    ed-insert
-	    ed-join
-	    ed-mark
-	    ed-read
-	    ed-get-mark
-	    ed-null
-	    ed-move
-	    ed-copy
-	    ed-line-number
-	    
+            ed-change
+            ed-delete
+            ed-edit
+            ed-insert
+            ed-join
+            ed-mark
+            ed-read
+            ed-get-mark
+            ed-null
+            ed-move
+            ed-copy
+            ed-line-number
+
             insert-lines-before
             replace-lines
             delete-all
@@ -347,10 +347,10 @@ current line if the implicit movement direction (SIMD) is 'forward, or
 to the first character position in the current line if SIMD is
 'backward."
   (set-pd-cur! buf
-	       (if (eqv? (get-implicit-movement-direction buf)
-			 'forward)
-		   (get-text-cur-length buf)
-		   0)))
+               (if (eqv? (get-implicit-movement-direction buf)
+                         'forward)
+                   (get-text-cur-length buf)
+                   0)))
 
 (define-method (set-pd-cur-to-simd-bol! (buf <CBuffer>))
   "Sets the active data position to the first character position in the
@@ -358,9 +358,9 @@ current line if the implicit movement direction (SIMD) is 'forward, or
 to the last character position in the current line if SIMD is
 'backward."
   (set-pd-cur! buf
-	       (if (eqv? (get-implicit-movement-direction buf) 'forward)
-		   0
-		   (get-text-cur-length buf))))
+               (if (eqv? (get-implicit-movement-direction buf) 'forward)
+                   0
+                   (get-text-cur-length buf))))
 
 (define-method (increase-pd-cur! (buf <CBuffer>) n)
   "Moves the active data position N characters to the right, if N is
@@ -989,21 +989,21 @@ the active data line set to the end of the line before the deletion
 region. It will be at the last charcter position if SIMD is 'forward,
 or the first character position if SIMD is 'negative."
   (let* ((LStart (bracket-line buf lstart))
-	 (LEnd (bracket-line buf lend))
-	 (ReplaceLen (length strlist)))
+         (LEnd (bracket-line buf lend))
+         (ReplaceLen (length strlist)))
 
     (if (null? strlist)
-	(op-delete-lines buf LStart LEnd)
-	(op-replace-lines buf LStart LEnd strlist))
+        (op-delete-lines buf LStart LEnd)
+        (op-replace-lines buf LStart LEnd strlist))
     (cond
      ((and (null? strlist) (<= (get-line-count buf) LStart))
       (set-line-cur! buf (1- (get-line-count buf)))
       (set-pd-cur-to-simd-eol! buf))
-      
+
      ((and (null? strlist) (> (get-line-count buf) LStart))
       (set-line-cur! buf LStart)
       (set-pd-cur-to-simd-bol! buf))
-      
+
      (else
       (set-line-cur! buf (+ LStart (1- ReplaceLen)))
       (set-pd-cur-to-simd-eol! buf)))))
@@ -1020,14 +1020,14 @@ line set to the end of the line before the deletion region. It will be
 at the last charcter position if SIMD is 'forward, or the first
 character position if SIMD is 'negative."
   (let* ((LStart (bracket-line buf lstart))
-	 (LEnd (bracket-line buf lend)))
+         (LEnd (bracket-line buf lend)))
 
     (op-delete-lines buf LStart LEnd)
     (cond
      ((<= (get-line-count buf) LStart)
       (set-line-cur! buf (1- (get-line-count buf)))
       (set-pd-cur-to-simd-eol! buf))
-      
+
      (else
       (set-line-cur! buf LStart)
       (set-pd-cur-to-simd-bol! buf)))))
@@ -1046,11 +1046,11 @@ placed at the first character position."
   (let ((bytes-read 0))
     (while #t
       (let ((txt (read-line input-port)))
-	(if (eof-object? txt)
-	    (break)
-	    (begin
-	      (set! bytes-read (+ bytes-read (string-length txt) 1))
-	      (ed-append buf (get-line-cur buf) (list txt))))))
+        (if (eof-object? txt)
+            (break)
+            (begin
+              (set! bytes-read (+ bytes-read (string-length txt) 1))
+              (ed-append buf (get-line-cur buf) (list txt))))))
     bytes-read))
 
 (define-method (ed-read (buf <CBuffer>) lineno input-port)
@@ -1062,16 +1062,16 @@ If the implicit movement direction (SIMD) is 'forward, it is placed at
 the last character position in the line.  If SIMD is 'backward, it is
 placed at the first character position."
   (let ((L (bracket-line buf lineno))
-	(bytes-read 0))
+        (bytes-read 0))
     (set-line-cur! buf L)
     (while #t
       (let ((txt (read-line input-port)))
-	(if (eof-object? txt)
-	    (break)
-	    (begin
-	      (set! bytes-read (+ bytes-read (string-length txt) 1))
-	      (ed-append buf (get-line-cur buf) (list txt))
-	      (set-line-cur! buf (1+ L))))))
+        (if (eof-object? txt)
+            (break)
+            (begin
+              (set! bytes-read (+ bytes-read (string-length txt) 1))
+              (ed-append buf (get-line-cur buf) (list txt))
+              (set-line-cur! buf (1+ L))))))
     (set-pd-cur-to-simd-eol! buf)
     bytes-read))
 
@@ -1094,13 +1094,13 @@ position will be at the last character position in the line."
     (unless (null? strlist)
       (op-insert-lines-before buf L strlist))
     (if (null? strlist)
-	(begin
-	  (set-line-cur! buf L)
-	  (set-pd-cur-to-simd-bol! buf))
-	;; else
-	(begin 
-	  (set-line-cur! buf (bracket-line buf (1- L)))
-	  (set-pd-cur-to-simd-eol! buf)))))
+        (begin
+          (set-line-cur! buf L)
+          (set-pd-cur-to-simd-bol! buf))
+        ;; else
+        (begin
+          (set-line-cur! buf (bracket-line buf (1- L)))
+          (set-pd-cur-to-simd-eol! buf)))))
 
 (define-method (ed-join (buf <CBuffer>) lstart lend)
   "Combine the lines LStart (inclusive) to LEnd (exclusive) into a single
@@ -1108,7 +1108,7 @@ line. The active data position will be moved to the last character position of
 that joined line if SIMD is 'forward, or to the first character position if
 SIMD is 'backward."
   (let ((LStart (bracket-line buf lstart))
-	(LEnd (bracket-line buf lend)))
+        (LEnd (bracket-line buf lend)))
     (op-merge-lines buf LStart LEnd)
     (set-line-cur! buf LStart)
     (set-pd-cur-to-simd-eol! buf)))
@@ -1119,21 +1119,21 @@ implicit movement direction (SIMD) is 'forward, or at the last data
 position of the line, if SIMD is 'backward."
   (let ((L (bracket-line buf lineno)))
     (bookmark-set! (get-bookmarks buf) name
-		   L
-		   (if (eqv? (get-implicit-movement-direction buf) 'forward)
-		       0
-		       (get-text-cur-length buf)))))
+                   L
+                   (if (eqv? (get-implicit-movement-direction buf) 'forward)
+                       0
+                       (get-text-cur-length buf)))))
 
 (define-method (ed-get-mark (buf <CBuffer>) name)
   "Return the line number in which a bookmark has been placed, or
 #f is no such bookmark exists."
   (let ((bm (bookmark-get (get-bookmarks buf) name)))
     (and bm
-	 (list-ref bm 1))))
+         (list-ref bm 1))))
 
 (define-method (ed-null (buf <CBuffer>))
   (get-line-cur buf))
-  
+
 (define-method (ed-move (buf <CBuffer>) lmovebegin lmoveend lmoveafter)
   "Reposition the lines between LMoveBegin (inclusive) and
 LMoveEnd (exclusive) to after the line LMoveAfter.
@@ -1144,13 +1144,13 @@ data position will be at the last character position in that line.  If
 it is 'backward, it will be at the first character position in that
 line."
   (let ((LMoveBegin (bracket-line buf lmovebegin))
-	(LMoveEnd (bracket-line buf lmoveend))
-	(LMoveAfter (bracket-line buf lmoveafter)))
+        (LMoveEnd (bracket-line buf lmoveend))
+        (LMoveAfter (bracket-line buf lmoveafter)))
     (op-move-lines buf LMoveBegin LMoveEnd LMoveAfter)
     (set-line-cur! buf (+ LMoveAfter (- LMoveEnd LMoveBegin)))
     (set-pd-cur-to-simd-eol! buf)))
-    
-    
+
+
 (define-method (ed-copy (buf <CBuffer>) lcopybegin lcopyend lcopyafter)
   "Make a copy of the lines between LCopyBegin (inclusive) and
 LCopyEnd (exclusive) and position that copy after the line
@@ -1162,11 +1162,11 @@ data position will be at the last character position in that line.  If
 it is 'backward, it will be at the first character position in that
 line."
   (let ((LCopyBegin (bracket-line buf lcopybegin))
-	(LCopyEnd (bracket-line buf lcopyend))
-	(LCopyAfter (bracket-line buf lcopyafter)))
+        (LCopyEnd (bracket-line buf lcopyend))
+        (LCopyAfter (bracket-line buf lcopyafter)))
     (if (> LCopyEnd LCopyBegin)
-	(begin
-	  (op-copy-lines buf LCopyBegin LCopyEnd LCopyAfter)))
+        (begin
+          (op-copy-lines buf LCopyBegin LCopyEnd LCopyAfter)))
     (set-line-cur! buf (+ LCopyAfter (- LCopyEnd LCopyBegin)))
     (set-pd-cur-to-simd-eol! buf)))
 
@@ -1365,9 +1365,9 @@ line, nothing happens.  If device is 'presentation, the characters are
 shifted one cell, even if the character was double-width.  If device
 is 'data, the characters are shifted one character."
   (let* ([txt (get-text-cur buf)]
-	 [pd (get-pd-cur buf)]
-	 [len (get-text-cur-length)]
-	 [width (wcwidth (string-ref txt pd))])
+         [pd (get-pd-cur buf)]
+         [len (get-text-cur-length)]
+         [width (wcwidth (string-ref txt pd))])
     (cond
      [(= len 0)
       *unspecified*]
@@ -1911,3 +1911,8 @@ added."
       (set-pd-cur! buf (+ pd-start space-num))
       (set-pp-cur! buf pp-adj-end)
       (set-pp-goal! buf pp-adj-end))]))
+
+;; Local Variables:
+;; coding: iso-latin-1-unix
+;; indent-tabs-mode: nil
+;; End:
