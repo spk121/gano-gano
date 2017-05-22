@@ -66,6 +66,8 @@ will move as text is inserted and deleted.
   #:use-module (gano stringlist)
   #:use-module (gano poslist)
   #:use-module (gano position)
+  #:use-module (mlg typechecking)
+  #:use-module (mlg logging)
   #:export (
             <CBuffer>
             ;; Constructors
@@ -84,6 +86,7 @@ will move as text is inserted and deleted.
             get-active-data-location
 
             ;; Needed for testing for now
+            %dump-cbuffer
             get-text-cur
             get-text
             get-undo
@@ -93,17 +96,20 @@ will move as text is inserted and deleted.
             ;; Operations inspired by POSIX ED
             ed-append
             ed-change
+            ed-copy
             ed-delete
             ed-edit
+            ed-get-mark
             ed-insert
             ed-join
-            ed-mark
-            ed-read
-            ed-get-mark
-            ed-null
-            ed-move
-            ed-copy
             ed-line-number
+            ed-mark
+            ed-move
+            ed-null
+            ed-read
+            ed-regex-search-backward-line
+            ed-regex-search-forward-line
+            ed-write
 
             insert-lines-before
             replace-lines
@@ -284,6 +290,25 @@ end (exclusive)."
 ;; Str - a string
 ;; Char - a character
 
+(define-method (%dump-cbuffer (buf <CBuffer>))
+  (format #t "Modes: IRM ~a, HEM ~a, IMM ~a, SIMD ~a~%"
+          (get-insertion-replacement-mode buf)
+          (get-character-editing-mode buf)
+          (get-invalid-movement-mode buf)
+          (get-implicit-movement-direction buf))
+  (format #t "===BEGIN TEXT===~%")
+  (let loop ((i 1) (lst (get-text buf)))
+    (if (not (null? lst))
+        (begin
+          (format #t "~a  |~a|~%" i (car lst))
+          (loop (1+ i) (cdr lst)))))
+  (format #t "====END TEXT====~%")
+  (format #t "Position: Line ~a, Pos ~a ~%" (get-line-cur buf) (get-pd-cur buf))
+  (format #t "Tabsize: Horiz ~a, Vert ~a~%" (get-tab-size buf) (get-vert-tab-size buf))
+  (format #t "Home: ~a,  Limit ~a~%" (get-home-pos buf) (get-limit-pos buf))
+  (format #t "Mark: Valid ~a, Line ~a, Pos ~a~%" (is-mark-set? buf)
+          (get-line-mark buf) (get-pd-mark buf)))
+
 (define-method (bracket-line (buf <CBuffer>) L)
   "Return L if it is a valid line number for the current buffer, or
 the nearest valid line number of L is out of range."
@@ -327,6 +352,9 @@ range."
 
 
 (define-method (set-line-and-pd-cur! (buf <CBuffer>) LPd)
+  (warn-if-false (cbuffer? buf))
+  (warn-if-false (list-of-two-integers? LPd))
+  
   (set-line-cur! buf (list-ref LPd 0))
   (set-pd-cur! buf (list-ref LPd 1)))
 
@@ -688,6 +716,7 @@ and the active data position."
     (adjust-poslist-insert-lines-before (get-bookmarks buf) LInsert LCount)))
 
 (define-method (op-insert-lines-after (buf <CBuffer>) LInsert txt)
+  (warn-if-false (list-of-strings? txt))
   (let ((LCount (length txt)))
     ;; Add the op to the list of mutator operations
     (append-undo! buf (list 'op-insert-lines-after LInsert txt))
@@ -721,8 +750,12 @@ with strlist"
       (append-undo! buf (list 'op-replace-lines LReplaceStart LReplaceEnd strlist replacetxt replacetags replacebmarks))
 
       ;; Move the activive data position
-      (set-line-and-pd-cur! buf (pos-replace-lines (get-line-cur buf) (get-pd-cur buf)
-                                                   LReplaceStart LReplaceEnd LenReplace))
+      (set-line-and-pd-cur! buf
+                            (pos-replace-lines (get-line-cur buf)
+                                               (get-pd-cur buf)
+                                               LReplaceStart
+                                               LReplaceEnd
+                                               LenReplace))
 
       ;; Clear the mark
       (set-mark-flag! buf #f))))
@@ -738,9 +771,11 @@ with strlist"
     (append-undo! buf (list 'op-delete-lines LDeleteStart LDeleteEnd deletetxt deletetags deletebmarks))
 
     ;; Move the activive data position
-    (set-line-and-pd-cur! buf (pos-delete-lines (get-line-cur buf) (get-pd-cur buf)
+    (set-line-and-pd-cur! buf (pos-delete-lines (get-line-cur buf)
+                                                (get-pd-cur buf)
                                                 LDeleteStart LDeleteEnd))
-
+    (log-debug-pk (get-line-cur buf))
+    (log-debug-pk (get-pd-cur buf))
     ;; Clear the mark
     (set-mark-flag! buf #f)))
 
@@ -1008,6 +1043,25 @@ or the first character position if SIMD is 'negative."
       (set-line-cur! buf (+ LStart (1- ReplaceLen)))
       (set-pd-cur-to-simd-eol! buf)))))
 
+(define-method (ed-copy (buf <CBuffer>) lcopybegin lcopyend lcopyafter)
+  "Make a copy of the lines between LCopyBegin (inclusive) and
+LCopyEnd (exclusive) and position that copy after the line
+LCopyAfter.
+
+The active data line will be set to the new location of the last line
+copied.  If the implicit movement direction (SIMD) is 'forward, the
+data position will be at the last character position in that line.  If
+it is 'backward, it will be at the first character position in that
+line."
+  (let ((LCopyBegin (bracket-line buf lcopybegin))
+        (LCopyEnd (bracket-line buf lcopyend))
+        (LCopyAfter (bracket-line buf lcopyafter)))
+    (if (> LCopyEnd LCopyBegin)
+        (begin
+          (op-copy-lines buf LCopyBegin LCopyEnd LCopyAfter)))
+    (set-line-cur! buf (+ LCopyAfter (- LCopyEnd LCopyBegin)))
+    (set-pd-cur-to-simd-eol! buf)))
+
 (define-method (ed-delete (buf <CBuffer>) lstart lend)
   "Remove the lines of text from LStart (inclusive) to LEnd (exclusive).
 
@@ -1032,6 +1086,10 @@ character position if SIMD is 'negative."
       (set-line-cur! buf LStart)
       (set-pd-cur-to-simd-bol! buf)))))
 
+(define-method (ed-delete-all (buf <CBuffer>))
+  "This deletes all the contents of the current buffer and places the
+active data position in the first position."
+  #f)
 
 (define-method (ed-edit (buf <CBuffer>) input-port)
   "Delete the entire contents of the buffer, and then read in from the
@@ -1053,27 +1111,12 @@ placed at the first character position."
               (ed-append buf (get-line-cur buf) (list txt))))))
     bytes-read))
 
-(define-method (ed-read (buf <CBuffer>) lineno input-port)
-  "Read in from the port, line by line, appending those lines to the
-buffer after LINENO.  Read until #<eof> is found.
-
-The active data position will be set to the last line read in..
-If the implicit movement direction (SIMD) is 'forward, it is placed at
-the last character position in the line.  If SIMD is 'backward, it is
-placed at the first character position."
-  (let ((L (bracket-line buf lineno))
-        (bytes-read 0))
-    (set-line-cur! buf L)
-    (while #t
-      (let ((txt (read-line input-port)))
-        (if (eof-object? txt)
-            (break)
-            (begin
-              (set! bytes-read (+ bytes-read (string-length txt) 1))
-              (ed-append buf (get-line-cur buf) (list txt))
-              (set-line-cur! buf (1+ L))))))
-    (set-pd-cur-to-simd-eol! buf)
-    bytes-read))
+(define-method (ed-get-mark (buf <CBuffer>) name)
+  "Return the line number in which a bookmark has been placed, or
+#f is no such bookmark exists."
+  (let ((bm (bookmark-get (get-bookmarks buf) name)))
+    (and bm
+         (list-ref bm 1))))
 
 ;; N.B. ed-insert is supposed to behave similarly to ed-append
 (define-method (ed-insert (buf <CBuffer>) lineno strlist)
@@ -1113,6 +1156,10 @@ SIMD is 'backward."
     (set-line-cur! buf LStart)
     (set-pd-cur-to-simd-eol! buf)))
 
+(define-method (ed-line-number (buf <CBuffer>))
+  "Return the address of the active data line."
+  (get-line-cur buf))
+
 (define-method (ed-mark (buf <CBuffer>) lineno name)
   "Set a bookmark at the first data position of the given lineno if
 implicit movement direction (SIMD) is 'forward, or at the last data
@@ -1123,16 +1170,6 @@ position of the line, if SIMD is 'backward."
                    (if (eqv? (get-implicit-movement-direction buf) 'forward)
                        0
                        (get-text-cur-length buf)))))
-
-(define-method (ed-get-mark (buf <CBuffer>) name)
-  "Return the line number in which a bookmark has been placed, or
-#f is no such bookmark exists."
-  (let ((bm (bookmark-get (get-bookmarks buf) name)))
-    (and bm
-         (list-ref bm 1))))
-
-(define-method (ed-null (buf <CBuffer>))
-  (get-line-cur buf))
 
 (define-method (ed-move (buf <CBuffer>) lmovebegin lmoveend lmoveafter)
   "Reposition the lines between LMoveBegin (inclusive) and
@@ -1150,45 +1187,105 @@ line."
     (set-line-cur! buf (+ LMoveAfter (- LMoveEnd LMoveBegin)))
     (set-pd-cur-to-simd-eol! buf)))
 
-
-(define-method (ed-copy (buf <CBuffer>) lcopybegin lcopyend lcopyafter)
-  "Make a copy of the lines between LCopyBegin (inclusive) and
-LCopyEnd (exclusive) and position that copy after the line
-LCopyAfter.
-
-The active data line will be set to the new location of the last line
-copied.  If the implicit movement direction (SIMD) is 'forward, the
-data position will be at the last character position in that line.  If
-it is 'backward, it will be at the first character position in that
-line."
-  (let ((LCopyBegin (bracket-line buf lcopybegin))
-        (LCopyEnd (bracket-line buf lcopyend))
-        (LCopyAfter (bracket-line buf lcopyafter)))
-    (if (> LCopyEnd LCopyBegin)
-        (begin
-          (op-copy-lines buf LCopyBegin LCopyEnd LCopyAfter)))
-    (set-line-cur! buf (+ LCopyAfter (- LCopyEnd LCopyBegin)))
-    (set-pd-cur-to-simd-eol! buf)))
-
-(define-method (ed-line-number (buf <CBuffer>))
-  "Return the address of the active data line."
+(define-method (ed-null (buf <CBuffer>))
   (get-line-cur buf))
 
-(define-method (ed-delete-all (buf <CBuffer>))
-  "This deletes all the contents of the current buffer and places the
-active data position in the first position."
-  #f)
+(define-method (ed-read (buf <CBuffer>) lineno input-port)
+  "Read in from the port, line by line, appending those lines to the
+buffer after LINENO.  Read until #<eof> is found.
+
+The active data position will be set to the last line read in..
+If the implicit movement direction (SIMD) is 'forward, it is placed at
+the last character position in the line.  If SIMD is 'backward, it is
+placed at the first character position."
+  (let ((L (bracket-line buf lineno))
+        (bytes-read 0))
+    (set-line-cur! buf L)
+    (while #t
+      (let ((txt (read-line input-port)))
+        (if (eof-object? txt)
+            (break)
+            (begin
+              (set! bytes-read (+ bytes-read (string-length txt) 1))
+              (ed-append buf (get-line-cur buf) (list txt))
+              (set-line-cur! buf (1+ L))))))
+    (set-pd-cur-to-simd-eol! buf)
+    bytes-read))
+
+(define-method (ed-regex-search-backward-line (buf <CBuffer>) lineno regex)
+  "This searches the the text for the first line that matches the
+regular expression.  The search begins on the line before lineno. The
+search will wrap around to the end of the buffer, if necessary, and
+search upto and including lineno.
+
+If a match is found, the procedure returns the line number of the
+matching line, and the active data position will be set to the end of
+the matching line.  If a match is not found, the procedure returns #f
+and the active data position is unchanged."
+  (if (= (get-line-count buf) 0)
+      #f
+      ;; else
+      (let* ((rx (make-regexp regex-string))
+             (next-line (lambda (n)
+                          (if (< (1- n) 0)
+                              (1- (get-line-count buf))
+                              (1- n))))
+             (start-line (next-line (bracket-line buf lineno))))
+        (let loop ((i start-line))
+          (if (regexp-exec rx (list-ref (get-text buf) i))
+              (begin
+                (set-line-cur! buf i)
+                (set-pd-cur-to-simd-eol! buf)
+                i)
+              ;; else
+              (if (= (next-line i) start-line)
+                  #f
+                  ;; else
+                  (loop (next-line i))))))))
 
 (define-method (ed-regex-search-forward-line (buf <CBuffer>) regex)
-  "This searches the text following the active data position for the
-first line that matches the regular expression.  For the line where
-the active data position is located, only the substring after the
-active data position is searched. For the remaining lines, the whole
-of the text in each line is searched. If a match is found, the
-procedure returns #t, and the active data position will be set to the
-end of the matching line.  If a match is not found, the procedure
-returns #f and the active data position is unchanged."  #f)
+  "This searches the text for the first line that matches the regular
+expression.  The search begins on the line after lineno. The search
+will wrap around the end of the buffer, if necessary, and search upto
+and including lineno.
 
+If a match is found, the procedure returns the line number of the
+matching line, and the active data position will be set to the end of
+the matching line.  If a match is not found, the procedure returns #f
+and the active data position is unchanged."
+  (if (= 0 (get-line-count buf))
+      #f
+      ;; else
+      (let* ((rx (make-regexp regex-string))
+             (next-line (lambda (n)
+                          (if (>= (1+ n) (length (get-text buf)))
+                              0
+                              (1+ n))))
+             (start-line (next-line (bracket-line buf lineno))))
+        (let loop ((i start-line))
+          (if (regexp-exec rx (list-ref (get-text buf) i))
+              (begin
+                (set-line-cur! buf i)
+                (set-pd-cur-to-simd-eol! buf)
+                i)
+              ;; else
+              (if (= (next-line i) start-line)
+                  #f
+                  ;; else
+                  (loop (next-line i))))))))
+
+(define-method (ed-write (buf <CBuffer>) lstart lend port)
+  "Write the buffer lines LStart (inclusive) through LEnd (exclusive)
+to the given port.  It returns the number of bytes written."
+  (let ((LStart (bracket-line buf lstart))
+        (LEnd (bracket-line buf lend))
+        (bytes-written 0))
+    (for-each
+     (lambda (line)
+       (write-line line port)
+       (+= bytes-written (1+ (string-length line))))
+     (sublist (get-text buf) LStart LEnd))
+    bytes-written))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OPERATIONS
