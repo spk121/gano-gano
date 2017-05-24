@@ -743,20 +743,36 @@ with strlist"
   (let ((LenReplace (length strlist)))
 
     ;; Overwrite the text in the line, and adjust bookmarks and tags
-    (let ((replacetxt (strlist-replace-lines (get-text buf) LReplaceStart LReplaceEnd strlist))
-          (replacetags (adjust-poslist-replace-lines (get-tags buf) LReplaceStart LReplaceEnd LenReplace))
-          (replacebmarks (adjust-poslist-replace-lines (get-bookmarks buf) LReplaceStart LReplaceEnd LenReplace)))
+    (let ((replacetxt (strlist-replace-lines (get-text buf)
+                                             LReplaceStart
+                                             LReplaceEnd strlist))
+          (replacetags (adjust-poslist-replace-lines (get-tags buf)
+                                                     LReplaceStart
+                                                     LReplaceEnd
+                                                     LenReplace))
+          (replacebmarks (adjust-poslist-replace-lines (get-bookmarks buf)
+                                                       LReplaceStart
+                                                       LReplaceEnd
+                                                       LenReplace)))
 
-      (append-undo! buf (list 'op-replace-lines LReplaceStart LReplaceEnd strlist replacetxt replacetags replacebmarks))
+      (append-undo! buf (list 'op-replace-lines
+                              LReplaceStart LReplaceEnd
+                              strlist
+                              replacetxt replacetags replacebmarks))
 
-      ;; Move the activive data position
-      (set-line-and-pd-cur! buf
-                            (pos-replace-lines (get-line-cur buf)
-                                               (get-pd-cur buf)
-                                               LReplaceStart
-                                               LReplaceEnd
-                                               LenReplace))
-
+      ;; Move the active data position
+      (let ((newpos (pos-replace-lines (get-line-cur buf)
+                                       (get-pd-cur buf)
+                                       LReplaceStart
+                                       LReplaceEnd
+                                       LenReplace)))
+        ;; If newpos is '(), the location of the active data position
+        ;; was overwritten in this operation.  So, put it after the paste,
+        ;; I guess.
+        (if (null? newpos)
+            (set-line-and-pd-cur! buf (list LReplaceEnd 0))
+            (set-line-and-pd-cur! buf newpos)))
+                   
       ;; Clear the mark
       (set-mark-flag! buf #f))))
 
@@ -764,18 +780,27 @@ with strlist"
   "Delete the lines from LStart (inclusive) and LEnd (exclusive)."
 
   ;; Overwrite the text in the line, and adjust bookmarks and tags
-  (let ((deletetxt (strlist-delete-lines (get-text buf) LDeleteStart LDeleteEnd))
-        (deletetags (adjust-poslist-delete-lines (get-tags buf) LDeleteStart LDeleteEnd))
-        (deletebmarks (adjust-poslist-delete-lines (get-bookmarks buf) LDeleteStart LDeleteEnd)))
+  (let ((deletetxt (strlist-delete-lines (get-text buf)
+                                         LDeleteStart LDeleteEnd))
+        (deletetags (adjust-poslist-delete-lines (get-tags buf)
+                                                 LDeleteStart LDeleteEnd))
+        (deletebmarks (adjust-poslist-delete-lines (get-bookmarks buf)
+                                                   LDeleteStart LDeleteEnd)))
 
-    (append-undo! buf (list 'op-delete-lines LDeleteStart LDeleteEnd deletetxt deletetags deletebmarks))
+    (append-undo! buf (list 'op-delete-lines
+                            LDeleteStart LDeleteEnd
+                            deletetxt deletetags deletebmarks))
 
     ;; Move the activive data position
-    (set-line-and-pd-cur! buf (pos-delete-lines (get-line-cur buf)
+    (let ((newpos (pos-delete-lines (get-line-cur buf)
                                                 (get-pd-cur buf)
-                                                LDeleteStart LDeleteEnd))
-    (log-debug-pk (get-line-cur buf))
-    (log-debug-pk (get-pd-cur buf))
+                                                LDeleteStart LDeleteEnd)))
+      ;; If the position was deleted, move the cursor to the end
+      ;; of the deleted region.
+      (if (null? newpos)
+          (set-line-and-pd-cur! buf (list LDeleteStart 0))
+          (set-line-and-pd-cur! buf newpos)))
+
     ;; Clear the mark
     (set-mark-flag! buf #f)))
 
@@ -989,19 +1014,22 @@ position of the following line."
 ;;  OPERATIONS INSPIRED BY ED
 
 (define-method (ed-append (buf <CBuffer>) lineno strlist)
-  "Append the lines of text STRLIST after the addressed line LINENO.
+  "Append the lines of text STRLIST at the addressed line LINENO.
+The previous contents of LINENO and following lines will be pushed down.
 The active data position will be set to the last inserted line, or, if
-STRLIST was an empty list, to the addressed line.  If LINENO is zero,
-the text is placed at the beginning of the buffer.
+STRLIST was an empty list, to the addressed line.
 
 If the implicit movement direction (SIMD) is 'forward, the active data
 position will be placed as the last character position of the line.
 If it is 'backward, it will be placed as the first character position
 of the line."
   (let ((L (bracket-line buf lineno)))
+    (log-debug-locals)
     (unless (null? strlist)
       (op-insert-lines-after buf L strlist))
-    (set-line-cur! buf (+ L (length strlist)))
+    (if (null? strlist)
+        (set-line-cur! buf L)
+        (set-line-cur! buf (+ L (1- (length strlist)))))
     (set-pd-cur-to-simd-eol! buf)))
 
 (define-method (ed-change (buf <CBuffer>) lstart lend strlist)
