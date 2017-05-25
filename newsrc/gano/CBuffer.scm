@@ -1136,7 +1136,7 @@ placed at the first character position."
             (break)
             (begin
               (set! bytes-read (+ bytes-read (string-length txt) 1))
-              (ed-append buf (get-line-cur buf) (list txt))))))
+              (ed-append buf (1+ (get-line-cur buf)) (list txt))))))
     bytes-read))
 
 (define-method (ed-get-mark (buf <CBuffer>) name)
