@@ -354,7 +354,7 @@ range."
 (define-method (set-line-and-pd-cur! (buf <CBuffer>) LPd)
   (warn-if-false (cbuffer? buf))
   (warn-if-false (list-of-two-integers? LPd))
-  
+
   (set-line-cur! buf (list-ref LPd 0))
   (set-pd-cur! buf (list-ref LPd 1)))
 
@@ -772,7 +772,7 @@ with strlist"
         (if (null? newpos)
             (set-line-and-pd-cur! buf (list LReplaceEnd 0))
             (set-line-and-pd-cur! buf newpos)))
-                   
+
       ;; Clear the mark
       (set-mark-flag! buf #f))))
 
@@ -842,7 +842,7 @@ with strlist"
   "Merge the lines from LStart (inclusive) and LEnd (exclusive)."
 
   ;; Overwrite the text in the line, and adjust bookmarks and tags
-  (let ((PMergeLengthList (apply string-length (sublist (get-text buf) LMergeStart LMergeEnd))))
+  (let ((PMergeLengthList (map string-length (sublist (get-text buf) LMergeStart LMergeEnd))))
     (strlist-merge-lines (get-text buf) LMergeStart LMergeEnd)
     (adjust-poslist-merge-lines (get-tags buf) LMergeStart LMergeEnd PMergeLengthList)
     (adjust-poslist-merge-lines (get-bookmarks buf) LMergeStart LMergeEnd PMergeLengthList)
@@ -2038,6 +2038,6 @@ added."
       (set-pp-goal! buf pp-adj-end))]))
 
 ;; Local Variables:
-;; coding: iso-latin-1-unix
+;; coding: us-ascii
 ;; indent-tabs-mode: nil
 ;; End:
