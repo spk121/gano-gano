@@ -127,13 +127,13 @@
 
 (define-syntax strlist-move-lines
   (syntax-rules()
-    ((_ strlist LMoveStart LMoveEnd LMoveAfter)
+    ((_ strlist LMoveStart LMoveEnd LMoveTo)
      (set! strlist
        (cond
-        ((< LMoveAfter LMoveStart)
+        ((< LMoveTo LMoveStart)
          (append
-          (take strlist (1+ LMoveAfter))
-          (sublist strlist LMoveStart (1+ LMoveAfter))
+          (take strlist LMoveTo)
+          (sublist strlist LMoveStart LMoveAfter))
           (sublist strlist LMoveAfter LMoveStart)
           (drop strlist LMoveEnd)))
         (else

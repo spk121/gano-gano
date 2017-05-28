@@ -805,7 +805,8 @@ with strlist"
     (set-mark-flag! buf #f)))
 
 (define-method (op-move-lines (buf <CBuffer>) LMoveStart LMoveEnd LMoveAfter)
-  "Move the lines from LStart (inclusive) and LEnd (exclusive)."
+  "Move the lines from LStart (inclusive) and LEnd (exclusive) to the 
+line LMoveAfter."
 
   ;; Overwrite the text in the line, and adjust bookmarks and tags
   (strlist-move-lines (get-text buf) LMoveStart LMoveEnd LMoveAfter)
