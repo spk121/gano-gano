@@ -1,4 +1,19 @@
-;;; CBuffer
+;;; (gano CBuffer) - an storage model for lines of text
+;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
+;;;
+;;; This program is free software: you can redistribute it and/or
+;;; modify it under the terms of the GNU General Public License as
+;;; published by the Free Software Foundataion, either version 3 of
+;;; this License, or (at your option) any later version.
+;;;
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see
+;;; <http://www.gnu.org/licenses/>
 
 #|
 
@@ -804,37 +819,38 @@ with strlist"
     ;; Clear the mark
     (set-mark-flag! buf #f)))
 
-(define-method (op-move-lines (buf <CBuffer>) LMoveStart LMoveEnd LMoveAfter)
-  "Move the lines from LStart (inclusive) and LEnd (exclusive) to the 
-line LMoveAfter."
+(define-method (op-move-lines (buf <CBuffer>) LMoveStart LMoveEnd LMoveTo)
+  "Move the lines from LStart (inclusive) and LEnd (exclusive) to the
+line LMoveTo."
 
   ;; Overwrite the text in the line, and adjust bookmarks and tags
-  (strlist-move-lines (get-text buf) LMoveStart LMoveEnd LMoveAfter)
-  (adjust-poslist-move-lines (get-tags buf) LMoveStart LMoveEnd LMoveAfter)
-  (adjust-poslist-move-lines (get-bookmarks buf) LMoveStart LMoveEnd LMoveAfter)
+  (strlist-move-lines (get-text buf) LMoveStart LMoveEnd LMoveTo)
+  (adjust-poslist-move-lines (get-tags buf) LMoveStart LMoveEnd LMoveTo)
+  (adjust-poslist-move-lines (get-bookmarks buf) LMoveStart LMoveEnd LMoveTo)
 
-  (append-undo! buf (list 'op-move-lines LMoveStart LMoveEnd LMoveAfter))
+  (append-undo! buf (list 'op-move-lines LMoveStart LMoveEnd LMoveTo))
 
   ;; Move the activive data position
   (set-line-and-pd-cur! buf (pos-move-lines (get-line-cur buf) (get-pd-cur buf)
-                                            LMoveStart LMoveEnd LMoveAfter))
+                                            LMoveStart LMoveEnd LMoveTo))
 
   ;; Clear the mark
   (set-mark-flag! buf #f))
 
-(define-method (op-copy-lines (buf <CBuffer>) LCopyStart LCopyEnd LCopyAfter)
-  "Copy the lines from LStart (inclusive) and LEnd (exclusive)."
+(define-method (op-copy-lines (buf <CBuffer>) LCopyStart LCopyEnd LCopyTo)
+  "Copy and insertthe lines from LCopyStart (inclusive) and
+LCopyEnd (exclusive) to the line LCopyTo."
 
   ;; Overwrite the text in the line, and adjust bookmarks and tags
-  (strlist-copy-lines (get-text buf) LCopyStart LCopyEnd LCopyAfter)
-  (poslist-copy-lines (get-tags buf) LCopyStart LCopyEnd LCopyAfter)
-  (adjust-poslist-copy-lines (get-bookmarks buf) LCopyStart LCopyEnd LCopyAfter #f)
+  (strlist-copy-lines (get-text buf) LCopyStart LCopyEnd LCopyTo)
+  (poslist-copy-lines (get-tags buf) LCopyStart LCopyEnd LCopyTo)
+  (adjust-poslist-copy-lines (get-bookmarks buf) LCopyStart LCopyEnd LCopyTo #f)
 
-  (append-undo! buf (list 'op-copy-lines LCopyStart LCopyEnd LCopyAfter))
+  (append-undo! buf (list 'op-copy-lines LCopyStart LCopyEnd LCopyTo))
 
   ;; Move the activive data position
   (set-line-and-pd-cur! buf (pos-copy-lines (get-line-cur buf) (get-pd-cur buf)
-                                            LCopyStart LCopyEnd LCopyAfter #t))
+                                            LCopyStart LCopyEnd LCopyTo #t))
 
   ;; Clear the mark
   (set-mark-flag! buf #f))
@@ -1025,7 +1041,7 @@ position will be placed as the last character position of the line.
 If it is 'backward, it will be placed as the first character position
 of the line."
   (let ((L (bracket-line buf lineno)))
-    (log-debug-locals)
+    ;; (log-debug-locals)
     (unless (null? strlist)
       (op-insert-lines-after buf L strlist))
     (if (null? strlist)
@@ -1072,10 +1088,9 @@ or the first character position if SIMD is 'negative."
       (set-line-cur! buf (+ LStart (1- ReplaceLen)))
       (set-pd-cur-to-simd-eol! buf)))))
 
-(define-method (ed-copy (buf <CBuffer>) lcopybegin lcopyend lcopyafter)
+(define-method (ed-copy (buf <CBuffer>) lcopybegin lcopyend lcopyto)
   "Make a copy of the lines between LCopyBegin (inclusive) and
-LCopyEnd (exclusive) and position that copy after the line
-LCopyAfter.
+LCopyEnd (exclusive) and position that copy at the line LCopyTo.
 
 The active data line will be set to the new location of the last line
 copied.  If the implicit movement direction (SIMD) is 'forward, the
@@ -1084,11 +1099,12 @@ it is 'backward, it will be at the first character position in that
 line."
   (let ((LCopyBegin (bracket-line buf lcopybegin))
         (LCopyEnd (bracket-line buf lcopyend))
-        (LCopyAfter (bracket-line buf lcopyafter)))
+        (LCopyTo (bracket-line buf lcopyto)))
+    ;; (log-debug-locals)
     (if (> LCopyEnd LCopyBegin)
         (begin
-          (op-copy-lines buf LCopyBegin LCopyEnd LCopyAfter)))
-    (set-line-cur! buf (+ LCopyAfter (- LCopyEnd LCopyBegin)))
+          (op-copy-lines buf LCopyBegin LCopyEnd LCopyTo)))
+    (set-line-cur! buf (+ LCopyTo (- LCopyEnd LCopyBegin)))
     (set-pd-cur-to-simd-eol! buf)))
 
 (define-method (ed-delete (buf <CBuffer>) lstart lend)
@@ -1200,9 +1216,9 @@ position of the line, if SIMD is 'backward."
                        0
                        (get-text-cur-length buf)))))
 
-(define-method (ed-move (buf <CBuffer>) lmovebegin lmoveend lmoveafter)
+(define-method (ed-move (buf <CBuffer>) lmovebegin lmoveend lmoveto)
   "Reposition the lines between LMoveBegin (inclusive) and
-LMoveEnd (exclusive) to after the line LMoveAfter.
+LMoveEnd (exclusive) to the location LMoveTo.
 
 The active data line will be set to the new location of the last line
 moved.  If the implicit movement direction (SIMD) is 'forward, the
@@ -1211,9 +1227,13 @@ it is 'backward, it will be at the first character position in that
 line."
   (let ((LMoveBegin (bracket-line buf lmovebegin))
         (LMoveEnd (bracket-line buf lmoveend))
-        (LMoveAfter (bracket-line buf lmoveafter)))
-    (op-move-lines buf LMoveBegin LMoveEnd LMoveAfter)
-    (set-line-cur! buf (+ LMoveAfter (- LMoveEnd LMoveBegin)))
+        (LMoveTo (bracket-line buf lmoveto)))
+    (if (>= (- LMoveEnd LMoveBegin) 1)
+        (begin
+          (op-move-lines buf LMoveBegin LMoveEnd LMoveTo)
+          (set-line-cur! buf (+ LMoveTo (1- (- LMoveEnd LMoveBegin)))))
+        ;; else
+        (set-line-cur! buf LMoveTo))
     (set-pd-cur-to-simd-eol! buf)))
 
 (define-method (ed-null (buf <CBuffer>))

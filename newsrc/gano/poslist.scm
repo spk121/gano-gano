@@ -1,3 +1,21 @@
+;;; (gano poslist) -- adjust lists of locations under mutation
+;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
+;;;
+;;; This program is free software: you can redistribute it and/or
+;;; modify it under the terms of the GNU General Public License as
+;;; published by the Free Software Foundataion, either version 3 of
+;;; this License, or (at your option) any later version.
+;;;
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see
+;;; <http://www.gnu.org/licenses/>
+
+
 ;; Named position lists are association lists between names and
 ;; positions in a text. There are two flavors of named position lists:
 ;; bookmarks and tags.
@@ -287,25 +305,25 @@
 
 (define-syntax adjust-poslist-move-lines
   (syntax-rules ()
-    ((_ poslist LMoveStart LMoveEnd LMoveAfter)
+    ((_ poslist LMoveStart LMoveEnd LMoveTo)
      (adjust-positions
       (lambda (LPos PPos)
-        (pos-move-lines LPos PPos LMoveStart LMoveEnd LMoveAfter))
+        (pos-move-lines LPos PPos LMoveStart LMoveEnd LMoveTo))
       poslist))))
 
 (define-syntax adjust-poslist-copy-lines
   (syntax-rules ()
-    ((_ poslist LCopyStart LCopyEnd LCopyAfter followCopy)
+    ((_ poslist LCopyStart LCopyEnd LCopyTo followCopy)
      (adjust-positions
       (lambda (LPos PPos)
-        (pos-copy-lines LPos PPos LCopyStart LCopyEnd LCopyAfter followCopy))
+        (pos-copy-lines LPos PPos LCopyStart LCopyEnd LCopyTo followCopy))
       poslist))))
 
 ;; Moves the entries as a response to a copy-lines. An entry in the
 ;; region to be copied will be duplicated, with the original tag
 ;; remaining in the original region and the copy moved to the copied
 ;; region.
-(define-syntax poslist-copy-Linese
+(define-syntax poslist-copy-lines
   (syntax-rules ()
     ((_ poslist LCopyStart LCopyEnd LCopyAfter)
      (set! poslist
@@ -353,6 +371,6 @@
 
 
 ;; Local Variables:
-;; coding: iso-latin-1-unix
+;; coding: us-ascii
 ;; indent-tabs-mode: nil
 ;; End:

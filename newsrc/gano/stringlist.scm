@@ -1,5 +1,19 @@
-;; A stringlist is a list of strings.  Each list element represents
-;; a single line of text.
+;;; (gano stringlist) - a library of procedures for lists of strings
+;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
+;;;
+;;; This program is free software: you can redistribute it and/or
+;;; modify it under the terms of the GNU General Public License as
+;;; published by the Free Software Foundataion, either version 3 of
+;;; this License, or (at your option) any later version.
+;;;
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see
+;;; <http://www.gnu.org/licenses/>
 
 (define-module (gano stringlist)
   #:use-module (srfi srfi-1)
@@ -130,27 +144,29 @@
     ((_ strlist LMoveStart LMoveEnd LMoveTo)
      (set! strlist
        (cond
+        ((= LMoveTo LMoveStart)
+         strlist)
         ((< LMoveTo LMoveStart)
          (append
           (take strlist LMoveTo)
-          (sublist strlist LMoveStart LMoveAfter))
-          (sublist strlist LMoveAfter LMoveStart)
+          (sublist strlist LMoveStart LMoveEnd)
+          (sublist strlist LMoveTo LMoveStart)
           (drop strlist LMoveEnd)))
-        (else
+        (>= LMoveTo LMoveEnd
          (append
           (take strlist LMoveStart)
-          (sublist strlist LMoveEnd (1+ LMoveAfter))
+          (sublist strlist LMoveEnd LMoveTo)
           (sublist strlist LMoveStart LMoveEnd)
-          (drop strlist LMoveAfter))))))))
+          (drop strlist LMoveTo))))))))
 
 (define-syntax strlist-copy-lines
   (syntax-rules()
-    ((_ strlist LCopyStart LCopyEnd LCopyAfter)
+    ((_ strlist LCopyStart LCopyEnd LCopyTo)
      (set! strlist
        (append
-        (take strlist LCopyAfter)
-        (sublist strlist LCopyStart LCopyAfter)
-        (drop strlist LCopyAfter))))))
+        (take strlist LCopyTo)
+        (sublist strlist LCopyStart LCopyEnd)
+        (drop strlist LCopyTo))))))
 
 (define-syntax strlist-merge-lines
   (syntax-rules()
@@ -172,6 +188,6 @@
         (drop strlist (1+ LSplit)))))))
 
 ;; Local Variables:
-;; coding: iso-latin-1-unix
+;; coding: us-ascii
 ;; indent-tabs-mode: nil
 ;; End:

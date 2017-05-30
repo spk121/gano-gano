@@ -1,7 +1,22 @@
-;; These are math operations for text locations.  These are generic:
-;; the positions could be cells locations in a line, or they could be
-;; lines within a document.
+;;; (gano math) - mathmatical operations on integer spans
+;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
+;;;
+;;; This program is free software: you can redistribute it and/or
+;;; modify it under the terms of the GNU General Public License as
+;;; published by the Free Software Foundataion, either version 3 of
+;;; this License, or (at your option) any later version.
+;;;
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see
+;;; <http://www.gnu.org/licenses/>
+
 (define-module (gano math)
+  #:use-module (mlg logging)
   #:export(x-insert-before
 	   x-insert-after
 	   x-replace
@@ -10,12 +25,16 @@
 	   x-delete
 	   ))
 
+;; These are math operations for text locations.  These are generic:
+;; the positions could be cells locations in a line, or they could be
+;; lines within a document.
+
 (define (x-insert X XInsert LenInsert before-or-after)
   (cond
    ;; Pos is before text to insert
    ;; |--*--:--| => |--*--:|new|--|
    ((or (and (eqv? before-or-after 'before) (< X XInsert))
-	(and (eqv? before-or-after 'after) (<= X XInsert)))
+        (and (eqv? before-or-after 'after) (<= X XInsert)))
     X)
 
    ;; Pos is after text to insert
@@ -54,12 +73,17 @@ length ReplaceLen."
     ;; |--|repl|--*--| => |--|new|--*--|
     (+ (- X (- XReplaceEnd XReplaceStart)) ReplaceLen))))
 
-(define (x-move X XMoveStart XMoveEnd XMoveAfter)
+(define (x-move X XMoveStart XMoveEnd XMoveTo)
   "Adjust the position as if the region XMoveStart (inclusive) to
-XMoveEnd (exclusive) was moved just after the position XMoveAfter."
+XMoveEnd (exclusive) was moved to the location XMoveTo."
   (let ((MoveLen (- XMoveEnd XMoveStart)))
+    (log-debug-locals)
     (cond
-     ((and (<= XMoveStart XMoveAfter) (< XMoveAfter XMoveEnd))
+     ((= XMoveTo XMoveStart)
+      ;; If we're not moving, then the position doesn't change.
+      X)
+
+     ((and (< XMoveStart XMoveTo) (< XMoveTo XMoveEnd))
       ;; Can't move block inside itself.
       (error "invalid move in line"))
 
@@ -69,8 +93,8 @@ XMoveEnd (exclusive) was moved just after the position XMoveAfter."
      ;; or Pos is after text to move and point
      ;; |--|move|--:--*--| => |----:|move|--*--|
      ;; |--:--|move|--*--| => |--:|move|----*--|
-     ((or (and (< X XMoveStart) (<= X XMoveAfter))
-	  (and (>= X XMoveEnd) (> X XMoveAfter)))
+     ((or (and (< X XMoveStart) (< X XMoveTo))
+          (and (>= X XMoveEnd) (> X XMoveTo)))
       X)
 
      ;; Pos is inside the text to move
@@ -78,75 +102,75 @@ XMoveEnd (exclusive) was moved just after the position XMoveAfter."
      ;; |--:--|mo*ve|--| => |--:|mo*ve|----|
      ((and (<= XMoveStart X) (< X XMoveEnd))
       (cond
-       ((< XMoveAfter XMoveStart)
-	(+ XMoveAfter
-	   (1+ (- X XMoveStart))))
+       ((< XMoveTo XMoveStart)
+        (+ XMoveTo
+           (- X XMoveStart)))
        (else
-	(+ XMoveAfter
-	   (1+ (- X XMoveStart))
-	   (- MoveLen)))))
+        (+ XMoveTo
+           (- X XMoveStart)
+           (- MoveLen)))))
 
      ;; Text to move is before point. Pos is between text and point.
      ;; |--|move|--*--:--| => |----*--:|move|--|
-     ((and (<= XMoveEnd X) (<= X XMoveAfter))
+     ((and (<= XMoveEnd X) (< X XMoveTo))
       (- X MoveLen))
 
      ;; Text to move is after point. Pos is between point and text
      ;; |--:--*--|move|--| => |--:|move|--*----|
-     ((and (< XMoveAfter X) (< X XMoveStart))
+     ((and (<= XMoveTo X) (< X XMoveStart))
       (+ X MoveLen))
 
      (else
       (error "impossible error")))))
 
-(define (x-copy X XCopyStart XCopyEnd XCopyAfter followCopy)
+(define (x-copy X XCopyStart XCopyEnd XCopyTo followCopy)
   "Adjust the position X as if the region from XCopyStart (inclusive)
-to XCopyEnd (exclusive) was copied after the position XCopyAfter.  If
-followCopy is #t, if position X is within the copy region, it moves to
-the new copy.  If followCopy is #f, if position within the copy
-region, it stays in the original region to be copied."
+to XCopyEnd (exclusive) was copied and inserted at the position
+XCopyAfter.  If followCopy is #t, if position X is within the copy
+region, it moves to the new copy.  If followCopy is #f, if position
+within the copy region, it stays in the original region to be copied."
   (let ((CopyLen (- XCopyEnd XCopyStart)))
     (cond
-     ((and (<= XCopyStart XCopyAfter) (< XCopyAfter XCopyEnd))
+     ((and (< XCopyStart XCopyTo) (< XCopyTo XCopyEnd))
       ;; Can't copy block inside itself.
       (error "invalid x-copy"))
 
      ;; Pos is before text to copy and point
      ;; |--*--|copy|--:--| => |--*--|copy|--:|copy|--|
      ;; |--*--:--|copy|--| => |--*--:|copy|--|copy|--|
-     ((and (< X XCopyStart) (<= X XCopyAfter))
+     ((and (< X XCopyStart) (< X XCopyTo))
       X)
 
      ;; Pos is after text to copy and point
      ;; |--|copy|--:--*--| => |--|copy|--:|copy|--*--|
      ;; |--:--|copy|--*--| => |--:|copy|--|copy|--*--|
-     ((and (<= XCopyEnd X) (< XCopyAfter X))
+     ((and (<= XCopyEnd X) (<= XCopyTo X))
       (+ X CopyLen))
 
      ;; Pos is inside the text to copy. Pos doesn't follow copy.
      ;; |--|co*py|--:--| => |--|co*py|--:|copy|--|
      ;; |--:--|co*py|--| => |--:|copy|--|co*py|--|
      ((and (<= XCopyStart X) (< X XCopyEnd) (not followCopy))
-      (if (< XCopyAfter XCopyStart)
-	  (+ X CopyLen)
-	  X))
+      (if (< XCopyTo XCopyStart)
+          (+ X CopyLen)
+          X))
 
      ;; Pos is inside the text to copy. Pos follows copy.
      ;; |--|co*py|--:--| => |--|copy|--:|co*py|--|
      ;; |--:--|co*py|--| => |--:|co*py|--|copy|--|
      ((and (<= XCopyStart X) (< X XCopyEnd) followCopy)
-      (if (< XCopyAfter XCopyStart)
-	  (+ XCopyAfter (1+ (- X XCopyStart)))
-	  (+ X CopyLen)))
+      (if (< XCopyTo XCopyStart)
+          (+ XCopyTo (- X XCopyStart))
+          (+ X CopyLen)))
 
      ;; Text to copy is before point. Pos is between text and point.
      ;; |--|copy|--*--:--| => |--|copy|--*--:|copy|--|
-     ((and (<= XCopyEnd X) (<= X XCopyAfter))
+     ((and (<= XCopyEnd X) (< X XCopyTo))
       X)
 
      ;; Text to copy is after point. Pos is between point and text
      ;; |--:--*--|copy|--| => |--:|copy|--*--|copy|--|
-     ((and (< XCopyAfter X) (< X XCopyStart))
+     ((and (<= XCopyTo X) (< X XCopyStart))
       (+ X CopyLen))
 
      (else
@@ -174,3 +198,8 @@ XDeleteStart (inclusive) to XDeleteEnd (exclusive) was removed."
 
      (else
       (error "impossible error")))))
+
+;; Local Variables:
+;; coding: us-ascii
+;; indent-tabs-mode: nil
+;; End:

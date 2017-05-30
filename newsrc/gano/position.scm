@@ -1,3 +1,20 @@
+;;; (gano position) - mathmatical operations on i,j coordinates
+;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
+;;;
+;;; This program is free software: you can redistribute it and/or
+;;; modify it under the terms of the GNU General Public License as
+;;; published by the Free Software Foundataion, either version 3 of
+;;; this License, or (at your option) any later version.
+;;;
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see
+;;; <http://www.gnu.org/licenses/>
+
 ;; A position is a coordinate in a text: a line number and a position
 ;; in a given line.  This module are math operations for positions.
 
@@ -8,27 +25,27 @@
   #:use-module (gano math)
   #:use-module (srfi srfi-1)
   #:export (
-	    pos-insert-in-line-before
-	    pos-insert-in-line-after
-	    pos-replace-in-line
-	    pos-move-in-line
-	    pos-copy-in-line
-	    pos-delete-in-line
-	    
-	    pos-insert-lines-before
-	    pos-insert-lines-after
-	    pos-replace-lines
-	    pos-move-lines
-	    pos-copy-lines
-	    pos-delete-lines
-	    
-	    pos-merge-lines
-	    pos-split-lines))
+            pos-insert-in-line-before
+            pos-insert-in-line-after
+            pos-replace-in-line
+            pos-move-in-line
+            pos-copy-in-line
+            pos-delete-in-line
+
+            pos-insert-lines-before
+            pos-insert-lines-after
+            pos-replace-lines
+            pos-move-lines
+            pos-copy-lines
+            pos-delete-lines
+
+            pos-merge-lines
+            pos-split-lines))
 
 (define (<> a b)
   (not (= a b)))
 
-(define (pos-insert-in-line-before LPos PPos LInsert PInsert LenInsert) 
+(define (pos-insert-in-line-before LPos PPos LInsert PInsert LenInsert)
   (cond
    ((<> LPos LInsert)
     (list LPos PPos))
@@ -49,8 +66,8 @@
    (else
     (let ((P (x-replace PPos PReplaceStart PReplaceEnd ReplaceLen)))
       (if P
-	  (list LPos P)
-	  '())))))
+          (list LPos P)
+          '())))))
 
 (define (pos-move-in-line LPos PPos LMove PMoveStart PMoveEnd PMoveAfter)
   "Adjust the position as if the text from PMoveStart (inclusive)
@@ -60,7 +77,7 @@ to PMoveEnd (exclusive) was moved after the position PMoveAfter."
     (list LPos PPos))
    (else
     (list LPos (x-move PPos PMoveStart PMoveEnd PMoveAfter)))))
-     
+
 (define (pos-copy-in-line LPos PPos LCopy PCopyStart PCopyEnd PCopyAfter followCopy)
   "Adjust the position as if the text from PCopyStart (inclusive) to
 PCopyEnd (exclusive) was copied after the position PCopyAfter.  If
@@ -98,21 +115,21 @@ lines."
   (let ((LNew (x-replace LPos LReplaceStart LReplaceEnd ReplaceLen)))
     (if LNew (list LNew PPos) '())))
 
-(define (pos-move-lines LPos PPos LMoveStart LMoveEnd LMoveAfter)
+(define (pos-move-lines LPos PPos LMoveStart LMoveEnd LMoveTo)
   "Adjust position as if the lines LMoveStart (inclusive) to
-LMoveEnd (exclusive) were moved to after line LMoveAfter."
-  (list (x-move LPos LMoveStart LMoveEnd LMoveAfter)
-	PPos))
+LMoveEnd (exclusive) were moved to the location LMoveTo."
+  (list (x-move LPos LMoveStart LMoveEnd LMoveTo)
+        PPos))
 
-(define (pos-copy-lines LPos PPos LCopyStart LCopyEnd LCopyAfter followCopy)
+(define (pos-copy-lines LPos PPos LCopyStart LCopyEnd LCopyTo followCopy)
   "Adjust position as if the lines LCopyStart (inclusive) to
-LCopyEnd (exclusive) were copied to after the line LCopyAfter.  If
+LCopyEnd (exclusive) were copied and inserted at the line LCopyTo.  If
 followCopy is true and the position is inside the copy region, this
 procedure adjusts the position as if it moved to the new copy.  If it
 is false, and the position is inside the copy region, the procedure
 adjust the position as if it remained in the original."
-  (list (x-copy LPos LCopyStart LCopyEnd LCopyAfter followCopy)
-	PPos))
+  (list (x-copy LPos LCopyStart LCopyEnd LCopyTo followCopy)
+        PPos))
 
 (define (pos-delete-lines LPos PPos LDeleteStart LDeleteEnd)
   "Adjust position as if the lines from LDeleteStart (inclusive)
@@ -130,26 +147,31 @@ of the lines LMergeStart to LMergeEnd are stored in PMergeLengthList."
 
    ((>= LPos LMergeEnd)
     (list (- LPos (1- (- LMergeEnd LMergeStart)))
-	  PPos))
+          PPos))
 
    (else
     (list LMergeStart
-	  (+ PPos
-	     (apply + (take PMergeLengthList (- (min LPos LMergeEnd) LMergeStart))))))))
+          (+ PPos
+             (apply + (take PMergeLengthList (- (min LPos LMergeEnd) LMergeStart))))))))
 
 (define (pos-split-lines LPos PPos LSplit PSplitAfter)
   "Adjust the position as of line LSplit had been split after the
 position PSplitAfter."
   (cond
    ((or (< LPos LSplit)
-	(and (= LPos LSplit) (<= PPos PSplitAfter)))
+        (and (= LPos LSplit) (<= PPos PSplitAfter)))
     (list LPos PPos))
-   
+
    ((> LPos LSplit)
     (list (1+ LPos) PPos))
-   
+
    ((and (= LPos LSplit) (> PPos PSplitAfter))
     (list (1+ LPos) (- PPos (+ PSplitAfter 1))))
-  
+
    (else
     (error "impossible error"))))
+
+;; Local Variables:
+;; coding: us-ascii
+;; indent-tabs-mode: nil
+;; End:
