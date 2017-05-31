@@ -1,3 +1,4 @@
+;;; -*- mode: scheme; coding: us-ascii; indent-tabs-mode: nil; -*-
 ;;; (gano poslist) -- adjust lists of locations under mutation
 ;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
 ;;;
@@ -38,6 +39,7 @@
             ;; Operations
             bookmark-get
             bookmark-get-at
+            bookmark-get-all-in-line
             bookmark-set!
             bookmark-remove!
             bookmark-remove-at!
@@ -84,6 +86,12 @@
              (equal? (list-ref entry 1) line)
              (equal? (list-ref entry 2) pos)))
           poslist))
+
+(define (bookmark-get-all-in-line poslist line)
+  (filter (lambda (entry)
+             (equal? (list-ref entry 1) line))
+          poslist))
+
 
 (define (bookmarks-get-not-at poslist line pos)
   (filter! (lambda (entry)
@@ -368,9 +376,3 @@
       (lambda (LPos PPos)
         (pos-split-lines LPos PPos LSplit PSplitAfter))
       poslist))))
-
-
-;; Local Variables:
-;; coding: us-ascii
-;; indent-tabs-mode: nil
-;; End:

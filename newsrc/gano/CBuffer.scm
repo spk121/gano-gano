@@ -1,3 +1,4 @@
+;;; -*- mode: scheme; coding: us-ascii; indent-tabs-mode: nil; -*-
 ;;; (gano CBuffer) - an storage model for lines of text
 ;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
 ;;;
@@ -107,6 +108,7 @@ will move as text is inserted and deleted.
             get-undo
             add-tag
             get-tags
+            get-bookmarks
 
             ;; Operations inspired by POSIX ED
             ed-append
@@ -306,6 +308,7 @@ end (exclusive)."
 ;; Char - a character
 
 (define-method (%dump-cbuffer (buf <CBuffer>))
+  (format #t "================~%")
   (format #t "Modes: IRM ~a, HEM ~a, IMM ~a, SIMD ~a~%"
           (get-insertion-replacement-mode buf)
           (get-character-editing-mode buf)
@@ -315,14 +318,21 @@ end (exclusive)."
   (let loop ((i 1) (lst (get-text buf)))
     (if (not (null? lst))
         (begin
-          (format #t "~a  |~a|~%" i (car lst))
+          (format #t "~a  |~a| " i (car lst))
+          (let ((bmarks (bookmark-get-all-in-line (get-bookmarks buf) (1- i))))
+            (when (not (null? bmarks))
+                (write bmarks)))
+          (newline)
           (loop (1+ i) (cdr lst)))))
   (format #t "====END TEXT====~%")
   (format #t "Position: Line ~a, Pos ~a ~%" (get-line-cur buf) (get-pd-cur buf))
   (format #t "Tabsize: Horiz ~a, Vert ~a~%" (get-tab-size buf) (get-vert-tab-size buf))
   (format #t "Home: ~a,  Limit ~a~%" (get-home-pos buf) (get-limit-pos buf))
   (format #t "Mark: Valid ~a, Line ~a, Pos ~a~%" (is-mark-set? buf)
-          (get-line-mark buf) (get-pd-mark buf)))
+          (get-line-mark buf) (get-pd-mark buf))
+  (format #t "================~%")
+  
+  )
 
 (define-method (bracket-line (buf <CBuffer>) L)
   "Return L if it is a valid line number for the current buffer, or
@@ -2057,8 +2067,3 @@ added."
       (set-pd-cur! buf (+ pd-start space-num))
       (set-pp-cur! buf pp-adj-end)
       (set-pp-goal! buf pp-adj-end))]))
-
-;; Local Variables:
-;; coding: us-ascii
-;; indent-tabs-mode: nil
-;; End:
