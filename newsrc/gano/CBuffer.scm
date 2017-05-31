@@ -331,7 +331,7 @@ end (exclusive)."
   (format #t "Mark: Valid ~a, Line ~a, Pos ~a~%" (is-mark-set? buf)
           (get-line-mark buf) (get-pd-mark buf))
   (format #t "================~%")
-  
+
   )
 
 (define-method (bracket-line (buf <CBuffer>) L)
@@ -1157,14 +1157,17 @@ the last character position in the line.  If SIMD is 'backward, it is
 placed at the first character position."
   (ed-delete buf 0 (get-line-count buf))
   (let ((bytes-read 0))
-    (while #t
-      (let ((txt (read-line input-port)))
-        (if (eof-object? txt)
-            (break)
-            (begin
-              (set! bytes-read (+ bytes-read (string-length txt) 1))
-              (ed-append buf (1+ (get-line-cur buf)) (list txt))))))
-    bytes-read))
+    (let loop ((txt (read-line input-port))
+               (out '())
+               (bytes-read 0))
+      (if (not (eof-object? txt))
+          (loop (read-line input-port)
+                (append out (list txt))
+                (+ bytes-read (string-length txt)))
+          ;; else
+          (begin
+            (ed-append buf 0 out)
+            bytes-read)))))
 
 (define-method (ed-get-mark (buf <CBuffer>) name)
   "Return the line number in which a bookmark has been placed, or
