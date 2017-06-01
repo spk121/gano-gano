@@ -1345,7 +1345,7 @@ to the given port.  It returns the number of bytes written."
     (for-each
      (lambda (line)
        (write-line line port)
-       (+= bytes-written (1+ (string-length line))))
+       (set! bytes-written (+ bytes-written (string-length line) 1)))
      (sublist (get-text buf) LStart LEnd))
     bytes-written))
 
