@@ -117,6 +117,10 @@ will move as text is inserted and deleted.
             ed-delete
             ed-edit
             ed-get-mark
+            ed-global-mark
+            ed-global-mark-unmatched
+            ed-global-clear
+            ed-global-map-in-order
             ed-insert
             ed-join
             ed-line-number
@@ -126,6 +130,7 @@ will move as text is inserted and deleted.
             ed-read
             ed-regex-search-backward-line
             ed-regex-search-forward-line
+            ed-substitute
             ed-write
 
             insert-lines-before
@@ -1176,6 +1181,44 @@ placed at the first character position."
     (and bm
          (list-ref bm 1))))
 
+
+(define-method (ed-global-mark (buf <CBuffer>) regex LStart LEnd)
+  "This procedure marks all lines between LStart (inclusive)
+and LEnd (exclusive) that match a regular expression.
+
+The regular expression is applied to each line in the buffer, and, if
+it matches, a tag (_RX) is set at the terminus of the line. If the
+SIMD is 'forward, the tag is set at the beginning of the line.  If the
+SIMD is 'backward, the tag is set at the end of the line."
+'fixme
+)
+
+(define-method (ed-global-mark-unmatched (buf <CBuffer>) regex LStart LEnd)
+  "This procedure marks all lines between LStart (inclusive)
+and LEnd (exclusive) that fail to match a regular expression.
+
+The regular expression is applied to each line in the buffer, and, if
+it does not match, a tag (_RX) is set at the terminus of the line.  If
+the SIMD is 'forward, the tag is set at the beginning of the line.  If
+the SIMD is 'backward, the tag is set at the end of the line."
+'fixme
+)
+
+(define-method (ed-global-clear (buf <CBuffer>))
+  "This procedure removes any _RX tags, as might have been set by the
+ed-global-mark or ed-global-mark-unmatched procedure."
+  'fixme)
+
+(define-method (ed-global-map-in-order (buf <CBuffer>)  proc)
+  "For each line that contains the _RX tag (proceeding from beginning
+to end) the active data position is set to the location of that tag,
+and then PROC is called.  Proc must be a procedure that takes BUF as a
+parameter.  If the application of PROC modifies the text in the given
+line, the _RX tag is removed."
+
+  'fixme)
+
+
 ;; N.B. ed-insert is supposed to behave similarly to ed-append
 (define-method (ed-insert (buf <CBuffer>) lineno strlist)
   "insert the lines of text STRLIST before the addressed line LINENO.
@@ -1335,6 +1378,39 @@ and the active data position is unchanged."
                   #f
                   ;; else
                   (loop (next-line i))))))))
+
+(define-method (ed-substitute (buf <CBuffer>) lstart lend regex replacement
+                              flags)
+  "This command shall search all the lines in the BUF from
+LStart (inclusive) to LEnd (exclusive) for matches to the regular
+expression REGEX.  When a match is found, it is replaced with the
+string REPLACEMENT.
+
+The REPLACEMENT string may contain some escape sequences.
+
+An backslash + digit zero '\0' will be replaced by the string matching
+regex.
+
+A backslash followed by a digit from 1 to 9 ('\1' to '\9') will be
+replaced with the Nth matching subexpression, or by an empty string if
+there was no Nth matching subexpression.
+
+A backslash + letter n '\n' will insert a line split at that location.
+
+A backslash + backslash will insert a single backslash.
+
+FLAGS may be logior of one or more of the standard regular expression
+flags 'regexp/icase', 'regexp/newline', 'regexp/basic' and
+'regexp/extended'.  This procedure also allows the following special
+flags.
+
+'regexp/global' applies the substitution to all non-overlapping matches
+in a line.
+
+'regexp/first' applies the substitution to only the first match in a line.
+"
+  'fixme
+  )
 
 (define-method (ed-write (buf <CBuffer>) lstart lend port)
   "Write the buffer lines LStart (inclusive) through LEnd (exclusive)
