@@ -69,7 +69,6 @@ will move as text is inserted and deleted.
 
 |#
 
-
 (define-module (gano CBuffer)
   #:use-module (oop goops)
   #:use-module (oop goops describe)
@@ -120,7 +119,7 @@ will move as text is inserted and deleted.
             ed-global-mark
             ed-global-mark-unmatched
             ed-global-clear
-            ed-global-map-in-order
+            ed-global-for-each
             ed-insert
             ed-join
             ed-line-number
@@ -327,6 +326,9 @@ end (exclusive)."
           (let ((bmarks (bookmark-get-all-in-line (get-bookmarks buf) (1- i))))
             (when (not (null? bmarks))
                 (write bmarks)))
+          (let ((tags (tag-get-all-in-line (get-tags buf) (1- i))))
+            (when (not (null? tags))
+                (write tags)))
           (newline)
           (loop (1+ i) (cdr lst)))))
   (format #t "====END TEXT====~%")
@@ -379,7 +381,6 @@ range."
 (define-method (get-text-cur-length (buf <CBuffer>))
   "Return the number of codepoints in the active line"
   (string-length (get-text-cur buf)))
-
 
 (define-method (set-line-and-pd-cur! (buf <CBuffer>) LPd)
   (warn-if-false (cbuffer? buf))
@@ -490,7 +491,6 @@ The return value is unspecified."
   (set-mark-flag! buf #f)
   *unspecified*)
 
-
 (define-method (set-text!! (buf <CBuffer>) strlist)
   "Sets the text of the current buffer to strlist.
 
@@ -561,7 +561,6 @@ list is returned."
     (set-bookmarks! buf unextracted)
     extracted))
 
-
 (define-method (adjust-bookmarks-in-line-after (buf <CBuffer>) LCur PdPrev PdCur)
   (for-each
    (lambda (bmark)
@@ -593,7 +592,6 @@ adjust the bookmarks."
       ((>= (bookmark:line bmark) LEnd)
        (bookmark:line! bmark (- (bookmark:line bmark) (- LEnd LStart))))))
    (get-bookmarks buf)))
-
 
 (define-method (get-active-data-location (buf <CBuffer>))
   "Counts the number of characters between the beginning of the CBuffer
@@ -1041,7 +1039,6 @@ position of the following line."
 (define-method (add-tag (buf <CBuffer>) id)
   (tag-set! (get-tags buf) id (get-line-cur buf) (get-pd-cur buf)))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  OPERATIONS INSPIRED BY ED
 
@@ -1181,8 +1178,7 @@ placed at the first character position."
     (and bm
          (list-ref bm 1))))
 
-
-(define-method (ed-global-mark (buf <CBuffer>) regex LStart LEnd)
+(define-method (ed-global-mark (buf <CBuffer>) lstart lend regex-string)
   "This procedure marks all lines between LStart (inclusive)
 and LEnd (exclusive) that match a regular expression.
 
@@ -1190,10 +1186,24 @@ The regular expression is applied to each line in the buffer, and, if
 it matches, a tag (_RX) is set at the terminus of the line. If the
 SIMD is 'forward, the tag is set at the beginning of the line.  If the
 SIMD is 'backward, the tag is set at the end of the line."
-'fixme
-)
+  (if (= 0 (get-line-count buf))
+      #f
+      ;; else
+      (let ((LStart (bracket-line buf lstart))
+            (LEnd (bracket-line buf lend))
+            (rx (make-regexp regex-string)))
+        (let loop ((i LStart))
+          (when (regexp-exec rx (get-text-line buf i))
+            (tag-set! (get-tags buf)
+                      '_RX
+                      i
+                      (if (eqv? (get-implicit-movement-direction buf) 'forward)
+                          0
+                          (string-length (get-text-line buf i)))))
+          (when (< i LEnd)
+            (loop (1+ i)))))))
 
-(define-method (ed-global-mark-unmatched (buf <CBuffer>) regex LStart LEnd)
+(define-method (ed-global-mark-unmatched (buf <CBuffer>) lstart lend regex-string)
   "This procedure marks all lines between LStart (inclusive)
 and LEnd (exclusive) that fail to match a regular expression.
 
@@ -1201,23 +1211,58 @@ The regular expression is applied to each line in the buffer, and, if
 it does not match, a tag (_RX) is set at the terminus of the line.  If
 the SIMD is 'forward, the tag is set at the beginning of the line.  If
 the SIMD is 'backward, the tag is set at the end of the line."
-'fixme
-)
+  (if (= 0 (get-line-count buf))
+      #f
+      ;; else
+      (let ((LStart (bracket-line buf lstart))
+            (LEnd (bracket-line buf lend))
+            (rx (make-regexp regex-string)))
+        (let loop ((i LStart))
+          (unless (regexp-exec rx (get-text-line buf i))
+            (tag-set! (get-tags buf)
+                      '_RX
+                      i
+                      (if (eqv? (get-implicit-movement-direction buf) 'forward)
+                          0
+                          (string-length (get-text-line buf i)))))
+          (when (< i LEnd)
+            (loop (1+ i)))))))
 
 (define-method (ed-global-clear (buf <CBuffer>))
   "This procedure removes any _RX tags, as might have been set by the
 ed-global-mark or ed-global-mark-unmatched procedure."
-  'fixme)
+  (tag-remove-all-by-name! (get-tags buf) '_RX))
 
-(define-method (ed-global-map-in-order (buf <CBuffer>)  proc)
+(define-method (ed-global-for-each (buf <CBuffer>)  proc)
   "For each line that contains the _RX tag (proceeding from beginning
 to end) the active data position is set to the location of that tag,
 and then PROC is called.  Proc must be a procedure that takes BUF as a
 parameter.  If the application of PROC modifies the text in the given
-line, the _RX tag is removed."
+line, the _RX tag is removed.  If no text is modified, the active data
+position will be returned to its original location."
+  (let ((tags (tag-get-all-by-name (get-tags buf) '_RX))
+        (LOrig (get-line-cur buf))
+        (PdOrig (get-pd-cur buf))
+        (modified? #f))
+    (for-each
+     (lambda (tag)
+       (let ((LCur (second tag))
+             (PdCur (third tag)))
+         (let ((OldStr (list-ref (get-text buf) LCur)))
+           (set-line-cur! buf LCur)
+           (set-pd-cur! buf PdCur)
+           (proc buf)
+           (unless (string=? OldStr (list-ref (get-text buf) LCur))
+             (set! modified? #t)
+             (tag-remove-at-by-name! (get-tags buf)
+                                     '_RX LCur PdCur)))))
+     tags)
 
-  'fixme)
-
+    ;; If nothing has changed, return the active data position
+    ;; to its original position.
+    (unless modified?
+      (set-line-cur! buf LOrig)
+      (set-pd-cur! buf PdOrig))))
 
 ;; N.B. ed-insert is supposed to behave similarly to ed-append
 (define-method (ed-insert (buf <CBuffer>) lineno strlist)
@@ -1388,14 +1433,14 @@ string REPLACEMENT.
 
 The REPLACEMENT string may contain some escape sequences.
 
-An backslash + digit zero '\0' will be replaced by the string matching
+An backslash + digit zero '\\0' will be replaced by the string matching
 regex.
 
-A backslash followed by a digit from 1 to 9 ('\1' to '\9') will be
+A backslash followed by a digit from 1 to 9 ('\\1' to '\\9') will be
 replaced with the Nth matching subexpression, or by an empty string if
 there was no Nth matching subexpression.
 
-A backslash + letter n '\n' will insert a line split at that location.
+A backslash + letter n '\\n' will insert a line split at that location.
 
 A backslash + backslash will insert a single backslash.
 
@@ -1677,11 +1722,6 @@ character position"
   (set-line-cur! buf (bracket-line buf n))
   (update-pp-list! buf)
   (character-position-absolute buf m))
-
-
-
-
-
 
 (define-method (delete-in-line buf P)
   "This removes some or all of the characters in the current line.

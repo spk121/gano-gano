@@ -34,6 +34,7 @@
 (define-module (gano poslist)
   #:use-module (srfi srfi-1)
   #:use-module (gano position)
+  #:use-module (mlg logging)
   #:export (
 
             ;; Operations
@@ -47,6 +48,7 @@
 
             tag-get-all-by-name
             tag-get-all-at
+            tag-get-all-in-line
             tag-set!
             tag-remove-all-by-name!
             tag-remove-at-by-name!
@@ -91,7 +93,6 @@
   (filter (lambda (entry)
              (equal? (list-ref entry 1) line))
           poslist))
-
 
 (define (bookmarks-get-not-at poslist line pos)
   (filter! (lambda (entry)
@@ -146,6 +147,11 @@
              (equal? (list-ref entry 2) pos)))
           poslist))
 
+(define (tag-get-all-in-line poslist line)
+  (filter (lambda (entry)
+             (equal? (list-ref entry 1) line))
+          poslist))
+
 (define (tag-name-at? poslist name line pos)
   (let ((entry (find (lambda (entry)
                        (and
@@ -157,12 +163,30 @@
         #t
         #f)))
 
+;; This syntax takes a list of entries of the form ('name Line Pos)
+;; and a new name, line, and pos, and it inserts the new entry if it is
+;; not a duplicate of an existing entry.
 (define-syntax tag-set!
   (syntax-rules ()
     ((_ poslist name line pos)
      (begin
-       (if (not (tag-name-at? poslist name line pos))
-           (set! poslist (acons name (list line pos) poslist)))))))
+       (when (not (tag-name-at? poslist name line pos))
+         (set! poslist (acons name (list line pos) poslist))
+         ;; The tags need to be kept sorted in a beginning-to-end
+         ;; ordering.
+         (set! poslist
+           (sort! poslist
+                  (lambda (A B)
+                    (log-debug-locals)
+                    "Sort two tags: A and B"
+                    (if (= (second A) (second B))
+                        (if (= (third A) (third B))
+                            (string<? (symbol->string (first A))
+                                      (symbol->string (first B)))
+                            ;; else
+                            (< (third A) (third B)))
+                        ;; else
+                        (< (second A) (second B)))))))))))
 
 (define-syntax tag-remove-all-by-name!
   (syntax-rules ()
