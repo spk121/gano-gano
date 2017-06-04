@@ -1470,6 +1470,91 @@ to the given port.  It returns the number of bytes written."
      (sublist (get-text buf) LStart LEnd))
     bytes-written))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; OPERATIONS INSPIRED BY SED
+
+(define (sed-display (buf <CBuffer>) LStart LEnd)
+  "Display the lines from LStart (inclusive) to LEnd (exclusive)
+to the current output port."
+  'fixme)
+
+(define (sed-display-to-port (buf <CBuffer>) LStart LEnd Port)
+  "Display the lines from LStart (inclusive) to LEnd (exclusive)
+to the given Port."
+  'fixme)
+
+(define (sed-write (buf <CBuffer>) LStart LEnd)
+  "Write the lines from LStart (inclusive) to LEnd (exclusive)
+using escape sequences for non-printable characters."
+  'fixme)
+
+(define (sed-delete (buf <CBuffer>) LStart LEnd)
+  "Delete the lines from LStart (inclusive) to LEnd (exclusive)"
+  'fixme)
+
+(define (sed-display-and-print (buf <CBuffer>) LStart LEnd)
+  "Display the lines from LStart (inclusive) to LEnd (exclusive)
+to the current output port, and then delete them from the buffer."
+  'fixme)
+
+(define (sed-replace (buf <CBuffer>) LStart LEnd StrList)
+  "Replace the lines LStart (inclusive) to LEnd (exclusive)
+with the list of strings StrList."
+  'fixme)
+
+(define (sed-read-replace (buf <CBuffer>) LStart LEnd)
+  "For each line from LStart (inclusive) to LEnd (exclusive),
+read a line from the current input port, replacing the line in the
+buffer."
+  'fixme)
+
+(define (sed-display-and-read-replace (buf <CBuffer>) LStart LEnd)
+  "For each line from LStart (inclusive) to LEnd (exclusive),
+display the line to the current output port, and then read a line from
+the current input port, which will replace that line in the buffer."
+  'fixme)
+
+(define (sed-substitute (buf <CBuffer>) LStart LEnd RegexString
+                        ReplacementString Flags)
+  "For each line from LStart (inclusive) to LEnd (exclusive),
+search for the regular expression RegexString.  If found, replace it
+with ReplacementString, minding Flags."
+  'fixme)
+
+(define (sed-transliterate (buf <CBuffer>) LStart LEnd StringBefore StringAfter)
+  "For each line from LStart (inclusive) to LEnd (exclusive),
+replace any character in the line that found in StringBefore with the
+corrensponding character in StringAfter.  StringBefore and StringAfter
+must be the same length."
+  'fixme)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; OPERATIONS INSPIRED BY EX
+
+(define (ex-shift-left (buf <CBuffer>) LStart LEnd Count)
+  "For each of the lines from LStart (inclusive) to LEnd  (exclusive) remove Count leading blank characters from the lines.
+If there are fewer than Count leading blank characters in a
+given line, remove all the leading blank characters."
+  'fixme)
+
+(define (ex-shift-right (buf <CBuffer>) LStart LEnd Count)
+  "For each of the lines from LStart (inclusive) to LEnd (exclusive)
+append Count leading blank characters to the lines."
+  'fixme)
+
+(define (ex-delete-non-printing-characters (buf <CBuffer>) LStart LEnd Count)
+  "For each of the lines from LStart (inclusive) to LEnd (exclusive)
+remove any non-printing characters other than format effectors tab, newline, and form feed."
+  'fixme)
+
+(define (ex-scroll-up (buf <CBuffer>) Count)
+  "Move the active data position up Count lines."
+  'fixme)
+
+(define (ex-scroll-down (buf <CBuffer>) Count)
+  "Move the active data position down Count lines."
+  'fixme)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OPERATIONS
 
