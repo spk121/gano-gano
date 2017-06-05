@@ -83,6 +83,7 @@ will move as text is inserted and deleted.
   #:use-module (gano position)
   #:use-module (mlg typechecking)
   #:use-module (mlg logging)
+  #:use-module (mlg strings)
   #:export (
             <CBuffer>
             ;; Constructors
@@ -110,7 +111,7 @@ will move as text is inserted and deleted.
             get-bookmarks
 
             ;; Operations inspired by POSIX ED
-            ed-append
+            insert-lines
             ed-change
             ed-copy
             ed-delete
@@ -120,7 +121,6 @@ will move as text is inserted and deleted.
             ed-global-mark-unmatched
             ed-global-clear
             ed-global-for-each
-            ed-insert
             ed-join
             ed-line-number
             ed-mark
@@ -240,7 +240,7 @@ end (exclusive)."
 
   ;; The text
   ;; A list of strings
-  (m_rgText #:init-value '("") #:accessor get-text #:setter set-text!)
+  (m_rgText #:init-value '() #:accessor get-text #:setter set-text!)
   ;; The current line number
   (m_LCur #:init-value 0 #:getter get-line-cur #:setter %set-line-cur!)
   ;; The current data position
@@ -1042,24 +1042,41 @@ position of the following line."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  OPERATIONS INSPIRED BY ED
 
-(define-method (ed-append (buf <CBuffer>) lineno strlist)
-  "Append the lines of text STRLIST at the addressed line LINENO.
-The previous contents of LINENO and following lines will be pushed down.
-The active data position will be set to the last inserted line, or, if
-STRLIST was an empty list, to the addressed line.
+(define-method (insert-lines (Buf <CBuffer>) LInsert StrList)
+  "Append the StrList at the addressed line LInsert.  If LInsert is
+the line after the last line in the buffer, StrList is appended to the
+end of the text.  The previous contents of LInsert and following lines
+will be pushed down.  The active data position will be set to the end
+of the last inserted line, or, if StrList were an empty list, to the
+end of the addressed line."
+  (warn-if-false (list-of-strings-length-0+? StrList))
+  (warn-if-false (integer-nonnegative? LInsert))
+  (warn-if-false (<= LInsert (get-line-count Buf)))
 
-If the implicit movement direction (SIMD) is 'forward, the active data
-position will be placed as the last character position of the line.
-If it is 'backward, it will be placed as the first character position
-of the line."
-  (let ((L (bracket-line buf lineno)))
-    ;; (log-debug-locals)
-    (unless (null? strlist)
-      (op-insert-lines-after buf L strlist))
-    (if (null? strlist)
-        (set-line-cur! buf L)
-        (set-line-cur! buf (+ L (1- (length strlist)))))
-    (set-pd-cur-to-simd-eol! buf)))
+  (if (null? StrList)
+      (begin
+        (set-line-cur! Buf L)
+        (set-pd-cur-to-simd-eol! Buf))
+      ;; else
+      (begin
+        (let ((LCount (length StrList)))
+          ;; Add the op to the list of mutator operations
+          (append-undo! Buf (list 'insert-lines LInsert StrList))
+
+          ;; Insert the line into the string list
+          (let ((buftxt (get-text Buf)))
+            (set-text! Buf (append (take buftxt LInsert)
+                                   StrList
+                                   (drop buftxt LInsert))))
+          ;; Clear the mark.
+          (set-mark-flag! Buf #f)
+          ;; Move the active data position
+          (set-line-cur! Buf (+ LInsert (1- LCount)))
+          (set-pd-cur-to-simd-eol! Buf)
+
+          ;; Adjust bookmarks and tags
+          (adjust-poslist-insert-lines-after (get-tags Buf) LInsert LCount)
+          (adjust-poslist-insert-lines-after (get-bookmarks Buf) LInsert LCount)))))
 
 (define-method (ed-change (buf <CBuffer>) lstart lend strlist)
   "Remove the lines of text from LStart (inclusive) to LEnd (exclusive),
@@ -1433,29 +1450,40 @@ string REPLACEMENT.
 
 The REPLACEMENT string may contain some escape sequences.
 
-An backslash + digit zero '\\0' will be replaced by the string matching
-regex.
+An ampersand '&' will be replaced by the string matching regex.
 
 A backslash followed by a digit from 1 to 9 ('\\1' to '\\9') will be
 replaced with the Nth matching subexpression, or by an empty string if
 there was no Nth matching subexpression.
 
-A backslash + letter n '\\n' will insert a line split at that location.
-
 A backslash + backslash will insert a single backslash.
 
-FLAGS may be logior of one or more of the standard regular expression
-flags 'regexp/icase', 'regexp/newline', 'regexp/basic' and
-'regexp/extended'.  This procedure also allows the following special
-flags.
-
-'regexp/global' applies the substitution to all non-overlapping matches
-in a line.
-
-'regexp/first' applies the substitution to only the first match in a line.
-"
-  'fixme
-  )
+FLAGS is a string that may contain the letter 'g' or a
+digit '1' through '9'.  If 'g' is present, the substitution
+is applied to allnon-overlapping matches in each line.
+If a digit is present, the substitution applies only to the
+Nth match in the line."
+  (let ((LStart (bracket-line buf lstart))
+        (LEnd (bracket-line buf lend))
+        (LModified #f))
+    (do ((i LStart (1+ i)))
+        ((>= i LEnd))
+      (let* ((old-txt (list-ref (get-text buf) i))
+             (new-txt (string-sed-substitute
+                       old-txt
+                       regex
+                       replacement
+                       flags)))
+        (unless (string=? old-txt new-txt)
+          (list-set! (get-text buf) i new-txt)
+          (set! LModified i))))
+    ;; If there was a line that was modified, we move the active data
+    ;; position to the end of that line.  Otherwise, the active data
+    ;; position is not changed.
+    (when LModified
+      (set-line-cur! buf LModified)
+      (set-pd-cur-to-simd-eol! buf))
+    LModified))
 
 (define-method (ed-write (buf <CBuffer>) lstart lend port)
   "Write the buffer lines LStart (inclusive) through LEnd (exclusive)
@@ -1473,55 +1501,55 @@ to the given port.  It returns the number of bytes written."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OPERATIONS INSPIRED BY SED
 
-(define (sed-display (buf <CBuffer>) LStart LEnd)
+(define-method (sed-display (buf <CBuffer>) LStart LEnd)
   "Display the lines from LStart (inclusive) to LEnd (exclusive)
 to the current output port."
   'fixme)
 
-(define (sed-display-to-port (buf <CBuffer>) LStart LEnd Port)
+(define-method (sed-display-to-port (buf <CBuffer>) LStart LEnd Port)
   "Display the lines from LStart (inclusive) to LEnd (exclusive)
 to the given Port."
   'fixme)
 
-(define (sed-write (buf <CBuffer>) LStart LEnd)
+(define-method (sed-write (buf <CBuffer>) LStart LEnd)
   "Write the lines from LStart (inclusive) to LEnd (exclusive)
 using escape sequences for non-printable characters."
   'fixme)
 
-(define (sed-delete (buf <CBuffer>) LStart LEnd)
+(define-method (sed-delete (buf <CBuffer>) LStart LEnd)
   "Delete the lines from LStart (inclusive) to LEnd (exclusive)"
   'fixme)
 
-(define (sed-display-and-print (buf <CBuffer>) LStart LEnd)
+(define-method (sed-display-and-print (buf <CBuffer>) LStart LEnd)
   "Display the lines from LStart (inclusive) to LEnd (exclusive)
 to the current output port, and then delete them from the buffer."
   'fixme)
 
-(define (sed-replace (buf <CBuffer>) LStart LEnd StrList)
+(define-method (sed-replace (buf <CBuffer>) LStart LEnd StrList)
   "Replace the lines LStart (inclusive) to LEnd (exclusive)
 with the list of strings StrList."
   'fixme)
 
-(define (sed-read-replace (buf <CBuffer>) LStart LEnd)
+(define-method (sed-read-replace (buf <CBuffer>) LStart LEnd)
   "For each line from LStart (inclusive) to LEnd (exclusive),
 read a line from the current input port, replacing the line in the
 buffer."
   'fixme)
 
-(define (sed-display-and-read-replace (buf <CBuffer>) LStart LEnd)
+(define-method (sed-display-and-read-replace (buf <CBuffer>) LStart LEnd)
   "For each line from LStart (inclusive) to LEnd (exclusive),
 display the line to the current output port, and then read a line from
 the current input port, which will replace that line in the buffer."
   'fixme)
 
-(define (sed-substitute (buf <CBuffer>) LStart LEnd RegexString
+(define-method (sed-substitute (buf <CBuffer>) LStart LEnd RegexString
                         ReplacementString Flags)
   "For each line from LStart (inclusive) to LEnd (exclusive),
 search for the regular expression RegexString.  If found, replace it
 with ReplacementString, minding Flags."
   'fixme)
 
-(define (sed-transliterate (buf <CBuffer>) LStart LEnd StringBefore StringAfter)
+(define-method (sed-transliterate (buf <CBuffer>) LStart LEnd StringBefore StringAfter)
   "For each line from LStart (inclusive) to LEnd (exclusive),
 replace any character in the line that found in StringBefore with the
 corrensponding character in StringAfter.  StringBefore and StringAfter
@@ -1531,27 +1559,27 @@ must be the same length."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OPERATIONS INSPIRED BY EX
 
-(define (ex-shift-left (buf <CBuffer>) LStart LEnd Count)
+(define-method (ex-shift-left (buf <CBuffer>) LStart LEnd Count)
   "For each of the lines from LStart (inclusive) to LEnd  (exclusive) remove Count leading blank characters from the lines.
 If there are fewer than Count leading blank characters in a
 given line, remove all the leading blank characters."
   'fixme)
 
-(define (ex-shift-right (buf <CBuffer>) LStart LEnd Count)
+(define-method (ex-shift-right (buf <CBuffer>) LStart LEnd Count)
   "For each of the lines from LStart (inclusive) to LEnd (exclusive)
 append Count leading blank characters to the lines."
   'fixme)
 
-(define (ex-delete-non-printing-characters (buf <CBuffer>) LStart LEnd Count)
+(define-method (ex-delete-non-printing-characters (buf <CBuffer>) LStart LEnd Count)
   "For each of the lines from LStart (inclusive) to LEnd (exclusive)
 remove any non-printing characters other than format effectors tab, newline, and form feed."
   'fixme)
 
-(define (ex-scroll-up (buf <CBuffer>) Count)
+(define-method (ex-scroll-up (buf <CBuffer>) Count)
   "Move the active data position up Count lines."
   'fixme)
 
-(define (ex-scroll-down (buf <CBuffer>) Count)
+(define-method (ex-scroll-down (buf <CBuffer>) Count)
   "Move the active data position down Count lines."
   'fixme)
 
