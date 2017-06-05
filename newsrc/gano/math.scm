@@ -19,12 +19,12 @@
 (define-module (gano math)
   #:use-module (mlg logging)
   #:export(x-insert-before
-	   x-insert
-	   x-replace
-	   x-move
-	   x-copy
-	   x-delete
-	   ))
+           x-insert
+           x-replace
+           x-move
+           x-copy
+           x-delete
+           ))
 
 ;; These are math operations for text locations.  These are generic:
 ;; the positions could be cells locations in a line, or they could be
@@ -46,7 +46,7 @@
 (define (x-insert-before X XInsert LenInsert)
   "Adjust position X as if LenInsert cells were inserted just before
 position XInsert."
-  (x-insert X XInsert LenInsert 'before))
+  (%x-insert X XInsert LenInsert 'before))
 
 (define (x-insert X XInsert LenInsert)
   "Adjust position X as if LenInsert cells were inserted at
@@ -61,7 +61,6 @@ position XInsert."
    ;; |--:--*--| => |--:|new|--*--|
    (else
     (+ X LenInsert))))
-
 
 (define (x-replace X XReplaceStart XReplaceEnd ReplaceLen)
   "Adjust position X as if the region XReplaceStart (inclusive) to

@@ -58,7 +58,7 @@
    ((<> LPos LInsert)
     (list LPos PPos))
    (else
-    (list LPos (x-insert-after PPos PInsert LenInsert)))))
+    (list LPos (x-insert PPos PInsert LenInsert)))))
 
 (define (pos-replace-in-line LPos PPos LReplace PReplaceStart PReplaceEnd ReplaceLen)
   (cond
