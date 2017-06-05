@@ -1,3 +1,4 @@
+;;; -*- mode: scheme; coding: us-ascii; indent-tabs-mode: nil; -*-
 ;;; (gano position) - mathmatical operations on i,j coordinates
 ;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
 ;;;
@@ -33,7 +34,7 @@
             pos-delete-in-line
 
             pos-insert-lines-before
-            pos-insert-lines-after
+            pos-insert-lines
             pos-replace-lines
             pos-move-lines
             pos-copy-lines
@@ -104,9 +105,9 @@ PDeleteEnd (exclusive) was removed."
   "Adjust position as if LCount lines were inserted before LInsert."
   (list (x-insert-before LPos LInsert LCount) PPos))
 
-(define (pos-insert-lines-after LPos PPos LInsert LCount)
-  "Adjust position as if LCount lines were inserted before LInsert."
-  (list (x-insert-after LPos LInsert LCount) PPos))
+(define (pos-insert-lines LPos PPos LInsert LCount)
+  "Adjust position as if LCount lines were inserted at LInsert."
+  (list (x-insert LPos LInsert LCount) PPos))
 
 (define (pos-replace-lines LPos PPos LReplaceStart LReplaceEnd ReplaceLen)
   "Adjust position as if lines LReplaceStart (inclusive) to
@@ -170,8 +171,3 @@ position PSplitAfter."
 
    (else
     (error "impossible error"))))
-
-;; Local Variables:
-;; coding: us-ascii
-;; indent-tabs-mode: nil
-;; End:

@@ -380,11 +380,13 @@ range."
 
 (define-method (get-text-cur-length (buf <CBuffer>))
   "Return the number of codepoints in the active line"
-  (string-length (get-text-cur buf)))
+  (if (null? (get-text buf))
+      0
+      (string-length (get-text-cur buf))))
 
 (define-method (set-line-and-pd-cur! (buf <CBuffer>) LPd)
   (warn-if-false (cbuffer? buf))
-  (warn-if-false (list-of-two-integers? LPd))
+  (warn-if-false (list-of-integers-length-2? LPd))
 
   (set-line-cur! buf (list-ref LPd 0))
   (set-pd-cur! buf (list-ref LPd 1)))
@@ -903,10 +905,29 @@ LCopyEnd (exclusive) to the line LCopyTo."
   ;; Clear the mark
   (set-mark-flag! buf #f))
 
-(define-method (undo (buf <CBuffer>))
+(define-method (undo (Buf <CBuffer>))
   ;; Pop the last operation off the list of mutator operations
   ;; Dispatch the operation to its handler.
-  )
+  (if (null? (get-undo Buf))
+      #f
+      ;; else
+      (let ((last-op (last (get-undo Buf))))
+        (set-undo! Buf (drop-right (get-undo Buf) 1))
+        (log-debug-locals)
+        (log-debug-pk (get-undo Buf))
+        (cond
+         ((eqv? (car last-op) 'insert-lines)
+          (undo-insert-lines Buf
+                             (second last-op)
+                             (third last-op)
+                             (fourth last-op)
+                             (fifth last-op))
+
+          #t)
+
+         (else
+          (warn-if-reached)
+          #f)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; METHODS
@@ -1061,7 +1082,10 @@ end of the addressed line."
       (begin
         (let ((LCount (length StrList)))
           ;; Add the op to the list of mutator operations
-          (append-undo! Buf (list 'insert-lines LInsert StrList))
+          (append-undo! Buf (list 'insert-lines
+                                  LInsert StrList
+                                  (get-line-cur Buf)
+                                  (get-pd-cur Buf)))
 
           ;; Insert the line into the string list
           (let ((buftxt (get-text Buf)))
@@ -1075,8 +1099,23 @@ end of the addressed line."
           (set-pd-cur-to-simd-eol! Buf)
 
           ;; Adjust bookmarks and tags
-          (adjust-poslist-insert-lines-after (get-tags Buf) LInsert LCount)
-          (adjust-poslist-insert-lines-after (get-bookmarks Buf) LInsert LCount)))))
+          (adjust-poslist-insert-lines (get-tags Buf) LInsert LCount)
+          (adjust-poslist-insert-lines (get-bookmarks Buf) LInsert LCount)))))
+
+(define-method (undo-insert-lines (Buf <CBuffer>) LInsert StrList LCur PdCur)
+  "Undo insert lines. Note that this doesn't alter the undo stack."
+  (let ((buftxt (get-text Buf))
+        (LCount (length StrList)))
+    (set-text! Buf (append (take buftxt LInsert)
+                           (drop buftxt (+ LInsert LCount))))
+    ;; Clear the mark
+    (set-mark-flag! Buf #f)
+    ;; Move the active data position
+    (set-line-cur! Buf LCur)
+    (set-pd-cur! Buf PdCur)
+    ;; Adjust bookmarks and tags
+    (adjust-poslist-delete-lines (get-tags Buf) LInsert LCount)
+    (adjust-poslist-delete-lines (get-bookmarks Buf) LInsert LCount)))
 
 (define-method (ed-change (buf <CBuffer>) lstart lend strlist)
   "Remove the lines of text from LStart (inclusive) to LEnd (exclusive),
@@ -1185,7 +1224,7 @@ placed at the first character position."
                 (+ bytes-read (string-length txt)))
           ;; else
           (begin
-            (ed-append buf 0 out)
+            (insert-lines buf 0 out)
             bytes-read)))))
 
 (define-method (ed-get-mark (buf <CBuffer>) name)

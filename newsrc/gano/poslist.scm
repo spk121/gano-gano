@@ -64,7 +64,7 @@
             poslist-copy-in-line
 
             adjust-poslist-insert-lines-before
-            adjust-poslist-insert-lines-after
+            adjust-poslist-insert-lines
             adjust-poslist-replace-lines
             adjust-poslist-move-lines
             adjust-poslist-copy-lines
@@ -319,12 +319,12 @@
         (pos-insert-lines-before LPos PPos LInsert LCount))
       poslist))))
 
-(define-syntax adjust-poslist-insert-lines-after
+(define-syntax adjust-poslist-insert-lines
   (syntax-rules ()
     ((_ poslist LInsert LCount)
      (adjust-positions
       (lambda (LPos PPos)
-        (pos-insert-lines-after LPos PPos LInsert LCount))
+        (pos-insert-lines LPos PPos LInsert LCount))
       poslist))))
 
 (define-syntax adjust-poslist-replace-lines

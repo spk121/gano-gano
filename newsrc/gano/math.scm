@@ -1,3 +1,4 @@
+;;; -*- mode: scheme; coding: us-ascii; indent-tabs-mode: nil; -*-
 ;;; (gano math) - mathmatical operations on integer spans
 ;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
 ;;;
@@ -18,7 +19,7 @@
 (define-module (gano math)
   #:use-module (mlg logging)
   #:export(x-insert-before
-	   x-insert-after
+	   x-insert
 	   x-replace
 	   x-move
 	   x-copy
@@ -29,12 +30,12 @@
 ;; the positions could be cells locations in a line, or they could be
 ;; lines within a document.
 
-(define (x-insert X XInsert LenInsert before-or-after)
+(define (%x-insert X XInsert LenInsert where)
   (cond
    ;; Pos is before text to insert
    ;; |--*--:--| => |--*--:|new|--|
-   ((or (and (eqv? before-or-after 'before) (< X XInsert))
-        (and (eqv? before-or-after 'after) (<= X XInsert)))
+   ((or (and (eqv? where 'before) (< X XInsert))
+        (and (eqv? where 'at) (< X XInsert)))
     X)
 
    ;; Pos is after text to insert
@@ -47,10 +48,20 @@
 position XInsert."
   (x-insert X XInsert LenInsert 'before))
 
-(define (x-insert-after X XInsert LenInsert)
-  "Adjust position X as if LenInsert cells were inserted just after
+(define (x-insert X XInsert LenInsert)
+  "Adjust position X as if LenInsert cells were inserted at
 position XInsert."
-  (x-insert X XInsert LenInsert 'after))
+  (cond
+   ;; Pos is before text to insert
+   ;; |--*--:--| => |--*--:|new|--|
+   ((< X XInsert)
+    X)
+
+   ;; Pos is after text to insert
+   ;; |--:--*--| => |--:|new|--*--|
+   (else
+    (+ X LenInsert))))
+
 
 (define (x-replace X XReplaceStart XReplaceEnd ReplaceLen)
   "Adjust position X as if the region XReplaceStart (inclusive) to
@@ -198,8 +209,3 @@ XDeleteStart (inclusive) to XDeleteEnd (exclusive) was removed."
 
      (else
       (error "impossible error")))))
-
-;; Local Variables:
-;; coding: us-ascii
-;; indent-tabs-mode: nil
-;; End:
