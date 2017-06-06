@@ -24,6 +24,7 @@
 ;; operation.
 (define-module (gano position)
   #:use-module (gano math)
+  #:use-module (mlg math)
   #:use-module (srfi srfi-1)
   #:export (
             pos-insert-in-line-before
@@ -155,19 +156,17 @@ of the lines LMergeStart to LMergeEnd are stored in PMergeLengthList."
           (+ PPos
              (apply + (take PMergeLengthList (- (min LPos LMergeEnd) LMergeStart))))))))
 
-(define (pos-split-lines LPos PPos LSplit PSplitAfter)
-  "Adjust the position as of line LSplit had been split after the
-position PSplitAfter."
+(define (pos-split-lines LPos PPos LSplit PSplitList)
+  "Adjust the position as if the line LSplit had been split into
+multiple lines at the boundaries given in PSplitList."
   (cond
-   ((or (< LPos LSplit)
-        (and (= LPos LSplit) (<= PPos PSplitAfter)))
+   ((or (< LPos LSplit))
     (list LPos PPos))
 
-   ((> LPos LSplit)
-    (list (1+ LPos) PPos))
-
-   ((and (= LPos LSplit) (> PPos PSplitAfter))
-    (list (1+ LPos) (- PPos (+ PSplitAfter 1))))
+   ((= LPos LSplit)
+    (let ((coord (monotonic-list-pos-to-coord PSplitList PPos)))
+      (list (+ LPos (first coord))
+            (second coord))))
 
    (else
-    (error "impossible error"))))
+    (list (+ LPos (1- (length PSplitList))) PPos))))

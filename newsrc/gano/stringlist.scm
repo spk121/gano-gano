@@ -1,3 +1,4 @@
+;;; -*- mode: scheme; coding: us-ascii; indent-tabs-mode: nil; -*-
 ;;; (gano stringlist) - a library of procedures for lists of strings
 ;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
 ;;;
@@ -32,7 +33,7 @@
             strlist-delete-lines
 
             strlist-merge-lines
-            strlist-split-line))
+            strlist-split-lines))
 
 (define (sublist list start end)
   (drop (take list end) start))
@@ -177,17 +178,27 @@
         (list (apply string-append (sublist strlist LMergeStart LMergeEnd)))
         (drop strlist LMergeEnd))))))
 
-(define-syntax strlist-split-line
+(define-syntax strlist-split-lines
   (syntax-rules()
-    ((_ strlist LSplit PSplitAfter)
-     (set! strlist
-       (append
-        (take strlist LSplit)
-        (list (string-take (list-ref strlist LSplit) PSplitAfter)
-              (string-drop (list-ref strlist LSplit) PSplitAfter))
-        (drop strlist (1+ LSplit)))))))
+    ((_ strlist LSplit LengthList)
+     (let ((str (list-ref strlist LSplit)))
+       (set! strlist
+         (append
+          (take strlist LSplit)
+          (let loop ((i 0)
+                     (out '()))
+            (cond
+             ((= i 0)
+              (loop (1+ i)
+                    (list (string-take str (list-ref LengthList i)))))
+             ((< i (length LengthList))
+              (loop (1+ i)
+                    (append
+                     out
+                     (list (substring str
+                                      (list-ref LengthList (1- i))
+                                      (list-ref LengthList i))))))
+             (else
+              out)))
+          (drop strlist (1+ LSplit))))))))
 
-;; Local Variables:
-;; coding: us-ascii
-;; indent-tabs-mode: nil
-;; End:

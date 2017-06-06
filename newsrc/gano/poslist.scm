@@ -16,7 +16,6 @@
 ;;; along with this program.  If not, see
 ;;; <http://www.gnu.org/licenses/>
 
-
 ;; Named position lists are association lists between names and
 ;; positions in a text. There are two flavors of named position lists:
 ;; bookmarks and tags.
@@ -90,9 +89,14 @@
           poslist))
 
 (define (bookmark-get-all-in-line poslist line)
-  (filter (lambda (entry)
-             (equal? (list-ref entry 1) line))
-          poslist))
+  (let ((bmarks (filter (lambda (entry)
+                          (equal? (list-ref entry 1) line))
+                        poslist)))
+    (if (null? bmarks)
+        '()
+        ;; else
+        (sort bmarks (lambda (B1 B2)
+                       (< (third B1) (third B2)))))))
 
 (define (bookmarks-get-not-at poslist line pos)
   (filter! (lambda (entry)
@@ -228,6 +232,8 @@
           (let ((LPos (list-ref entry 1))
                 (PPos (list-ref entry 2)))
             (let ((adjusted-pos (proc LPos PPos)))
+              (log-debug-pk adjusted-pos)
+              (warn-if-false (proper-list? adjusted-pos))
               (if (null-list? adjusted-pos)
                   ret
                   (begin
@@ -395,8 +401,8 @@
 
 (define-syntax adjust-poslist-split-lines
   (syntax-rules ()
-    ((_ poslist LSplit PSplitAfter)
+    ((_ poslist LSplit PSplitList)
      (adjust-positions
       (lambda (LPos PPos)
-        (pos-split-lines LPos PPos LSplit PSplitAfter))
+        (pos-split-lines LPos PPos LSplit PSplitList))
       poslist))))
