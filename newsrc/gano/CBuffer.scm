@@ -114,23 +114,21 @@ will move as text is inserted and deleted.
             ;; Operations inspired by POSIX ED
             bookmark-bol
             delete-lines
+            display-lines-to-port
             insert-lines
+            insert-lines-from-port
             join-lines
             move-lines
             replace-all-from-port
             replace-lines
-            ed-copy
-            ed-get-mark
+            substitute-in-lines
+            get-bookmark-line
             ed-global-mark
             ed-global-mark-unmatched
             ed-global-clear
             ed-global-for-each
-            ed-line-number
-            ed-null
-            ed-read
             ed-regex-search-backward-line
             ed-regex-search-forward-line
-            ed-substitute
             ed-write
 
             insert-lines-before
@@ -954,6 +952,14 @@ LCopyEnd (exclusive) to the line LCopyTo."
                             (fifth last-op)  ;LCur
                             (sixth last-op))  ;PdCur
           #t)
+         ((eqv? (car last-op) 'copy-lines)
+          (undo-copy-lines Buf
+                           (second last-op) ;LCopyStart
+                           (third last-op)  ;LCopyEnd
+                           (fourth last-op) ;LCopyTo
+                           (fifth last-op)  ;LCur
+                           (sixth last-op)) ;PdCur
+          #t)
          (else
           (warn-if-reached)
           #f)))))
@@ -1107,6 +1113,52 @@ position of the following line."
                      0
                      (get-text-cur-length Buf))))
 
+(define (copy-lines Buf LCopyStart LCopyEnd LCopyTo)
+  "Make a copy of the lines between LCopyStart (inclusive) and
+LCopyEnd (exclusive) and position that copy at the line LCopyTo.
+
+The active data line will be set to the new location of the last line
+copied."
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (integer-nonnegative? LCopyStart))
+  (warn-if-false (integer-nonnegative? LCopyEnd))
+  (warn-if-false (integer-nonnegative? LCopyTo))
+  (warn-if-false (< LCopyStart LCopyEnd))
+
+  (if (> LCopyEnd LCopyStart)
+      (begin
+        (append-undo! Buf (list 'copy-lines LCopyStart LCopyEnd LCopyTo
+                                (get-line-cur Buf) (get-pd-cur Buf)))
+        ;; Overwrite the text in the line, and adjust bookmarks and tags
+        (strlist-copy-lines (get-text Buf) LCopyStart LCopyEnd LCopyTo)
+        (poslist-copy-lines (get-tags Buf) LCopyStart LCopyEnd LCopyTo)
+        (adjust-poslist-copy-lines (get-bookmarks Buf) LCopyStart LCopyEnd LCopyTo #f)
+
+        ;; Move the activive data position
+        (set-line-and-pd-cur! Buf (pos-copy-lines (get-line-cur Buf) (get-pd-cur Buf)
+                                                  LCopyStart LCopyEnd LCopyTo #t))
+        (set-pd-cur-to-simd-eol! Buf)
+
+        ;; Clear the mark
+        (set-mark-flag! Buf #f))))
+
+(define (undo-copy-lines Buf LCopyStart LCopyEnd LCopyTo LCur PdCur)
+  "Undo copy lines."
+  (let ((buftxt (get-text Buf))
+        (copylen (- LCopyEnd LCopyStart)))
+    (set-text! Buf (append (take buftxt LCopyTo)
+                           (drop buftxt (+ LCopyTo copylen))))
+    ;; Clear the mark
+    (set-mark-flag! Buf #f)
+    ;; Move the active data position
+    (set-line-cur! Buf LCur)
+    (set-pd-cur! Buf PdCur)
+    ;; Adjust bookmarks and tags
+    (adjust-poslist-delete-lines (get-tags Buf) LCopyStart
+                                 (+ LCopyTo (1- copylen)))
+    (adjust-poslist-delete-lines (get-bookmarks Buf) LCopyStart
+                                 (+ LCopyTo (1- copylen)))))
+
 (define-method (delete-lines (Buf <CBuffer>) LStart LEnd)
   "Remove the lines of text from LStart (inclusive) to LEnd (exclusive).
 
@@ -1161,8 +1213,24 @@ buffer, the active data position is set to the end of the last line."
     (set-line-cur! Buf LCur)
     (set-pd-cur! Buf PdCur)
     ;; Adjust bookmarks and tags
-    (adjust-poslist-insert-lines (get-tags Buf) LInsert lremovedcount)
-    (adjust-poslist-insert-lines (get-bookmarks Buf) LInsert lremovedcount)))
+    (adjust-poslist-insert-lines (get-tags Buf) LStart lremovedcount)
+    (adjust-poslist-insert-lines (get-bookmarks Buf) LStart lremovedcount)))
+
+(define (display-lines-to-port Buf LStart LEnd Port)
+  "Writes the buffer lines LStart (inclusive) through LEnd (exclusive)
+to the given port.  It returns the number of bytes written."
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (integer-nonnegative? LStart))
+  (warn-if-false (integer-nonnegative? LEnd))
+  (warn-if-false (output-port? Port))
+
+  (let ((bytes-written 0))
+    (for-each
+     (lambda (line)
+       (write-line line Port)
+       (set! bytes-written (+ bytes-written (string-length line) 1)))
+     (sublist (get-text Buf) LStart LEnd))
+    bytes-written))
 
 (define-method (insert-lines (Buf <CBuffer>) LInsert StrList)
   "Append the StrList at the addressed line LInsert.  If LInsert is
@@ -1217,6 +1285,33 @@ end of the addressed line."
     ;; Adjust bookmarks and tags
     (adjust-poslist-delete-lines (get-tags Buf) LInsert lcount)
     (adjust-poslist-delete-lines (get-bookmarks Buf) LInsert lcount)))
+
+(define-method (insert-lines-from-port (Buf <CBuffer>) LInsert InputPort)
+  "Reads in from the port, line by line, appending those lines to the
+buffer.  Read until #<eof> is found, and then inserts the text at
+lines LInsert.
+
+The active data position will be set to the end of the last line
+inserted into the buffer.
+
+Return the number of characters or bytes received."
+  (warn-if-false (input-port? InputPort))
+  (warn-if-false (integer-nonnegative? LInsert))
+  (warn-if-false (<= LInsert (get-line-count Buf)))
+
+  (let loop ((txt (read-line InputPort))
+             (newstrlist '())
+             (chars-read 0))
+    (if (not (eof-object? txt))
+        (loop (read-line InputPort)
+              (append newstrlist (list txt))
+              (+ chars-read (string-length txt)))
+        ;; else
+        (begin
+          ;; Note that insert-lines handles the undo information and
+          ;; moving the active data position.
+          (insert-lines Buf LInsert newstrlist)
+          chars-read))))
 
 (define-method (join-lines (Buf <CBuffer>) LStart LEnd)
   "Combine the lines LStart (inclusive) to LEnd (exclusive) into a single
@@ -1419,34 +1514,61 @@ region."
                                   LStart (+ LStart lcountnew)
                                   lcountremoved)))
 
-(define-method (ed-copy (buf <CBuffer>) lcopybegin lcopyend lcopyto)
-  "Make a copy of the lines between LCopyBegin (inclusive) and
-LCopyEnd (exclusive) and position that copy at the line LCopyTo.
+(define (substitute-in-lines Buf LStart LEnd Regex Replacement Flags)
+  "This command shall search all the lines in the BUF from
+LStart (inclusive) to LEnd (exclusive) for matches to the regular
+expression REGEX.  When a match is found, it is replaced with the
+string REPLACEMENT.
 
-The active data line will be set to the new location of the last line
-copied.  If the implicit movement direction (SIMD) is 'forward, the
-data position will be at the last character position in that line.  If
-it is 'backward, it will be at the first character position in that
-line."
-  (let ((LCopyBegin (bracket-line buf lcopybegin))
-        (LCopyEnd (bracket-line buf lcopyend))
-        (LCopyTo (bracket-line buf lcopyto)))
-    ;; (log-debug-locals)
-    (if (> LCopyEnd LCopyBegin)
-        (begin
-          (op-copy-lines buf LCopyBegin LCopyEnd LCopyTo)))
-    (set-line-cur! buf (+ LCopyTo (- LCopyEnd LCopyBegin)))
-    (set-pd-cur-to-simd-eol! buf)))
+The REPLACEMENT string may contain some escape sequences.
+
+An ampersand '&' will be replaced by the string matching regex.
+
+A backslash followed by a digit from 1 to 9 ('\\1' to '\\9') will be
+replaced with the Nth matching subexpression, or by an empty string if
+there was no Nth matching subexpression.
+
+A backslash + backslash will insert a single backslash.
+
+FLAGS is a string that may contain the letter 'g' or a
+digit '1' through '9'.  If 'g' is present, the substitution
+is applied to allnon-overlapping matches in each line.
+If a digit is present, the substitution applies only to the
+Nth match in the line."
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (integer-nonnegative? LStart))
+  (warn-if-false (integer-nonnegative? LEnd))
+
+  (let ((LModified #f))
+    (do ((i LStart (1+ i)))
+        ((>= i LEnd))
+      (let* ((old-txt (list-ref (get-text Buf) i))
+             (new-txt (string-sed-substitute
+                       old-txt
+                       Regex
+                       Replacement
+                       Flags)))
+        (unless (string=? old-txt new-txt)
+          (list-set! (get-text Buf) i new-txt)
+          (set! LModified i))))
+    ;; If there was a line that was modified, we move the active data
+    ;; position to the end of that line.  Otherwise, the active data
+    ;; position is not changed.
+
+    (when LModified
+      (set-line-cur! Buf LModified)
+      (set-pd-cur-to-simd-eol! Buf))
+    LModified))
 
 (define-method (ed-delete-all (buf <CBuffer>))
   "This deletes all the contents of the current buffer and places the
 active data position in the first position."
   #f)
 
-(define-method (ed-get-mark (buf <CBuffer>) name)
+(define-method (get-bookmark-line (Buf <CBuffer>) Name)
   "Return the line number in which a bookmark has been placed, or
 #f is no such bookmark exists."
-  (let ((bm (bookmark-get (get-bookmarks buf) name)))
+  (let ((bm (bookmark-get (get-bookmarks Buf) Name)))
     (and bm
          (list-ref bm 1))))
 
@@ -1563,35 +1685,6 @@ position will be at the last character position in the line."
           (set-line-cur! buf (bracket-line buf (1- L)))
           (set-pd-cur-to-simd-eol! buf)))))
 
-(define-method (ed-line-number (buf <CBuffer>))
-  "Return the address of the active data line."
-  (get-line-cur buf))
-
-(define-method (ed-null (buf <CBuffer>))
-  (get-line-cur buf))
-
-(define-method (ed-read (buf <CBuffer>) lineno input-port)
-  "Read in from the port, line by line, appending those lines to the
-buffer after LINENO.  Read until #<eof> is found.
-
-The active data position will be set to the last line read in..
-If the implicit movement direction (SIMD) is 'forward, it is placed at
-the last character position in the line.  If SIMD is 'backward, it is
-placed at the first character position."
-  (let ((L (bracket-line buf lineno))
-        (bytes-read 0))
-    (set-line-cur! buf L)
-    (while #t
-      (let ((txt (read-line input-port)))
-        (if (eof-object? txt)
-            (break)
-            (begin
-              (set! bytes-read (+ bytes-read (string-length txt) 1))
-              (ed-append buf (get-line-cur buf) (list txt))
-              (set-line-cur! buf (1+ L))))))
-    (set-pd-cur-to-simd-eol! buf)
-    bytes-read))
-
 (define-method (ed-regex-search-backward-line (buf <CBuffer>) lineno regex)
   "This searches the the text for the first line that matches the
 regular expression.  The search begins on the line before lineno. The
@@ -1653,63 +1746,6 @@ and the active data position is unchanged."
                   #f
                   ;; else
                   (loop (next-line i))))))))
-
-(define-method (ed-substitute (buf <CBuffer>) lstart lend regex replacement
-                              flags)
-  "This command shall search all the lines in the BUF from
-LStart (inclusive) to LEnd (exclusive) for matches to the regular
-expression REGEX.  When a match is found, it is replaced with the
-string REPLACEMENT.
-
-The REPLACEMENT string may contain some escape sequences.
-
-An ampersand '&' will be replaced by the string matching regex.
-
-A backslash followed by a digit from 1 to 9 ('\\1' to '\\9') will be
-replaced with the Nth matching subexpression, or by an empty string if
-there was no Nth matching subexpression.
-
-A backslash + backslash will insert a single backslash.
-
-FLAGS is a string that may contain the letter 'g' or a
-digit '1' through '9'.  If 'g' is present, the substitution
-is applied to allnon-overlapping matches in each line.
-If a digit is present, the substitution applies only to the
-Nth match in the line."
-  (let ((LStart (bracket-line buf lstart))
-        (LEnd (bracket-line buf lend))
-        (LModified #f))
-    (do ((i LStart (1+ i)))
-        ((>= i LEnd))
-      (let* ((old-txt (list-ref (get-text buf) i))
-             (new-txt (string-sed-substitute
-                       old-txt
-                       regex
-                       replacement
-                       flags)))
-        (unless (string=? old-txt new-txt)
-          (list-set! (get-text buf) i new-txt)
-          (set! LModified i))))
-    ;; If there was a line that was modified, we move the active data
-    ;; position to the end of that line.  Otherwise, the active data
-    ;; position is not changed.
-    (when LModified
-      (set-line-cur! buf LModified)
-      (set-pd-cur-to-simd-eol! buf))
-    LModified))
-
-(define-method (ed-write (buf <CBuffer>) lstart lend port)
-  "Write the buffer lines LStart (inclusive) through LEnd (exclusive)
-to the given port.  It returns the number of bytes written."
-  (let ((LStart (bracket-line buf lstart))
-        (LEnd (bracket-line buf lend))
-        (bytes-written 0))
-    (for-each
-     (lambda (line)
-       (write-line line port)
-       (set! bytes-written (+ bytes-written (string-length line) 1)))
-     (sublist (get-text buf) LStart LEnd))
-    bytes-written))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OPERATIONS INSPIRED BY SED
