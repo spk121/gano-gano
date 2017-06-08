@@ -78,7 +78,7 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
   #:use-module (srfi srfi-1)
   #:use-module (rnrs control)
   #:use-module ((ncurses extra) #:select (wcwidth))
-  #:use-module (gano debug)
+  ;; #:use-module (gano debug)
   #:use-module (gano stringlist)
   #:use-module (gano poslist)
   #:use-module (gano position)
@@ -696,7 +696,7 @@ and the active data position."
 
     ;; Note that tags are duplicated under a copy operaton, but,
     ;; bookmarks are not duplicated and stay with the original.
-    (poslist-copy-in-line (get-tags buf) LCopy PCopyStart PCopyEnd PCopyAfter)
+    (adjust-poslist-copy-in-line (get-tags buf) LCopy PCopyStart PCopyEnd PCopyAfter #f)
     (adjust-poslist-copy-in-line (get-bookmarks buf) LCopy PCopyStart PCopyEnd PCopyAfter #f)
 
     (append-undo! buf (list 'op-copy-in-line LCopy PCopyStart PCopyEnd PCopyAfter))
@@ -858,7 +858,7 @@ LCopyEnd (exclusive) to the line LCopyTo."
 
   ;; Overwrite the text in the line, and adjust bookmarks and tags
   (strlist-copy-lines (get-text buf) LCopyStart LCopyEnd LCopyTo)
-  (poslist-copy-lines (get-tags buf) LCopyStart LCopyEnd LCopyTo)
+  (adjust-poslist-copy-lines (get-tags buf) LCopyStart LCopyEnd LCopyTo #f)
   (adjust-poslist-copy-lines (get-bookmarks buf) LCopyStart LCopyEnd LCopyTo #f)
 
   (append-undo! buf (list 'op-copy-lines LCopyStart LCopyEnd LCopyTo))
@@ -892,7 +892,7 @@ LCopyEnd (exclusive) to the line LCopyTo."
   "Split the line LSplit into two lines at the position PSplit."
 
   ;; Overwrite the text in the line, and adjust bookmarks and tags
-  (strlist-split-line (get-text buf) LSplit PSplit)
+  (strlist-split-lines (get-text buf) LSplit (list PSplit))
   (adjust-poslist-split-lines (get-tags buf) LSplit PSplit)
   (adjust-poslist-split-lines (get-bookmarks buf) LSplit PSplit)
 
@@ -1063,7 +1063,6 @@ position of the following line."
         (HEM (get-character-editing-mode buf))
         (IMM (get-invalid-movement-mode buf))
         (SIMD (get-implicit-movement-direction buf))
-        (txtCur (get-text-cur buf))
         (len (get-text-cur-length buf)))
 
     ;; Normally,
@@ -1131,7 +1130,7 @@ copied."
                                 (get-line-cur Buf) (get-pd-cur Buf)))
         ;; Overwrite the text in the line, and adjust bookmarks and tags
         (strlist-copy-lines (get-text Buf) LCopyStart LCopyEnd LCopyTo)
-        (poslist-copy-lines (get-tags Buf) LCopyStart LCopyEnd LCopyTo)
+        (adjust-poslist-copy-lines (get-tags Buf) LCopyStart LCopyEnd LCopyTo #f)
         (adjust-poslist-copy-lines (get-bookmarks Buf) LCopyStart LCopyEnd LCopyTo #f)
 
         ;; Move the activive data position
@@ -1216,7 +1215,7 @@ buffer, the active data position is set to the end of the last line."
     (adjust-poslist-insert-lines (get-tags Buf) LStart lremovedcount)
     (adjust-poslist-insert-lines (get-bookmarks Buf) LStart lremovedcount)))
 
-(define (display-lines-to-port Buf LStart LEnd Port)
+(define (write-lines-to-port Buf LStart LEnd Port)
   "Writes the buffer lines LStart (inclusive) through LEnd (exclusive)
 to the given port.  It returns the number of bytes written."
   (warn-if-false (cbuffer? Buf))
@@ -1653,34 +1652,7 @@ position will be returned to its original location."
       (set-line-cur! buf LOrig)
       (set-pd-cur! buf PdOrig))))
 
-;; N.B. ed-insert is supposed to behave similarly to ed-append
-(define-method (ed-insert (buf <CBuffer>) lineno strlist)
-  "insert the lines of text STRLIST before the addressed line LINENO.
-
-If strlist is not null, the active data position will be set to the
-last inserted line. If the implicit movement direction (SIMD) is
-'forward, the active data position will be placed as the last
-character position of the line.  If it is 'backward, it will be placed
-as the first character position of the line.
-
-If strlist is null, the active data line will be set to LINENO.  If
-SIMD is 'forward, the active data position will be at the first
-character position of the line.  If SIMD is 'backward, the active data
-position will be at the last character position in the line."
-  (let ((L (bracket-line buf lineno))
-        (SIMD (get-implicit-movement-direction buf)))
-    (unless (null? strlist)
-      (op-insert-lines-before buf L strlist))
-    (if (null? strlist)
-        (begin
-          (set-line-cur! buf L)
-          (set-pd-cur-to-simd-bol! buf))
-        ;; else
-        (begin
-          (set-line-cur! buf (bracket-line buf (1- L)))
-          (set-pd-cur-to-simd-eol! buf)))))
-
-(define-method (ed-regex-search-backward-line (buf <CBuffer>) lineno regex)
+(define-method (regex-search-backward-line (Buf <CBuffer>) LStart RegexString)
   "This searches the the text for the first line that matches the
 regular expression.  The search begins on the line before lineno. The
 search will wrap around to the end of the buffer, if necessary, and
@@ -1690,20 +1662,23 @@ If a match is found, the procedure returns the line number of the
 matching line, and the active data position will be set to the end of
 the matching line.  If a match is not found, the procedure returns #f
 and the active data position is unchanged."
-  (if (= (get-line-count buf) 0)
+  (warn-if-false (integer-nonnegative? LStart))
+  (warn-if-false (string? RegexString))
+
+  (if (= (get-line-count Buf) 0)
       #f
       ;; else
-      (let* ((rx (make-regexp regex-string))
+      (let* ((rx (make-regexp RegexString))
              (next-line (lambda (n)
                           (if (< (1- n) 0)
-                              (1- (get-line-count buf))
+                              (1- (get-line-count Buf))
                               (1- n))))
-             (start-line (next-line (bracket-line buf lineno))))
+             (start-line (next-line LStart)))
         (let loop ((i start-line))
-          (if (regexp-exec rx (list-ref (get-text buf) i))
+          (if (regexp-exec rx (list-ref (get-text Buf) i))
               (begin
-                (set-line-cur! buf i)
-                (set-pd-cur-to-simd-eol! buf)
+                (set-line-cur! Buf i)
+                (set-pd-cur-to-simd-eol! Buf)
                 i)
               ;; else
               (if (= (next-line i) start-line)
@@ -1711,7 +1686,7 @@ and the active data position is unchanged."
                   ;; else
                   (loop (next-line i))))))))
 
-(define-method (ed-regex-search-forward-line (buf <CBuffer>) regex)
+(define-method (regex-search-forward-line (Buf <CBuffer>) LStart RegexString)
   "This searches the text for the first line that matches the regular
 expression.  The search begins on the line after lineno. The search
 will wrap around the end of the buffer, if necessary, and search upto
@@ -1721,26 +1696,31 @@ If a match is found, the procedure returns the line number of the
 matching line, and the active data position will be set to the end of
 the matching line.  If a match is not found, the procedure returns #f
 and the active data position is unchanged."
-  (if (= 0 (get-line-count buf))
+  (warn-if-false (string? RegexString))
+  (warn-if-false (integer-nonnegative? LStart))
+
+  (if (= 0 (get-line-count Buf))
       #f
       ;; else
-      (let* ((rx (make-regexp regex-string))
+      (let* ((rx (make-regexp RegexString))
              (next-line (lambda (n)
-                          (if (>= (1+ n) (length (get-text buf)))
+                          (if (>= (1+ n) (length (get-text Buf)))
                               0
                               (1+ n))))
-             (start-line (next-line (bracket-line buf lineno))))
+             (start-line (next-line LStart)))
         (let loop ((i start-line))
-          (if (regexp-exec rx (list-ref (get-text buf) i))
+          (if (regexp-exec rx (list-ref (get-text Buf) i))
               (begin
-                (set-line-cur! buf i)
-                (set-pd-cur-to-simd-eol! buf)
+                (set-line-cur! Buf i)
+                (set-pd-cur-to-simd-eol! Buf)
                 i)
               ;; else
               (if (= (next-line i) start-line)
                   #f
                   ;; else
                   (loop (next-line i))))))))
+
+#|
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OPERATIONS INSPIRED BY SED
@@ -2543,3 +2523,4 @@ added."
       (set-pd-cur! buf (+ pd-start space-num))
       (set-pp-cur! buf pp-adj-end)
       (set-pp-goal! buf pp-adj-end))]))
+|#
