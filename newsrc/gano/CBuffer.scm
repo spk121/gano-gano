@@ -27,45 +27,46 @@ characters.  No format effectors or presentation control functions are
 stored.  The lone exception is the horizontal tab character.
 
 The strings stored in CBuffers do not explicitly store line
-terminations, like newline or carriage return.  A separate list
-stores the line terminators for each line. A line termination is
-exists for each line in the buffer.  A line may be terminated
-by any of the allowed Unicode terminators, CR, LF, NL, CRLF, LS,
-PS, FF, or VT.
+terminations, like newline or carriage return.
 
-A CBuffer consists of
-- the text, broken into lines.
-- a list of line endings, one per line.
-- an active line and position. This active location is a special address
-that is used in the command set.  It is the location of a virtual cursor.
-- a mark line and position,  This mark location is a special address that
-is used in the command set.
-- a list of bookmarks that assign names to locations in the text file.
-  Bookmarks are unique and a location may have only one bookmark.
-- a list of tags that assign properties to locations in the text file.
-  There may be multiple tags with the same name, and a position may
-  have any number of tags.
-- an operations list.  This is a list of all the operations that have
-modified the buffer. This allows for the implementation of undo and redo
-commands.
+(Someday, a separate list will store the line terminators for each
+line. A line termination will exists for each line in the buffer.  A
+line may be terminated by any of the allowed Unicode terminators, CR,
+LF, NL, CRLF, LS, PS, FF, or VT.)
 
-The Mark
+The text may be "decorated" with various bookmarks, tags, and spans.
 
-The mark is often set to assign a range of text.  It may represent one
-extrema of a range of text upon which a command may operate, which the
-active position representing the other extrema.
+A "bookmark" is a string that uniquely identifies one location in the
+text.  No two bookmarks have the same name, and a bookmark points to a
+single (line, column) location in the text.  A location in the text
+shall not have more than one bookmark. One possible use for
+bookmarks are as are intradocument navigation.
 
-Usually any action that modifies the text of the buffer will clear the
-mark.
+A "tag" is a string that labels a location (line, column) in the text.
+There may be more than one tag by the same name, and a location in the
+text may have more than one tag.  An example use for tags is
+sectioning, such as "Chapter" or "Section".
 
-Bookmarks.
+A "span" is label that identifies a range of characters.  There may be
+more than one span with the same name, and a location may be covered
+by multiple spans.  Spans could be used for formatting.  Note that the
+first location in a span points to the (line, column) of the first
+character in the region, but the second (line,column) location in the
+span points to the first character **not** in the region.  It is valid
+for the 2nd location in a span to be the on the column after the end
+of the line.  An example use for spans is markup, such as "bold"
+or "italic".
 
-A bookmark is a name for a position in a text file.  Unlike the mark,
-which is cleared on any operation that modifies text, bookmarks are
-persistent.  A bookmark will only be cleared when explicitely
-requested or when the character location to which they are attached is
-deleted.  Since bookmarks are attached to locations in the text, they
-will move as text is inserted and deleted.
+To facilitate navigation operations in the text buffer, there are two
+important locations: the "active data position" and the "mark".  This
+"active data position"n is a special address that is used in the command set.
+It is the location of a virtual cursor.  The "mark" is another special
+location used to indicate the extreme of a selection of text or a
+range of text used in operations.
+
+To enable undo, redo, and delta operations, an "operations list" is stored.
+And operations list is an ordered list that describes all the mutations
+that have occured to the CBuffer, like inserted text, deleted text, etc.
 
 |#
 
