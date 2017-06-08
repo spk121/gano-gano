@@ -91,17 +91,6 @@ will move as text is inserted and deleted.
             make-empty-cbuffer
             cbuffer?
 
-            ;; TTY Operations
-            backspace                   ; BS
-            line-feed                   ; LF
-            carriage-return             ; CR
-            set-line-home               ; SLH
-            set-line-limit              ; SLL
-            set-mode                    ; SM
-            write-character             ; WC
-            set-invalid-movement-mode!
-            get-active-data-location
-
             ;; Needed for testing for now
             %dump-cbuffer
             get-text-cur
@@ -111,35 +100,45 @@ will move as text is inserted and deleted.
             get-tags
             get-bookmarks
 
-            ;; Operations inspired by POSIX ED
+            ;; The Almighty Undo
+            undo
+
+            ;; Dumb TTY Operations
+            line-feed                   ; LF
+            carriage-return             ; CR
+            insert-character            ; IC
+
+            ;; Dumb TTY Undo Operations
+            undo-insert-character
+
+            ;; Line-editing Operations
             bookmark-bol
+            copy-lines
             delete-lines
-            display-lines-to-port
+            find-bookmarks-in-line
+            get-bookmark-line
+            global-clear
+            global-for-each
+            global-mark
+            global-mark-unmatched
             insert-lines
             insert-lines-from-port
             join-lines
             move-lines
+            regex-search-backward-line
+            regex-search-forward-line
             replace-all-from-port
             replace-lines
             substitute-in-lines
-            get-bookmark-line
-            ed-global-mark
-            ed-global-mark-unmatched
-            ed-global-clear
-            ed-global-for-each
-            ed-regex-search-backward-line
-            ed-regex-search-forward-line
-            ed-write
+            write-lines-to-port
 
-            insert-lines-before
-            replace-lines
-            delete-all
-            regex-search-forward-line
-            join-lines
-            move-lines
-            copy-lines
-            bookmark-line
-            undo
+            ;; Line-editing Undo Operations
+            undo-copy-lines
+            undo-delete-lines
+            undo-insert-lines
+            undo-join-lines
+            undo-move-lines
+            undo-replace-lines
 
             ;; ECMA-48 primitives
 
@@ -1559,11 +1558,6 @@ Nth match in the line."
       (set-line-cur! Buf LModified)
       (set-pd-cur-to-simd-eol! Buf))
     LModified))
-
-(define-method (ed-delete-all (buf <CBuffer>))
-  "This deletes all the contents of the current buffer and places the
-active data position in the first position."
-  #f)
 
 (define-method (get-bookmark-line (Buf <CBuffer>) Name)
   "Return the line number in which a bookmark has been placed, or
