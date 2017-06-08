@@ -8,19 +8,29 @@
 ;;; functions
 
 
+;; ifndef NANO_TINY
 (define (autoindent bool)
   "When true, use auto-identation")
+
+;; ifndef NANO_TINY
 (define (backup bool)
   "When true, create backup files in filename~"
   )
+
+;; ifndef NANO_TINY
 (define (backupdir directory)
   "Set the directory where nano puts unique backup files if file
 backups are enabled."  )
+
+;; ifndef NANO_TINY
 (define (backwards bool)
   "Do backwards searches by default.")
+
 (define (boldtext bool)
   "Use bold text instead of reverse video text."
   )
+
+;; ifndef DISABLE_JUSTIFY
 (define (brackets str)
   "Set the characters treated as closing brackets when justifying
 paragraphs. They cannot contain blank characters. Only closing
@@ -28,6 +38,7 @@ punctuation, optionally followed by closing brackets, can end
 sentences. The default value is "".)>]}".
   )
 
+;; ifndef NANO_TINY
 (define (casesensitive bool)
   "Do case sensitive searchesby default"
   )
@@ -36,6 +47,7 @@ sentences. The default value is "".)>]}".
   "Constantly display the cursor position in the status bar."
   )
 
+;; ifndef NANO_TINY
 (define (cut bool)
   "Use cut to end of line by default."
   )
@@ -46,10 +58,12 @@ length will be the screen width less n columns. The default value is
 -8."
   )
 
+;; ifndef NANO_TINY
 (define (historylog bool)
   ("Enable ~/.nano_history for saving and reading search/replace strings."
    ))
 
+;; ifndef NANO_TINY
 (define (matchbrackets str)
   " Set the opening and closing brackets that can be found by bracket
 searches. They cannot contain blank characters. The former set must
@@ -57,10 +71,12 @@ come before the latter set, and both must be in the same order. The
 default value is '(<[{)>]}'."
   )
 
+;;
 (define (morespace str)
   "Use the blank line below the titlebar as extra editing space."
   )
 
+;; ifndef DISABLE_MOUSE
 (define (mouse bool)
   " Enable mouse support, if available for your system. When enabled,
 mouse clicks can be used to place the cursor, set the mark (with a
@@ -68,30 +84,37 @@ double click), and execute shortcuts. The mouse will work in the X
 Window System, and on the console when gpm is running."
   )
 
+;; ifndef DISABLE_MULTIBUFFER
 (define (multibuffer bool)
   "Allow inserting files into their own buffers."
   )
 
+;; ifndef NANO_TINY
 (define (noconvert bool)
   "Don.t convert files from DOS/Mac format."
   )
 
+;;
 (define (nofollow bool)
   "Don.t follow symlinks when writing files."
   )
 
+;;
 (define (nohelp bool)
   "Don.t display the help lists at the bottom of the screen."
   )
 
+;;
 (define (nonewlines bool)
   "Don.t add newlines to the ends of files."
   )
 
+;; ifndef DISABLE_WRAPPING
 (define (nowrap bool)
   "Don.t wrap text at all."
   )
 
+;; ifndef DISABLE_OPERATINGDIR
 (define (operatingdir directory)
   " nano will only read and write files inside directory and its
 subdirectories. Also, the current directory is changed to here, so
@@ -99,10 +122,12 @@ files are inserted from this diractory. By default, the operating
 directory feature is turned off."
   )
 
+;;
 (define (preserve bool)
   "Preserve the XON and XOFF keys (^Q and ^S)."
   )
 
+;; ifndef DISABLE_JUSTIFY
 (define (punct string)
   " Set the characters treated as closing punctuation when justifying
 paragraphs. They cannot contain blank characters. Only closing
@@ -110,17 +135,20 @@ punctuation, optionally followed by closing brackets, can end
 sentences. The default value is '!.?'."
   )
 
+;; ifndef NANO_TINY
 (define (quiet bool)
   "nano will not report errors in the nanorc file and ask them to be
 acknowledged by pressing enter at startup. If this is used it should
 be placed at the top of the file to be fully effective."
   )
 
+;; ifndef NANO_TINY
 (define (quickblank bool)
   "Do quick statusbar blanking. Statusbar messages will disappear
 after 1 keystroke instead of 25."
   )
 
+;; ifndef DISABLE_JUSTIFY
 (define (quotestr str)
   "The email-quote string, used to justify email-quoted
 paragraphs. This is an extended regular expression if your system
@@ -129,20 +157,24 @@ supports them, otherwise a literal string. The default value is '^([
 or '> ' otherwise. Note that .\t. stands for a literal Tab character."
   )
 
+;;
 (define (rebinddelete bool)
   "Interpret the Delete key differently so that both Backspace and
 Delete work properly. You should only need to use this option if
 Backspace acts like Delete on your system."
   )
 
+;;
 (define (rebindkeypad bool)
   "Interpret the numeric keypad keys so that they all work properly. You should only need to use this option if they don.t, as mouse support won.t work properly with this option enabled."
   )
 
+;; ifdef HAVE_REGEX_H
 (define (regexp bool)
   "Do extended regular expression searches by default."
   )
 
+;; ifndef NANO_TINY
 (define (smarthome bool)
   "Make the Home key smarter. When Home is pressed anywhere but at the
 very beginning of non-whitespace characters on a line, the cursor will
@@ -151,32 +183,39 @@ is already at that position, it will jump to the true beginning of the
 line."
   )
 
+;; ifndef NANO_TINY
 (define (smooth bool)
   "Use smooth scrolling by default."
   )
 
+;; ifndef NANO_TINY
 (define (softwrap bool)
   "Enable soft line wrapping for easier viewing of very long lones."
   )
 
+;; ifndef DISABLE_SPELLER
 (define (speller prog)
   "Use spelling checker spellprog instead of the built-in one, which
 calls spell."
   )
 
+;;
 (define (suspend bool)
   "Allow nano to be suspended."
   )
 
+;;
 (define (tabsize n)
   "Use a tab size of n columns. The value of n must be greater than
 0. The default value is 8."
   )
 
+;; ifndef NANO_TINY
 (define (tabstospaces bool)
   "Convert typed tabs to spaces."
   )
 
+;;
 (define (tempfile bool)
   "Save automatically on exit, don.t prompt."
   )
@@ -185,14 +224,17 @@ calls spell."
   "Enable experimental generic-purpose undo code.
 ")
 
+;;
 (define (view bool)
   "Disallow file modifcation")
 )
 
+;; ifndef NANO_TINY
 (define (whitespace str)
   "Sets the two characters to be use to display the first characters of tabs
 and spaces.  They must be single column characters.")
 
+;; ifndef NANO_TINY
 (define (wordbounds bool)
   "Detect word boundaries more accurately by treating punctuation characters as parts of words."
   )
@@ -227,12 +269,15 @@ F + <number>
 Valid function names to be bound include:
 help: Invoke the help menu.
 cancel: Cancel the current command.
-exit :Exit from the program.
-writeout :Write the current buffer to disk.
-justify :ustify the current text.
-insert: Insert a file into the current buffer (or into a new buffer when multibuffer is enabled).
+exit: Exit from the program.
+writeout: Write the current buffer to disk.
+justify: Justify the current text.
+
+insert: Insert a file into the current buffer (or into a new buffer
+  when multibuffer is enabled).
+
 whereis: search for text in the current buffer.
-searchagain :Repeat the last search command.
+searchagain: Repeat the last search command.
 up: Move up in the editor or browser.
 
 down: Move down in the editor or browser.
@@ -259,7 +304,10 @@ findbracket: Move the cursor to the matching bracket (brace,
 parenthesis, etc.) of the one under the cursor.
 scrollup: Scroll up one line of text from the current position.
 scrolldown: Scroll down one line of text from the current position.
-prevbuf: Switch to editing/viewing the previous buffer when using multibuffer mode.
+
+prevbuf: Switch to editing/viewing the previous buffer when using
+  multibuffer mode.
+
 nextbuf: Switch to editing/viewing the next buffer when using multibuffer mode.
 verbatim: Insert the next character verbatim into the file.
 tab: Insert a tab at the current cursor location.
@@ -273,28 +321,54 @@ redo: redo the last undone action (i.e. undo an undo)
 suspend: Suspend the editor (if the suspend function is enabled, see
 the 'suspendenable' entry below).
 casesens: Toggle case sensitivity in searching (search/replace menus only).
-regexp: Toggle whether searching/replacing is based on literal strings or regular expressions.
+
+regexp: Toggle whether searching/replacing is based on literal strings
+  or regular expressions.
+
 prevhistory: Show the previous history entry in the prompt menus (e.g. search).
 nexthistory: Show the next history entry in the prompt menus (e.g. search).
 dontreplace: Switch back to searching instead of replacing.
-gototext: Search for files matching a string in the file browser (reading or writing files).
+
+gototext: Search for files matching a string in the file
+  browser (reading or writing files).
+
 dosformat: When writing a file, switch to writing a DOS format (CR/LF).
 macformat: When writing a file, switch to writing a Mac format.
 append: When writing a file, append to the end instead of overwriting.
-prepend: When writing a file, .prepend. (write at the beginning) instead of overwriting.
+
+prepend: When writing a file, .prepend. (write at the beginning)
+  instead of overwriting.
+
 backup: When writing a file, create a backup of the current file.
-firstfile: Move to the first file when using the file browser (reading or writing files).
-lastfile: Move to the last file when using the file browser (reading or writing files).
-nohelp: Toggle showing/hiding the two-line list of key bindings at the bottom of the screen.
+
+firstfile: Move to the first file when using the file browser (reading
+  or writing files).
+
+lastfile: Move to the last file when using the file browser (reading
+  or writing files).
+
+nohelp: Toggle showing/hiding the two-line list of key bindings at the
+  bottom of the screen.
+
 constupdate: Constantly display the current line, column, word positions.
-morespace: Toggle showing/hiding the blank line which .separates. the .title. from the file text.
+
+morespace: Toggle showing/hiding the blank line which .separates. the
+  .title. from the file text.
+
 smoothscroll: toggle smooth scrolling when moving via the arrow keys.
 whitespacedisplay: Toggle whether whitespace is shown.
 smarthome: Toggle whether the smart home key function is enabled.
-autoindent: Toggle whether new lines will contain the same amount of whitespace as the line above.
-cuttoend: Toggle whether cutting text will cut the whole line or just from the current cursor position to the end of the line.
+
+autoindent: Toggle whether new lines will contain the same amount of
+  whitespace as the line above.
+
+cuttoend: Toggle whether cutting text will cut the whole line or just
+  from the current cursor position to the end of the line.
+
 nowrap: Toggle whether long lines will be wrapped to the next line.
-suspendenable: Toggle whether the suspend sequence (normally ^Z) will suspend the editor window.
+
+suspendenable: Toggle whether the suspend sequence (normally ^Z) will
+  suspend the editor window.
 
 
 ------
