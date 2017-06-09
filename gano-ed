@@ -3,7 +3,7 @@
 !#
 
 ;;; -*- mode: scheme; coding: us-ascii; indent-tabs-mode: nil; -*-
-;;; (gano ed) - an Ed-like line-oriented text editor
+;;; gano-ed - an Ed-like line-oriented text editor
 ;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
 ;;;
 ;;; This program is free software: you can redistribute it and/or
@@ -20,26 +20,12 @@
 ;;; along with this program.  If not, see
 ;;; <http://www.gnu.org/licenses/>
 
-(define-module (mlg ed)
-  #:use-module (ice-9 getopt-long)
-  ;; #:use-module (ice-9 rdelim)
-  ;; #:use-module (ice-9 popen)
-  ;; #:use-module (gano CBuffer)
-  #:use-module (gano ed-repl)
-  #:use-module (mlg utils)
-  ;; #:use-module (mlg re)
-  ;; #:use-module (mlg buf)
-  #:use-module (mlg strings)
-  ;; #:use-module (mlg port)
-  ;; #:use-module (mlg debug)
-  ;; #:use-module (mlg ed address)
-  ;; ;; #:use-module (mlg ed bmark)
-  ;; #:use-module (mlg ed regex)
-  ;; #:use-module (mlg ed ops)
-  ;; #:use-module (mlg logging)
-  #:export (main))
-
+(use-modules (ice-9 getopt-long)
+	     (gano ed-repl)
+	     (mlg utils)
+	     (mlg strings))
 ;; signals
+(define *repl* #f)	     ; If set, the current repl.
 (define mutex 0)                        ; if set, signals set flags
 (define sighup #f)                      ; if set, sighup received while mutex set
 (define sigint #f)                      ; if set, sigint received while mutex set
@@ -50,8 +36,7 @@
                         (scripted (single-char #\s) (value #f))))
          (options (getopt-long args option-spec))
          (argv (option-ref options '() '()))
-	 (interactive #f)
-	 (repl #f))
+	 (interactive #f))
 
     ;; If one of the remaining arguments is a sole hyphen,
     ;; some versions of ed make this scripted mode.
@@ -79,11 +64,11 @@
     (when (file-port? (current-input-port))
       (setvbuf (current-input-port) _IONBF))
 
-    (set! repl (make-ed-repl #:promptstring (option-ref options 'prompt #f)
-			     #:scripted (option-ref options 'scripted #f)
-			     #:homedir (get-home-dir)
-			     #:interactive interactive))
-			
+    (set! *repl* (make-ed-repl #:promptstring (option-ref options 'prompt #f)
+			       #:scripted (option-ref options 'scripted #f)
+			       #:homedir (get-home-dir)
+			       #:interactive interactive))
+    (ed-repl-set-default-dispatch-table! *repl*)
     ;; Enable signal handlers
     (set! sigactive #t)
 
@@ -91,7 +76,7 @@
     (cond
      ((and (> (length argv) 0) (> (string-length (car argv)) 0))
       (let* ((fname (car argv))
-             (ret (ed-repl-read-file repl fname)))
+             (ret (ed-repl-read-file *repl* fname)))
         (when (and (< ret 0) (not interactive))
 	  (quit 2))))
      (else
@@ -102,7 +87,7 @@
 
     ;; This is the main loop
     (while #t
-      (let ((ret (ed-repl-do repl (current-input-port))))
+      (let ((ret (ed-repl-do *repl* (current-input-port))))
 	(if (not ret)
 	    (break))))
 
@@ -113,19 +98,10 @@
   ;; then set rows and cols here.
   *unspecified* )
 
-
 (define (handle-hup signo)
-  (unless sigactive
-    (quit 1))                           ; signal race?
-  (set! sighup #f)
   ;; Try to write the crash-out file here.  Or, failing that, in my
   ;; home directory.
-  (if (and (not (zero? (get-line-count *repl*)))
-		
-           (< (write-file "ed.hup" "1" 1 addr-last) 0)
-           (not (string-null? home))
-           (string-starts-with? home #\/))
-      (write-file (string-append home "/ed.hup") "w" 1 addr-last))
+  (ed-repl-write-crash-out-file *repl*)
   (primitive-_exit 2))
 
 (define (handle-int signo)

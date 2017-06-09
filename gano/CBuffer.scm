@@ -118,10 +118,10 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             delete-lines
             find-bookmarks-in-line
             get-bookmark-line
-            global-clear
-            global-for-each
-            global-mark
-            global-mark-unmatched
+            regex-tag-lines
+            regex-tag-nonmatching-lines
+            clear-tags
+            for-each-tagged-line
             insert-lines
             insert-lines-from-port
             join-lines
@@ -1231,6 +1231,7 @@ to the given port.  It returns the number of bytes written."
      (sublist (get-text Buf) LStart LEnd))
     bytes-written))
 
+
 (define-method (insert-lines (Buf <CBuffer>) LInsert StrList)
   "Append the StrList at the addressed line LInsert.  If LInsert is
 the line after the last line in the buffer, StrList is appended to the
@@ -1529,35 +1530,29 @@ there was no Nth matching subexpression.
 
 A backslash + backslash will insert a single backslash.
 
-FLAGS is a string that may contain the letter 'g' or a
-digit '1' through '9'.  If 'g' is present, the substitution
-is applied to allnon-overlapping matches in each line.
-If a digit is present, the substitution applies only to the
-Nth match in the line."
+A backslash + 'n' will split the line at that location.
+
+FLAGS is a string that may contain the letter 'g' or a digit '1'
+through '9'.  If 'g' is present, the substitution is applied to
+allnon-overlapping matches in each line.  If a digit is present, the
+substitution applies only to the Nth match in the line."
   (warn-if-false (cbuffer? Buf))
   (warn-if-false (integer-nonnegative? LStart))
   (warn-if-false (integer-nonnegative? LEnd))
 
-  (let ((LModified #f))
-    (do ((i LStart (1+ i)))
-        ((>= i LEnd))
-      (let* ((old-txt (list-ref (get-text Buf) i))
-             (new-txt (string-sed-substitute
-                       old-txt
-                       Regex
-                       Replacement
-                       Flags)))
-        (unless (string=? old-txt new-txt)
-          (list-set! (get-text Buf) i new-txt)
-          (set! LModified i))))
-    ;; If there was a line that was modified, we move the active data
-    ;; position to the end of that line.  Otherwise, the active data
-    ;; position is not changed.
-
-    (when LModified
-      (set-line-cur! Buf LModified)
-      (set-pd-cur-to-simd-eol! Buf))
-    LModified))
+  (do ((i LStart (1+ i)))
+      ((>= i LEnd))
+    (let* ((old-txt (list-ref (get-text Buf) i))
+           (new-txt (string-sed-substitute
+                     old-txt
+                     Regex
+                     Replacement
+                     Flags)))
+      (unless (string=? old-txt new-txt)
+        ;; Weirdly, regex substitute is Ed's only way to split a
+        ;; line, so we handle '\n' here by splitting the lines.
+        (let ((split-new-txt (string-split new-txt #\newline)))
+          (replace-lines Buf LStart (1+ LStart) split-new-txt))))))
 
 (define-method (get-bookmark-line (Buf <CBuffer>) Name)
   "Return the line number in which a bookmark has been placed, or
@@ -1566,69 +1561,63 @@ Nth match in the line."
     (and bm
          (list-ref bm 1))))
 
-(define-method (ed-global-mark (buf <CBuffer>) lstart lend regex-string)
-  "This procedure marks all lines between LStart (inclusive)
-and LEnd (exclusive) that match a regular expression.
+(define-method (regex-tag-lines (Buf <CBuffer>) LStart LEnd RegexString Tag)
+  "This procedure places a TAG at the beginning of all lines
+between LStart (inclusive) and LEnd (exclusive) that match a regular
+expression string.
 
-The regular expression is applied to each line in the buffer, and, if
-it matches, a tag (_RX) is set at the terminus of the line. If the
-SIMD is 'forward, the tag is set at the beginning of the line.  If the
-SIMD is 'backward, the tag is set at the end of the line."
-  (if (= 0 (get-line-count buf))
+Even if there are multiple matches in a line, a single Tag is used."
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (integer-nonnegative? LStart))
+  (warn-if-false (integer-nonnegative? LEnd))
+  (warn-if-false (string? RegexString))
+  (warn-if-false (string? Tag))
+
+  (if (= 0 (get-line-count Buf))
       #f
       ;; else
-      (let ((LStart (bracket-line buf lstart))
-            (LEnd (bracket-line buf lend))
-            (rx (make-regexp regex-string)))
+      (let ((rx (make-regexp RegexString)))
         (let loop ((i LStart))
-          (when (regexp-exec rx (get-text-line buf i))
-            (tag-set! (get-tags buf)
-                      '_RX
+          (when (regexp-exec rx (get-text-line Buf i))
+            (tag-set! (get-tags Buf)
+                      Tag
                       i
-                      (if (eqv? (get-implicit-movement-direction buf) 'forward)
+                      (if (eqv? (get-implicit-movement-direction Buf) 'forward)
                           0
-                          (string-length (get-text-line buf i)))))
+                          (string-length (get-text-line Buf i)))))
           (when (< i LEnd)
             (loop (1+ i)))))))
 
-(define-method (ed-global-mark-unmatched (buf <CBuffer>) lstart lend regex-string)
-  "This procedure marks all lines between LStart (inclusive)
-and LEnd (exclusive) that fail to match a regular expression.
-
-The regular expression is applied to each line in the buffer, and, if
-it does not match, a tag (_RX) is set at the terminus of the line.  If
-the SIMD is 'forward, the tag is set at the beginning of the line.  If
-the SIMD is 'backward, the tag is set at the end of the line."
-  (if (= 0 (get-line-count buf))
+(define-method (regex-tag-nonmatching-lines (Buf <CBuffer>) LStart LEnd RegexString Tag)
+  "This procedure places a Tag at the beginning of all betweenLStart (inclusive)
+and LEnd (exclusive) that fail to match the regular expression RegexString."
+  (if (= 0 (get-line-count Buf))
       #f
       ;; else
-      (let ((LStart (bracket-line buf lstart))
-            (LEnd (bracket-line buf lend))
-            (rx (make-regexp regex-string)))
+      (let ((rx (make-regexp RegexString)))
         (let loop ((i LStart))
-          (unless (regexp-exec rx (get-text-line buf i))
-            (tag-set! (get-tags buf)
-                      '_RX
+          (unless (regexp-exec rx (get-text-line Buf i))
+            (tag-set! (get-tags Buf)
+                      Tag
                       i
-                      (if (eqv? (get-implicit-movement-direction buf) 'forward)
+                      (if (eqv? (get-implicit-movement-direction Buf) 'forward)
                           0
-                          (string-length (get-text-line buf i)))))
+                          (string-length (get-text-line Buf i)))))
           (when (< i LEnd)
             (loop (1+ i)))))))
 
-(define-method (ed-global-clear (buf <CBuffer>))
-  "This procedure removes any _RX tags, as might have been set by the
-ed-global-mark or ed-global-mark-unmatched procedure."
-  (tag-remove-all-by-name! (get-tags buf) '_RX))
+(define-method (clear-tags (buf <CBuffer>) name)
+  "This procedure removes any tags with the name Name."
+  (tag-remove-all-by-name! (get-tags buf) name))
 
-(define-method (ed-global-for-each (buf <CBuffer>)  proc)
-  "For each line that contains the _RX tag (proceeding from beginning
+(define-method (for-each-tagged-line (buf <CBuffer>) proc name)
+  "For each line that contains the Tag (proceeding from beginning
 to end) the active data position is set to the location of that tag,
 and then PROC is called.  Proc must be a procedure that takes BUF as a
 parameter.  If the application of PROC modifies the text in the given
 line, the _RX tag is removed.  If no text is modified, the active data
 position will be returned to its original location."
-  (let ((tags (tag-get-all-by-name (get-tags buf) '_RX))
+  (let ((tags (tag-get-all-by-name (get-tags buf) name))
         (LOrig (get-line-cur buf))
         (PdOrig (get-pd-cur buf))
         (modified? #f))
@@ -1643,7 +1632,7 @@ position will be returned to its original location."
            (unless (string=? OldStr (list-ref (get-text buf) LCur))
              (set! modified? #t)
              (tag-remove-at-by-name! (get-tags buf)
-                                     '_RX LCur PdCur)))))
+                                     name LCur PdCur)))))
      tags)
 
     ;; If nothing has changed, return the active data position

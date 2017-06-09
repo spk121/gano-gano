@@ -39,7 +39,8 @@
             ed-repl?
             ed-repl-set-default-dispatch-table!
             ed-repl-do
-            ed-repl-read-file)
+            ed-repl-read-file
+            ed-repl-write-crash-out-file)
   )
 
 ;; Globals
@@ -221,7 +222,6 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
   "Gets the last data line using Ed's 1-indexed coordinate system."
   (get-line-count repl))
 
-;(define-method (ed-repl-do (repl <EdRepl>) PortOrStr)
 (define (ed-repl-do repl PortOrStr)
   (warn-if-false (cbuffer? repl))
 
@@ -234,68 +234,82 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
   (set-status! repl OK)
 
   ;; Read in one line of text from the user.
-  (let ((port (open-input-string (if (string? PortOrStr)
-                                     PortOrStr
-                                     (read-line (current-input-port))))))
-
-    (and-let* ((addr-range (ed-repl-parse-address-range repl port))
-               (c (read-char-safe port))
-               (test1 (ed-repl-validate-command-key repl c))
-               (test2 (ed-repl-validate-addr-range-for-key repl c addr-range)))
-      ;; So far, so good.  The character C maps to an operation and we
-      ;; have the correct number of addresses for that operation.
-      (and-let* ((op (assoc c (get-dispatch-table repl)))
-
-                 (addr (ed-repl-unpack-addr-range repl op addr-range))
-                 (extra
-                  ;; Maybe there are other things that need to be parsed,
-                  ;; depending on the command.
-                  (case (dispatch:parser op)
-                    ((address)
-                     (ed-repl-parse/validate-3rd-address repl port))
-                    ((bookmark)
-                     (ed-repl-parse/validate-bookmark-name repl port))
-                    ((file)
-                     (ed-repl-parse/validate-filename repl port))
-                    ((regex)
-                     (ed-repl-parse-regex repl port))
-                    ((regex+cmd)
-                     (ed-repl-parse-regex+cmd repl port))
-                    ((regex+replace)
-                     (ed-repl-parse-regex+replace repl port))
-                    ((shell)
-                     (ed-repl-parse-shell repl port))
-                    (else
-                     #t)))
-                 (suffix
-                  ;; Some commands take the characters 'l', 'n', or 'p'
-                  ;; as a suffix
-                  (if (dispatch:suffix? op)
-                      (ed-repl-parse/validate-suffix repl port)
-                      ""))
-                 (txt
-                  ;; Some commands let the user type some lines terminated
-                  ;; by a dot
-                  (if (dispatch:append? op)
-                      (ed-repl-parse/validate-input-lines repl port)
-                      '())))
-        ;; So, all the parsing is done, and we can finally
-        ;; run a command.
-        ((dispatch:op op) repl addr extra suffix txt)
-        (set-last-command! repl c)))
-
-    (if (member (get-status repl) (list ERR))
-        (if (get-garrulous repl)
+  (catch 'interrupt
+    (lambda ()
+      (let ((line (if (string? PortOrStr)
+                      PortOrStr
+                      (read-line (current-input-port)))))
+        (if (eof-object? line)
             (begin
-              (display (get-err-msg repl))
-              (newline))
-            ;; else
-            (begin
-              (display "?")
-              (newline))))
-    (if (= QUIT (get-status repl))
-        #f
-        #t)))
+              ;; Got a hangup when reading a line from the current
+              ;; input port.  So give up quietly.
+              (when (get-verbose repl)
+                (display "Input was aborted.")
+                (newline))
+              #t)
+            ;; Otherwise, we got text to process.
+            (and-let* ((port (open-input-string line))
+                       (addr-range (ed-repl-parse-address-range repl port))
+                       (c (read-char-safe port))
+                       (test1 (ed-repl-validate-command-key repl c))
+                       (test2 (ed-repl-validate-addr-range-for-key repl c addr-range)))
+              ;; So far, so good.  The character C maps to an operation and we
+              ;; have the correct number of addresses for that operation.
+              (and-let* ((op (assoc c (get-dispatch-table repl)))
+                         (addr (ed-repl-unpack-addr-range repl op addr-range))
+                         (extra
+                          ;; Maybe there are other things that need to be parsed,
+                          ;; depending on the command.
+                          (case (dispatch:parser op)
+                            ((address)
+                             (ed-repl-parse/validate-3rd-address repl port))
+                            ((bookmark)
+                             (ed-repl-parse/validate-bookmark-name repl port))
+                            ((file)
+                             (ed-repl-parse/validate-filename repl port))
+                            ((regex)
+                             (ed-repl-parse-regex repl port))
+                            ((regex+cmd)
+                             (ed-repl-parse-regex+cmd repl port))
+                            ((regex+replace)
+                             (ed-repl-parse-regex+replace repl port))
+                            ((shell)
+                             (ed-repl-parse-shell repl port))
+                            (else
+                             #t)))
+                         (suffix
+                          ;; Some commands take the characters 'l', 'n', or 'p'
+                          ;; as a suffix
+                          (if (dispatch:suffix? op)
+                              (ed-repl-parse/validate-suffix repl port)
+                              ""))
+                         (txt
+                          ;; Some commands let the user type some lines terminated
+                          ;; by a dot
+                          (if (dispatch:append? op)
+                              (ed-repl-parse/validate-input-lines repl port)
+                              '())))
+                ;; So, all the parsing is done, and we can finally
+                ;; run a command.
+                ((dispatch:op op) repl addr extra suffix txt)
+                (set-last-command! repl c))))))
+    ;; Interrupt handler
+    (lambda (key . rest)
+      (set-err-msg! repl "interrupt")
+      (set-status! repl ERR)))
+
+  (if (member (get-status repl) (list ERR))
+      (if (get-garrulous repl)
+          (begin
+            (display (get-err-msg repl))
+            (newline))
+          ;; else
+          (begin
+            (display "?")
+            (newline))))
+  (if (= QUIT (get-status repl))
+      #f
+      #t))
 
 (define-method (ed-repl-parse-address-range (repl <EdRepl>) port)
   (let ((addr-range (addr-get-range port
@@ -772,42 +786,44 @@ changes have been made since the last 'w' write command."
                    (substring delimited-regex-string
                               1
                               (1- (string-length delimited-regex-string)))))))
-    (if regex-string
-        (begin
-          (if match?
-              (ed-global-mark repl
-                              (1- (first addr))
-                              (second addr)
-                              regex-string)
-              ;; else
-              (ed-global-mark-unmatched repl
-                                        (1- (first addr))
-                                        (second addr)
-                                        regex-string))
-          ;; N.B.  In this function below, we actually recurse back
-          ;; into ed-repl-do, but this time we get the commands from a
-          ;; the cmd-string instead of the current input port.
-          (ed-global-for-each repl
-                              (lambda (repl)
-                                (ed-repl-do
-                                 repl
-                                 (if interactive?
-                                     (begin
-                                       (when (get-prompt-active repl)
-                                         (set-prompt-string! repl "global>"))
-                                       (display (get-text-cur repl))
-                                       (newline)
-                                       (current-input-port))
+      (if regex-string
+          (begin
+            (if match?
+                (regex-tag-lines repl
+                                 (1- (first addr))
+                                 (second addr)
+                                 regex-string
+                                 "_RX")
+                ;; else
+                (regex-tag-nonmatching-lines repl
+                                             (1- (first addr))
+                                             (second addr)
+                                             regex-string
+                                             "_RX"))
+            ;; N.B.  In this function below, we actually recurse back
+            ;; into ed-repl-do, but this time we get the commands from a
+            ;; the cmd-string instead of the current input port.
+            (for-each-tagged-line repl
+                                  (lambda (repl)
+                                    (ed-repl-do
+                                     repl
+                                     (if interactive?
+                                         (begin
+                                           (when (get-prompt-active repl)
+                                             (set-prompt-string! repl "global>"))
+                                           (display (get-text-cur repl))
+                                           (newline)
+                                           (current-input-port))
+                                         cmd-string)))
+                                  "_RX")
+            (set-prompt-string! repl "command>")
+            (clear-tags repl "_RX"))
 
-                                     cmd-string))))
-          (set-prompt-string! repl "command>")
-          (ed-global-clear repl))
-
-        ;; else
-        (begin
-          (set-err-msg! repl (get-read-regex-string-err))
-          (set-status! ERR)
-          ERR)))))
+          ;; else
+          (begin
+            (set-err-msg! repl (get-read-regex-string-err))
+            (set-status! ERR)
+            ERR)))))
 
 (define-method (op-help (Repl <EdRepl>) addr special suffix append)
   "Display the last error message."
@@ -1061,8 +1077,8 @@ in."
 
 (define-method (op-substitute (Repl <EdRepl>) AddrList RegexReplace suffix append)
   "Searched the addressed lines for occurrences of the given regular
-expression and replace either the first or all (non-overlapped) matched strings
-with the replacement."
+expression and replace either the first or all (non-overlapped)
+matched strings with the replacement."
   (warn-if-false (cbuffer? Repl))
   (warn-if-false (list-of-integers-length-2? AddrList))
 
@@ -1078,7 +1094,6 @@ with the replacement."
         (ed-repl-display-lines Repl (1+ (get-line-cur Repl)) (1+ (get-line-cur Repl)) flags)))
   0)
 
-;;(define-method (op-undo (Repl <EdRepl>) Addr Special Suffix Append)
 (define (op-undo Repl Addr Special Suffix Append)
   "Undo the last mutator operation."
   (warn-if-false (cbuffer? Repl))
@@ -1131,38 +1146,112 @@ with the replacement."
 
 (define (ed-repl-set-default-dispatch-table! Rpl)
   (warn-if-false (cbuffer? Rpl))
-(set-dispatch-table!
- Rpl
- `((#\a    1 dot   #f    #t null          #t #t  ,op-append)
-   (#\c    2 dot   dot   #t null          #t #t  ,op-change)
-   (#\d    2 dot   dot   #f null          #t #f  ,op-delete)
-   (#\e    0 #f    #f    #f file          #f #f  ,op-edit)
-   (#\E    0 #f    #f    #f file          #f #f  ,op-edit-without-checking)
-   (#\f    0 #f    #f    #f file          #f #f  ,op-filename)
-   (#\g    2 1     $     #f regex+cmd     #t #f  ,op-global)
-   (#\G    2 1     $     #f regex         #t #f  ,op-global-interactive)
-   (#\h    0 #f    #f    #f null          #t #f  ,op-help)
-   (#\H    0 #f    #f    #f null          #t #f  ,op-help-mode)
-   (#\i    1 dot   #f    #t null          #t #t  ,op-insert)
-   (#\j    2 dot   dot+1 #f null          #t #f  ,op-join)
-   (#\k    1 dot   #f    #f bookmark      #t #f  ,op-mark)
-   (#\l    2 dot   dot   #f null          #t #f  ,op-list)
-   (#\m    2 dot   dot   #t address       #t #f  ,op-move)
-   (#\n    2 dot   dot   #f null          #t #f  ,op-number)
-   (#\p    2 dot   dot   #f null          #t #f  ,op-print)
-   (#\P    0 #f    #f    #f null          #t #f  ,op-prompt)
-   (#\q    0 #f    #f    #f null          #f #f  ,op-quit)
-   (#\Q    0 #f    #f    #f null          #f #f  ,op-quit-without-checking)
-   (#\r    1 $     #f    #t file          #f #f  ,op-read)
-   (#\s    2 dot   dot   #f regex+replace #t #f  ,op-substitute)
-   (#\t    2 dot   dot   #t address       #t #f  ,op-copy)
-   (#\u    0 #f    #f    #f null          #t #f  ,op-undo)
-   (#\v    2 1     $     #f regex+cmd     #t #f  ,op-global-non-matched)
-   (#\V    2 1     $     #f regex         #t #f  ,op-global-interactive-non-matched)
-   (#\w    2 1     $     #f file          #f #f  ,op-write)
-   (#\=    1 $     #f    #f null          #t #f  ,op-line-number)
-   (#\!    0 #f    #f    #f shell         #f #f  ,op-shell-escape)
-   (#\nul  1 dot+1 #f    #f null          #t #f  ,op-null))))
+  (set-dispatch-table!
+   Rpl
+   `((#\a    1 dot   #f    #t null          #t #t  ,op-append)
+     (#\c    2 dot   dot   #t null          #t #t  ,op-change)
+     (#\d    2 dot   dot   #f null          #t #f  ,op-delete)
+     (#\e    0 #f    #f    #f file          #f #f  ,op-edit)
+     (#\E    0 #f    #f    #f file          #f #f  ,op-edit-without-checking)
+     (#\f    0 #f    #f    #f file          #f #f  ,op-filename)
+     (#\g    2 1     $     #f regex+cmd     #t #f  ,op-global)
+     (#\G    2 1     $     #f regex         #t #f  ,op-global-interactive)
+     (#\h    0 #f    #f    #f null          #t #f  ,op-help)
+     (#\H    0 #f    #f    #f null          #t #f  ,op-help-mode)
+     (#\i    1 dot   #f    #t null          #t #t  ,op-insert)
+     (#\j    2 dot   dot+1 #f null          #t #f  ,op-join)
+     (#\k    1 dot   #f    #f bookmark      #t #f  ,op-mark)
+     (#\l    2 dot   dot   #f null          #t #f  ,op-list)
+     (#\m    2 dot   dot   #t address       #t #f  ,op-move)
+     (#\n    2 dot   dot   #f null          #t #f  ,op-number)
+     (#\p    2 dot   dot   #f null          #t #f  ,op-print)
+     (#\P    0 #f    #f    #f null          #t #f  ,op-prompt)
+     (#\q    0 #f    #f    #f null          #f #f  ,op-quit)
+     (#\Q    0 #f    #f    #f null          #f #f  ,op-quit-without-checking)
+     (#\r    1 $     #f    #t file          #f #f  ,op-read)
+     (#\s    2 dot   dot   #f regex+replace #t #f  ,op-substitute)
+     (#\t    2 dot   dot   #t address       #t #f  ,op-copy)
+     (#\u    0 #f    #f    #f null          #t #f  ,op-undo)
+     (#\v    2 1     $     #f regex+cmd     #t #f  ,op-global-non-matched)
+     (#\V    2 1     $     #f regex         #t #f  ,op-global-interactive-non-matched)
+     (#\w    2 1     $     #f file          #f #f  ,op-write)
+     (#\=    1 $     #f    #f null          #t #f  ,op-line-number)
+     (#\!    0 #f    #f    #f shell         #f #f  ,op-shell-escape)
+     (#\nul  1 dot+1 #f    #f null          #t #f  ,op-null))))
 
 (define (ed-repl-read-file Repl FileNameOrCmd)
-  (op-edit-without-checking Repl '() FileName "" '()))
+  (op-edit-without-checking Repl '() FileNameOrCmd "" '()))
+
+(define (ed-repl-write-crash-out-file Repl)
+  "Writes the text of the buffer to a file, as might be required by
+a signal handler.  The filename will be derived from the buffer's
+current filename, if any, or may be 'ed.hup' if there is
+no filename associated with the repl.
+It tries a couple of  likely save locations in order.
+- current directory
+- home directory
+The location of the crash file is reported to stdout.
+It describes noisily what it is trying to do."
+  (warn-if-false (cbuffer? Repl))
+
+  (if (not (get-modified Repl))
+      (format #t "HANGUP. Buffer is unmodified since last save.~%")
+      ;; else
+      (begin
+        (if (string-null? (get-filename Repl))
+            (format #t "HANGUP. Will try to write a save file for this buffer.~%")
+            (format #t "HANGUP. Will try to write a save file for this buffer ~a.~%"
+                    (get-filename Repl)))
+        
+        (let ((path (or (if (access? (getcwd) W_OK) "." #f)
+                        (if (access? (get-home Repl) W_OK) (get-home Repl) #f))))
+          (if (not path)
+              (begin
+                (format #t "Cannot save file. ~a and ~a are not writeable."
+                        (getcwd) (get-home Repl))
+                #f)
+              ;; else
+              (begin
+                (format #t "Will try to save in '~a'.~%" path)
+                (let ((fname (basename (get-filename Repl))))
+                  (when (string-null? fname)
+                    (set! fname "ed"))
+                  (let loop ((i 0))
+                    (let ((fullname
+                           (build-filename path
+                                           (string-append
+                                            fname
+                                            (if (= i 0)
+                                                ".hup"
+                                                (string-append ".hu"
+                                                               (number->string i)))))))
+                      (cond
+                       ((>= i 100)
+                        (format #t
+                                "Too many save files already exist for ~a."
+                                (get-filename Repl))
+                        #f)
+                       ((file-exists? fullname)
+                        (loop (1+ i)))
+                       (else
+                        (let ((bytes-written 0)
+                              (port (open-output-file fullname)))
+                          (if (not port)
+                              (begin
+                                (format #t "Cannot open save file ~a.~%"
+                                        fullname)
+                                #f)
+                              ;; else
+                              (begin
+                                (for-each
+                                 (lambda (line)
+                                   (write-line line port)
+                                   (set! bytes-written
+                                     (+ bytes-written (string-length line) 1)))
+                                 (get-text Repl))
+                                (force-output port)
+                                (close port)
+                                (format #t "Wrote ~a characters to ~a.~%"
+                                        bytes-written
+                                        fullname)
+                                bytes-written))))))))))))))
