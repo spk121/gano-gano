@@ -1,0 +1,146 @@
+#!/usr/bin/guile \
+--debug -e main
+!#
+
+;;; -*- mode: scheme; coding: us-ascii; indent-tabs-mode: nil; -*-
+;;; (gano ed) - an Ed-like line-oriented text editor
+;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
+;;;
+;;; This program is free software: you can redistribute it and/or
+;;; modify it under the terms of the GNU General Public License as
+;;; published by the Free Software Foundataion, either version 3 of
+;;; this License, or (at your option) any later version.
+;;;
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see
+;;; <http://www.gnu.org/licenses/>
+
+(define-module (mlg ed)
+  #:use-module (ice-9 getopt-long)
+  ;; #:use-module (ice-9 rdelim)
+  ;; #:use-module (ice-9 popen)
+  ;; #:use-module (gano CBuffer)
+  #:use-module (gano ed-repl)
+  #:use-module (mlg utils)
+  ;; #:use-module (mlg re)
+  ;; #:use-module (mlg buf)
+  #:use-module (mlg strings)
+  ;; #:use-module (mlg port)
+  ;; #:use-module (mlg debug)
+  ;; #:use-module (mlg ed address)
+  ;; ;; #:use-module (mlg ed bmark)
+  ;; #:use-module (mlg ed regex)
+  ;; #:use-module (mlg ed ops)
+  ;; #:use-module (mlg logging)
+  #:export (main))
+
+;; signals
+(define mutex 0)                        ; if set, signals set flags
+(define sighup #f)                      ; if set, sighup received while mutex set
+(define sigint #f)                      ; if set, sigint received while mutex set
+(define sigactive #f)                   ; if set, signal handlers are enabled.
+
+(define (main args)
+  (let* ((option-spec '((prompt (single-char #\p) (value #t) (predicate string?))
+                        (scripted (single-char #\s) (value #f))))
+         (options (getopt-long args option-spec))
+         (argv (option-ref options '() '()))
+	 (interactive #f)
+	 (repl #f))
+
+    ;; If one of the remaining arguments is a sole hyphen,
+    ;; some versions of ed make this scripted mode.
+
+    ;; Determine if we're interactive.
+    ;; isatty  | file-port?  |
+    ;; yes     | yes         | interactive
+    ;; no      | yes         | input is piped into
+    ;; no      | no          | probably running under repl
+    (set! interactive (or (and (isatty? (current-input-port))
+                               (file-port? (current-input-port)))
+                          (and (not (isatty? (current-input-port)))
+                               (not (file-port? (current-input-port))))))
+    ;; Signal handler installation goes here.
+    (when (isatty? (current-input-port))
+      (handle-winch SIGWINCH)
+      (sigaction SIGWINCH handle-winch))
+    (sigaction SIGHUP signal-hup)
+    (sigaction SIGQUIT SIG_IGN)
+    (sigaction SIGINT signal-int)
+
+    ;; FIXME: This is the big interrupt catch.
+    ;; If I catch a sigint, restart restart processing from here.
+
+    (when (file-port? (current-input-port))
+      (setvbuf (current-input-port) _IONBF))
+
+    (set! repl (make-ed-repl #:promptstring (option-ref options 'prompt #f)
+			     #:scripted (option-ref options 'scripted #f)
+			     #:homedir (get-home-dir)
+			     #:interactive interactive))
+			
+    ;; Enable signal handlers
+    (set! sigactive #t)
+
+    ;; Load the file, if a filename is given
+    (cond
+     ((and (> (length argv) 0) (> (string-length (car argv)) 0))
+      (let* ((fname (car argv))
+             (ret (ed-repl-read-file repl fname)))
+        (when (and (< ret 0) (not interactive))
+	  (quit 2))))
+     (else
+      (display "?")
+      (newline)
+      (unless interactive
+        (quit 2))))
+
+    ;; This is the main loop
+    (while #t
+      (let ((ret (ed-repl-do repl (current-input-port))))
+	(if (not ret)
+	    (break))))
+
+    (exit 0)))
+
+(define (handle-winch signo)
+  ;; When there is a way to check TIOCGWINSZ,
+  ;; then set rows and cols here.
+  *unspecified* )
+
+
+(define (handle-hup signo)
+  (unless sigactive
+    (quit 1))                           ; signal race?
+  (set! sighup #f)
+  ;; Try to write the crash-out file here.  Or, failing that, in my
+  ;; home directory.
+  (if (and (not (zero? (get-line-count *repl*)))
+		
+           (< (write-file "ed.hup" "1" 1 addr-last) 0)
+           (not (string-null? home))
+           (string-starts-with? home #\/))
+      (write-file (string-append home "/ed.hup") "w" 1 addr-last))
+  (primitive-_exit 2))
+
+(define (handle-int signo)
+  (unless sigactive
+    (primitive-_exit 1))
+  (set! sigint #f)
+  ;; FIXME, here I somehow jump to the top of the main loop
+  (throw 'interrupt))
+
+(define (signal-int signo)
+  (if (> mutex 0)
+      (set! sigint #t)
+      (handle-int signo)))
+
+(define (signal-hup signo)
+  (if (> mutex 0)
+      (set! sighup #t)
+      (handle-hup signo)))

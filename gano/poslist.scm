@@ -301,13 +301,12 @@
                 ;; entries.  The original is not moved, and the copy
                 ;; is moved.
                 (let ((newentry (set-cdr! (list-copy entry) adjusted-pos)))
-                  (cons newentry (cons entry ret)))))
-              (else
-               (set-cdr! entry adjusted-pos)
-               (cons entry ret)))))
+                  (cons newentry (cons entry ret))))
+               (else
+                (set-cdr! entry adjusted-pos)
+                (cons entry ret))))))
         (list)
         poslist)))))
-
 
 (define-syntax adjust-poslist-delete-in-line
   (syntax-rules ()
