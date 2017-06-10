@@ -11,16 +11,10 @@ SCM_SRC = \
  gano/position.scm \
  gano/math.scm
 
-BROKEN_SCM_SRC = \
- ed.scm \
- io.scm \
- regex.scm \
- spreadsheet.scm
-
 SCM_OBJ := $(patsubst %.scm,%.go,$(SCM_SRC))
 SCM_SCRIPT_OBJ := $(patsubst %,%.go,$(SCM_SCRIPTS))
-C_SRC =
 
+C_SRC =
 C_OBJ := $(patsubst %.c,%.o,$(C_SRC))
 
 .SUFFIXES: .c .o .scm .go
@@ -53,9 +47,11 @@ gano-ed.go: gano-ed
 	guild compile $(SCM_LDFLAGS) $(SCM_CFLAGS) -o "$@" "$<"
 
 clean:
-	rm -f *.go
-	rm -f *.o
-	rm -f *.so
+	rm -f $(SCM_SCRIPT_OBJ)
+	rm -f $(SCM_OBJ)
+	rm -f $(C_OBJ)
+	rm -f *~
+	rm gano.go.tar
 
 install:
 	mkdir -p `pkg-config guile-$(GUILE_VERSION) --variable=extensiondir`

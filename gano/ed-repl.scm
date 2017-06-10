@@ -18,19 +18,18 @@
 
 (define-module (gano ed-repl)
   #:use-module (gano CBuffer)
+  #:use-module (gano address)
   #:use-module (gano poslist)
+  #:use-module (gano regex)
+  #:use-module (ice-9 format)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
-  #:use-module (ice-9 format)
-  #:use-module (mlg ed address)
-  ;; #:use-module (mlg ed bmark)
-  #:use-module (mlg ed filename)
-  #:use-module (gano regex)
+  #:use-module (mlg characters)
   #:use-module (mlg logging)
   #:use-module (mlg port)
   #:use-module (mlg strings)
-  #:use-module (mlg utils)
   #:use-module (mlg typechecking)
+  #:use-module (mlg utils)
   #:use-module (oop goops)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-2)
@@ -105,7 +104,8 @@
                #:setter set-garrulous!)
 
   ;; If true, we are printing debug information.
-  (m_Verbose #:init-value #t
+  (m_Verbose #:init-value #f
+             #:setter set-verbose!
              #:getter get-verbose)
 
   ;; If true, we are printing a prompt when prompting for a command.
@@ -145,11 +145,15 @@
 
 (define* (make-ed-repl #:key promptstring
                        scripted
+                       verbose
+                       debug
                        homedir
                        interactive)
   (let ((rpl (make <EdRepl>)))
     (when promptstring (set-prompt-string! repl promptstring))
     (when scripted (set-scripted! rpl scripted))
+    (when verbose (set-garrulous! rpl verbose))
+    (when debug (set-verbose! rpl debug))
     (when homedir (set-home! rpl homedir))
     (when interactive (set-interactive! rpl interactive))
     rpl))
@@ -283,6 +287,19 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
                           (if (dispatch:suffix? op)
                               (ed-repl-parse/validate-suffix repl port)
                               ""))
+                         (leftover
+                          ;; There should be nothing left in the command
+                          ;; line but whitespace
+                          (let* ((ws (read-whitespace port))
+                                 (leftover (peek-char-safe port)))
+                            (if (not (char=? leftover #\null))
+                                (begin
+                                  (if (isprint? leftover)
+                                      (set-err-msg! repl (format #f "invalid suffix character '~a'" leftover))
+                                      (set-err-msg! repl (format #f "invalid suffix character ~s" leftover)))
+                                  (set-status! repl ERR)
+                                  #f)
+                                "")))
                          (txt
                           ;; Some commands let the user type some lines terminated
                           ;; by a dot
@@ -329,6 +346,7 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
      ((not (char-lower-case? name))
       (set-err-msg! repl
                     (format #f "invalid bookmark name '~a'" name))
+      (set-status! repl ERR)
       #f)
      (else
       (string name)))))
@@ -352,20 +370,26 @@ instead.  It will return the string, or #f on failure."
   (let ((txt ""))
     (if (not (eof-object? (peek-char port)))
         (set! txt (read-whitespace port)))
-    (if (eof-object? (peek-char port))
-        (if (string-null? (get-filename repl))
-            (begin
-              (set-err-msg! repl "missing filename")
-              (set-status! repl ERR)
-              (unread-string txt port)
-              #f)
-            ;; else
-            (get-filename repl))
+    (if (= 0 (string-length txt))
+        (begin
+          (set-err-msg! repl "a space is requied after this command")
+          (set-status! repl ERR)
+          #f)
         ;; else
-        (let ((str (string-trim-both (read-line port))))
-          (if (not (string-starts-with? str #\!))
-              (set-filename! repl str))
-          str))))
+        (if (eof-object? (peek-char port))
+            (if (string-null? (get-filename repl))
+                (begin
+                  (set-err-msg! repl "missing filename")
+                  (set-status! repl ERR)
+                  (unread-string txt port)
+                  #f)
+                ;; else
+                (get-filename repl))
+            ;; else
+            (let ((str (string-trim-both (read-line port))))
+              (if (not (string-starts-with? str #\!))
+                  (set-filename! repl str))
+              str)))))
 
 (define-method (ed-repl-parse/validate-input-lines (repl <EdRepl>) port)
   "Some commands allow the entry of text lines, ended by entering
@@ -572,7 +596,9 @@ C."
   "Returns #t if C is a known 1-letter Ed command, else returns #f."
   (if (not (assoc c (get-dispatch-table repl)))
       (begin
-        (set-err-msg! repl (format #f "unknown command ~a" c))
+        (if (isprint? c)
+            (set-err-msg! repl (format #f "unknown command '~a'" c))
+            (set-err-msg! repl (format #f "unknown command ~s" c)))
         (set-status! repl ERR)
         #f)
       #t))

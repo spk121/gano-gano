@@ -33,7 +33,9 @@
 
 (define (main args)
   (let* ((option-spec '((prompt (single-char #\p) (value #t) (predicate string?))
-                        (scripted (single-char #\s) (value #f))))
+                        (scripted (single-char #\s) (value #f))
+			(verbose (single-char #\v) (value #f))
+			(debug (single-char #\d) (value #f))))
          (options (getopt-long args option-spec))
          (argv (option-ref options '() '()))
 	 (interactive #f))
@@ -62,10 +64,12 @@
     ;; If I catch a sigint, restart restart processing from here.
 
     (when (file-port? (current-input-port))
-      (setvbuf (current-input-port) _IONBF))
+      (setvbuf (current-input-port) _IOLBF))
 
     (set! *repl* (make-ed-repl #:promptstring (option-ref options 'prompt #f)
 			       #:scripted (option-ref options 'scripted #f)
+			       #:verbose (option-ref options 'verbose #f)
+			       #:debug (option-ref options 'debug #f)
 			       #:homedir (get-home-dir)
 			       #:interactive interactive))
     (ed-repl-set-default-dispatch-table! *repl*)
@@ -80,13 +84,13 @@
         (when (and (< ret 0) (not interactive))
 	  (quit 2))))
      (else
-      (display "?")
-      (newline)
-      (unless interactive
-        (quit 2))))
+      ;;(unless interactive (quit 2))
+      #f
+      ))
 
     ;; This is the main loop
     (while #t
+      (usleep 100000)
       (let ((ret (ed-repl-do *repl* (current-input-port))))
 	(if (not ret)
 	    (break))))
