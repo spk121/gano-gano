@@ -23,6 +23,7 @@
   #:use-module (mlg port)
   #:use-module (mlg characters)
   #:use-module (mlg logging)
+  #:use-module (mlg lists)
   #:use-module (mlg typechecking)
   #:export (addr-get-range
             addr-get-range-error))
@@ -48,7 +49,7 @@
                                  bmark-callback
                                  regex-callback)))
     (if ret
-        (take-up-to-two-right ret)
+        (take-right-n ret 2)
         #f)))
 
 (define (compute-ed-address _tokens
@@ -250,13 +251,6 @@ used should be reapplied."
       #f
       (+ a b c)))
 
-(define (take-up-to-two-right lst)
-  (warn-if-false (list? lst))
-
-  (if (>= (length lst) 2)
-      (take-right lst 2)
-      lst))
-
 (define (last-two-list-elements-in-range? lst low high)
   "Return #t if the last two elements in the list, if present, are
 between low (inclusive) and high (inclusive)"
@@ -264,7 +258,7 @@ between low (inclusive) and high (inclusive)"
   (warn-if-false (integer-nonnegative? low))
   (warn-if-false (integer-nonnegative? high))
 
-  (let ((sublist (take-up-to-two-right lst)))
+  (let ((sublist (take-right-n lst 2)))
     (every (lambda (x)
              (and (integer? x) (<= low x) (<= x high)))
            sublist)))
