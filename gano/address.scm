@@ -247,18 +247,6 @@ used should be reapplied."
           (loop (append output (list addr offset separator))))
       )))
 
-(define (last-two-list-elements-in-range? lst low high)
-  "Return #t if the last two elements in the list, if present, are
-between low (inclusive) and high (inclusive)"
-  (warn-if-false (list? lst))
-  (warn-if-false (integer-nonnegative? low))
-  (warn-if-false (integer-nonnegative? high))
-
-  (let ((sublist (take-right-n lst 2)))
-    (every (lambda (x)
-             (and (integer? x) (<= low x) (<= x high)))
-           sublist)))
-
 (define (validate-ed-address final-addr-list last-line)
   ;; The last two elements are the one that might be used.  Any other
   ;; initial elements can be ignored.  The last two elements must be
@@ -267,7 +255,7 @@ between low (inclusive) and high (inclusive)"
   ;; If final-addr-list is #f, we can assume that an error message
   ;; has already been stored.
   (cond
-   ((not (last-two-list-elements-in-range? final-addr-list 0 last-line))
+   ((not (list-range-check-right-n final-addr-list 2 0 last-line))
     (set! *compute-ed-address-error*
       (if (= 1 (length final-addr-list))
           (format #f "Address ~a is not in range ~a to ~a"
