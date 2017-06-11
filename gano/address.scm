@@ -24,6 +24,7 @@
   #:use-module (mlg characters)
   #:use-module (mlg logging)
   #:use-module (mlg lists)
+  #:use-module (mlg math)
   #:use-module (mlg typechecking)
   #:export (addr-get-range
             addr-get-range-error))
@@ -245,11 +246,6 @@ used should be reapplied."
           ;; else
           (loop (append output (list addr offset separator))))
       )))
-
-(define* (add-num-or-false a b #:optional (c 0))
-  (if (or (not (integer? a)) (not (integer? b)) (not (integer? c)))
-      #f
-      (+ a b c)))
 
 (define (last-two-list-elements-in-range? lst low high)
   "Return #t if the last two elements in the list, if present, are
