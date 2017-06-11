@@ -26,10 +26,10 @@
 	     (mlg strings))
 ;; signals
 (define *repl* #f)	     ; If set, the current repl.
-(define mutex 0)                        ; if set, signals set flags
-(define sighup #f)                      ; if set, sighup received while mutex set
-(define sigint #f)                      ; if set, sigint received while mutex set
-(define sigactive #f)                   ; if set, signal handlers are enabled.
+(define mutex 0)	     ; if set, signals set flags
+(define sighup #f)	     ; if set, sighup received while mutex set
+(define sigint #f)	     ; if set, sigint received while mutex set
+(define sigactive #f)	     ; if set, signal handlers are enabled.
 
 (define (main args)
   (let* ((option-spec '((prompt (single-char #\p) (value #t) (predicate string?))

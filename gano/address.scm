@@ -255,7 +255,7 @@ used should be reapplied."
   ;; If final-addr-list is #f, we can assume that an error message
   ;; has already been stored.
   (cond
-   ((not (list-range-check-right-n final-addr-list 2 0 last-line))
+   ((not (list-range-check-right-n? final-addr-list 2 0 last-line))
     (set! *compute-ed-address-error*
       (if (= 1 (length final-addr-list))
           (format #f "Address ~a is not in range ~a to ~a"
@@ -291,7 +291,7 @@ used should be reapplied."
       'dollar)
 
      ;; A positive decimal number shall address the nth line of the buffer.
-     ((member c (string->list "0123456789"))
+     ((ascii-isdigit? c)
       (cons 'absolute-number (read-integer port)))
 
      ;; An apostrophe followed by a single lowercase letter is a bookmark
@@ -328,22 +328,22 @@ used should be reapplied."
       (cons 'backward-regex (read-regex-string port)))
 
      ;; A plus sign not followed by a number is the current line plus 1
-     ((and (char=? c #\+) (not (isdigit? (peek-2nd-char-safe port))))
+     ((and (char=? c #\+) (not (ascii-isdigit? (peek-2nd-char-safe port))))
       (read-char port)
       (cons 'relative-number 1))
 
      ;; A minus sign not followed by a number is the current line plus 1
-     ((and (char=? c #\-) (not (isdigit? (peek-2nd-char-safe port))))
+     ((and (char=? c #\-) (not (ascii-isdigit? (peek-2nd-char-safe port))))
       (read-char port)
       (cons 'relative-number -1))
 
      ;; A plus sign followed by a number is current line + num
-     ((and (char=? c #\+) (isdigit? (peek-2nd-char-safe port)))
+     ((and (char=? c #\+) (ascii-isdigit? (peek-2nd-char-safe port)))
       (read-char port)
       (cons 'relative-number (read-integer port)))
 
      ;; A minus sign followed by a number is current line - num
-     ((and (char=? c #\-) (isdigit? (peek-2nd-char-safe port)))
+     ((and (char=? c #\-) (ascii-isdigit? (peek-2nd-char-safe port)))
       (read-char port)
       (cons 'relative-number (- (read-integer port))))
 
@@ -360,26 +360,26 @@ used should be reapplied."
         delta)
 
        ;; A positive decimal number shall be a positive offset
-       ((member c (string->list "0123456789"))
+       ((ascii-isdigit? c)
         (loop (+ delta (read-integer port))))
 
        ;; A plus sign not followed by a number is an offset of 1
-       ((and (char=? c #\+) (not (isdigit? (peek-2nd-char-safe port))))
+       ((and (char=? c #\+) (not (ascii-isdigit? (peek-2nd-char-safe port))))
         (read-char port)
         (loop (1+ delta)))
 
        ;; A minus sign not followed by a number is an offset of 1
-       ((and (char=? c #\-) (not (isdigit? (peek-2nd-char-safe port))))
+       ((and (char=? c #\-) (not (ascii-isdigit? (peek-2nd-char-safe port))))
         (read-char port)
         (loop (1- delta)))
 
        ;; A plus sign followed by a positive offset
-       ((and (char=? c #\+) (isdigit? (peek-2nd-char-safe port)))
+       ((and (char=? c #\+) (ascii-isdigit? (peek-2nd-char-safe port)))
         (read-char port)
         (loop (+ (read-integer port))))
 
        ;; A minus sign followed by a number is a negative offset
-       ((and (char=? c #\-) (isdigit? (peek-2nd-char-safe port)))
+       ((and (char=? c #\-) (ascii-isdigit? (peek-2nd-char-safe port)))
         (read-char port)
         (loop (- delta (read-integer))))
 
