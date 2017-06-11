@@ -20,7 +20,6 @@
   #:use-module (gano CBuffer)
   #:use-module (gano address)
   #:use-module (gano poslist)
-  #:use-module (gano regex)
   #:use-module (ice-9 format)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
@@ -28,6 +27,7 @@
   #:use-module (mlg logging)
   #:use-module (mlg port)
   #:use-module (mlg strings)
+  #:use-module (mlg math)
   #:use-module (mlg typechecking)
   #:use-module (mlg utils)
   #:use-module (oop goops)
@@ -138,6 +138,10 @@
                  #:getter get-last-command
                  #:setter set-last-command!)
 
+  (m_LastRegexString #:init-value ""
+                     #:getter get-last-regex-string
+                     #:setter set-last-regex-string!)
+
   (m_LastReplacementString #:init-value #f
                            #:getter get-last-replacement-string
                            #:setter set-last-replacement-string!)
@@ -185,6 +189,19 @@
       (if pos
           (1+ (car pos))
           #f))))
+
+(define-method (ed-repl-construct-regex-callback (repl <EdRepl>))
+  (lambda (regex-string start-line direction)
+    (if (string-null? regex-string)
+        (set! regex-string (get-last-regex-string repl))
+        ;; else
+        (set-last-regex-string! repl regex-string))
+    (if (= 1 direction)
+        (add-num-or-false 1 (regex-search-forward-line repl start-line regex-string))
+        ;; else
+        (if (= -1 direction)
+            (add-num-or-false 1 (regex-search-backward-line repl start-line regex-string))
+            (warn-if-reached)))))
 
 (define-method (ed-repl-display-lines (Repl <EdRepl>) LStart LEnd Suffix)
   "Print a range of lines to stdout from LStart (1-indexed, inclusive)
@@ -333,7 +350,7 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
                                     (ed-repl-get-line-cur-in-ed-coordinates repl)
                                     (ed-repl-get-line-last-in-ed-coordinates repl)
                                     (ed-repl-construct-bookmark-callback repl)
-                                    regex-default-cb)))
+                                    (ed-repl-construct-regex-callback repl))))
     ;; (log-debug-locals)
     (unless addr-range
       (set-err-msg! repl (addr-get-range-error))
@@ -1209,10 +1226,11 @@ matched strings with the replacement."
   (op-edit-without-checking Repl '() FileNameOrCmd "" '()))
 
 (define (ed-repl-write-crash-out-file Repl)
-  "Writes the text of the buffer to a file, as might be required by
-a signal handler.  The filename will be derived from the buffer's
-current filename, if any, or may be 'ed.hup' if there is
-no filename associated with the repl.
+  "Writes the text of the buffer to a file, as might be required by a
+signal handler.  The filename will be derived from the buffer's
+current filename, if any, or may be 'ed.hup' if there is no filename
+associated with the repl.
+
 It tries a couple of  likely save locations in order.
 - current directory
 - home directory
@@ -1228,7 +1246,7 @@ It describes noisily what it is trying to do."
             (format #t "HANGUP. Will try to write a save file for this buffer.~%")
             (format #t "HANGUP. Will try to write a save file for this buffer ~a.~%"
                     (get-filename Repl)))
-        
+
         (let ((path (or (if (access? (getcwd) W_OK) "." #f)
                         (if (access? (get-home Repl) W_OK) (get-home Repl) #f))))
           (if (not path)

@@ -4,12 +4,13 @@ SCM_SCRIPTS = \
  gano-ed
 
 SCM_SRC = \
- gano/ed-repl.scm \
+ gano/address.scm \
  gano/CBuffer.scm \
- gano/poslist.scm \
- gano/stringlist.scm \
+ gano/ed-repl.scm \
+ gano/math.scm \
  gano/position.scm \
- gano/math.scm
+ gano/poslist.scm \
+ gano/stringlist.scm
 
 SCM_OBJ := $(patsubst %.scm,%.go,$(SCM_SRC))
 SCM_SCRIPT_OBJ := $(patsubst %,%.go,$(SCM_SCRIPTS))
