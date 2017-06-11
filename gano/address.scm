@@ -381,7 +381,7 @@ used should be reapplied."
        ;; A minus sign followed by a number is a negative offset
        ((and (char=? c #\-) (ascii-isdigit? (peek-2nd-char-safe port)))
         (read-char port)
-        (loop (- delta (read-integer))))
+        (loop (- delta (read-integer port))))
 
        ;; else there are no more offsets.
        (else
