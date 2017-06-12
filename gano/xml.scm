@@ -4,7 +4,7 @@
   #:use-module (sxml xpath)
   #:use-module (ice-9 pretty-print))
 
-(define X (xml->sxml (open-input-file "test.xml")
+(define X (xml->sxml (open-input-file "ecma48.xml")
 		     #:trim-whitespace? #t))
 
 (define ACTION_LIST
@@ -14,7 +14,7 @@
 (define (transform-action entry)
   (list
    (string->number (second (first ((sxpath `(// id)) entry))))
-   (second (first ((sxpath `(// name)) entry)))
+   (string->symbol (second (first ((sxpath `(// name)) entry))))
    (second (first ((sxpath `(// text)) entry)))))
 
 (define action-list
@@ -62,8 +62,10 @@
    state-list
    start-state))
 
+(display "(define *ecma48-machine* '")
 (pretty-print state-machine-data)
-
+(display ")")
+(newline)
 
 
 
