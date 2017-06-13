@@ -107,7 +107,7 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             ;; Dumb TTY Operations
             line-feed                   ; LF
             carriage-return             ; CR
-            insert-character            ; IC
+            write-character            ; IC
 
             ;; Dumb TTY Undo Operations
             undo-insert-character
@@ -636,12 +636,14 @@ and the active data position."
   (adjust-poslist-insert-in-line-before (get-tags buf) LInsert PInsert LenInsert)
   (adjust-poslist-insert-in-line-before (get-bookmarks buf) LInsert PInsert LenInsert)))
 
-(define-method (op-insert-in-line-after (buf <CBuffer>) LInsert PInsert txt)
+(define (op-insert-in-line-after buf LInsert PInsert txt)
+  (warn-if-false (cbuffer? buf))
   (let ((LenInsert (string-length txt)))
 
   (append-undo! buf (list 'op-insert-in-line-after LInsert PInsert txt))
 
   ;; Insert the text into the line
+  (log-debug-locals)
   (strlist-insert-in-line (get-text buf) LInsert PInsert txt)
 
   ;; Move the active data position

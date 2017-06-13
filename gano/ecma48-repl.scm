@@ -2,6 +2,7 @@
   #:use-module (gano CBuffer)
   #:use-module (oop goops)
   #:use-module (srfi srfi-1)
+  #:use-module (rnrs io ports)
   #:use-module (ice-9 rdelim)
   )
 
@@ -87,17 +88,77 @@ between the first two elements of a given entry."
     ((do_ack)
      ;; NOOP
      #t)
+    ((do_apc)
+     ;; APC - Application Program Command
+     #t)
+    ((do_bel)
+     ;; BEL - Bell
+     (console-bell))
+    ((do_bph)
+     ;; BPH - Break Permitted Here
+     #t)
+    ((do_bs)
+     ;; BS - Backspace
+     #t)
+    ((do_can)
+     ;; CAN - Cancel
+     #t)
+    ((do_cbt)
+     ;; CBT - Cursor Backward Tabulation
+     #t)
+    ((do_cch)
+     ;; CCH - Cancel Character
+     #t)
+    ((do_cht)
+     ;; CHT - Cursor Forward Tabulation
+     #t)
+    ((do_cmd)
+     ;; CMD - Coding Method Delimiter
+     #t)
+    ((do_cnl)
+     ;; CNL - Cursor Next Line
+     #t)
+    ((do_cpl)
+     ;; CPS - Cursor Preceding Line
+     #t)
+    ((do_cpr)
+     ;; CPR - Active Position Report
+     #t)
+    ((do_cr)
+     ;; CR - Carriage Return
+     #t)
+    ((do_ctc)
+     ;; CTC - Cursor Tabulation Control
+     #t)
+    ((do_cub)
+     ;; CUB - Cursor Left
+     #t)
+    ((do_cud)
+     ;; CUD - Cursor Down
+     #t)
+    ((do_cuf)
+     ;; CUF - Cursor Right
+     #t)
+    ((do_cup)
+     ;; CUP - Cursor Position
+     #t)
+    ((do_cuu)
+     ;; CUU - Cursor Up
+     #t)
+    ((do_cvt)
+     ;; CVT - Cursor Line Tabulation
+     #t)
+    ((do_print)
+     ;; Write a G0 character
+     (write-character *self* val))
     (else
      (format #t "no dispatchable action for the curent key '~a'~%" key))))
 
 (set! *self* (make-ecma48-repl))
 (define *state-id* (fourth *ecma48-machine*))
 (while #t
-  (display "> ")
-  (let ((txt (read-line)))
-    (string-for-each
-     (lambda (char)
-       (let ((ret (state-machine-do *state-id* char)))
-	 (set! *state-id* ret)
-	 ret))
-     txt)))
+  (let ((c (get-u8 (current-input-port))))
+    (format #t "received ~s = ~s ~%" (integer->char c) c)
+    (let ((ret (state-machine-do *state-id* (integer->char c))))
+      (set! *state-id* ret)
+      ret)))

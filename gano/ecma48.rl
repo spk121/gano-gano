@@ -16,17 +16,9 @@
 
 %%{
   machine ECMA48;
-  
+
   alphtype unsigned char;
-  
-  action store_param {
-  ;;; Store sole numeric parameter
-  }
-  
-  action store_string {
-  ;;; Store control string parameter
-  }
-  
+
   action do_ack {
   ;;; ACK - ACKNOWLEDGE.  In ISO 1745, when a slave station receive an ACK,
   ;;; it is an error by the upstream master station.
@@ -41,7 +33,7 @@
   ;;; BEL - BELL.
     (console-bell)
   }
-  
+
   action do_bph {
     // BPH - BREAK PERMITTED HERE.  This console doesn't auto-wrap, so
     // this is ignored.
@@ -78,7 +70,7 @@
   action do_cmd {
   // CMD - CODING METHOD DELIMITER
   }
-  
+
   action do_cht {
     // CHT - CURSOR FORWARD TABULATION
     console_move_tab_right(p1(1));
@@ -128,7 +120,7 @@
     // CUF - CURSOR RIGHT
     console_move_right(p1(1));
   }
-  
+
   action do_cup {
     // CUP - CURSOR POSITION
     console_move_to(p1(1) - 1, p2(1) - 1); // ECMA-48 coords begin at 1
@@ -160,14 +152,14 @@
     else if (hem == 1)
       console_delete_left(p1(1));
   }
-    
+
   action do_dcs {
     // DCS - DEVICE CONTROL STRING.  This console doesn't interpret
     // any device control strings.
   }
 
   action do_dc1 {
-    // DC1 - DEVICE CONTROL ONE.  This console doesn't have any 
+    // DC1 - DEVICE CONTROL ONE.  This console doesn't have any
     // devices to control.
   }
 
@@ -194,7 +186,7 @@
       console_delete_line_up(p1(1));
     console_move_to_column(line_home - 1); // ECMA-48 coords begin a 1
   }
-  
+
   action do_dle {
     // DLE - DATA LINK ESCAPE.  In ISO 1745, this would disconnect
     // communication.
@@ -219,7 +211,7 @@
   action do_ea {
     // EA - ERASE IN AREA.  The concept of 'areas' is unimplemented.
   }
-  
+
   action do_ech {
     // ECH - ERASE CHARACTER.
     console_erase_right(p1(1));
@@ -235,7 +227,7 @@
     else if (s == 2)
       console_erase_page ();
   }
-  
+
   action do_ef {
     // EF - ERASE IN FIELD.  This console has no notion of fields.
   }
@@ -332,7 +324,7 @@
   action do_hts {
     // HTS - CHARACTER TABULATION SET.  Unimplemented.
   }
-    
+
   action do_hvp {
     // HVP = CHARACTER AND LINE POSITION.
     console_move_to (p1(1) - 1, p2(1) - 1);
@@ -367,7 +359,7 @@
       console_insert_line_up(p1(1));
     console_move_to_column(line_home - 1); // ECMA-48 coordinates begin at 1
   }
-  
+
   action do_int {
     // INT - INTERRUPT. Data stream indicates to console that the current
     // process is to be interrupted and some agreed procedure is to be
@@ -390,6 +382,9 @@
     // IS4 - INFORMATION SEPARATOR FOUR (FILE SEPARATOR)
   }
 
+  action do_iso1745 {
+    ;; ISO1745 message
+  }
   action do_jfy {
     // JFY - JUSTIFY. Indicates the beginning or end of a string that
     // was to be justified on the screen.  Cool, but, unimplemented.
@@ -621,7 +616,7 @@
   }
 
   action do_sds {
-    // SDS - START DIRECTED STRING. Would allow one to label the 
+    // SDS - START DIRECTED STRING. Would allow one to label the
     // string as right-to-left or left-to-right.  Unimplemented.
   }
 
@@ -840,7 +835,7 @@
   }
 
   action do_sm {
-    // SM - SET MODE.  Flip the boolean mode to the 
+    // SM - SET MODE.  Flip the boolean mode to the
     // non-nominal state.
     for (int i = 0; i < P_size; i ++) {
       if (P[i] == 4)
@@ -867,7 +862,7 @@
     // SPD - SELECT PRESENTATION DIRECTIONS.  Directionality is
     // unimplemented.
   }
-  
+
   action do_sph {
     // SPH - SET PAGE HOME.  Sets the line to which the active position
     // is set after a FORM FEED.
@@ -884,7 +879,7 @@
     // the active position may not be moved.  Unimplemented, because
     // it is fixed for this console.
   }
-  
+
   action do_spqr {
     // SPQR - SELECT PRINT QUALITY AND RAPIDITY.  Would let one
     // choose the DPI of the fonts.  Unimplemented.
@@ -926,7 +921,7 @@
     console_write_char (codepoint_tables[G2][*p - 0x20], irm, hem, simd,
 		  line_home - 1, line_limit - 1);
   }
-  
+
   action do_ss3 {
     // SS3 - SINGLE-SHIFT THREE.  The next graphical character will come
     // from the character set G3.
@@ -980,7 +975,7 @@
     // TAC - TABULATION ALIGNED TRAILING EDGE.  Would allow one to
     // center a field on a tab stop.  Unimplemented.
   }
-  
+
   action do_tbc {
     // TBC - TABULATION CLEAR. Woudl allow one to clear tabstops.
     // Unimplemented.
@@ -1025,25 +1020,20 @@
     // Unimplemented.
   }
 
+
   action do_print {
-    int n = *p;
-    if (n >= 0x20 && n <= 0x7F)
-      console_write_char (codepoint_tables[GL][n - 0x20], irm, hem, simd,
-		       line_home - 1, line_limit - 1);
-    else if (n >= 0xA0 && n <= 0xFF)
-      console_write_char (codepoint_tables[GR][n - 0xA0], irm, hem, simd,
-		       line_home - 1, line_limit - 1);
+  ;; Print single 8-bit glyph
   }
-  
+
   action parse_P_void {
     P_size = 0;
   }
-  
+
   action parse_P {
   //   unsigned char *pos = fpc;
   //   int i, n;
   //   P_size = 0;
-    
+
   // loop:
   //   n = 0;
   //   i = 1;
@@ -1059,34 +1049,11 @@
   //     goto loop;
   //   fpc = pos;
   }
-  
-  action reparse_P {
-    unsigned char *pos = fpc;
-    int i, n;
-    P_size = 0;
-    
-    pos --;
-    while (*pos >= '0' && *pos <= '9' || *pos == ';') {
-      pos --;
-    }
 
-  loop:
-    n = 0;
-    i = 1;
-    while (*pos >= '0' && *pos <= '9') {
-      n += (*pos - '0') * i;
-      i *= 10;
-      pos ++;
-    }
-    P[P_size] = n;
-    P_size ++;
-    SDL_assert(P_size < PARAMS);
-    if (*pos == ';')
-      goto loop;
-    fpc = pos;
+  action reparse_P {
   }
 
-  
+
     command_string = ('\b' | space | graph)*;
     character_string = (any - (0x1B 0x58 | 0x98 | 0x1B 0x5C | 0x9C))*;
     Pn = '' @parse_P_void | digit+ @parse_P;
@@ -1102,7 +1069,7 @@
       | (digit* ';')+ digit*;
 
     # Codepoint
-    GLYPH = ([\x20] | print | [\xA0-\xff]) @do_print;
+    GLYPH = (0x20..0x7E | 0xA0..0xff) @do_print;
 
     # C0 control functions from Section 5.2
     NUL = 0x00 @do_nul;
@@ -1138,14 +1105,14 @@
     IS2 = 0x1E @do_is2;
     IS1 = 0x1F @do_is1;
 
-    # C1 controls from Table 2a 
+    # C1 controls from Table 2a
     ST  = (ESC 0x5C | 0x9C);  # This needs to be defined early
 
     BPH = (ESC 0x42 | 0x82) @do_bph;
     NBH = (ESC 0x43 | 0x83) @do_nbh;
     NEL = (ESC 0x45 | 0x85) @do_nel;
     SSA = (ESC 0x46 | 0x86) @do_ssa;
-    ESA = (ESC 0x47 | 0x87);
+    ESA = (ESC 0x47 | 0x87) @do_esa;
     HTS = (ESC 0x48 | 0x88) @do_hts;
     HTJ = (ESC 0x49 | 0x89) @do_htj;
     VTS = (ESC 0x4A | 0x8A) @do_vts;
@@ -1162,19 +1129,21 @@
     MW  = (ESC 0x55 | 0x95) @do_mw;
     SPA = (ESC 0x56 | 0x96) @do_spa;
     EPA = (ESC 0x57 | 0x97) @do_epa;
-    SOS = (ESC 0x58 | 0x98) character_string ST @do_sos;
+    # FIXME: SOS should take 'character_string', which creates
+    # problems
+    SOS = (ESC 0x58 | 0x98) command_string ST @do_sos;
     SCI = (ESC 0x5A | 0x9A) ([\b] | space | graph) @do_sci;
     CSI = (ESC 0x5B | 0x9B);
     OSC = (ESC 0x5D | 0x9D) command_string ST @do_osc;
     PM  = (ESC 0x5E | 0x9E) command_string ST @do_pm;
     APC = (ESC 0x5F | 0x9F) command_string ST @do_apc;
 
-    CBT = CSI Pn @store_param 0x5A @do_cbt;
-    CHA = CSI Pn @store_param 0x47 @do_cha;
-    CHT = CSI Pn @store_param 0x49 @do_cht;
+    CBT = CSI Pn 0x5A @do_cbt;
+    CHA = CSI Pn 0x47 @do_cha;
+    CHT = CSI Pn 0x49 @do_cht;
     CMD = ESC 0x64 @do_cmd;
-    CNL = CSI Pn @store_param 0x45 @do_cnl;
-    CPL = CSI Pn @store_param 0x46 @do_cpl;
+    CNL = CSI Pn 0x45 @do_cnl;
+    CPL = CSI Pn 0x46 @do_cpl;
     CPR = CSI Pn2 0x52 @do_cpr;
     CTC = CSI Ps_ 0x57 @do_ctc;
     CUB = CSI Pn 0x44 @do_cub;
@@ -1238,7 +1207,7 @@
     SDS = CSI Ps 0x5D @do_sds;
     SEE = CSI Ps 0x51 @do_see;
     SEF = CSI Ps2 0x20 0x59 @do_sef;
-    SGR = CSI Ps_ 0x6D %do_sgr;
+    SGR = CSI Ps_ 0x6D @do_sgr;
     SHS = CSI Ps 0x20 0x4B @do_shs;
     SIMD = CSI Ps 0x5E @do_simd;
     SL  = CSI Pn 0x20 0x40 @do_sl;
@@ -1257,7 +1226,7 @@
     SSU = CSI Ps 0x20 0x49 @do_ssu;
     SSW = CSI Pn 0x20 0x5B @do_ssw;
     STAB = CSI Ps 0x20 0x5E @do_stab;
-    SU  = CSI Pn 0x53 @do_su;    
+    SU  = CSI Pn 0x53 @do_su;
     SVS = CSI Ps 0x20 0x4C @do_svs;
     TAC = CSI Pn 0x20 0x62 @do_tac;
     TALE = CSI Pn 0x20 0x61 @do_tale;
@@ -1268,26 +1237,28 @@
     TSS = CSI Pn 0x20 0x45 @do_tss;
     VPA = CSI Pn 0x64 @do_vpa;
     VPB = CSI Pn 0x6B @do_vpb;
-    VPR = CSI Pn 0x65 @do_vpr;    
-    
+    VPR = CSI Pn 0x65 @do_vpr;
+
     # ISO 1745 Messages
     isoheader = (space | graph)+;
     isotext = (space | graph)+;
-    ISO1745 = (SOH isoheader ETB)* (SOH isoheader)? STX (isotext ETB)* isotext ETX;
+    ISO1745 = (SOH isoheader ETB)* (SOH isoheader)? STX (isotext ETB)* isotext ETX @do_iso1745;
 
+    # Note, in the list below, we specifically exclude some symbols
+    # that aren't stand alo, like CSI
     main := (
       NUL | ACK | BEL | BS | HT | LF | VT | FF | CR | SO | SI | DLE | DC1
       | DC2 | DC3 | DC4 | CAN | EM | SUB | IS4 | IS3 | IS2 | IS1
       | BPH | NBH | NEL | SSA | ESA | HTS | HTJ | VTS | PLD | PLU | RI
       | SS2 | SS3 | DCS | PU1 | PU2 | STS | CCH | MW | SPA | EPA | SOS
-      | SCI | CSI | ST | OSC | PM 
+      | SCI | ST | OSC | PM
       | APC | CBT | CHA | CHT | CMD | CNL | CPL | CPR | CTC | CUB | CUD | CUF
       | CUP | CUU | CVT | DA | DAQ | DCH | DL | DSR | DTA | EA | ECH | ED
       | EF | EL | FNK | FNT | GCC | GSM | HPA | HPB | HPR | ICH | IGS
       | IL | INT | JFY | LS1R | LS2R | LS3 | LS3R | MC | NP | PEC
       | PFS | PP | PPA | PPB | PPR | PTX | QUAD | REP | RIS | RM | SACS
       | SCO | SCP | SCS | SD | SDS | SEE | SEF | SGR | SIMD | SL | SLH
-      |	SLL | SLS | SM | SPD | SPH | SPI | SPL | SPQR | SR | SRCS
+      | SLL | SLS | SM | SPD | SPH | SPI | SPL | SPQR | SR | SRCS
       | SRS | SSU | SSW | STAB | SU | SVS | TAC | TALE | TATE | TBC
       | TCC | TSR | TSS | VPA | VPB | VPR
       | ISO1745
@@ -1295,5 +1266,21 @@
       )*;
 }%%
 
-%% write data;
+      # NUL | ACK | BEL | BS | HT | LF | VT | FF | CR | SO | SI | DLE | DC1
+      # | DC2 | DC3 | DC4 | CAN | EM | SUB | IS4 | IS3 | IS2 | IS1
+      # | BPH | NBH | NEL | SSA | ESA | HTS | HTJ | VTS | PLD | PLU | RI
+      # | SS2 | SS3 | DCS | PU1 | PU2 | STS | CCH | MW | SPA | EPA | SOS
+      # | SCI | CSI | ST | OSC | PM
+      # | APC | CBT | CHA | CHT | CMD | CNL | CPL | CPR | CTC | CUB | CUD | CUF
+      # | CUP | CUU | CVT | DA | DAQ | DCH | DL | DSR | DTA | EA | ECH | ED
+      # | EF | EL | FNK | FNT | GCC | GSM | HPA | HPB | HPR | ICH | IGS
+      # | IL | INT | JFY | LS1R | LS2R | LS3 | LS3R | MC | NP | PEC
+      # | PFS | PP | PPA | PPB | PPR | PTX | QUAD | REP | RIS | RM | SACS
+      # | SCO | SCP | SCS | SD | SDS | SEE | SEF | SGR | SIMD | SL | SLH
+      # |	SLL | SLS | SM | SPD | SPH | SPI | SPL | SPQR | SR | SRCS
+      # | SRS | SSU | SSW | STAB | SU | SVS | TAC | TALE | TATE | TBC
+      # | TCC | TSR | TSS | VPA | VPB | VPR
+      # | ISO1745
+      # | GLYPH
 
+%% write data;
