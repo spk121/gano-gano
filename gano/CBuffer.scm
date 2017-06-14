@@ -105,9 +105,9 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             undo
 
             ;; Dumb TTY Operations
-            line-feed                   ; LF
+            line-feed!                   ; LF
             carriage-return             ; CR
-            write-character            ; IC
+            insert-character-in-line!
 
             ;; Dumb TTY Undo Operations
             undo-insert-character
@@ -369,13 +369,22 @@ range."
 
 (define-method (get-text-cur (buf <CBuffer>))
   "Return the text of the active line"
-  (list-ref (get-text buf) (get-line-cur buf)))
+  (if (null? (get-text buf))
+      0
+      ;; else
+      (list-ref (get-text buf) (get-line-cur buf))))
 
-(define-method (get-text-line (buf <CBuffer>) n)
+(define (get-text-line buf n)
   "Return the text of line N"
-  (if (= n (bracket-line buf n))
-      (list-ref (get-text buf) n)
-      ""))
+  (warn-if-false (cbuffer? buf))
+  (warn-if-false (>= n (get-line-count buf)))
+  (cond
+   ((null? (get-text buf))
+    "")
+   ((= n (get-line-count buf))
+    "")
+   (else
+    (list-ref (get-text buf) n))))
 
 (define-method (get-text-cur-length (buf <CBuffer>))
   "Return the number of codepoints in the active line"
@@ -618,24 +627,50 @@ and the active data position."
 
 ;; These are primitives that need to add undo information
 
-(define-method (op-insert-in-line-before (buf <CBuffer>) LInsert PInsert txt)
-  (let ((LenInsert (string-length txt)))
+(define (op-insert-in-line! Buf LInsert PInsert Txt)
+  (warn-if-false (integer-nonnegative? LInsert))
+  (warn-if-false (integer-nonnegative? PInsert))
+  (warn-if-false (<= LInsert (get-line-count Buf)))
+  (warn-if-false (<= PInsert (string-length (get-text-line Buf LInsert))))
+  (warn-if-false (string? Txt))
+  (warn-if-false (cbuffer? Buf))
 
-  (append-undo! buf (list 'op-insert-in-line-before LInsert PInsert txt))
+  (unless (string-null? Txt)
+    (let ((strlen (string-length Txt)))
+      (append-undo! Buf (list 'insert-in-line LInsert PInsert Txt
+                              (get-line-cur Buf)
+                              (get-pd-cur Buf)))
+      ;; Insert the text into the line
+      (set-text! Buf
+                 (strlist-insert-in-line (get-text Buf) LInsert PInsert Txt)
 
-  ;; Insert the text into the line
-  (strlist-insert-in-line (get-text buf) LInsert PInsert txt)
+      ;; Move the active data position
+      (set-line-and-pd-cur! Buf
+                            (pos-insert-in-line (get-line-cur Buf)
+                                                (get-pd-cur Buf)
+                                                LInsert PInsert strlen))
+      ;; Clear the mark
+      (set-mark-flag! Buf #f)
 
-  ;; Move the active data position
-  (set-line-and-pd-cur! buf (pos-insert-in-line-before (get-line-cur buf) (get-pd-cur buf)
-                                                       LInsert PInsert LenInsert))
-  ;; Clear the mark
-  (set-mark-flag! buf #f)
+      ;; Adjust the bookmarks and tags
+      (adjust-poslist-insert-in-line! (get-tags Buf) LInsert PInsert strlen)
+      (adjust-poslist-insert-in-line! (get-bookmarks Buf)
+                                      LInsert PInsert strlen))))
 
-  ;; Adjust the bookmarks and tags
-  (adjust-poslist-insert-in-line-before (get-tags buf) LInsert PInsert LenInsert)
-  (adjust-poslist-insert-in-line-before (get-bookmarks buf) LInsert PInsert LenInsert)))
+(define (undo-insert-in-line! Buf LInsert PInsert Str LCur PdCur)
+  "Undo insert in line. Note that this doesn't alter the undo stack."
+  (let ((PEnd (+ PInsert (string-length Str))))
+    (strlist-delete-in-line! (get-text Buf) LInsert PInsert PEnd)
+    ;; Clear the mark
+    (set-mark-flag! Buf #f)
+    ;; Move the active data position
+    (set-line-cur! Buf LCur)
+    (set-pd-cur! Buf PdCur)
+    ;; Adjust bookmarks and tags
+    (adjust-poslist-delete-in-line! (get-tags Buf) LInsert PInsert PEnd)
+    (adjust-poslist-delete-in-line! (get-bookmarks Buf) LInsert PInsert PEnd)))
 
+  
 (define (op-insert-in-line-after buf LInsert PInsert txt)
   (warn-if-false (cbuffer? buf))
   (let ((LenInsert (string-length txt)))
@@ -644,17 +679,18 @@ and the active data position."
 
   ;; Insert the text into the line
   (log-debug-locals)
-  (strlist-insert-in-line (get-text buf) LInsert PInsert txt)
+  (set-text! Buf
+             (strlist-insert-in-line (get-text buf) LInsert PInsert txt)
 
   ;; Move the active data position
-  (set-line-and-pd-cur! buf (pos-insert-in-line-after (get-line-cur buf) (get-pd-cur buf)
+  (set-line-and-pd-cur! buf (pos-insert-in-line (get-line-cur buf) (get-pd-cur buf)
                                                       LInsert PInsert LenInsert))
   ;; Clear the mark
   (set-mark-flag! buf #f)
 
   ;; Adjust the bookmarks and tags
-  (adjust-poslist-insert-in-line-after (get-tags buf) LInsert PInsert LenInsert)
-  (adjust-poslist-insert-in-line-after (get-bookmarks buf) LInsert PInsert LenInsert)))
+  (adjust-poslist-insert-in-line! (get-tags buf) LInsert PInsert LenInsert)
+  (adjust-poslist-insert-in-line! (get-bookmarks buf) LInsert PInsert LenInsert)))
 
 (define-method (op-replace-in-line (buf <CBuffer>) LReplace PReplaceStart PReplaceEnd txt)
   (let ((LenReplace (string-length txt)))
@@ -712,9 +748,9 @@ and the active data position."
 
 (define-method (op-delete-in-line (buf <CBuffer>) LDelete PDeleteStart PDeleteEnd)
   ;; Overwrite the text in the line, and adjust bookmarks and tags
-  (let ((deletetxt (strlist-delete-in-line (get-text buf) LDelete PDeleteStart PDeleteEnd))
-        (deletetags (adjust-poslist-delete-in-line (get-tags buf) LDelete PDeleteStart PDeleteEnd))
-        (deletebmarks (adjust-poslist-delete-in-line (get-bookmarks buf) LDelete PDeleteStart PDeleteEnd)))
+  (let ((deletetxt (strlist-delete-in-line! (get-text buf) LDelete PDeleteStart PDeleteEnd))
+        (deletetags (adjust-poslist-delete-in-line! (get-tags buf) LDelete PDeleteStart PDeleteEnd))
+        (deletebmarks (adjust-poslist-delete-in-line! (get-bookmarks buf) LDelete PDeleteStart PDeleteEnd)))
 
     (append-undo! buf (list 'op-delete-in-line LDelete PDeleteStart PDeleteEnd deletetxt deletetags deletebmarks))
 
@@ -725,49 +761,59 @@ and the active data position."
     ;; Clear the mark
     (set-mark-flag! buf #f)))
 
-(define-method (op-insert-lines-before (buf <CBuffer>) LInsert txt)
-  (let ((LCount (length txt)))
-    ;; Add the op to the list of mutator operations
-    (append-undo! buf (list 'op-insert-lines-before LInsert txt))
+(define (op-insert-lines! Buf LInsert StrList)
+  "Append the StrList at the addressed line LInsert.  If LInsert is
+the line after the last line in the buffer, StrList is appended to the
+end of the text.  The previous contents of LInsert and following lines
+will be pushed down. "
+  (warn-if-false (integer-nonnegative? LInsert))
+  (warn-if-false (<= LInsert (get-line-count Buf)))
+  (warn-if-false (list-of-strings-length-0+? StrList))
 
-    ;; Insert the line into the string list
-    (let ((bufTxt (get-text buf)))
-      (set-text! buf (append (take bufTxt LInsert)
-                             txt
-                             (drop bufTxt LInsert))))
+  (unless (null? StrList)
+    (let ((strlistlen (length StrList)))
+      ;; Add the op to the list of mutator operations
+      (append-undo! Buf (list 'insert-lines LInsert StrList
+                              (get-line-cur Buf)
+                              (get-pd-cur Buf)))
+      (log-debug-locals)
+      (log-debug-pk (get-text Buf))
+      ;; Insert the line into the string list
+      (set-text! Buf
+                 (append
+                  (take (get-text Buf) LInsert)
+                  StrList
+                  (drop (get-text Buf) LInsert)))
+      
+      (strlist-insert-lines! (get-text Buf) LInsert StrList)
+      (log-debug-pk (get-text Buf))
+      ;; Clear the mark.
+      (set-mark-flag! Buf #f)
 
-    ;; Clear the mark.
-    (set-mark-flag! buf #f)
+      (set-line-and-pd-cur! Buf (pos-insert-lines (get-line-cur Buf)
+                                                  (get-pd-cur Buf)
+                                                  LInsert strlistlen))
 
-    (set-line-and-pd-cur! buf (pos-insert-lines-before (get-line-cur buf) (get-pd-cur buf)
-                                                       LInsert LCount))
+      ;; Adjust bookmarks and tags
+      (adjust-poslist-insert-lines! (get-tags Buf) LInsert strlistlen)
+      (adjust-poslist-insert-lines! (get-bookmarks Buf) LInsert strlistlen)
+      )))
 
+(define (undo-insert-lines! Buf LInsert StrList LCur PdCur)
+  "Undo insert lines. Note that this doesn't alter the undo stack."
+  (let ((buftxt (get-text Buf))
+        (lcount (length StrList)))
+    (set-text! Buf (append (take buftxt LInsert)
+                           (drop buftxt (+ LInsert lcount))))
+    ;; Clear the mark
+    (set-mark-flag! Buf #f)
+    ;; Move the active data position
+    (set-line-cur! Buf LCur)
+    (set-pd-cur! Buf PdCur)
     ;; Adjust bookmarks and tags
-    (adjust-poslist-insert-lines-before (get-tags buf) LInsert LCount)
-    (adjust-poslist-insert-lines-before (get-bookmarks buf) LInsert LCount)))
-
-(define-method (op-insert-lines-after (buf <CBuffer>) LInsert txt)
-  (warn-if-false (list-of-strings? txt))
-  (let ((LCount (length txt)))
-    ;; Add the op to the list of mutator operations
-    (append-undo! buf (list 'op-insert-lines-after LInsert txt))
-
-    ;; Insert the line into the string list
-    (let ((bufTxt (get-text buf)))
-      (set-text! buf (append (take bufTxt LInsert)
-                             txt
-                             (drop bufTxt LInsert))))
-    ;; Clear the mark.
-    (set-mark-flag! buf #f)
-
-    (set-line-and-pd-cur! buf (pos-insert-lines (get-line-cur buf) (get-pd-cur buf)
-                                                      LInsert LCount))
-
-    ;; Adjust bookmarks and tags
-    (adjust-poslist-insert-lines (get-tags buf) LInsert LCount)
-    (adjust-poslist-insert-lines (get-bookmarks buf) LInsert LCount)
-    ))
-
+    (adjust-poslist-delete-lines (get-tags Buf) LInsert lcount)
+    (adjust-poslist-delete-lines (get-bookmarks Buf) LInsert lcount)))
+  
 (define-method (op-replace-lines (buf <CBuffer>) LReplaceStart LReplaceEnd
                                  strlist)
   "Replace the lines from LStart (inclusive) and LEnd (exclusive)
@@ -921,8 +967,15 @@ LCopyEnd (exclusive) to the line LCopyTo."
         (log-debug-locals)
         (log-debug-pk (get-undo Buf))
         (cond
+         ((eqv? (car last-op) 'insert-in-line)
+          (undo-insert-in-line! Buf
+                                (second last-op) ;LInsert
+                                (third last-op)  ;PInsert
+                                (fourth last-op) ;Str
+                                (fifth last-op)  ;LCur
+                                (sixth last-op)))  ;PdCur
          ((eqv? (car last-op) 'insert-lines)
-          (undo-insert-lines Buf
+          (undo-insert-lines! Buf
                              (second last-op)
                              (third last-op)
                              (fourth last-op)
@@ -1000,17 +1053,37 @@ position to the line-limit position of the current line."
         (op-insert-in-line-after buf (get-line-cur buf) pos (make-string (- pos len) #\space)))
   (set-pd-cur! buf pos)))
 
+(define-method (insert-character-in-line! (Buf <CBuffer>) LInsert PInsert C)
+  "Insert C into the addressed line LInsert at position PInsert.
+If LInsert is the line after the last line in the buffer, C is
+appended as a new line to the end of the text.  If PInsert is after
+the end of the line, Str is appended to the end of the line.  The
+active data position will be set to the end of the inserted text."
+  (warn-if-false (integer-nonnegative? LInsert))
+  (warn-if-false (integer-nonnegative? PInsert))
+  (warn-if-false (<= LInsert (get-line-count Buf)))
+  (warn-if-false (<= PInsert (string-length (get-text-line Buf LInsert))))
+  (warn-if-false (char? C))
+
+  (op-insert-in-line! Buf LInsert PInsert (string C))
+  ;; Move the active data position
+  (set-line-cur! Buf LInsert)
+  (if (eqv? (get-implicit-movement-direction Buf) 'forward)
+      (set-pd-cur! Buf (1+ PInsert))
+      (set-pd-cur! Buf PInsert)))
+
 ;; LF - LINE FEED
 
 ;; Move the active data position to the corresponding character
 ;; position of the following line.
 
-(define-method (line-feed (buf <CBuffer>))
+(define (line-feed! Buf)
   "Move the active data position to the corresponding character
 position of the following line."
-  (let ((LCur (get-line-cur buf))
-        (LCount (get-line-count buf))
-        (PdCur (get-pd-cur buf)))
+  (warn-if-false (cbuffer? Buf))
+  (let ((LCur (get-line-cur Buf))
+        (LCount (get-line-count Buf))
+        (PdCur (get-pd-cur Buf)))
     ;; If the following line doesn't exist, we'll append a line with
     ;; PdCur spaces to the end of the buffer.
 
@@ -1020,14 +1093,15 @@ position of the following line."
     ;; Then move down.
 
     (when (= LCur (1- LCount))
-      (op-insert-lines-after buf (get-line-count buf) (list (make-string PdCur #\space))))
+      (op-insert-lines! Buf (get-line-count Buf)
+                        (list (make-string PdCur #\space))))
 
-    (let* ((txt (get-text-line buf (1+ LCur)))
+    (let* ((txt (get-text-line Buf (1+ LCur)))
            (txtLen (string-length txt)))
       (when (< txtLen PdCur)
-        (op-insert-in-line-after buf (1+ LCur) txtLen (make-string (- PdCur txtLen) #\space))))
+        (op-insert-in-line! Buf (1+ LCur) txtLen (make-string (- PdCur txtLen) #\space))))
 
-    (increase-line-cur! buf 1)))
+    (increase-line-cur! Buf 1)))
 
 ;; SLH - SET LINE HOME
 (define-method (set-line-home (buf <CBuffer>) n)
@@ -1091,7 +1165,7 @@ position of the following line."
     (when (= (get-limit-pos buf) (get-pd-cur buf))
       (when (member 'auto_right_margin IMM)
         (carriage-return buf)
-        (line-feed buf)))))
+        (line-feed! buf)))))
 
 (define-method (add-tag (buf <CBuffer>) id)
   (tag-set! (get-tags buf) id (get-line-cur buf) (get-pd-cur buf)))
@@ -1214,8 +1288,8 @@ buffer, the active data position is set to the end of the last line."
     (set-line-cur! Buf LCur)
     (set-pd-cur! Buf PdCur)
     ;; Adjust bookmarks and tags
-    (adjust-poslist-insert-lines (get-tags Buf) LStart lremovedcount)
-    (adjust-poslist-insert-lines (get-bookmarks Buf) LStart lremovedcount)))
+    (adjust-poslist-insert-lines! (get-tags Buf) LStart lremovedcount)
+    (adjust-poslist-insert-lines! (get-bookmarks Buf) LStart lremovedcount)))
 
 (define (write-lines-to-port Buf LStart LEnd Port)
   "Writes the buffer lines LStart (inclusive) through LEnd (exclusive)
@@ -1251,44 +1325,12 @@ end of the addressed line."
         (set-pd-cur-to-simd-eol! Buf))
       ;; else
       (begin
+        (op-insert-lines! Buf LInsert StrList)
         (let ((strlistlen (length StrList)))
-          ;; Add the op to the list of mutator operations
-          (append-undo! Buf (list 'insert-lines
-                                  LInsert StrList
-                                  (get-line-cur Buf)
-                                  (get-pd-cur Buf)))
-
-          ;; Insert the line into the string list
-          (let ((buftxt (get-text Buf)))
-            (set-text! Buf (append (take buftxt LInsert)
-                                   StrList
-                                   (drop buftxt LInsert))))
-          ;; Clear the mark.
-          (set-mark-flag! Buf #f)
-          ;; Move the active data position
           (set-line-cur! Buf (+ LInsert (1- strlistlen)))
-          (set-pd-cur-to-simd-eol! Buf)
+          (set-pd-cur-to-simd-eol! Buf)))))
 
-          ;; Adjust bookmarks and tags
-          (adjust-poslist-insert-lines (get-tags Buf) LInsert strlistlen)
-          (adjust-poslist-insert-lines (get-bookmarks Buf) LInsert strlistlen)))))
-
-(define-method (undo-insert-lines (Buf <CBuffer>) LInsert StrList LCur PdCur)
-  "Undo insert lines. Note that this doesn't alter the undo stack."
-  (let ((buftxt (get-text Buf))
-        (lcount (length StrList)))
-    (set-text! Buf (append (take buftxt LInsert)
-                           (drop buftxt (+ LInsert lcount))))
-    ;; Clear the mark
-    (set-mark-flag! Buf #f)
-    ;; Move the active data position
-    (set-line-cur! Buf LCur)
-    (set-pd-cur! Buf PdCur)
-    ;; Adjust bookmarks and tags
-    (adjust-poslist-delete-lines (get-tags Buf) LInsert lcount)
-    (adjust-poslist-delete-lines (get-bookmarks Buf) LInsert lcount)))
-
-(define-method (insert-lines-from-port (Buf <CBuffer>) LInsert InputPort)
+(define-method (insert-lines-from-port! (Buf <CBuffer>) LInsert InputPort)
   "Reads in from the port, line by line, appending those lines to the
 buffer.  Read until #<eof> is found, and then inserts the text at
 lines LInsert.

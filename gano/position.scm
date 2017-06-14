@@ -27,14 +27,12 @@
   #:use-module (mlg math)
   #:use-module (srfi srfi-1)
   #:export (
-            pos-insert-in-line-before
-            pos-insert-in-line-after
+            pos-insert-in-line
             pos-replace-in-line
             pos-move-in-line
             pos-copy-in-line
             pos-delete-in-line
 
-            pos-insert-lines-before
             pos-insert-lines
             pos-replace-lines
             pos-move-lines
@@ -47,14 +45,7 @@
 (define (<> a b)
   (not (= a b)))
 
-(define (pos-insert-in-line-before LPos PPos LInsert PInsert LenInsert)
-  (cond
-   ((<> LPos LInsert)
-    (list LPos PPos))
-   (else
-    (list LPos (x-insert-before PPos PInsert LenInsert)))))
-
-(define (pos-insert-in-line-after LPos PPos LInsert PInsert LenInsert)
+(define (pos-insert-in-line LPos PPos LInsert PInsert LenInsert)
   (cond
    ((<> LPos LInsert)
     (list LPos PPos))
@@ -101,10 +92,6 @@ PDeleteEnd (exclusive) was removed."
    (else
     (let ((P (x-delete PPos PDeleteStart PDeleteEnd)))
       (if P (list LPos P) '())))))
-
-(define (pos-insert-lines-before LPos PPos LInsert LCount)
-  "Adjust position as if LCount lines were inserted before LInsert."
-  (list (x-insert-before LPos LInsert LCount) PPos))
 
 (define (pos-insert-lines LPos PPos LInsert LCount)
   "Adjust position as if LCount lines were inserted at LInsert."

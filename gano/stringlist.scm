@@ -24,9 +24,9 @@
             strlist-replace-in-line
             strlist-move-in-line
             strlist-copy-in-line
-            strlist-delete-in-line
+            strlist-delete-in-line!
 
-            strlist-insert-lines
+            strlist-insert-lines!
             strlist-replace-lines
             strlist-move-lines
             strlist-copy-lines
@@ -41,28 +41,27 @@
 (define-syntax strlist-insert-in-line
   (syntax-rules ()
     ((_ strlist LInsert PInsert txt)
-     (let ((linetxt (list-ref strlist LInsert)))
-     (set! strlist
-       (append
-        (take strlist LInsert)
-        (list (string-append (string-take linetxt PInsert)
-                             txt
-                             (string-drop linetxt PInsert)))
-        (drop strlist (1+ LInsert))))))))
+     (if (null? strlist)
+         strlist
+         ;; else
+         (let ((linetxt (list-ref strlist LInsert)))
+           (append
+            (take strlist LInsert)
+            (list (string-append (string-take linetxt PInsert)
+                                 txt
+                                 (string-drop linetxt PInsert)))
+            (drop strlist (1+ LInsert))))))))
 
 (define-syntax strlist-replace-in-line
   (syntax-rules ()
     ((_ strlist LReplace PReplaceStart PReplaceEnd txt)
-     (let* ((linetxt (list-ref strlist LReplace))
-            (removedtxt (substring linetxt PReplaceStart PReplaceEnd)))
-       (set! strlist
-         (append
-          (take strlist LReplace)
-          (list (string-append (string-take linetxt PReplaceStart)
-                               txt
-                               (string-drop linetxt PReplaceEnd)))
-          (drop strlist (1+ LReplace))))
-       removedtxt))))
+     (let* ((linetxt (list-ref strlist LReplace)))
+       (append
+        (take strlist LReplace)
+        (list (string-append (string-take linetxt PReplaceStart)
+                             txt
+                             (string-drop linetxt PReplaceEnd)))
+        (drop strlist (1+ LReplace)))))))
 
 (define-syntax strlist-move-in-line
   (syntax-rules ()
@@ -98,7 +97,9 @@
                                (substring linetxt PCopyAfter)))
           (drop strlist (1+ LCopy))))))))
 
-(define-syntax strlist-delete-in-line
+;; Remove character in line LDelete from PDeleteStart (inclusive) to
+;; PDeleteEnd (exclusive).
+(define-syntax strlist-delete-in-line!
   (syntax-rules ()
     ((_ strlist LDelete PDeleteStart PDeleteEnd)
      (let* ((linetxt (list-ref strlist LDelete))
@@ -111,13 +112,14 @@
           (drop strlist (1+ LDelete))))
        deletedtxt))))
 
-(define (strlist-insert-lines strlist LInsert txtlists)
+(define (strlist-insert-lines! strlist LInsert txtlists)
   (syntax-rules()
     ((_ strlist LInsert txtlist)
      (set! strlist
-       (take strlist LInsert)
-       txtlist
-       (drop strlist LInsert)))))
+       (append
+        (take strlist LInsert)
+        txtlist
+        (drop strlist LInsert))))))
 
 (define-syntax strlist-replace-lines
   (syntax-rules()

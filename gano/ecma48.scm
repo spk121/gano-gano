@@ -6,16 +6,14 @@
 
 The <Ecma48> class acts as a 'receiving device' of text and coded control
 functions.  It takes input from an INPUT PORT, and stores the text
-in a CBuffer.  It it receives any control functions for coded character
+in a CBuffer.  If it receives any control functions for coded character
 sets (as described in Standard ECMA-48) it will try to interpret them.
 
 Upon recipt of <eof> from the input port, or of the control function
 <esc> + '[' + {optional '0'} + 'i' -- which is the MEDIA COPY command
-to the initiate transfer to the primary auxiliary device -- the
-buffered text will be written out to the MEDIA OUTPUT PORT.
-
-The format of the output file is set by the --format option, which for
-now is just plain text.
+to the initiate transfer to the primary auxiliary device -- or the ISO
+1745 hangup sequence DLE + EOT, the buffered text will be written out
+to the MEDIA OUTPUT PORT.
 
 Some control functions (like CPR cursor position report, or DSR device
 status report) expect a response from the terminal.  This script will
@@ -30,6 +28,9 @@ interpret any ISO 1745 messages it receives.  If a response is
 requested, it'll be sent to the RESPONSE OUTPUT PORT.  If an ISO 1745
 message is received, it will be written to the MESSAGE OUTPUT PORT.
 
+If the input sends an FNK function key message, it is also forwarded
+on to the MESSAGE OUTPUT PORT.
+
 It also takes some callbacks. 
 
 There are two device callbacks that take a single boolean
@@ -40,6 +41,8 @@ DEVICE 2 CALLBACK is set, it will respond similarly to DC2 and DC4.
 There is an alarm callback which takes no parameters.If the
 ALARM_CALLBACK is set, it will be called when an ALARM (aka BEL) is
 received.
+
+Similarly, there is an INT Interrupt callback.
 
 The script does not fully conform to the standard.  Many features are
 unimplemented.  But to be fair, no one device could adhere to all
@@ -57,11 +60,11 @@ The Vertical tab table is initially 6, 12, ... 60.
 Input interpretaton must be set to one of the foolowing modes.
 - MODE 1: 7-bit controls. 7-bit US-ASCII characters. All codepage
   commands ignored.
-- MODE 1: 7-bit controls. UTF-8 characters.  All codepage commands ignored.
 - MODE 2: 7-bit controls. 7-bit characters. SO/SI codepage shift is
   enabled.  A G1 table must be given.
 - MODE 3: 7-bit and 8-bit controls. ISO-2022 shifts for codepages
   G0 to G3.  Tables for G1, G2, and G3 must be given.
+- MODE 4: 7-bit controls. UTF-8 characters.  All codepage commands ignored.
 
 Furthermore, input interpretation has the following flags - COMPOSE:
 handle overstruck characters
@@ -80,6 +83,36 @@ be ignored and an error to be thrown.
 
 |#
 
+#|
+
+----------------
+ECMA-16 Behavior
+
+If an ENQ is received by the INPUT PORT, an ACK will be sent to the
+RESPONSE OUTPUT PORT.
+
+If a SYN is sent by the INPUT, a SYN will be sent to the RESPONSE OUTPUT
+PORT.
+
+If a ECMA-16 message is received by the INPUT PORT, and ACK will be
+sent to the RESPONSE OUTPUT PORT.
+
+If a DLE + EOT is sent by the input port, the class will treat it
+as if it were an EOF.
+
+All other parts of ECMA-16 will be unimplemented.
+
+----------------
+ECMA-35 Behavior
+
+Maybe I'll get this.  Everyone's moved on to UTF-8, though.
+
+For now, ignore all SI/SO and shifts and such
+
+----------------
+ECMA-48 Behavior
+|#
+
 (define* (make-ecma48-receiver Mode Flags InputPort OutputPort
 			       #:keys
 			       (MessagePort #f)
@@ -90,4 +123,5 @@ be ignored and an error to be thrown.
 			       (G1Table #f)
 			       (G2Table #f)
 			       (G3Table #f))
+
   

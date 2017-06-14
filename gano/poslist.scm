@@ -54,16 +54,14 @@
             tag-remove-all-at!
             tag-name-at?
 
-            adjust-poslist-insert-in-line-after
-            adjust-poslist-insert-in-line-before
+            adjust-poslist-insert-in-line!
             adjust-poslist-replace-in-line
             adjust-poslist-move-in-line
             adjust-poslist-copy-in-line
-            adjust-poslist-delete-in-line
+            adjust-poslist-delete-in-line!
             poslist-copy-in-line
 
-            adjust-poslist-insert-lines-before
-            adjust-poslist-insert-lines
+            adjust-poslist-insert-lines!
             adjust-poslist-replace-lines
             adjust-poslist-move-lines
             adjust-poslist-copy-lines
@@ -242,20 +240,12 @@
         (list)
         poslist)))))
 
-(define-syntax adjust-poslist-insert-in-line-after
+(define-syntax adjust-poslist-insert-in-line!
   (syntax-rules ()
     ((_ poslist LInsert PInsert LenInsert)
      (adjust-positions
       (lambda (LPos PPos)
-        (pos-insert-in-line-after LPos PPos LInsert PInsert LenInsert))
-      poslist))))
-
-(define-syntax adjust-poslist-insert-in-line-before
-  (syntax-rules ()
-    ((_ poslist LInsert PInsert LenInsert)
-     (adjust-positions
-      (lambda (LPos PPos)
-        (pos-insert-in-line-before LPos PPos LInsert PInsert LenInsert))
+        (pos-insert-in-line LPos PPos LInsert PInsert LenInsert))
       poslist))))
 
 (define-syntax adjust-poslist-replace-in-line
@@ -308,7 +298,7 @@
         (list)
         poslist)))))
 
-(define-syntax adjust-poslist-delete-in-line
+(define-syntax adjust-poslist-delete-in-line!
   (syntax-rules ()
     ((_ poslist LDelete PDeleteStart PDeleteEnd)
      (adjust-positions
@@ -316,15 +306,7 @@
         (pos-delete-in-line LPos PPos LDelete PDeleteStart PDeleteEnd))
       poslist))))
 
-(define-syntax adjust-poslist-insert-lines-before
-  (syntax-rules ()
-    ((_ poslist LInsert LCount)
-     (adjust-positions
-      (lambda (LPos PPos)
-        (pos-insert-lines-before LPos PPos LInsert LCount))
-      poslist))))
-
-(define-syntax adjust-poslist-insert-lines
+(define-syntax adjust-poslist-insert-lines!
   (syntax-rules ()
     ((_ poslist LInsert LCount)
      (adjust-positions

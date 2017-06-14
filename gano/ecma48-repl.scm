@@ -102,13 +102,13 @@ between the first two elements of a given entry."
      #t)
     ((do_can)
      ;; CAN - Cancel
-     #t)
+     (ecma48-undo))
     ((do_cbt)
      ;; CBT - Cursor Backward Tabulation
      #t)
     ((do_cch)
      ;; CCH - Cancel Character
-     #t)
+     (ecma48-undo))
     ((do_cht)
      ;; CHT - Cursor Forward Tabulation
      #t)
@@ -145,18 +145,34 @@ between the first two elements of a given entry."
     ((do_cuu)
      ;; CUU - Cursor Up
      #t)
-    ((do_cvt)
-     ;; CVT - Cursor Line Tabulation
-     #t)
+    ((do_lf)
+     ;; LF - Line Feed
+     (ecma48-line-feed))
     ((do_print)
      ;; Write a G0 character
-     (write-character *self* val))
+     (ecma48-insert-character val))
     (else
      (format #t "no dispatchable action for the curent key '~a'~%" key))))
 
 (set! *self* (make-ecma48-repl))
 (define *state-id* (fourth *ecma48-machine*))
+
+(define (ecma48-insert-character val)
+  (insert-character-in-line! *self*
+			     (get-line-cur *self*)
+			     (get-pd-cur *self*)
+			     val))
+
+(define (ecma48-line-feed)
+  (line-feed! *self*))
+
+(define (ecma48-undo)
+  (undo *self*))
+
+;; (setvbuf (current-input-port) _IONBF)
+
 (while #t
+  (%dump-cbuffer *self*)
   (let ((c (get-u8 (current-input-port))))
     (format #t "received ~s = ~s ~%" (integer->char c) c)
     (let ((ret (state-machine-do *state-id* (integer->char c))))
