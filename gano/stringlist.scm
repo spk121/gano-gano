@@ -113,10 +113,9 @@
    (drop strlist LReplaceEnd)))
 
 (define (strlist-delete-lines strlist LDeleteStart LDeleteEnd)
-  (set! strlist
-    (append
-     (take strlist LDeleteStart)
-     (drop strlist LDeleteEnd))))
+  (append
+   (take strlist LDeleteStart)
+   (drop strlist LDeleteEnd)))
 
 (define (strlist-move-lines strlist LMoveStart LMoveEnd LMoveTo)
   (cond

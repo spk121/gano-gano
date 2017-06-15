@@ -30,10 +30,13 @@ SCM_CFLAGS = -Wunsupported-warning -Wunused-variable -Wunused-toplevel\
  -Wbad-case-datum -Wformat
 SCM_LDFLAGS = -L ..
 
-all: gano.go.tar
+all: gano.go.tar.gz
+
+gano.go.tar.gz: gano.go.tar
+	gzip -f gano.go.tar
 
 gano.go.tar: $(SCM_OBJ) $(SCM_SCRIPT_OBJ)
-	tar cf $@ $(SCM_OBJ)
+	tar -c -f $@ -H ustar $(SCM_OBJ)
 
 .scm.go:
 	unset GUILE_LOAD_COMPILED_PATH ; \
@@ -48,11 +51,11 @@ gano-ed.go: gano-ed
 	guild compile $(SCM_LDFLAGS) $(SCM_CFLAGS) -o "$@" "$<"
 
 clean:
-	rm -f $(SCM_SCRIPT_OBJ)
-	rm -f $(SCM_OBJ)
-	rm -f $(C_OBJ)
-	rm -f *~
-	rm gano.go.tar
+	-rm -f $(SCM_SCRIPT_OBJ)
+	-rm -f $(SCM_OBJ)
+	# -rm -f $(C_OBJ)
+	-rm -f *~
+	-rm gano.go.tar
 
 install:
 	mkdir -p `pkg-config guile-$(GUILE_VERSION) --variable=extensiondir`

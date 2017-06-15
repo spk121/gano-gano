@@ -120,8 +120,8 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             get-bookmark-line
             regex-tag-lines
             regex-tag-nonmatching-lines
-            clear-tags
-            for-each-tagged-line
+            clear-regex-tags
+            for-each-regex-tagged-line
             insert-lines
             insert-lines-from-port
             join-lines
@@ -340,9 +340,11 @@ end (exclusive)."
 
   )
 
-(define-method (bracket-line (Buf <CBuffer>) L)
+(define (bracket-line Buf L)
   "Return L if it is a valid line number for the current buffer, or
 the nearest valid line number of L is out of range."
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (integer-nonnegative? L))
   (max 0
        (min L
             (1- (get-line-count Buf)))))
@@ -363,8 +365,9 @@ range."
        (min pd
             (string-length (get-text-line buf (bracket-line buf L))))))
 
-(define-method (get-line-count (buf <CBuffer>))
+(define (get-line-count buf)
   "Return the number of lines in the buffer"
+  (warn-if-false (cbuffer? buf))
   (length (get-text buf)))
 
 (define-method (get-text-cur (buf <CBuffer>))
@@ -392,12 +395,13 @@ range."
       0
       (string-length (get-text-cur buf))))
 
-(define-method (set-line-and-pd-cur! (buf <CBuffer>) LPd)
+(define (set-line-and-pd-cur! buf LPd)
   (warn-if-false (cbuffer? buf))
   (warn-if-false (list-of-integers-length-2? LPd))
-
-  (set-line-cur! buf (list-ref LPd 0))
-  (set-pd-cur! buf (list-ref LPd 1)))
+  
+  (when (list-of-integers-length-2? LPd)
+    (set-line-cur! buf (list-ref LPd 0))
+    (set-pd-cur! buf (list-ref LPd 1))))
 
 (define-method (set-pd-cur! (buf <CBuffer>) Pd)
   "Moves the active data position to Pd.  The data position is
@@ -444,7 +448,7 @@ position before the beginning or past the end of the line."
          (LEnd (set-pd-cur! buf (+ n (get-pd-cur buf)))))
     (- LEnd LStart)))
 
-(define-method (set-line-cur! (buf <CBuffer>) L)
+(define (set-line-cur! buf L)
   "Sets the active data line to L. The line number is bracketed to a
 valid value.
 
@@ -456,6 +460,9 @@ located at the active presentation position.
 
 It returns the active data line, which may be different from the L
 parameter."
+  (warn-if-false (cbuffer? buf))
+  (warn-if-false (integer-nonnegative? L))
+  
   (%set-line-cur! buf (bracket-line buf L))
   (get-line-cur buf))
 
@@ -625,6 +632,48 @@ and the active data position."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; MODIFYING OPERATIONS
 
+(define (op-bookmark-set! Buf LBookmark PBookmark Name)
+  "Set a bookmark with the given name at the given location."
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (integer-nonnegative? LBookmark))
+  (warn-if-false (integer-nonnegative? PBookmark))
+  (warn-if-false (<= LBookmark (get-line-count Buf)))
+  (warn-if-false (<= PBookmark (string-length (get-text-line Buf LBookmark))))
+  (warn-if-false (string? Name))
+  
+  (unless (bookmark-name-at? (get-bookmarks Buf) Name LBookmark PBookmark)
+    (let ((old-bookmark-pos (bookmark-get (get-bookmarks Buf) Name)))
+      (bookmark-set! (get-bookmarks Buf) Name LBookmark PBookmark)
+      (if old-bookmark-pos
+          (append-undo! Buf (list 'bookmark-move LBookmark PBookmark Name
+                                  (first old-bookmark-pos)
+                                  (second old-bookmark-pos)))
+          (append-undo! Buf (list 'bookmark-set LBookmark PBookmark Name))))))
+
+(define (undo-bookmark-move Buf LBookmark PBookmark Name LOldBookmark POldBookmark)
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (integer-nonnegative? LBookmark))
+  (warn-if-false (integer-nonnegative? PBookmark))
+  (warn-if-false (<= LBookmark (get-line-count Buf)))
+  (warn-if-false (<= PBookmark (string-length (get-text-line Buf LBookmark))))
+  (warn-if-false (integer-nonnegative? LOldBookmark))
+  (warn-if-false (integer-nonnegative? POldBookmark))
+  (warn-if-false (<= LOldBookmark (get-line-count Buf)))
+  (warn-if-false (<= POldBookmark (string-length (get-text-line Buf LOldBookmark))))
+  (warn-if-false (string? Name))
+
+  (bookmark-set! (get-bookmarks Buf) Name LOldBookmark POldBookmark))
+
+(define (undo-bookmark-set Buf LBookmark PBookmark Name)
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (integer-nonnegative? LBookmark))
+  (warn-if-false (integer-nonnegative? PBookmark))
+  (warn-if-false (<= LBookmark (get-line-count Buf)))
+  (warn-if-false (<= PBookmark (string-length (get-text-line Buf LBookmark))))
+  (warn-if-false (string? Name))
+
+  (bookmark-remove! (get-bookmarks Buf) Name))
+
 (define (op-insert-in-line! Buf LInsert PInsert Txt)
   (warn-if-false (integer-nonnegative? LInsert))
   (warn-if-false (integer-nonnegative? PInsert))
@@ -658,7 +707,7 @@ and the active data position."
 (define (undo-insert-in-line! Buf LInsert PInsert Str LCur PdCur)
   "Undo insert in line. Note that this doesn't alter the undo stack."
   (let ((PEnd (+ PInsert (string-length Str))))
-    (set-text! buf
+    (set-text! Buf
                (strlist-delete-in-line (get-text Buf) LInsert PInsert PEnd))
     ;; Clear the mark
     (set-mark-flag! Buf #f)
@@ -725,7 +774,7 @@ and the active data position."
 
 (define-method (op-delete-in-line (buf <CBuffer>) LDelete PDeleteStart PDeleteEnd)
   ;; Overwrite the text in the line, and adjust bookmarks and tags
-  (let ((deletetxt (strlist-delete-in-line! (get-text buf) LDelete PDeleteStart PDeleteEnd))
+  (let ((deletetxt (strlist-delete-in-line (get-text buf) LDelete PDeleteStart PDeleteEnd))
         (deletetags (adjust-poslist-delete-in-line! (get-tags buf) LDelete PDeleteStart PDeleteEnd))
         (deletebmarks (adjust-poslist-delete-in-line! (get-bookmarks buf) LDelete PDeleteStart PDeleteEnd)))
 
@@ -823,33 +872,74 @@ with strlist"
       ;; Clear the mark
       (set-mark-flag! buf #f))))
 
-(define-method (op-delete-lines (buf <CBuffer>) LDeleteStart LDeleteEnd)
-  "Delete the lines from LStart (inclusive) and LEnd (exclusive)."
+(define (op-delete-lines! Buf LStart LEnd)
+  "Remove the lines of text from LStart (inclusive) to LEnd (exclusive)."
+  (warn-if-false (integer-nonnegative? LStart))
+  (warn-if-false (integer-nonnegative? LEnd))
+  (warn-if-false (< LStart LEnd))
+  (warn-if-false (<= LEnd (get-line-count Buf)))
+  (warn-if-false (cbuffer? Buf))
 
-  ;; Overwrite the text in the line, and adjust bookmarks and tags
-  (let ((deletetxt (strlist-delete-lines (get-text buf)
-                                         LDeleteStart LDeleteEnd))
-        (deletetags (adjust-poslist-delete-lines (get-tags buf)
-                                                 LDeleteStart LDeleteEnd))
-        (deletebmarks (adjust-poslist-delete-lines (get-bookmarks buf)
-                                                   LDeleteStart LDeleteEnd)))
+  (let ((orig-len (get-line-count Buf))
+        (lost-bmarks (bookmark-get-all-in-lines (get-bookmarks Buf) LStart LEnd))
+        (lost-tags (tag-get-all-in-lines (get-tags Buf) LStart LEnd)))
+    ;; Add this operation to the list of mutator operations.
+    (append-undo! Buf (list 'delete-lines
+                            LStart LEnd
+                            (sublist (get-text Buf) LStart LEnd)
+                            lost-bmarks
+                            lost-tags
+                            (get-line-cur Buf)
+                            (get-pd-cur Buf)))
+    ;; Change the string list
+    (let ((buftxt (get-text Buf)))
+      (set-text! Buf (strlist-delete-lines buftxt LStart LEnd))
 
-    (append-undo! buf (list 'op-delete-lines
-                            LDeleteStart LDeleteEnd
-                            deletetxt deletetags deletebmarks))
+      ;; Clear the mark
+      (set-mark-flag! Buf #f)
+      ;; Move the active data position
+      (let ((newpos (pos-delete-lines (get-line-cur Buf)
+                                      (get-pd-cur Buf)
+                                      LStart LEnd)))
+        ;; If the position was deleted, move the cursor to the end
+        ;; of the deleted region.
+        (if (null? newpos)
+            (set-line-and-pd-cur! Buf (list LStart 0))
+            (set-line-and-pd-cur! Buf newpos)))
 
-    ;; Move the activive data position
-    (let ((newpos (pos-delete-lines (get-line-cur buf)
-                                                (get-pd-cur buf)
-                                                LDeleteStart LDeleteEnd)))
-      ;; If the position was deleted, move the cursor to the end
-      ;; of the deleted region.
-      (if (null? newpos)
-          (set-line-and-pd-cur! buf (list LDeleteStart 0))
-          (set-line-and-pd-cur! buf newpos)))
+      ;; Adjust bookmarks and tags.
+      (adjust-poslist-delete-lines (get-tags Buf) LStart LEnd)
+      (adjust-poslist-delete-lines (get-bookmarks Buf) LStart LEnd))))
 
+(define (undo-delete-lines Buf LStart LEnd RemovedStrList LostBmarks LostTags
+                           LCur PdCur)
+  "Undo delete lines."
+  (let ((buftxt (get-text Buf))
+        (lremovedcount (length RemovedStrList)))
+    (set-text! Buf
+               (strlist-insert-lines buftxt
+                                     LStart
+                                     RemovedStrList))
     ;; Clear the mark
-    (set-mark-flag! buf #f)))
+    (set-mark-flag! Buf #f)
+    ;; Move the active data position
+    (set-line-cur! Buf LCur)
+    (set-pd-cur! Buf PdCur)
+    ;; Adjust bookmarks and tags
+    (adjust-poslist-insert-lines! (get-tags Buf) LStart lremovedcount)
+    (adjust-poslist-insert-lines! (get-bookmarks Buf) LStart lremovedcount)
+    (for-each (lambda (bmark)
+                (bookmark-set! (get-bookmarks Buf)
+                               (bookmark:name bmark)
+                               (bookmark:line bmark)
+                               (bookmark:pd bmark)))
+              LostBmarks)
+    (for-each (lambda (tag)
+                (tag-set! (get-tags Buf)
+                               (first tag)
+                               (second tag)
+                               (third tag)))
+              LostTags)))
 
 (define-method (op-move-lines (buf <CBuffer>) LMoveStart LMoveEnd LMoveTo)
   "Move the lines from LStart (inclusive) and LEnd (exclusive) to the
@@ -879,23 +969,17 @@ LCopyEnd (exclusive) to the line LCopyTo."
   (warn-if-false (< LCopyStart LCopyEnd))
 
   ;; Overwrite the text in the line, and adjust bookmarks and tags
-  (display "*A") (newline) (flush-all-ports)
   (set-text! Buf
              (strlist-copy-lines (get-text Buf) LCopyStart LCopyEnd LCopyTo))
-  (display "*B") (newline) (flush-all-ports)
   (adjust-poslist-copy-lines (get-tags Buf) LCopyStart LCopyEnd LCopyTo #f)
-  (display "*C") (newline) (flush-all-ports)
   (adjust-poslist-copy-lines (get-bookmarks Buf) LCopyStart LCopyEnd LCopyTo #f)
-  (display "*D") (newline) (flush-all-ports)
 
   ;; Clear the mark
   (set-mark-flag! Buf #f)
-  (display "*E") (newline) (flush-all-ports)
 
   (append-undo! Buf (list 'copy-lines LCopyStart LCopyEnd LCopyTo
                           (get-line-cur Buf)
                           (get-pd-cur Buf)))
-  (display "*F") (newline) (flush-all-ports)
 
   ;; Move the activive data position
   (set-line-and-pd-cur! Buf (pos-copy-lines (get-line-cur Buf) (get-pd-cur Buf)
@@ -965,8 +1049,6 @@ LCopyEnd (exclusive) to the line LCopyTo."
       ;; else
       (let ((last-op (last (get-undo Buf))))
         (set-undo! Buf (drop-right (get-undo Buf) 1))
-        (log-debug-locals)
-        (log-debug-pk (get-undo Buf))
         (cond
          ((eqv? (car last-op) 'insert-in-line)
           (undo-insert-in-line! Buf
@@ -997,8 +1079,10 @@ LCopyEnd (exclusive) to the line LCopyTo."
                              (second last-op) ;LStart
                              (third last-op)  ;LEnd
                              (fourth last-op) ;RemovedStrList
-                             (fifth last-op)  ;LCur
-                             (sixth last-op)) ;PdCur
+                             (fifth last-op)  ;LostBmarks
+                             (sixth last-op) ;LostTags
+                             (seventh last-op) ;LCur
+                             (eighth last-op)) ;PdCur
           #t)
          ((eqv? (car last-op) 'join-lines)
           (undo-join-lines Buf
@@ -1015,6 +1099,20 @@ LCopyEnd (exclusive) to the line LCopyTo."
                            (fourth last-op) ;LCopyTo
                            (fifth last-op)  ;LCur
                            (sixth last-op)) ;PdCur
+          #t)
+         ((eqv? (car last-op) 'bookmark-set)
+          (undo-bookmark-set Buf
+                             (second last-op) ;LBookmark
+                             (third last-op) ;PBookmark
+                             (fourth last-op)) ;Name
+          #t)
+         ((eqv? (car last-op) 'bookmark-move)
+          (undo-bookmark-move Buf
+                             (second last-op) ;LBookmark
+                             (third last-op) ;PBookmark
+                             (fourth last-op) ;Name
+                             (fifth last-op) ;LOldBookmark
+                             (sixth last-op)) ;POldBookmark
           #t)
          (else
           (warn-if-reached)
@@ -1183,11 +1281,12 @@ position of the following line."
   (warn-if-false (>= L 0))
   (warn-if-false (< L (get-line-count Buf)))
 
-  (bookmark-set! (get-bookmarks Buf) Name
-                 L
-                 (if (eqv? (get-implicit-movement-direction Buf) 'forward)
-                     0
-                     (get-text-cur-length Buf))))
+  (op-bookmark-set! Buf 
+                    L
+                    (if (eqv? (get-implicit-movement-direction Buf) 'forward)
+                        0
+                        (get-text-cur-length Buf))
+                    Name))
 
 (define (copy-lines Buf LCopyStart LCopyEnd LCopyTo)
   "Make a copy of the lines between LCopyStart (inclusive) and
@@ -1211,7 +1310,7 @@ copied."
         
         (set-pd-cur-to-simd-eol! Buf))))
 
-(define-method (delete-lines (Buf <CBuffer>) LStart LEnd)
+(define (delete-lines Buf LStart LEnd)
   "Remove the lines of text from LStart (inclusive) to LEnd (exclusive).
 
 The active data line is set to the beginning of the line after the
@@ -1223,19 +1322,8 @@ buffer, the active data position is set to the end of the last line."
   (warn-if-false (<= LEnd (get-line-count Buf)))
 
   (let ((orig-len (get-line-count Buf)))
-    ;; Add this operation to the list of mutator operations.
-    (append-undo! Buf (list 'delete-lines
-                            LStart LEnd
-                            (sublist (get-text Buf) LStart LEnd)
-                            (get-line-cur Buf)
-                            (get-pd-cur Buf)))
-    ;; Change the string list
-    (let ((buftxt (get-text Buf)))
-      (set-text! Buf (append (take buftxt LStart)
-                             (drop buftxt LEnd))))
+    (op-delete-lines! Buf LStart LEnd)
 
-    ;; Clear the mark
-    (set-mark-flag! Buf #f)
     ;; Move the active data position
     (cond
      ((= LEnd orig-len)
@@ -1248,45 +1336,7 @@ buffer, the active data position is set to the end of the last line."
       ;; Otherwise, set the active data position to the beginning
       ;; of the line after the deletion region.
       (set-line-cur! Buf LStart)
-      (set-pd-cur-to-simd-bol! Buf)))
-    ;; Adjust bookmarks and tags.
-    (adjust-poslist-delete-lines (get-tags Buf) LStart LEnd)
-    (adjust-poslist-delete-lines (get-bookmarks Buf) LStart LEnd)))
-
-(define-method (undo-delete-lines (Buf <CBuffer>) LStart LEnd RemovedStrList
-                                  LCur PdCur)
-  "Undo delete lines."
-  (let ((buftxt (get-text Buf))
-        (lremovedcount (length RemovedStrList)))
-    (set-text! Buf
-               (strlist-insert-lines (get-text Buf)
-                                     LStart
-                                     RemovedStrList))
-    ;; Clear the mark
-    (set-mark-flag! Buf #f)
-    ;; Move the active data position
-    (set-line-cur! Buf LCur)
-    (set-pd-cur! Buf PdCur)
-    ;; Adjust bookmarks and tags
-    (adjust-poslist-insert-lines! (get-tags Buf) LStart lremovedcount)
-    (adjust-poslist-insert-lines! (get-bookmarks Buf) LStart lremovedcount)))
-
-(define (write-lines-to-port Buf LStart LEnd Port)
-  "Writes the buffer lines LStart (inclusive) through LEnd (exclusive)
-to the given port.  It returns the number of bytes written."
-  (warn-if-false (cbuffer? Buf))
-  (warn-if-false (integer-nonnegative? LStart))
-  (warn-if-false (integer-nonnegative? LEnd))
-  (warn-if-false (output-port? Port))
-
-  (let ((bytes-written 0))
-    (for-each
-     (lambda (line)
-       (write-line line Port)
-       (set! bytes-written (+ bytes-written (string-length line) 1)))
-     (sublist (get-text Buf) LStart LEnd))
-    bytes-written))
-
+      (set-pd-cur-to-simd-bol! Buf)))))
 
 (define (insert-lines Buf LInsert StrList)
   "Append the StrList at the addressed line LInsert.  If LInsert is
@@ -1310,6 +1360,24 @@ end of the addressed line."
         (let ((strlistlen (length StrList)))
           (set-line-cur! Buf (+ LInsert (1- strlistlen)))
           (set-pd-cur-to-simd-eol! Buf)))))
+
+(define (write-lines-to-port Buf LStart LEnd Port)
+  "Writes the buffer lines LStart (inclusive) through LEnd (exclusive)
+to the given port.  It returns the number of bytes written."
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (integer-nonnegative? LStart))
+  (warn-if-false (integer-nonnegative? LEnd))
+  (warn-if-false (output-port? Port))
+
+  (let ((bytes-written 0))
+    (for-each
+     (lambda (line)
+       (write-line line Port)
+       (set! bytes-written (+ bytes-written (string-length line) 1)))
+     (sublist (get-text Buf) LStart LEnd))
+    bytes-written))
+
+
 
 (define-method (insert-lines-from-port! (Buf <CBuffer>) LInsert InputPort)
   "Reads in from the port, line by line, appending those lines to the
@@ -1473,7 +1541,6 @@ region."
   (warn-if-false (< LStart LEnd))
   (warn-if-false (<= LEnd (get-line-count Buf)))
   (warn-if-false (list-of-strings-length-0+? StrList))
-  (log-debug-locals)
   (let ((strlistlen (length StrList))
         (orig-len (get-line-count Buf)))
     ;; Add this operation to the list of mutator operations.

@@ -40,6 +40,7 @@
             bookmark-get
             bookmark-get-at
             bookmark-get-all-in-line
+            bookmark-get-all-in-lines
             bookmark-set!
             bookmark-remove!
             bookmark-remove-at!
@@ -48,6 +49,7 @@
             tag-get-all-by-name
             tag-get-all-at
             tag-get-all-in-line
+            tag-get-all-in-lines
             tag-set!
             tag-remove-all-by-name!
             tag-remove-at-by-name!
@@ -87,6 +89,8 @@
           poslist))
 
 (define (bookmark-get-all-in-line poslist line)
+  (warn-if-false (list? poslist))
+  (warn-if-false (integer-nonnegative? line))
   (let ((bmarks (filter (lambda (entry)
                           (equal? (list-ref entry 1) line))
                         poslist)))
@@ -95,6 +99,21 @@
         ;; else
         (sort bmarks (lambda (B1 B2)
                        (< (third B1) (third B2)))))))
+
+(define (bookmark-get-all-in-lines poslist lstart lend)
+  (warn-if-false (list? poslist))
+  (warn-if-false (integer-nonnegative? line))
+  (let ((bmarks (filter (lambda (entry)
+                          (and
+                           (>= (list-ref entry 1) lstart)
+                           (< (list-ref entry 1) lend)))
+                        poslist)))
+    (if (null? bmarks)
+        '()
+        ;; else
+        (sort bmarks (lambda (B1 B2)
+                       (< (+ (* 1000 (second B1)) (third B1))
+                          (+ (* 1000 (second B1)) (third B2))))))))
 
 (define (bookmarks-get-not-at poslist line pos)
   (filter! (lambda (entry)
@@ -153,6 +172,19 @@
   (filter (lambda (entry)
              (equal? (list-ref entry 1) line))
           poslist))
+
+(define (tag-get-all-in-lines poslist lstart lend)
+  (let ((tags (filter (lambda (entry)
+                          (and
+                           (>= (list-ref entry 1) lstart)
+                           (< (list-ref entry 1) lend)))
+                        poslist)))
+    (if (null? tags)
+        '()
+        ;; else
+        (sort tags (lambda (B1 B2)
+                     (< (+ (* 1000 (second B1)) (third B1))
+                        (+ (* 1000 (second B1)) (third B2))))))))
 
 (define (tag-name-at? poslist name line pos)
   (let ((entry (find (lambda (entry)
