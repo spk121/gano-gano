@@ -368,10 +368,13 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
      (else
       (string name)))))
 
-(define-method (ed-repl-parse/validate-3rd-address (repl <EdRepl>) port)
+(define (ed-repl-parse/validate-3rd-address repl port)
+  (warn-if-false (ed-repl? repl))
+  (warn-if-false (input-port? port))
   (let ((addr3 (ed-repl-parse-address-range repl port)))
     (cond
-     ((< (length addr3) 1)
+     ((or (not addr3)
+          (< (length addr3) 1))
       (set-err-msg! repl
                     (format #f "invalid 3rd address"))
       (set-status! repl ERR)

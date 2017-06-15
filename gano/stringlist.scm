@@ -24,9 +24,9 @@
             strlist-replace-in-line
             strlist-move-in-line
             strlist-copy-in-line
-            strlist-delete-in-line!
+            strlist-delete-in-line
 
-            strlist-insert-lines!
+            strlist-insert-lines
             strlist-replace-lines
             strlist-move-lines
             strlist-copy-lines
@@ -38,169 +38,132 @@
 (define (sublist list start end)
   (drop (take list end) start))
 
-(define-syntax strlist-insert-in-line
-  (syntax-rules ()
-    ((_ strlist LInsert PInsert txt)
-     (if (null? strlist)
-         strlist
-         ;; else
-         (let ((linetxt (list-ref strlist LInsert)))
-           (append
-            (take strlist LInsert)
-            (list (string-append (string-take linetxt PInsert)
-                                 txt
-                                 (string-drop linetxt PInsert)))
-            (drop strlist (1+ LInsert))))))))
+(define (strlist-insert-in-line strlist LInsert PInsert txt)
+  (if (null? strlist)
+      strlist
+      ;; else
+      (let ((linetxt (list-ref strlist LInsert)))
+        (append
+         (take strlist LInsert)
+         (list (string-append (string-take linetxt PInsert)
+                              txt
+                              (string-drop linetxt PInsert)))
+         (drop strlist (1+ LInsert))))))
 
-(define-syntax strlist-replace-in-line
-  (syntax-rules ()
-    ((_ strlist LReplace PReplaceStart PReplaceEnd txt)
-     (let* ((linetxt (list-ref strlist LReplace)))
-       (append
-        (take strlist LReplace)
-        (list (string-append (string-take linetxt PReplaceStart)
-                             txt
-                             (string-drop linetxt PReplaceEnd)))
-        (drop strlist (1+ LReplace)))))))
+(define (strlist-replace-in-line strlist LReplace PReplaceStart PReplaceEnd txt)
+  (let* ((linetxt (list-ref strlist LReplace)))
+    (if (string-null? txt)
+        strlist
+        ;; else
+        (append
+         (take strlist LReplace)
+         (list (string-append (string-take linetxt PReplaceStart)
+                              txt
+                              (string-drop linetxt PReplaceEnd)))
+         (drop strlist (1+ LReplace))))))
 
-(define-syntax strlist-move-in-line
-  (syntax-rules ()
-    ((_ strlist LMove PMoveStart PMoveEnd PMoveAfter)
-     (let* ((linetxt (list-ref strlist LMove))
-            (movetxt (substring linetxt PMoveStart PMoveEnd)))
-       (set! strlist
-         (append
-          (take strlist LMove)
-          (list (cond
-                 ((< PMoveAfter PMoveStart)
-                  (string-append (substring linetxt 0 PMoveAfter)
-                                 movetxt
-                                 (substring linetxt PMoveAfter PMoveStart)
-                                 (substring linetxt PMoveEnd)))
-                 (else
-                  (string-append (substring linetxt 0 PMoveStart)
-                                 (substring linetxt PMoveEnd PMoveAfter)
-                                 movetxt
-                                 (substring linetxt PMoveAfter)))))
-          (drop strlist (1+ LMove))))))))
+(define (strlist-move-in-line strlist LMove PMoveStart PMoveEnd PMoveAfter)
+  (let* ((linetxt (list-ref strlist LMove))
+         (movetxt (substring linetxt PMoveStart PMoveEnd)))
+    (append
+     (take strlist LMove)
+     (list (cond
+            ((< PMoveAfter PMoveStart)
+             (string-append (substring linetxt 0 PMoveAfter)
+                            movetxt
+                            (substring linetxt PMoveAfter PMoveStart)
+                            (substring linetxt PMoveEnd)))
+            (else
+             (string-append (substring linetxt 0 PMoveStart)
+                            (substring linetxt PMoveEnd PMoveAfter)
+                            movetxt
+                            (substring linetxt PMoveAfter)))))
+     (drop strlist (1+ LMove)))))
 
-(define-syntax strlist-copy-in-line
-  (syntax-rules ()
-    ((_ strlist LCopy PCopyStart PCopyEnd PCopyAfter)
-     (let* ((linetxt (list-ref strlist LCopy))
-            (copytxt (substring linetxt PCopyStart PCopyEnd)))
-       (set! strlist
-         (append
-          (take strlist LCopy)
-          (list (string-append (substring linetxt 0 PCopyAfter)
-                               copytxt
-                               (substring linetxt PCopyAfter)))
-          (drop strlist (1+ LCopy))))))))
+(define (strlist-copy-in-line strlist LCopy PCopyStart PCopyEnd PCopyAfter)
+  (let* ((linetxt (list-ref strlist LCopy))
+         (copytxt (substring linetxt PCopyStart PCopyEnd)))
+    (append
+     (take strlist LCopy)
+     (list (string-append (substring linetxt 0 PCopyAfter)
+                          copytxt
+                          (substring linetxt PCopyAfter)))
+     (drop strlist (1+ LCopy)))))
 
 ;; Remove character in line LDelete from PDeleteStart (inclusive) to
 ;; PDeleteEnd (exclusive).
-(define-syntax strlist-delete-in-line!
-  (syntax-rules ()
-    ((_ strlist LDelete PDeleteStart PDeleteEnd)
-     (let* ((linetxt (list-ref strlist LDelete))
-            (deletedtxt (substring linetxt PDeleteStart PDeleteEnd)))
-       (set! strlist
-         (append
-          (take strlist LDelete)
-          (list (string-append (substring linetxt 0 PDeleteStart)
-                               (substring linetxt PDeleteEnd)))
-          (drop strlist (1+ LDelete))))
-       deletedtxt))))
+(define (strlist-delete-in-line strlist LDelete PDeleteStart PDeleteEnd)
+  (let* ((linetxt (list-ref strlist LDelete)))
+    (append
+     (take strlist LDelete)
+     (list (string-append (substring linetxt 0 PDeleteStart)
+                          (substring linetxt PDeleteEnd)))
+     (drop strlist (1+ LDelete)))))
 
-(define (strlist-insert-lines! strlist LInsert txtlists)
-  (syntax-rules()
-    ((_ strlist LInsert txtlist)
-     (set! strlist
+(define (strlist-insert-lines strlist LInsert txtlist)
+  (append
+   (take strlist LInsert)
+   txtlist
+   (drop strlist LInsert)))
+
+(define (strlist-replace-lines strlist LReplaceStart LReplaceEnd txtlist)
+  (append
+   (take strlist LReplaceStart)
+   txtlist
+   (drop strlist LReplaceEnd)))
+
+(define (strlist-delete-lines strlist LDeleteStart LDeleteEnd)
+  (set! strlist
+    (append
+     (take strlist LDeleteStart)
+     (drop strlist LDeleteEnd))))
+
+(define (strlist-move-lines strlist LMoveStart LMoveEnd LMoveTo)
+  (cond
+   ((= LMoveTo LMoveStart)
+    strlist)
+   ((< LMoveTo LMoveStart)
+    (append
+     (take strlist LMoveTo)
+     (sublist strlist LMoveStart LMoveEnd)
+     (sublist strlist LMoveTo LMoveStart)
+     (drop strlist LMoveEnd)))
+   (>= LMoveTo LMoveEnd
        (append
-        (take strlist LInsert)
-        txtlist
-        (drop strlist LInsert))))))
+        (take strlist LMoveStart)
+        (sublist strlist LMoveEnd LMoveTo)
+        (sublist strlist LMoveStart LMoveEnd)
+        (drop strlist LMoveTo)))))
 
-(define-syntax strlist-replace-lines
-  (syntax-rules()
-    ((_ strlist LReplaceStart LReplaceEnd txtlist)
-     (let ((replacedtxt (sublist strlist LReplaceStart LReplaceEnd)))
-       (set! strlist
-         (append
-          (take strlist LReplaceStart)
-          txtlist
-          (drop strlist LReplaceEnd)))
-       replacedtxt))))
+(define (strlist-copy-lines strlist LCopyStart LCopyEnd LCopyTo)
+  (append
+   (take strlist LCopyTo)
+   (sublist strlist LCopyStart LCopyEnd)
+   (drop strlist LCopyTo)))
 
-(define-syntax strlist-delete-lines
-  (syntax-rules()
-    ((_ strlist LDeleteStart LDeleteEnd)
-     (let ((deletedtxt (sublist strlist LDeleteStart LDeleteEnd)))
-       (set! strlist
-         (append
-          (take strlist LDeleteStart)
-          (drop strlist LDeleteEnd)))
-       deletedtxt))))
+(define (strlist-merge-lines strlist LMergeStart LMergeEnd)
+  (append
+   (take strlist LMergeStart)
+   (list (apply string-append (sublist strlist LMergeStart LMergeEnd)))
+   (drop strlist LMergeEnd)))
 
-(define-syntax strlist-move-lines
-  (syntax-rules()
-    ((_ strlist LMoveStart LMoveEnd LMoveTo)
-     (set! strlist
+(define (strlist-split-lines strlist LSplit LengthList)
+  (let ((str (list-ref strlist LSplit)))
+    (append
+     (take strlist LSplit)
+     (let loop ((i 0)
+                (out '()))
        (cond
-        ((= LMoveTo LMoveStart)
-         strlist)
-        ((< LMoveTo LMoveStart)
-         (append
-          (take strlist LMoveTo)
-          (sublist strlist LMoveStart LMoveEnd)
-          (sublist strlist LMoveTo LMoveStart)
-          (drop strlist LMoveEnd)))
-        (>= LMoveTo LMoveEnd
-         (append
-          (take strlist LMoveStart)
-          (sublist strlist LMoveEnd LMoveTo)
-          (sublist strlist LMoveStart LMoveEnd)
-          (drop strlist LMoveTo))))))))
-
-(define-syntax strlist-copy-lines
-  (syntax-rules()
-    ((_ strlist LCopyStart LCopyEnd LCopyTo)
-     (set! strlist
-       (append
-        (take strlist LCopyTo)
-        (sublist strlist LCopyStart LCopyEnd)
-        (drop strlist LCopyTo))))))
-
-(define-syntax strlist-merge-lines
-  (syntax-rules()
-    ((_ strlist LMergeStart LMergeEnd)
-     (set! strlist
-       (append
-        (take strlist LMergeStart)
-        (list (apply string-append (sublist strlist LMergeStart LMergeEnd)))
-        (drop strlist LMergeEnd))))))
-
-(define-syntax strlist-split-lines
-  (syntax-rules()
-    ((_ strlist LSplit LengthList)
-     (let ((str (list-ref strlist LSplit)))
-       (set! strlist
-         (append
-          (take strlist LSplit)
-          (let loop ((i 0)
-                     (out '()))
-            (cond
-             ((= i 0)
-              (loop (1+ i)
-                    (list (string-take str (list-ref LengthList i)))))
-             ((< i (length LengthList))
-              (loop (1+ i)
-                    (append
-                     out
-                     (list (substring str
-                                      (list-ref LengthList (1- i))
-                                      (list-ref LengthList i))))))
-             (else
-              out)))
-          (drop strlist (1+ LSplit))))))))
-
+        ((= i 0)
+         (loop (1+ i)
+               (list (string-take str (list-ref LengthList i)))))
+        ((< i (length LengthList))
+         (loop (1+ i)
+               (append
+                out
+                (list (substring str
+                                 (list-ref LengthList (1- i))
+                                 (list-ref LengthList i))))))
+        (else
+         out)))
+     (drop strlist (1+ LSplit)))))
