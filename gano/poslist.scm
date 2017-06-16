@@ -34,6 +34,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (gano position)
   #:use-module (mlg logging)
+  #:use-module (mlg typechecking)
   #:export (
 
             ;; Operations
@@ -44,6 +45,7 @@
             bookmark-set!
             bookmark-remove!
             bookmark-remove-at!
+            bookmark-remove-all-in-line!
             bookmark-name-at?
 
             tag-get-all-by-name
@@ -54,6 +56,7 @@
             tag-remove-all-by-name!
             tag-remove-at-by-name!
             tag-remove-all-at!
+            tag-remove-all-in-line!
             tag-name-at?
 
             adjust-poslist-insert-in-line!
@@ -102,7 +105,8 @@
 
 (define (bookmark-get-all-in-lines poslist lstart lend)
   (warn-if-false (list? poslist))
-  (warn-if-false (integer-nonnegative? line))
+  (warn-if-false (integer-nonnegative? lstart))
+  (warn-if-false (integer-nonnegative? lend))
   (let ((bmarks (filter (lambda (entry)
                           (and
                            (>= (list-ref entry 1) lstart)
@@ -111,9 +115,10 @@
     (if (null? bmarks)
         '()
         ;; else
-        (sort bmarks (lambda (B1 B2)
+        (let ((copy (map list-copy bmarks)))
+          (sort copy (lambda (B1 B2)
                        (< (+ (* 1000 (second B1)) (third B1))
-                          (+ (* 1000 (second B1)) (third B2))))))))
+                          (+ (* 1000 (second B1)) (third B2)))))))))
 
 (define (bookmarks-get-not-at poslist line pos)
   (filter! (lambda (entry)
@@ -147,6 +152,15 @@
                     (equal? (list-ref entry 1) line)
                     (equal? (list-ref entry 2) pos))))
                 poslist)))))
+
+(define-syntax bookmark-remove-all-in-line!
+  (syntax-rules ()
+    ((_ poslist line)
+     (set! poslist
+       (filter! (lambda (entry)
+                  (not (equal? (list-ref entry 1) line)))
+                poslist)))))
+
 
 (define (bookmark-name-at? poslist name line pos)
   (let ((entry (assoc name poslist)))
@@ -211,7 +225,6 @@
          (set! poslist
            (sort! poslist
                   (lambda (A B)
-                    (log-debug-locals)
                     "Sort two tags: A and B"
                     (if (= (second A) (second B))
                         (if (= (third A) (third B))
@@ -243,12 +256,20 @@
 
 (define-syntax tag-remove-all-at!
   (syntax-rules ()
-    ((_ poslist name line pos)
+    ((_ poslist line pos)
      (set! poslist
        (filter! (lambda (entry)
                   (not
                    (and (equal? (list-ref entry 1) line)
                         (equal? (list-ref entry 2) pos))))
+                poslist)))))
+
+(define-syntax tag-remove-all-in-line!
+  (syntax-rules ()
+    ((_ poslist line)
+     (set! poslist
+       (filter! (lambda (entry)
+                  (not (equal? (list-ref entry 1) line)))
                 poslist)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -262,7 +283,6 @@
           (let ((LPos (list-ref entry 1))
                 (PPos (list-ref entry 2)))
             (let ((adjusted-pos (proc LPos PPos)))
-              (log-debug-pk adjusted-pos)
               (warn-if-false (proper-list? adjusted-pos))
               (if (null-list? adjusted-pos)
                   ret

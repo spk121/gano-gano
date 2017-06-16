@@ -53,9 +53,10 @@ gano-ed.go: gano-ed
 clean:
 	-rm -f $(SCM_SCRIPT_OBJ)
 	-rm -f $(SCM_OBJ)
-	# -rm -f $(C_OBJ)
 	-rm -f *~
-	-rm gano.go.tar
+	-rm -f gano.go.tar
+
+# -rm -f $(C_OBJ)
 
 install:
 	mkdir -p `pkg-config guile-$(GUILE_VERSION) --variable=extensiondir`

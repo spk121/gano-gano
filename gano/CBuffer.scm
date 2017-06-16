@@ -137,7 +137,6 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             undo-copy-lines
             undo-delete-lines
             undo-insert-lines
-            undo-join-lines
             undo-move-lines
             undo-replace-lines
 
@@ -398,7 +397,7 @@ range."
 (define (set-line-and-pd-cur! buf LPd)
   (warn-if-false (cbuffer? buf))
   (warn-if-false (list-of-integers-length-2? LPd))
-  
+
   (when (list-of-integers-length-2? LPd)
     (set-line-cur! buf (list-ref LPd 0))
     (set-pd-cur! buf (list-ref LPd 1))))
@@ -462,7 +461,7 @@ It returns the active data line, which may be different from the L
 parameter."
   (warn-if-false (cbuffer? buf))
   (warn-if-false (integer-nonnegative? L))
-  
+
   (%set-line-cur! buf (bracket-line buf L))
   (get-line-cur buf))
 
@@ -593,23 +592,6 @@ list is returned."
        (bookmark:line! bmark (+ (bookmark:line bmark) (- LCur LPrev)))))
    (get-bookmarks buf)))
 
-(define-method (adjust-bookmarks-in-joined-lines (buf <CBuffer>) LStart LEnd)
-  "When combining lines LStart (inclusive) through LEnd (exclusive),
-adjust the bookmarks."
-  (for-each
-   (lambda (bmark)
-     (cond
-      ((and (<= (1+ LStart) (bookmark:line bmark)) (< (bookmark:line bmark) LEnd))
-       (bookmark:line! bmark LStart)
-       (bookmark:pd! bmark (+ (bookmark:pd bmark)
-                              (apply +
-                                     (map string-length
-                                          (sublist (get-text buf) LStart (bookmark:line bmark)))))))
-
-      ((>= (bookmark:line bmark) LEnd)
-       (bookmark:line! bmark (- (bookmark:line bmark) (- LEnd LStart))))))
-   (get-bookmarks buf)))
-
 (define-method (get-active-data-location (buf <CBuffer>))
   "Counts the number of characters between the beginning of the CBuffer
 and the active data position."
@@ -640,7 +622,7 @@ and the active data position."
   (warn-if-false (<= LBookmark (get-line-count Buf)))
   (warn-if-false (<= PBookmark (string-length (get-text-line Buf LBookmark))))
   (warn-if-false (string? Name))
-  
+
   (unless (bookmark-name-at? (get-bookmarks Buf) Name LBookmark PBookmark)
     (let ((old-bookmark-pos (bookmark-get (get-bookmarks Buf) Name)))
       (bookmark-set! (get-bookmarks Buf) Name LBookmark PBookmark)
@@ -698,7 +680,7 @@ and the active data position."
                                                 LInsert PInsert strlen))
       ;; Clear the mark
       (set-mark-flag! Buf #f)
-      
+
       ;; Adjust the bookmarks and tags
       (adjust-poslist-insert-in-line! (get-tags Buf) LInsert PInsert strlen)
       (adjust-poslist-insert-in-line! (get-bookmarks Buf)
@@ -807,11 +789,11 @@ will be pushed down. "
                 (strlist-insert-lines (get-text Buf) LInsert StrList))
       ;; Clear the mark.
       (set-mark-flag! Buf #f)
-      
+
       (set-line-and-pd-cur! Buf (pos-insert-lines (get-line-cur Buf)
                                                   (get-pd-cur Buf)
                                                   LInsert strlistlen))
-      
+
       ;; Adjust bookmarks and tags
       (adjust-poslist-insert-lines! (get-tags Buf) LInsert strlistlen)
       (adjust-poslist-insert-lines! (get-bookmarks Buf) LInsert strlistlen)
@@ -831,7 +813,77 @@ will be pushed down. "
     ;; Adjust bookmarks and tags
     (adjust-poslist-delete-lines (get-tags Buf) LInsert lcount)
     (adjust-poslist-delete-lines (get-bookmarks Buf) LInsert lcount)))
-  
+
+(define (op-merge-lines! Buf LStart LEnd)
+  "Combine the lines LStart (inclusive) to LEnd (exclusive) into a single
+line."
+  (warn-if-false (< LStart LEnd))
+  (warn-if-false (>= LStart 0))
+  (warn-if-false (<= LEnd (get-line-count Buf)))
+  (warn-if-false (cbuffer? Buf))
+
+  (when (> (- LEnd LStart) 1)
+
+    ;; Overwrite the text in the line, and adjust bookmarks and tags
+    (let* ((merge-length-list
+            (map string-length (sublist (get-text Buf) LStart LEnd)))
+           (cum-length-list
+            (cumulative-sum merge-length-list))
+           (moved-bmarks (bookmark-get-all-in-lines (get-bookmarks Buf) LStart LEnd))
+           (moved-tags (tag-get-all-in-lines (get-tags Buf) LStart LEnd)))
+      (log-debug-pk moved-bmarks)
+      (append-undo! Buf (list 'merge-lines LStart LEnd cum-length-list
+                              moved-bmarks
+                              moved-tags
+                              (get-line-cur Buf)
+                              (get-pd-cur Buf)))
+
+      (set-text! Buf
+                 (strlist-merge-lines (get-text Buf) LStart LEnd))
+
+      ;; Clear the mark
+      (set-mark-flag! Buf #f)
+
+      ;; Move the activive data position
+      (set-line-and-pd-cur! Buf (pos-merge-lines (get-line-cur Buf) (get-pd-cur Buf)
+                                                 LStart LEnd merge-length-list))
+
+      (adjust-poslist-merge-lines (get-tags Buf) LStart LEnd merge-length-list)
+      (adjust-poslist-merge-lines (get-bookmarks Buf) LStart LEnd
+                                  merge-length-list))))
+
+(define (undo-merge-lines! Buf LStart LEnd PSplitList
+                           MovedBmarks
+                           MovedTags
+                           LCur PdCur)
+  "Undo merge lines. Note that this doesn't alter the undo stack."
+  (warn-if-false (cbuffer? Buf))
+  (log-debug-pk MovedBmarks)
+
+  (set-text! Buf
+             (strlist-split-lines (get-text Buf) LStart PSplitList))
+
+  ;; Clear the mark
+  (set-mark-flag! Buf #f)
+  ;; Move the active data position
+  (set-line-cur! Buf LCur)
+  (set-pd-cur! Buf PdCur)
+  ;; Adjust bookmarks and tags
+  (bookmark-remove-all-in-line! (get-bookmarks Buf) LStart)
+  (for-each
+   (lambda (bmark)
+     (log-debug-locals)
+     (log-debug-pk (get-bookmarks Buf))
+     (bookmark-set! (get-bookmarks Buf)
+                    (first bmark) (second bmark) (third bmark)))
+   MovedBmarks)
+  (tag-remove-all-in-line! (get-tags Buf) LStart)
+  (for-each
+   (lambda (tag)
+     (tag-set! (get-tags Buf)
+               (first tag) (second tag) (third tag)))
+   MovedTags))
+
 (define-method (op-replace-lines (buf <CBuffer>) LReplaceStart LReplaceEnd
                                  strlist)
   "Replace the lines from LStart (inclusive) and LEnd (exclusive)
@@ -880,8 +932,7 @@ with strlist"
   (warn-if-false (<= LEnd (get-line-count Buf)))
   (warn-if-false (cbuffer? Buf))
 
-  (let ((orig-len (get-line-count Buf))
-        (lost-bmarks (bookmark-get-all-in-lines (get-bookmarks Buf) LStart LEnd))
+  (let ((lost-bmarks (bookmark-get-all-in-lines (get-bookmarks Buf) LStart LEnd))
         (lost-tags (tag-get-all-in-lines (get-tags Buf) LStart LEnd)))
     ;; Add this operation to the list of mutator operations.
     (append-undo! Buf (list 'delete-lines
@@ -1084,13 +1135,15 @@ LCopyEnd (exclusive) to the line LCopyTo."
                              (seventh last-op) ;LCur
                              (eighth last-op)) ;PdCur
           #t)
-         ((eqv? (car last-op) 'join-lines)
-          (undo-join-lines Buf
-                            (second last-op) ;LStart
-                            (third last-op)  ;LEnd
-                            (fourth last-op) ;PSplitList
-                            (fifth last-op)  ;LCur
-                            (sixth last-op))  ;PdCur
+         ((eqv? (car last-op) 'merge-lines)
+          (undo-merge-lines! Buf
+                             (second last-op) ;LStart
+                             (third last-op)  ;LEnd
+                             (fourth last-op) ;PSplitList
+                             (fifth last-op)  ;LostBmarks
+                             (sixth last-op)  ;LostTags
+                             (seventh last-op) ;LCur
+                             (eighth last-op)) ;PdCur
           #t)
          ((eqv? (car last-op) 'copy-lines)
           (undo-copy-lines Buf
@@ -1281,7 +1334,7 @@ position of the following line."
   (warn-if-false (>= L 0))
   (warn-if-false (< L (get-line-count Buf)))
 
-  (op-bookmark-set! Buf 
+  (op-bookmark-set! Buf
                     L
                     (if (eqv? (get-implicit-movement-direction Buf) 'forward)
                         0
@@ -1299,7 +1352,7 @@ copied."
   (warn-if-false (integer-nonnegative? LCopyEnd))
   (warn-if-false (integer-nonnegative? LCopyTo))
   (warn-if-false (< LCopyStart LCopyEnd))
-  
+
   (if (> LCopyEnd LCopyStart)
       (begin
         (op-copy-lines! Buf LCopyStart LCopyEnd LCopyTo)
@@ -1307,7 +1360,7 @@ copied."
         (set-line-and-pd-cur! Buf (pos-copy-lines (get-line-cur Buf)
                                                   (get-pd-cur Buf)
                                                   LCopyStart LCopyEnd LCopyTo #t))
-        
+
         (set-pd-cur-to-simd-eol! Buf))))
 
 (define (delete-lines Buf LStart LEnd)
@@ -1378,7 +1431,6 @@ to the given port.  It returns the number of bytes written."
     bytes-written))
 
 
-
 (define-method (insert-lines-from-port! (Buf <CBuffer>) LInsert InputPort)
   "Reads in from the port, line by line, appending those lines to the
 buffer.  Read until #<eof> is found, and then inserts the text at
@@ -1416,51 +1468,10 @@ SIMD is 'backward."
   (warn-if-false (<= LEnd (get-line-count Buf)))
 
   (when (> (- LEnd LStart) 1)
-
-    ;; Overwrite the text in the line, and adjust bookmarks and tags
-    (let* ((merge-length-list
-            (map string-length (sublist (get-text Buf) LStart LEnd)))
-           (cum-length-list
-            (cumulative-sum merge-length-list)))
-      (append-undo! Buf (list 'join-lines LStart LEnd cum-length-list
-                              (get-line-cur Buf)
-                              (get-pd-cur Buf)))
-
-      (strlist-merge-lines (get-text Buf) LStart LEnd)
-
-      ;; Clear the mark
-      (set-mark-flag! Buf #f)
-
+    (op-merge-lines! Buf LStart LEnd)
       ;; Move the activive data position
       (set-line-cur! Buf LStart)
-      (set-pd-cur-to-simd-eol! Buf)
-
-      (adjust-poslist-merge-lines (get-tags Buf) LStart LEnd merge-length-list)
-      (adjust-poslist-merge-lines (get-bookmarks Buf) LStart LEnd
-                                  merge-length-list))
-    0))
-
-;;(define-method (undo-join-lines (Buf <CBuffer>) LStart LEnd PSplitList
-;;                                LCur PdCur)
-(define (undo-join-lines Buf LStart LEnd PSplitList
-                                LCur PdCur)
-  "Undo joinlines. Note that this doesn't alter the undo stack."
-  (warn-if-false (cbuffer? Buf))
-  (warn-if-false (proper-list? (get-tags Buf)))
-  (warn-if-false (proper-list? (get-bookmarks Buf)))
-
-  (strlist-split-lines (get-text Buf) LStart PSplitList)
-  (warn-if-false (proper-list? (get-tags Buf)))
-  (warn-if-false (proper-list? (get-bookmarks Buf)))
-
-  ;; Clear the mark
-  (set-mark-flag! Buf #f)
-  ;; Move the active data position
-  (set-line-cur! Buf LCur)
-  (set-pd-cur! Buf PdCur)
-  ;; Adjust bookmarks and tags
-  (adjust-poslist-split-lines (get-tags Buf) LStart PSplitList)
-  (adjust-poslist-split-lines (get-bookmarks Buf) LStart PSplitList))
+      (set-pd-cur-to-simd-eol! Buf)))
 
 (define (move-lines Buf LMoveStart LMoveEnd LMoveTo)
   "Reposition the lines between LMoveStart (inclusive) and
