@@ -705,7 +705,7 @@ beginning."
   ;; 1-indexed end line (inclusive). The 3rd address is the
   ;; 1-indexed line after which to move the lines.  Zero indicates
   ;; that the lines are to be inserted before the 1st line.
-  (copy-lines Repl (1- (first AddrList)) (second AddrList) Addr3)
+  (copy-lines! Repl (1- (first AddrList)) (second AddrList) Addr3)
   (set-modified! Repl #t)
   (unless (string-null? Suffix)
     ;; When displaying a line after an append, print only
@@ -731,7 +731,7 @@ A Suffix if 'l', 'n', or 'p' is allowed."
 
   ;; The Ed address is a 1-indexed start line (inclusive) and a
   ;; 1-indexed end line (inclusive). An address of zero is invalid.
-  (delete-lines Repl (1- (first AddrList)) (second AddrList))
+  (delete-lines! Repl (1- (first AddrList)) (second AddrList))
   (set-modified! Repl #t)
   (unless (string-null? Suffix)
     (ed-repl-display-lines Repl (1+ (get-line-cur Repl))
@@ -968,8 +968,7 @@ A Suffix of 'l', 'n', or 'p' is allowed."
   ;; Ed bookmarks are 1-indexed.  CBuffer bookmarks are zero-indexed.
   (warn-if-false (list-of-integers-length-1? AddrList))
   (warn-if-false (string? Name))
-  (log-debug-pk Name)
-  (bookmark-bol Repl (1- (first AddrList)) Name)
+  (bookmark-bol! Repl (1- (first AddrList)) Name)
   (unless (string-null? Suffix)
     ;; When displaying a line after an append, print only
     ;; the current line.
