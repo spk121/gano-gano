@@ -104,7 +104,7 @@ XMoveEnd (exclusive) was moved to the location XMoveTo."
      ;; |--|move|--:--*--| => |----:|move|--*--|
      ;; |--:--|move|--*--| => |--:|move|----*--|
      ((or (and (< X XMoveStart) (< X XMoveTo))
-          (and (>= X XMoveEnd) (> X XMoveTo)))
+          (and (>= X XMoveEnd) (>= X XMoveTo)))
       X)
 
      ;; Pos is inside the text to move

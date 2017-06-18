@@ -996,15 +996,30 @@ If the 3rd address is zero, it moves the addressed lines to the beginning."
   ;; 1-indexed end line (inclusive). The 3rd address is the
   ;; 1-indexed line after which to move the lines.  Zero indicates
   ;; that the lines are to be inserted before the 1st line.
-  (move-lines Repl (1- (first AddrList)) (second AddrList) Addr3)
-  (set-modified! Repl #t)
+  (if (and (< (first AddrList) Addr3) (< Addr3 (second AddrList)))
+      (begin
+        ;; Shouldn't try to move a block to within itself.
+        (set-err-msg! Repl (format #f "cannot move lines ~a to ~a to line ~s"
+                                   (first AddrList) (second AddrList) Addr3))
+        (set-status! Repl ERR)
+        ERR)
+      ;; else
+      (begin
+        (cond
+         ((or (= (first AddrList) Addr3)
+              (= (second AddrList) Addr3))
+          ;; If MoveTo is MoveStart or MoveEnd, nothing really happens.
+          #f)
+         (else
+          (move-lines Repl (1- (first AddrList)) (second AddrList) Addr3)
+          (set-modified! Repl #t)))
 
-  (unless (string-null? Suffix)
-    ;; When displaying a line after an append, print only
-    ;; the current line.
-    (ed-repl-display-lines Repl (1+ (get-line-cur Repl))
-                           (1+ (get-line-cur Repl)) Suffix))
-  0)
+        (unless (string-null? Suffix)
+          ;; When displaying a line after an append, print only
+          ;; the current line.
+          (ed-repl-display-lines Repl (1+ (get-line-cur Repl))
+                                 (1+ (get-line-cur Repl)) Suffix))
+        0)))
 
 (define-method (op-null (Repl <EdRepl>) AddrList Special Suffix Append)
   "Print the addressed line."

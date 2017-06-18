@@ -120,8 +120,8 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             get-bookmark-line
             regex-tag-lines
             regex-tag-nonmatching-lines
-            clear-regex-tags
-            for-each-regex-tagged-line
+            clear-tags
+            for-each-tagged-line
             insert-lines
             insert-lines-from-port
             join-lines
@@ -656,6 +656,53 @@ and the active data position."
 
   (bookmark-remove! (get-bookmarks Buf) Name))
 
+(define (op-tags-set! Buf ListOfTags)
+  (warn-if-false (cbuffer? Buf))
+  (let ((tags-used '()))
+    (do ((i 0 (1+ i))) ((>= i (length ListOfTags)))
+      (let ((tag-cur (list-ref ListOfTags i)))
+        (unless (tag-name-at? (get-tags Buf)
+                              (first tag-cur)
+                              (second tag-cur)
+                              (third tag-cur))
+          (tag-set! (get-tags Buf) (first tag-cur) (second tag-cur)
+                    (third tag-cur))
+          (set! tags-used (append tags-used (list tag-cur))))))
+    (unless (null? tags-used)
+      (append-undo! Buf (list 'tags-set tags-used)))))
+
+(define (undo-tags-set! Buf ListOfTags)
+  (do ((i 0 (1+ i))) ((>= i (length ListOfTags)))
+    (let ((tag-cur (list-ref ListOfTags i)))
+      (tag-remove-at-by-name! (get-tags Buf)
+                              (first tag-cur)
+                              (second tag-cur)
+                              (third tag-cur)))))
+
+(define (op-tags-remove! Buf ListOfTags)
+  "Remove all tags that match tags in the given list."
+  (warn-if-false (cbuffer? Buf))
+  (let ((tags-used '()))
+    (do ((i 0 (1+ i))) ((>= i (length ListOfTags)))
+      (let ((tag-cur (list-ref ListOfTags i)))
+        (when (tag-name-at? (get-tags Buf)
+                            (first tag-cur)
+                            (second tag-cur)
+                            (third tag-cur))
+          (tag-remove-at-by-name! (get-tags Buf) (first tag-cur) (second tag-cur)
+                                  (third tag-cur))
+          (set! tags-used (append tags-used (list tag-cur))))))
+    (unless (null? tags-used)
+      (append-undo! Buf (list 'tags-remove tags-used)))))
+
+(define (undo-tags-remove! Buf ListOfTags)
+  (do ((i 0 (1+ i))) ((>= i (length ListOfTags)))
+    (let ((tag-cur (list-ref ListOfTags i)))
+      (tag-set! (get-tags Buf)
+                (first tag-cur)
+                (second tag-cur)
+                (third tag-cur)))))
+
 (define (op-insert-in-line! Buf LInsert PInsert Txt)
   (warn-if-false (integer-nonnegative? LInsert))
   (warn-if-false (integer-nonnegative? PInsert))
@@ -884,45 +931,66 @@ line."
                (first tag) (second tag) (third tag)))
    MovedTags))
 
-(define-method (op-replace-lines (buf <CBuffer>) LReplaceStart LReplaceEnd
-                                 strlist)
+(define (op-replace-lines! Buf LStart LEnd StrList)
   "Replace the lines from LStart (inclusive) and LEnd (exclusive)
 with strlist"
-  (let ((LenReplace (length strlist)))
-
-    ;; Overwrite the text in the line, and adjust bookmarks and tags
-    (let ((replacetxt (strlist-replace-lines (get-text buf)
-                                             LReplaceStart
-                                             LReplaceEnd strlist))
-          (replacetags (adjust-poslist-replace-lines (get-tags buf)
-                                                     LReplaceStart
-                                                     LReplaceEnd
-                                                     LenReplace))
-          (replacebmarks (adjust-poslist-replace-lines (get-bookmarks buf)
-                                                       LReplaceStart
-                                                       LReplaceEnd
-                                                       LenReplace)))
-
-      (append-undo! buf (list 'op-replace-lines
-                              LReplaceStart LReplaceEnd
-                              strlist
-                              replacetxt replacetags replacebmarks))
-
-      ;; Move the active data position
-      (let ((newpos (pos-replace-lines (get-line-cur buf)
-                                       (get-pd-cur buf)
-                                       LReplaceStart
-                                       LReplaceEnd
-                                       LenReplace)))
+  (warn-if-false (integer-nonnegative? LStart))
+  (warn-if-false (integer-nonnegative? LEnd))
+  (warn-if-false (< LStart LEnd))
+  (warn-if-false (<= LEnd (get-line-count Buf)))
+  (warn-if-false (list-of-strings-length-0+? StrList))  
+  (let ((strlistlen (length StrList))
+        (orig-len (get-line-count Buf)))
+    ;; And undo info.
+    (append-undo! Buf (list 'replace-lines
+                            LStart LEnd
+                            (sublist (get-text Buf) LStart LEnd)
+                            StrList
+                            (get-line-cur Buf)
+                            (get-pd-cur Buf)))
+    ;; Change the string list.
+    (let ((buftxt (get-text Buf)))
+      (set-text! Buf (append (take buftxt LStart)
+                             StrList
+                             (drop buftxt LEnd))))
+    ;; Clear the mark.
+    (set-mark-flag! Buf #f)
+    ;; Move the active data position.
+    (let ((newpos (pos-replace-lines (get-line-cur Buf)
+                                     (get-pd-cur Buf)
+                                     LStart
+                                     LEnd
+                                     strlistlen)))
         ;; If newpos is '(), the location of the active data position
         ;; was overwritten in this operation.  So, put it after the paste,
         ;; I guess.
         (if (null? newpos)
-            (set-line-and-pd-cur! buf (list LReplaceEnd 0))
-            (set-line-and-pd-cur! buf newpos)))
+            (set-line-and-pd-cur! Buf (list LEnd 0))
+            (set-line-and-pd-cur! Buf newpos)))))
 
-      ;; Clear the mark
-      (set-mark-flag! buf #f))))
+(define-method (undo-replace-lines (Buf <CBuffer>) LStart LEnd RemovedStrList
+                                   NewStrList
+                                   LCur PdCur)
+  "Undo replace lines. Note that this doesn't alter the undo stack."
+  (let ((buftxt (get-text Buf))
+        (lcountnew (length NewStrList))
+        (lcountremoved (length RemovedStrList)))
+    ;; Remove the new text and reinsert the old text.
+    (set-text! Buf (append (take buftxt LStart)
+                           RemovedStrList
+                           (drop buftxt (+ LStart lcountnew))))
+    ;; Clear the mark.
+    (set-mark-flag! Buf #f)
+    ;; Restore the active data position.
+    (set-line-cur! Buf LCur)
+    (set-pd-cur! Buf PdCur)
+    ;; Adjust bookmarks and tags.
+    (adjust-poslist-replace-lines (get-tags Buf)
+                                  LStart (+ LStart lcountnew)
+                                  lcountremoved)
+    (adjust-poslist-replace-lines (get-bookmarks Buf)
+                                  LStart (+ LStart lcountnew)
+                                  lcountremoved)))
 
 (define (op-delete-lines! Buf LStart LEnd)
   "Remove the lines of text from LStart (inclusive) to LEnd (exclusive)."
@@ -992,23 +1060,32 @@ with strlist"
                                (third tag)))
               LostTags)))
 
-(define-method (op-move-lines (buf <CBuffer>) LMoveStart LMoveEnd LMoveTo)
+(define (op-move-lines! Buf LMoveStart LMoveEnd LMoveTo)
   "Move the lines from LStart (inclusive) and LEnd (exclusive) to the
 line LMoveTo."
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (< LMoveStart LMoveEnd))
+  (warn-if-false (or (< LMoveTo LMoveStart) (<= LMoveEnd LMoveTo)))
+  (warn-if-false (<= LMoveEnd (get-line-count Buf)))
 
-  ;; Overwrite the text in the line, and adjust bookmarks and tags
-  (strlist-move-lines (get-text buf) LMoveStart LMoveEnd LMoveTo)
-  (adjust-poslist-move-lines (get-tags buf) LMoveStart LMoveEnd LMoveTo)
-  (adjust-poslist-move-lines (get-bookmarks buf) LMoveStart LMoveEnd LMoveTo)
+  (when (>= (- LMoveEnd LMoveStart) 1)
+    
+    ;; Overwrite the text in the line, and adjust bookmarks and tags
+    (set-text! Buf
+               (strlist-move-lines (get-text Buf) LMoveStart LMoveEnd LMoveTo))
+    (adjust-poslist-move-lines (get-tags Buf) LMoveStart LMoveEnd LMoveTo)
+    (adjust-poslist-move-lines (get-bookmarks Buf) LMoveStart LMoveEnd LMoveTo)
 
-  (append-undo! buf (list 'op-move-lines LMoveStart LMoveEnd LMoveTo))
+    (append-undo! Buf (list 'op-move-lines LMoveStart LMoveEnd LMoveTo
+                            (get-line-cur Buf) (get-pd-cur Buf)))
 
-  ;; Move the activive data position
-  (set-line-and-pd-cur! buf (pos-move-lines (get-line-cur buf) (get-pd-cur buf)
-                                            LMoveStart LMoveEnd LMoveTo))
+    ;; Move the activive data position
+    (set-line-and-pd-cur! Buf (pos-move-lines (get-line-cur Buf)
+                                              (get-pd-cur Buf)
+                                              LMoveStart LMoveEnd LMoveTo))
 
-  ;; Clear the mark
-  (set-mark-flag! buf #f))
+    ;; Clear the mark
+    (set-mark-flag! Buf #f)))
 
 (define (op-copy-lines! Buf LCopyStart LCopyEnd LCopyTo)
   "Copy and insert the lines from LCopyStart (inclusive) and
@@ -1166,6 +1243,14 @@ LCopyEnd (exclusive) to the line LCopyTo."
                              (fourth last-op) ;Name
                              (fifth last-op) ;LOldBookmark
                              (sixth last-op)) ;POldBookmark
+          #t)
+         ((eqv? (car last-op) 'tags-set)
+          (undo-tags-set! Buf
+                          (second last-op)) ;ListOfTags
+          #t)
+         ((eqv? (car last-op) 'tags-remove)
+          (undo-tags-remove! Buf
+                          (second last-op)) ;ListOfTags
           #t)
          (else
           (warn-if-reached)
@@ -1486,21 +1571,11 @@ moved."
 
   (if (>= (- LMoveEnd LMoveStart) 1)
       (begin
-        ;; Overwrite the text in the line, and adjust bookmarks and tags
-        (strlist-move-lines (get-text Buf) LMoveStart LMoveEnd LMoveTo)
-        (adjust-poslist-move-lines (get-tags Buf) LMoveStart LMoveEnd LMoveTo)
-        (adjust-poslist-move-lines (get-bookmarks Buf) LMoveStart LMoveEnd LMoveTo)
-
-        (append-undo! Buf (list 'move-lines LMoveStart LMoveEnd LMoveTo
-                                (get-line-cur Buf)
-                                (get-pd-cur Buf)))
+        (op-move-lines! Buf LMoveStart LMoveEnd LMoveTo)
 
         ;; Move the activive data position
         (set-line-cur! Buf (+ LMoveTo (1- (- LMoveEnd LMoveStart))))
-        (set-pd-cur-to-simd-eol! Buf)
-
-        ;; Clear the mark
-        (set-mark-flag! Buf #f))
+        (set-pd-cur-to-simd-eol! Buf))
       ;; else
       (begin
         (set-line-cur! Buf LMoveTo)
@@ -1537,7 +1612,7 @@ Return the number of characters or bytes received."
                 (replace-lines Buf 0 oldlen newstrlist))
             chars-read)))))
 
-  (define-method (replace-lines (Buf <CBuffer>) LStart LEnd StrList)
+(define (replace-lines Buf LStart LEnd StrList)
   "Removes the lines of text from LStart (inclusive) to LEnd (exclusive),
 and inserts StrList as a replacement to the deleted lines.
 
@@ -1552,23 +1627,9 @@ region."
   (warn-if-false (< LStart LEnd))
   (warn-if-false (<= LEnd (get-line-count Buf)))
   (warn-if-false (list-of-strings-length-0+? StrList))
-  (let ((strlistlen (length StrList))
-        (orig-len (get-line-count Buf)))
-    ;; Add this operation to the list of mutator operations.
-    (append-undo! Buf (list 'replace-lines
-                            LStart LEnd
-                            (sublist (get-text Buf) LStart LEnd)
-                            StrList
-                            (get-line-cur Buf)
-                            (get-pd-cur Buf)))
-    ;; Change the string list.
-    (let ((buftxt (get-text Buf)))
-      (set-text! Buf (append (take buftxt LStart)
-                             StrList
-                             (drop buftxt LEnd))))
-    ;; Clear the mark.
-    (set-mark-flag! Buf #f)
-    ;; Move the active data position.
+
+  (let ((orig-len (get-line-count Buf)))
+    (op-replace-lines! Buf LStart LEnd StrList)
     (cond
      ((= LEnd orig-len)
       ;; When the end of the buffer is being modified, set the active
@@ -1586,36 +1647,9 @@ region."
      (else
       ;; On a normal change operation, set the active data position to
       ;; the end of the last changed line.
-      (set-line-cur! Buf (+ LStart (1- strlistlen)))
-      (set-pd-cur-to-simd-eol! Buf)))
-    ;; Adjust bookmarks and tags
-    (adjust-poslist-replace-lines (get-tags Buf) LStart LEnd strlistlen)
-    (adjust-poslist-replace-lines (get-bookmarks Buf) LStart LEnd
-                                  strlistlen)))
+      (set-line-cur! Buf (+ LStart (1- (- LEnd LStart))))
+      (set-pd-cur-to-simd-eol! Buf)))))
 
-(define-method (undo-replace-lines (Buf <CBuffer>) LStart LEnd RemovedStrList
-                                   NewStrList
-                                   LCur PdCur)
-  "Undo replace lines. Note that this doesn't alter the undo stack."
-  (let ((buftxt (get-text Buf))
-        (lcountnew (length NewStrList))
-        (lcountremoved (length RemovedStrList)))
-    ;; Remove the new text and reinsert the old text.
-    (set-text! Buf (append (take buftxt LStart)
-                           RemovedStrList
-                           (drop buftxt (+ LStart lcountnew))))
-    ;; Clear the mark.
-    (set-mark-flag! Buf #f)
-    ;; Restore the active data position.
-    (set-line-cur! Buf LCur)
-    (set-pd-cur! Buf PdCur)
-    ;; Adjust bookmarks and tags.
-    (adjust-poslist-replace-lines (get-tags Buf)
-                                  LStart (+ LStart lcountnew)
-                                  lcountremoved)
-    (adjust-poslist-replace-lines (get-bookmarks Buf)
-                                  LStart (+ LStart lcountnew)
-                                  lcountremoved)))
 
 (define (substitute-in-lines Buf LStart LEnd Regex Replacement Flags)
   "This command shall search all the lines in the BUF from
@@ -1642,6 +1676,7 @@ substitution applies only to the Nth match in the line."
   (warn-if-false (cbuffer? Buf))
   (warn-if-false (integer-nonnegative? LStart))
   (warn-if-false (integer-nonnegative? LEnd))
+  (log-debug-locals)
 
   (do ((i LStart (1+ i)))
       ((>= i LEnd))
@@ -1655,7 +1690,7 @@ substitution applies only to the Nth match in the line."
         ;; Weirdly, regex substitute is Ed's only way to split a
         ;; line, so we handle '\n' here by splitting the lines.
         (let ((split-new-txt (string-split new-txt #\newline)))
-          (replace-lines Buf LStart (1+ LStart) split-new-txt))))))
+          (replace-lines Buf i (1+ i) split-new-txt))))))
 
 (define-method (get-bookmark-line (Buf <CBuffer>) Name)
   "Return the line number in which a bookmark has been placed, or
@@ -1676,43 +1711,61 @@ Even if there are multiple matches in a line, a single Tag is used."
   (warn-if-false (string? RegexString))
   (warn-if-false (string? Tag))
 
-  (if (= 0 (get-line-count Buf))
-      #f
-      ;; else
-      (let ((rx (make-regexp RegexString)))
-        (let loop ((i LStart))
-          (when (regexp-exec rx (get-text-line Buf i))
-            (tag-set! (get-tags Buf)
-                      Tag
-                      i
-                      (if (eqv? (get-implicit-movement-direction Buf) 'forward)
-                          0
-                          (string-length (get-text-line Buf i)))))
-          (when (< i LEnd)
-            (loop (1+ i)))))))
+  (when (> (get-line-count Buf) 0)
+    (let ((rx (make-regexp RegexString)))
+      (let loop ((i LStart)
+                 (tags-list '()))
+        (cond
+         ((and (< i LEnd) (regexp-exec rx (get-text-line Buf i)))
+          (loop (1+ i)
+                (append tags-list
+                        (list (list Tag
+                                    i
+                                    (if (eqv? (get-implicit-movement-direction Buf) 'forward)
+                                        0
+                                        (string-length (get-text-line Buf i))))))))
+         ((< i LEnd)
+          (loop (1+ i)
+                tags-list))
+         (else
+          (op-tags-set! Buf tags-list)))))))
 
 (define-method (regex-tag-nonmatching-lines (Buf <CBuffer>) LStart LEnd RegexString Tag)
-  "This procedure places a Tag at the beginning of all betweenLStart (inclusive)
-and LEnd (exclusive) that fail to match the regular expression RegexString."
-  (if (= 0 (get-line-count Buf))
-      #f
-      ;; else
-      (let ((rx (make-regexp RegexString)))
-        (let loop ((i LStart))
-          (unless (regexp-exec rx (get-text-line Buf i))
-            (tag-set! (get-tags Buf)
-                      Tag
-                      i
-                      (if (eqv? (get-implicit-movement-direction Buf) 'forward)
-                          0
-                          (string-length (get-text-line Buf i)))))
-          (when (< i LEnd)
-            (loop (1+ i)))))))
+  "This procedure places a TAG at the beginning of all lines
+between LStart (inclusive) and LEnd (exclusive) that do not match a regular
+expression string.
 
-(define-method (clear-tags (buf <CBuffer>) name)
+Even if there are multiple matches in a line, a single Tag is used."
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (integer-nonnegative? LStart))
+  (warn-if-false (integer-nonnegative? LEnd))
+  (warn-if-false (string? RegexString))
+  (warn-if-false (string? Tag))
+  
+  (when (> (get-line-count Buf) 0)
+    (let ((rx (make-regexp RegexString)))
+      (let loop ((i LStart)
+                 (tags-list '()))
+        (cond
+         ((and (< i LEnd) (not (regexp-exec rx (get-text-line Buf i))))
+          (loop (1+ i)
+                (append tags-list
+                        (list (list Tag
+                                    i
+                                    (if (eqv? (get-implicit-movement-direction Buf) 'forward)
+                                        0
+                                        (string-length (get-text-line Buf i))))))))
+         ((< i LEnd)
+          (loop (1+ i)
+                tags-list))
+         (else
+          (op-tags-set! Buf tags-list)))))))
+
+(define (clear-tags Buf Name)
   "This procedure removes any tags with the name Name."
-  (tag-remove-all-by-name! (get-tags buf) name))
-
+  (op-tags-remove! Buf
+                   (tag-get-all-by-name (get-tags Buf) Name)))
+                   
 (define-method (for-each-tagged-line (buf <CBuffer>) proc name)
   "For each line that contains the Tag (proceeding from beginning
 to end) the active data position is set to the location of that tag,
@@ -1734,8 +1787,8 @@ position will be returned to its original location."
            (proc buf)
            (unless (string=? OldStr (list-ref (get-text buf) LCur))
              (set! modified? #t)
-             (tag-remove-at-by-name! (get-tags buf)
-                                     name LCur PdCur)))))
+             (op-tags-remove! buf
+                              (list (list name LCur PdCur)))))))
      tags)
 
     ;; If nothing has changed, return the active data position
