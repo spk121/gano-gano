@@ -113,11 +113,10 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             undo-insert-character
 
             ;; Line-editing Operations
-            bookmark-bol
-            copy-lines
-            delete-lines
-            find-bookmarks-in-line
-            get-bookmark-line
+            bookmark-bol!                ;
+            copy-lines!                  ;
+            delete-lines!                ;
+            get-bookmark-line            ;
             regex-tag-lines
             regex-tag-nonmatching-lines
             clear-tags
@@ -1410,7 +1409,7 @@ position of the following line."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  OPERATIONS INSPIRED BY ED
 
-(define-method (bookmark-bol (Buf <CBuffer>) L Name)
+(define (bookmark-bol! Bus L Name)
   "Set a bookmark at the beginning of line L using Name."
 
   ;; Unusually, the Ed Mark command doesn't change the current line.
@@ -1418,6 +1417,7 @@ position of the following line."
   (warn-if-false (string? Name))
   (warn-if-false (>= L 0))
   (warn-if-false (< L (get-line-count Buf)))
+  (warn-if-false (cbuffer? Buf))
 
   (op-bookmark-set! Buf
                     L
@@ -1426,7 +1426,7 @@ position of the following line."
                         (get-text-cur-length Buf))
                     Name))
 
-(define (copy-lines Buf LCopyStart LCopyEnd LCopyTo)
+(define (copy-lines! Buf LCopyStart LCopyEnd LCopyTo)
   "Make a copy of the lines between LCopyStart (inclusive) and
 LCopyEnd (exclusive) and position that copy at the line LCopyTo.
 
@@ -1448,7 +1448,7 @@ copied."
 
         (set-pd-cur-to-simd-eol! Buf))))
 
-(define (delete-lines Buf LStart LEnd)
+(define (delete-lines! Buf LStart LEnd)
   "Remove the lines of text from LStart (inclusive) to LEnd (exclusive).
 
 The active data line is set to the beginning of the line after the
@@ -1458,6 +1458,7 @@ buffer, the active data position is set to the end of the last line."
   (warn-if-false (integer-nonnegative? LEnd))
   (warn-if-false (< LStart LEnd))
   (warn-if-false (<= LEnd (get-line-count Buf)))
+  (warn-if-false (cbuffer? Buf))
 
   (let ((orig-len (get-line-count Buf)))
     (op-delete-lines! Buf LStart LEnd)
