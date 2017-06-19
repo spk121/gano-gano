@@ -18,6 +18,7 @@
 
 (define-module (gano stringlist)
   #:use-module (srfi srfi-1)
+  #:use-module (mlg logging)
   #:export (
             ;; Operations
             strlist-insert-in-line
@@ -39,8 +40,10 @@
   (drop (take list end) start))
 
 (define (strlist-insert-in-line strlist LInsert PInsert txt)
-  (if (null? strlist)
-      strlist
+  (if (= LInsert (length strlist))
+      (begin
+        (warn-if-false (= 0 PInsert))
+        (append strlist (list txt)))
       ;; else
       (let ((linetxt (list-ref strlist LInsert)))
         (append

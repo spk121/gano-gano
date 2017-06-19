@@ -1,9 +1,10 @@
 (define-module (gano ecma48-repl)
   #:use-module (gano CBuffer)
-  #:use-module (oop goops)
-  #:use-module (srfi srfi-1)
-  #:use-module (rnrs io ports)
   #:use-module (ice-9 rdelim)
+  #:use-module (mlg logging)
+  #:use-module (oop goops)
+  #:use-module (rnrs io ports)
+  #:use-module (srfi srfi-1)
   )
 
 (include-from-path "gano/ecma48-machine.scm")
@@ -17,7 +18,11 @@
 
   (m_AlarmCallback #:init-value #f
 		   #:getter get-alarm-callback
-		   #:setter set-alarm-callback!))
+		   #:setter set-alarm-callback!)
+  (m_VertTabStops #:init-value '()
+		  #:getter get-vert-tab-stops
+		  #:setter set-vert-tab-stops!)
+  )
 
 (define (make-ecma48-repl)
   (let ((rpl (make <Ecma48Repl>)))
@@ -29,7 +34,9 @@
 (define (console-bell)
   (let ((cb (get-alarm-callback *self*)))
     (if cb
-	(cb))))
+	(cb)
+	;; else
+	(format #t " *BEEP* ~%"))))
 
 (define (state-machine-do state-id val)
   ;; Get the transition matrix for this state id
@@ -125,8 +132,7 @@ between the first two elements of a given entry."
      ;; CPR - Active Position Report
      #t)
     ((do_cr)
-     ;; CR - Carriage Return
-     #t)
+     (ecma48-carriage-return))
     ((do_ctc)
      ;; CTC - Cursor Tabulation Control
      #t)
@@ -151,11 +157,16 @@ between the first two elements of a given entry."
     ((do_print)
      ;; Write a G0 character
      (ecma48-insert-character val))
+    ((do_vts)
+     (ecma48-line-tabulation-set))
     (else
      (format #t "no dispatchable action for the curent key '~a'~%" key))))
 
 (set! *self* (make-ecma48-repl))
 (define *state-id* (fourth *ecma48-machine*))
+
+(define (ecma48-carriage-return)
+  (carriage-return! *self*))
 
 (define (ecma48-insert-character val)
   (insert-character-in-line! *self*
@@ -164,7 +175,31 @@ between the first two elements of a given entry."
 			     val))
 
 (define (ecma48-line-feed)
+  (carriage-return! *self*)
   (line-feed! *self*))
+
+(define (ecma48-line-tabulation)
+  "Jump to the next line tabulation stop."
+
+  ;; FIXME: this is a presentation operator, not a data operator.
+  (let ((vt (list-find-next-largest-entry
+	     (get-vert-tab-stops *self*)
+	     (get-line-cur *self*)))
+	(L (get-line-cur *self*))
+	(P (get-pd-cur *self*)))
+    (when vt
+      (pad-to-position! *self* vt P)
+      (set-line-cur! *self* vt)
+      (set-pd-cur! *self* P))))
+
+(define (ecma48-line-tabulation-set)
+  "Add the current line to the list of vertical tab stops."
+  (unless (member (get-line-cur *self*) (get-vert-tab-stops *self*))
+    (log-debug "New vertical tab stop added at line ~a~%" (get-line-cur *self*))
+    (set-vert-tab-stops! *self*
+			 (sort (append (get-vert-tab-stops *self*)
+				       (list (get-line-cur *self*)))
+			       <))))
 
 (define (ecma48-undo)
   (undo *self*))
@@ -174,7 +209,13 @@ between the first two elements of a given entry."
 (while #t
   (%dump-cbuffer *self*)
   (let ((c (get-u8 (current-input-port))))
-    (format #t "received ~s = ~s ~%" (integer->char c) c)
-    (let ((ret (state-machine-do *state-id* (integer->char c))))
-      (set! *state-id* ret)
-      ret)))
+    (if (eof-object? c)
+	(begin
+	  (format #t "received EOF ~%")
+	  (break))
+	;; else
+	(begin
+	  (format #t "received ~s = ~s ~%" (integer->char c) c)
+	  (let ((ret (state-machine-do *state-id* (integer->char c))))
+	    (set! *state-id* ret)
+	    ret)))))

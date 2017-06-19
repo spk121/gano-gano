@@ -105,18 +105,16 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             undo
 
             ;; Dumb TTY Operations
+            ;; bell                        ; BEL
             line-feed!                   ; LF
-            carriage-return             ; CR
+            carriage-return!             ; CR
             insert-character-in-line!
 
-            ;; Dumb TTY Undo Operations
-            undo-insert-character
-
             ;; Line-editing Operations
-            bookmark-bol!                ;
-            copy-lines!                  ;
-            delete-lines!                ;
-            get-bookmark-line            ;
+            bookmark-bol!
+            copy-lines!
+            delete-lines!
+            get-bookmark-line
             regex-tag-lines
             regex-tag-nonmatching-lines
             clear-tags
@@ -132,15 +130,10 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             substitute-in-lines
             write-lines-to-port
 
-            ;; Line-editing Undo Operations
-            undo-copy-lines
-            undo-delete-lines
-            undo-insert-lines
-            undo-move-lines
-            undo-replace-lines
-
             ;; ECMA-48 primitives
-
+            pad-lines!
+            pad-line-with-spaces!
+            pad-to-position!
             backspace                   ; BS
             cursor-backward-tabulation  ; CBT
             cursor-character-absolute   ; CHA
@@ -716,9 +709,10 @@ and the active data position."
                               (get-line-cur Buf)
                               (get-pd-cur Buf)))
       ;; Insert the text into the line
+      (log-debug-pk (get-text Buf))
       (set-text! Buf
                  (strlist-insert-in-line (get-text Buf) LInsert PInsert Txt))
-
+      (log-debug-pk (get-text Buf))
       ;; Move the active data position
       (set-line-and-pd-cur! Buf
                             (pos-insert-in-line (get-line-cur Buf)
@@ -1276,11 +1270,17 @@ direction opposite that of the implicit movement."
 ;; active data position to the line limit position of the current line.
 ;; CR
 
-(define-method (carriage-return (buf <CBuffer>))
+(define (carriage-return! buf)
   "If the implicit movement direction is 'forward, move the active
 data position to the line home position of the current line.  If the
 implicit movement direction is 'backward, move the active data
 position to the line-limit position of the current line."
+
+  ;; If there is no text, I guess a carriage return should create a
+  ;; line, right?
+  (when (null? (get-text buf))
+    (set-text! buf '("")))
+  
   (let ((pos (if (eqv? 'forward (get-implicit-movement-direction buf))
                        (get-home-pos buf)
                        (get-limit-pos buf)))
@@ -1289,7 +1289,7 @@ position to the line-limit position of the current line."
         (op-insert-in-line! buf (get-line-cur buf) pos (make-string (- pos len) #\space)))
   (set-pd-cur! buf pos)))
 
-(define-method (insert-character-in-line! (Buf <CBuffer>) LInsert PInsert C)
+(define (insert-character-in-line! Buf LInsert PInsert C)
   "Insert C into the addressed line LInsert at position PInsert.
 If LInsert is the line after the last line in the buffer, C is
 appended as a new line to the end of the text.  If PInsert is after
@@ -1300,6 +1300,7 @@ active data position will be set to the end of the inserted text."
   (warn-if-false (<= LInsert (get-line-count Buf)))
   (warn-if-false (<= PInsert (string-length (get-text-line Buf LInsert))))
   (warn-if-false (char? C))
+  (warn-if-false (cbuffer? Buf))
 
   (op-insert-in-line! Buf LInsert PInsert (string C))
   ;; Move the active data position
@@ -1409,7 +1410,7 @@ position of the following line."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  OPERATIONS INSPIRED BY ED
 
-(define (bookmark-bol! Bus L Name)
+(define (bookmark-bol! Buf L Name)
   "Set a bookmark at the beginning of line L using Name."
 
   ;; Unusually, the Ed Mark command doesn't change the current line.
@@ -1866,6 +1867,49 @@ and the active data position is unchanged."
                   ;; else
                   (loop (next-line i))))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; OPERATIONS INSPIRED BY ECMA48
+(define (pad-lines! Buf LCount)
+  "If necessary, add empty lines to Buf to ensure that
+it has LCount lines."
+  (when (< (get-line-count Buf) LCount)
+    (op-insert-lines! Buf
+                      (get-line-count Buf)
+                      (make-list (- LCount (get-line-count Buf)) ""))))
+  
+(define (pad-line-with-spaces! Buf L PCount)
+  "If necessary, append spaces to the end of line L to ensure that it
+has a length of PCount cells."
+  (let ((len (string-length (get-text-line Buf L))))
+    (when (< len PCount)
+      (op-insert-in-line! Buf L len (make-string (- PCount len) #\space)))))
+
+(define (pad-to-position! Buf L P)
+  "If necessary, append lines and spaces to the buffer to ensure that
+the position L,P is in the buffer.  E.G. that there are at least
+L+1 lines and that line L has a length of at least P+1."
+  (let ((lines-required (max 0 (- (1+ L) (get-line-count Buf)))))
+    (let ((spaces-required
+           (if (> lines-required 0)
+               (1+ P)
+               ;; else
+               (max 0 (- (1+ P) (string-length (get-text-line Buf L)))))))
+      (cond
+       ((and (= 0 lines-requred) (= 0 spaces-required))
+        ;; Do nothing
+        #f)
+       ((and (= 0 lines-required) (< 0 spaces-required))
+        (op-insert-in-line! Buf L (string-length (get-text-line Buf L))
+                            (make-string spaces-required #\space)))
+       ((and (< 0 lines-required) (< 0 spaces-required))
+        (op-insert-lines! Buf
+                          (get-line-count Buf)
+                          (append
+                           (make-list (- L (get-line-count Buf)) "")
+                           (list
+                            (make-string spaces-required #\space)))))))))
+
+        
 #|
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
