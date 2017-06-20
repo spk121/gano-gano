@@ -130,48 +130,46 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             substitute-in-lines
             write-lines-to-port
 
-            ;; ECMA-48 primitives
+            ;; Per-character Editing Operations
             pad-lines!
             pad-line-with-spaces!
             pad-to-position!
+            insert-string-in-line
+            replace-string-in-line
+            delete-string-in-line
             backspace                   ; BS
-            cursor-backward-tabulation  ; CBT
-            cursor-character-absolute   ; CHA
-            cursor-forward-tabulation   ; CHT
-            cursor-next-line            ; CNL
-            cursor-preceding-line       ; CPL
+            cancel                      ; CAN
             carriage-return             ; CR
-            cursor-tabulation-control   ; CTC
-            cursor-left                 ; CUB
-            cursor-down                 ; CUD
-            cursor-right                ; CUF
-            cursor-position             ; CUP
-            cursor-up                   ; CUU
-            cursor-line-tabulation      ; CVT
-            device-attributes           ; DA
             delete-character            ; DCH
             delete-line                 ; DL
+            dimension-text-area         ; DTA
             erase-character             ; ECH
+            erase-in-page               ; ED
+            erase-in-field              ; EF
             erase-in-line               ; EL
-            center-frame-line
-            center-frame-position
-            character-position-absolute
-            character-position-backward
-            character-position-forward
-            character-and-line-position
-            device-status-report        ; DSR
-            insert-character-space
-            insert-line
-            insert-nel
-            is-position-in-frame?
-            line-position-absolute
-            line-position-backward
-            line-position-forward
-            move-frame-line
-            render-frame
-            scroll-down
-            scroll-up
-            write-tabulation
+            character-position-absolute ; HPA
+            character-position-backward ; HPB
+            character-position-forward  ; HPR
+            character-and-line-position ; HVP
+            insert-character-space      ; ICH
+            insert-line                 ; IL
+            line-feed                   ; LF
+            next-line                   ; NEL
+            page-format-selection       ; PFS
+            page-position-absolute      ; PPA
+            page-position-backward      ; PPB
+            page-position-forward       ; PPR
+            quad                        ; QUAD
+            repeat                      ; REP
+            reverse-line-feed           ; RI
+            select-graphics-rendition   ; SGR
+            set-line-home               ; SLH
+            set-line-limit              ; SLL
+            set-page-home               ; SPH
+            set-page-limit              ; SPL
+            line-position-absolute      ; VPA
+            line-position-backward      ; VPB
+            line-position-forward       ; VPR
 
             get-line-count
             get-line-cur
