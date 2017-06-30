@@ -10,7 +10,8 @@ SCM_SRC = \
  gano/math.scm \
  gano/position.scm \
  gano/poslist.scm \
- gano/stringlist.scm
+ gano/stringlist.scm \
+ test/t-gano-CBuffer.scm
 
 SCM_OBJ := $(patsubst %.scm,%.go,$(SCM_SRC))
 SCM_SCRIPT_OBJ := $(patsubst %,%.go,$(SCM_SCRIPTS))

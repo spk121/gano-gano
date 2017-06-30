@@ -62,14 +62,14 @@
           (list LPos P)
           '())))))
 
-(define (pos-move-in-line LPos PPos LMove PMoveStart PMoveEnd PMoveAfter)
+(define (pos-move-in-line LPos PPos LMove PMoveStart PMoveEnd PMoveTo)
   "Adjust the position as if the text from PMoveStart (inclusive)
 to PMoveEnd (exclusive) was moved after the position PMoveAfter."
   (cond
    ((<> LPos LMove)
     (list LPos PPos))
    (else
-    (list LPos (x-move PPos PMoveStart PMoveEnd PMoveAfter)))))
+    (list LPos (x-move PPos PMoveStart PMoveEnd PMoveTo)))))
 
 (define (pos-copy-in-line LPos PPos LCopy PCopyStart PCopyEnd PCopyAfter followCopy)
   "Adjust the position as if the text from PCopyStart (inclusive) to

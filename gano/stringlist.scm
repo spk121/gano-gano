@@ -65,32 +65,34 @@
                               (string-drop linetxt PReplaceEnd)))
          (drop strlist (1+ LReplace))))))
 
-(define (strlist-move-in-line strlist LMove PMoveStart PMoveEnd PMoveAfter)
+(define (strlist-move-in-line strlist LMove PMoveStart PMoveEnd PMoveTo)
   (let* ((linetxt (list-ref strlist LMove))
          (movetxt (substring linetxt PMoveStart PMoveEnd)))
     (append
      (take strlist LMove)
      (list (cond
-            ((< PMoveAfter PMoveStart)
-             (string-append (substring linetxt 0 PMoveAfter)
+            ((< PMoveTo PMoveStart)
+             (string-append (substring linetxt 0 PMoveTo)
                             movetxt
-                            (substring linetxt PMoveAfter PMoveStart)
+                            (substring linetxt PMoveTo PMoveStart)
                             (substring linetxt PMoveEnd)))
+            ((= PMoveTo PMoveStart)
+             linetxt)
             (else
              (string-append (substring linetxt 0 PMoveStart)
-                            (substring linetxt PMoveEnd PMoveAfter)
+                            (substring linetxt PMoveEnd PMoveTo)
                             movetxt
-                            (substring linetxt PMoveAfter)))))
+                            (substring linetxt PMoveTo)))))
      (drop strlist (1+ LMove)))))
 
-(define (strlist-copy-in-line strlist LCopy PCopyStart PCopyEnd PCopyAfter)
+(define (strlist-copy-in-line strlist LCopy PCopyStart PCopyEnd PCopyTo)
   (let* ((linetxt (list-ref strlist LCopy))
          (copytxt (substring linetxt PCopyStart PCopyEnd)))
     (append
      (take strlist LCopy)
-     (list (string-append (substring linetxt 0 PCopyAfter)
+     (list (string-append (substring linetxt 0 PCopyTo)
                           copytxt
-                          (substring linetxt PCopyAfter)))
+                          (substring linetxt PCopyTo)))
      (drop strlist (1+ LCopy)))))
 
 ;; Remove character in line LDelete from PDeleteStart (inclusive) to

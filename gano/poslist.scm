@@ -41,6 +41,7 @@
             bookmark-get
             bookmark-get-at
             bookmark-get-all-in-line
+            bookmark-get-all-in-line-segment
             bookmark-get-all-in-lines
             bookmark-set!
             bookmark-remove!
@@ -51,6 +52,7 @@
             tag-get-all-by-name
             tag-get-all-at
             tag-get-all-in-line
+            tag-get-all-in-line-segment
             tag-get-all-in-lines
             tag-set!
             tag-remove-all-by-name!
@@ -60,7 +62,7 @@
             tag-name-at?
 
             adjust-poslist-insert-in-line!
-            adjust-poslist-replace-in-line
+            adjust-poslist-replace-in-line!
             adjust-poslist-move-in-line
             adjust-poslist-copy-in-line
             adjust-poslist-delete-in-line!
@@ -119,6 +121,25 @@
           (sort copy (lambda (B1 B2)
                        (< (+ (* 1000 (second B1)) (third B1))
                           (+ (* 1000 (second B1)) (third B2)))))))))
+
+(define (bookmark-get-all-in-line-segment poslist line pstart pend)
+  (warn-if-false (list? poslist))
+  (warn-if-false (integer-nonnegative? line))
+  (warn-if-false (integer-nonnegative? pstart))
+  (warn-if-false (integer-nonnegative? pend))
+  (warn-if-false (< pstart pend))
+  
+  (let ((bmarks (filter (lambda (entry)
+                          (and
+                           (equal? (list-ref entry 1) line)
+                           (<= pstart (list-ref entry 2))
+                           (< (list-ref entry 2) pend)))
+                        poslist)))
+    (if (null? bmarks)
+        '()
+        ;; else
+        (sort bmarks (lambda (B1 B2)
+                       (< (third B1) (third B2)))))))
 
 (define (bookmarks-get-not-at poslist line pos)
   (filter! (lambda (entry)
@@ -199,6 +220,25 @@
         (sort tags (lambda (B1 B2)
                      (< (+ (* 1000 (second B1)) (third B1))
                         (+ (* 1000 (second B1)) (third B2))))))))
+
+(define (tag-get-all-in-line-segment poslist line pstart pend)
+  (warn-if-false (list? poslist))
+  (warn-if-false (integer-nonnegative? line))
+  (warn-if-false (integer-nonnegative? pstart))
+  (warn-if-false (integer-nonnegative? pend))
+  (warn-if-false (< pstart pend))
+  
+  (let ((tags (filter (lambda (entry)
+                        (and
+                         (equal? (list-ref entry 1) line)
+                         (<= pstart (list-ref entry 2))
+                         (< (list-ref entry 2) pend)))
+                      poslist)))
+    (if (null? tags)
+        '()
+        ;; else
+        (sort tags (lambda (B1 B2)
+                     (< (third B1) (third B2)))))))
 
 (define (tag-name-at? poslist name line pos)
   (let ((entry (find (lambda (entry)
@@ -300,7 +340,7 @@
         (pos-insert-in-line LPos PPos LInsert PInsert LenInsert))
       poslist))))
 
-(define-syntax adjust-poslist-replace-in-line
+(define-syntax adjust-poslist-replace-in-line!
   (syntax-rules ()
     ((_ poslist LReplace PReplaceStart PReplaceEnd ReplaceLen)
      (adjust-positions

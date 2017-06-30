@@ -3,6 +3,18 @@
 
 (test-begin "t-gano-stringlist")
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; STRLIST MOVE IN LINE
+;; Moving a text backward
+(test-equal '("barfoo") (strlist-move-in-line '("foobar") 0 3 6 0))
+;; Moving a text forward
+(test-equal '("barfoo") (strlist-move-in-line '("foobar") 0 0 3 6))
+;; Moving a text nowhere
+(test-equal '("foobar") (strlist-move-in-line '("foobar") 0 2 4 2))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; STRLIST INSERT IN LINE
 ;; Inserting text into an empty strlist
 (test-equal '("foo") (strlist-insert-in-line '() 0 0 "foo"))
 ;; Inserting text before the beginning of the first line
