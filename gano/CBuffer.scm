@@ -823,7 +823,7 @@ and the active data position."
   "Undo a move-in-line operation."
   (let ((copylen (- PMoveEnd PMoveStart)))
     (set-text! Buf
-               (strlist-move-in-line (get-text Buf) LMove PMoveTo (+ PMoveTo copylen) PMoveStart))
+               (strlist-unmove-in-line (get-text Buf) LMove PMoveStart PMoveEnd PMoveTo))
     ;; Clear the mark
     (set-mark-flag! Buf #f)
     ;; Move the active data position

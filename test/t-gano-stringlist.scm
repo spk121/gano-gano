@@ -12,7 +12,6 @@
 ;; Moving a text nowhere
 (test-equal '("foobar") (strlist-move-in-line '("foobar") 0 2 4 2))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; STRLIST INSERT IN LINE
 ;; Inserting text into an empty strlist

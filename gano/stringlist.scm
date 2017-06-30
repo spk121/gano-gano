@@ -24,6 +24,7 @@
             strlist-insert-in-line
             strlist-replace-in-line
             strlist-move-in-line
+            strlist-unmove-in-line
             strlist-copy-in-line
             strlist-delete-in-line
 
@@ -71,18 +72,48 @@
     (append
      (take strlist LMove)
      (list (cond
+            ((= PMoveTo PMoveStart)
+             linetxt)
             ((< PMoveTo PMoveStart)
              (string-append (substring linetxt 0 PMoveTo)
                             movetxt
                             (substring linetxt PMoveTo PMoveStart)
                             (substring linetxt PMoveEnd)))
-            ((= PMoveTo PMoveStart)
-             linetxt)
             (else
              (string-append (substring linetxt 0 PMoveStart)
                             (substring linetxt PMoveEnd PMoveTo)
                             movetxt
                             (substring linetxt PMoveTo)))))
+     (drop strlist (1+ LMove)))))
+
+(define (strlist-unmove-in-line strlist LMove PMoveStart PMoveEnd PMoveTo)
+  (let* ((linetxt (list-ref strlist LMove))
+         (movetxt (substring linetxt PMoveStart PMoveEnd)))
+    (append
+     (take strlist LMove)
+     (list (cond
+            ((= PMoveTo PMoveStart)
+             linetxt)
+            ((< PMoveTo PMoveStart)
+             (let ((pre (substring linetxt 0 PMoveTo))
+                   (movetxt (substring linetxt
+                                       PMoveTo
+                                       (+ PMoveTo (- PMoveStart) PMoveEnd)))
+                   (pushtxt (substring linetxt
+                                       (+ PMoveTo (- PMoveStart) PMoveEnd)
+                                       PMoveEnd))
+                   (post (substring linetxt PMoveEnd)))
+               (string-append pre pushtxt movetxt post)))
+            (else
+             (let ((pre (substring linetxt 0 PMoveStart))
+                   (pushtxt (substring linetxt
+                                       PMoveStart
+                                       (+ PMoveStart (- PMoveEnd) PMoveTo)))
+                   (movetxt (substring linetxt
+                                       (+ PMoveStart (- PMoveEnd) PMoveTo)
+                                       PMoveTo))
+                   (post (substring linetxt PMoveTo)))
+               (string-append pre movetxt pushtxt post)))))
      (drop strlist (1+ LMove)))))
 
 (define (strlist-copy-in-line strlist LCopy PCopyStart PCopyEnd PCopyTo)

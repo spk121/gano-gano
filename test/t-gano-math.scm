@@ -3,9 +3,7 @@
 
 (test-begin "t-gano-math")
 
-;; Try the various combinations of x-move
-;; (x-move X MoveStart MoveEnd MoveTo)
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; FORWARDS MOVE
 ;; A position before a forward move shouldn't change.
 (test-equal 0 (x-move 0 1 3 10))
