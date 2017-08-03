@@ -133,6 +133,58 @@ XMoveEnd (exclusive) was moved to the location XMoveTo."
      (else
       (error "impossible error")))))
 
+(define (x-unmove X XMoveStart XMoveEnd XMoveTo)
+  "Adjust the position as if we were undoing the operation where the
+region XMoveStart (inclusive) to XMoveEnd (exclusive) was moved to the
+location XMoveTo."
+  (let ((MoveLen (- XMoveEnd XMoveStart)))
+    (log-debug-locals)
+    (cond
+     ((= XMoveTo XMoveStart)
+      ;; If we're not moving, then the position doesn't change.
+      X)
+
+     ((and (< XMoveStart XMoveTo) (< XMoveTo XMoveEnd))
+      ;; Can't move block inside itself.
+      (error "invalid unmove in line"))
+
+     ;; Pos is before text to move and point
+     ;; |--*--|move|--:--| => |--*----:|move|--|
+     ;; |--*--:--|move|--| => |--*--:|move|----|
+     ;; or Pos is after text to move and point
+     ;; |--|move|--:--*--| => |----:|move|--*--|
+     ;; |--:--|move|--*--| => |--:|move|----*--|
+     ((or (and (< X XMoveStart) (< X XMoveTo))
+          (and (>= X XMoveEnd) (>= X XMoveTo)))
+      X)
+
+     ;; Pos is inside the text to move
+     ;; |--|mo*ve|--:--| => |----:|mo*ve|--|
+     ;; |--:--|mo*ve|--| => |--:|mo*ve|----|
+     ((and (<= XMoveStart X) (< X XMoveEnd))
+      (cond
+       ((< XMoveTo XMoveStart)
+        (+ XMoveTo
+           (- X XMoveStart)))
+       (else
+        (+ XMoveTo
+           (- X XMoveStart)
+           (- MoveLen)))))
+
+     ;; Text to move is before point. Pos is between text and point.
+     ;; |--|move|--*--:--| => |----*--:|move|--|
+     ((and (<= XMoveEnd X) (< X XMoveTo))
+      (- X MoveLen))
+
+     ;; Text to move is after point. Pos is between point and text
+     ;; |--:--*--|move|--| => |--:|move|--*----|
+     ((and (<= XMoveTo X) (< X XMoveStart))
+      (+ X MoveLen))
+
+     (else
+      (error "impossible error")))))
+
+
 (define (x-copy X XCopyStart XCopyEnd XCopyTo followCopy)
   "Adjust the position X as if the region from XCopyStart (inclusive)
 to XCopyEnd (exclusive) was copied and inserted at the position
