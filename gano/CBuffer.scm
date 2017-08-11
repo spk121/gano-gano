@@ -95,6 +95,7 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
 
             ;; Needed for testing for now
             %dump-cbuffer
+            get-tab-size
             get-text-cur
             get-text
             get-undo
