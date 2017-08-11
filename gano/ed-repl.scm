@@ -644,7 +644,7 @@ A Suffix of 'l', 'n', or 'p' is allowed."
   ;; the insertion occurs. Zero means before the first line.
 
   ;; So in this case Ed address == CBuffer address
-  (insert-lines Repl (first AddrList) StrList)
+  (insert-lines! Repl (first AddrList) StrList)
   (unless (null? StrList)
     (set-modified! Repl #t))
   (unless (string-null? Suffix)
@@ -679,7 +679,7 @@ A Suffix of 'l', 'n', or 'p' is allowed."
   (let ((start (1- (max 1 (first AddrList))))
         (end (max 1 (second AddrList))))
     (if (null? (get-text Repl))
-        (insert-lines Repl start StrList)
+        (insert-lines! Repl start StrList)
         (replace-lines Repl start end StrList)))
   (set-modified! Repl #t)
   (unless (string-null? Suffix)
@@ -900,7 +900,7 @@ A Suffix of 'l', 'n', or 'p' is allowed."
   ;; the insertion occurs. Zero means before the first line.
 
   ;; So in this case Ed address - 1 == CBuffer address
-  (insert-lines Repl (max 0 (1- (first AddrList))) StrList)
+  (insert-lines! Repl (max 0 (1- (first AddrList))) StrList)
   (unless (null? StrList)
     (set-modified! Repl #t))
   (unless (string-null? Suffix)
