@@ -190,8 +190,8 @@ so the cursor is one-third of the distance to the edge of the frame."
         (frame-set-x-start! frame (max 0 x-frame-target))))))
 
 (define (frame-render-frame buf frame)
-  (let ([txt (cbuf-get-text buf)]
-        [tabsize (cbuf-get-tab-size buf)]
+  (let ([txt (get-text buf)]
+        [tabsize (get-tab-size buf)]
         [x-frame (frame-get-x-start frame)]
         [y-frame (frame-get-y-start frame)]
         [height (frame-get-height frame)]

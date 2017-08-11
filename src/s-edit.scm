@@ -234,7 +234,7 @@ that operate on it."
              (addstr vWinEdit filename)
              (refresh vWinEdit)
              (sleep 1)
-             (set! buf (cbuf-make-buffer))
+             (set! buf (make-empty-cbuffer))
              (set! frame (frame-make-frame (cols) editwinrows))
              (set! dsp (dsp-make-state))
              ;; Load the file
