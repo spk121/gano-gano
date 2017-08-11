@@ -85,6 +85,7 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
   #:use-module (mlg typechecking)
   #:use-module (mlg math)
   #:use-module (mlg logging)
+  #:use-module (mlg lists)
   #:use-module (mlg strings)
   #:export (
             <CBuffer>
@@ -192,11 +193,6 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             set-text!
             set-text-cur!
             ))
-
-(define (sublist lst start end)
-  "Extract a sublist from lst between start (inclusive) and
-end (exclusive)."
-  (drop (take lst end) start))
 
 (define-class <CBuffer> ()
 
