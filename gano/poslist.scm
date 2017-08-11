@@ -184,6 +184,10 @@
 
 
 (define (bookmark-name-at? poslist name line pos)
+  (warn-if-false (string? name))
+  (warn-if-false (integer-nonnegative? line))
+  (warn-if-false (integer-nonnegative? pos))
+  
   (let ((entry (assoc name poslist)))
     (and entry
          (equal? line (list-ref entry 1))
