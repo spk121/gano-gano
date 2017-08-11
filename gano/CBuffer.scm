@@ -620,7 +620,17 @@ and the active data position."
                                   (second old-bookmark-pos)))
           (append-undo! Buf (list 'bookmark-set LBookmark PBookmark Name))))))
 
-(define (undo-bookmark-move Buf LBookmark PBookmark Name LOldBookmark POldBookmark)
+(define (undo-bookmark-set! Buf LBookmark PBookmark Name)
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (integer-nonnegative? LBookmark))
+  (warn-if-false (integer-nonnegative? PBookmark))
+  (warn-if-false (<= LBookmark (get-line-count Buf)))
+  (warn-if-false (<= PBookmark (string-length (get-text-line Buf LBookmark))))
+  (warn-if-false (string? Name))
+
+  (bookmark-remove! (get-bookmarks Buf) Name))
+
+(define (undo-bookmark-move! Buf LBookmark PBookmark Name LOldBookmark POldBookmark)
   (warn-if-false (cbuffer? Buf))
   (warn-if-false (integer-nonnegative? LBookmark))
   (warn-if-false (integer-nonnegative? PBookmark))
@@ -633,16 +643,6 @@ and the active data position."
   (warn-if-false (string? Name))
 
   (bookmark-set! (get-bookmarks Buf) Name LOldBookmark POldBookmark))
-
-(define (undo-bookmark-set Buf LBookmark PBookmark Name)
-  (warn-if-false (cbuffer? Buf))
-  (warn-if-false (integer-nonnegative? LBookmark))
-  (warn-if-false (integer-nonnegative? PBookmark))
-  (warn-if-false (<= LBookmark (get-line-count Buf)))
-  (warn-if-false (<= PBookmark (string-length (get-text-line Buf LBookmark))))
-  (warn-if-false (string? Name))
-
-  (bookmark-remove! (get-bookmarks Buf) Name))
 
 (define (op-tags-set! Buf ListOfTags)
   (warn-if-false (cbuffer? Buf))
@@ -800,21 +800,20 @@ and the active data position."
               LostTags)))
 
 (define (op-move-in-line! Buf LMove PMoveStart PMoveEnd PMoveTo)
-  (let ((LenMove (- PMoveEnd PMoveStart)))
-    ;; Overwrite the text in the line, and adjust bookmarks and tags
-    (set-text! Buf
-               (strlist-move-in-line (get-text Buf) LMove PMoveStart PMoveEnd PMoveTo))
-    (adjust-poslist-move-in-line (get-tags Buf) LMove PMoveStart PMoveEnd PMoveTo)
-    (adjust-poslist-move-in-line (get-bookmarks Buf) LMove PMoveStart PMoveEnd PMoveTo)
+  ;; Overwrite the text in the line, and adjust bookmarks and tags
+  (set-text! Buf
+             (strlist-move-in-line (get-text Buf) LMove PMoveStart PMoveEnd PMoveTo))
+  (adjust-poslist-move-in-line (get-tags Buf) LMove PMoveStart PMoveEnd PMoveTo)
+  (adjust-poslist-move-in-line (get-bookmarks Buf) LMove PMoveStart PMoveEnd PMoveTo)
 
-    (append-undo! Buf (list 'move-in-line LMove PMoveStart PMoveEnd PMoveTo
-                            (get-line-cur Buf) (get-pd-cur Buf)))
+  (append-undo! Buf (list 'move-in-line LMove PMoveStart PMoveEnd PMoveTo
+                          (get-line-cur Buf) (get-pd-cur Buf)))
 
-    ;; Move the activive data position
-    (set-line-and-pd-cur! Buf (pos-move-in-line (get-line-cur Buf) (get-pd-cur Buf)
-                                                LMove PMoveStart PMoveEnd PMoveTo))
-    ;; Clear the mark
-    (set-mark-flag! Buf #f)))
+  ;; Move the activive data position
+  (set-line-and-pd-cur! Buf (pos-move-in-line (get-line-cur Buf) (get-pd-cur Buf)
+                                              LMove PMoveStart PMoveEnd PMoveTo))
+  ;; Clear the mark
+  (set-mark-flag! Buf #f))
 
 (define (undo-move-in-line! Buf LMove PMoveStart PMoveEnd PMoveTo LCur PdCur)
   "Undo a move-in-line operation."
@@ -1069,8 +1068,7 @@ with strlist"
   (warn-if-false (< LStart LEnd))
   (warn-if-false (<= LEnd (get-line-count Buf)))
   (warn-if-false (list-of-strings-length-0+? StrList))  
-  (let ((strlistlen (length StrList))
-        (orig-len (get-line-count Buf)))
+  (let ((strlistlen (length StrList)))
     ;; And undo info.
     (append-undo! Buf (list 'replace-lines
                             LStart LEnd
@@ -1436,13 +1434,13 @@ LCopyEnd (exclusive) to the line LCopyTo."
                            (sixth last-op)) ;PdCur
           #t)
          ((eqv? (car last-op) 'bookmark-set)
-          (undo-bookmark-set Buf
+          (undo-bookmark-set! Buf
                              (second last-op) ;LBookmark
                              (third last-op) ;PBookmark
                              (fourth last-op)) ;Name
           #t)
          ((eqv? (car last-op) 'bookmark-move)
-          (undo-bookmark-move Buf
+          (undo-bookmark-move! Buf
                              (second last-op) ;LBookmark
                              (third last-op) ;PBookmark
                              (fourth last-op) ;Name
