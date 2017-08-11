@@ -273,10 +273,11 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
 ;; CONSTRUCTORS
 
 (define (make-empty-cbuffer)
-  (let ((CB (make <CBuffer>)))
-    CB))
+  "Creates a <CBuffer> with a default empty text buffer."
+  (make <CBuffer>))
 
 (define (cbuffer? buf)
+  "Returns #t if BUF is of type <CBuffer>"
   (is-a? buf <CBuffer>))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
