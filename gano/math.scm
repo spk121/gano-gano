@@ -21,6 +21,7 @@
   #:export(x-insert-before
            x-insert
            x-replace
+           x-unmove
            x-move
            x-copy
            x-delete
