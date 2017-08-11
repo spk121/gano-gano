@@ -4,6 +4,100 @@
 
 (test-begin "t-gano-CBuffer")
 
+;; OP BOOKMARK SET
+(define op-bookmark-set! (@@ (gano CBuffer) op-bookmark-set!))
+(define buf (make-empty-cbuffer))
+(insert-lines! buf 0 '("one" "two" "three"))
+(op-bookmark-set! buf 1 2 "bmark")
+(%dump-cbuffer buf)
+
+(test-assert "bookmark can be set"
+  (bookmark-name-at? (get-bookmarks buf) "bmark" 1 2))
+
+(op-bookmark-set! buf 1 0 "bmark")
+(test-assert "bookmark can be moved"
+  (bookmark-name-at? (get-bookmarks buf) "bmark" 1 0))
+
+(undo buf)
+
+(test-assert "bookmark can be unmoved"
+  (bookmark-name-at? (get-bookmarks buf) "bmark" 1 2))
+
+(undo buf)
+
+(test-equal "bookmark can be unset"
+  #f
+  (bookmark-get (get-bookmarks buf) "bmark"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; OP INSERT IN LINE
+
+(define op-insert-in-line! (@@ (gano CBuffer) op-insert-in-line!))
+(define buf (make-empty-cbuffer))
+(insert-lines! buf 0 '("one" "two" "three"))
+
+;; change "two" to "twoTWO"
+(op-insert-in-line! buf 1 3 "TWO")
+
+(test-equal "op-insert-in-line! can insert at EOL"
+  '("one" "twoTWO" "three")
+  (get-text buf))
+
+(undo buf)
+
+(test-equal "can undo op-insert-in-line! at EOL"
+  '("one" "two" "three")
+  (get-text buf))
+
+;; change "three" to "THREEthree"
+(set-text! buf '("one" "two" "three"))
+(op-insert-in-line! buf 2 0 "THREE")
+
+(test-equal "op-insert-in-line! can insert at BOL"
+  '("one" "two" "THREEthree")
+  (get-text buf))
+
+(undo buf)
+
+(test-equal "can undo op-insert-in-line! at BOL"
+  '("one" "two" "three")
+  (get-text buf))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; OP REPLACE IN LINE
+
+(define op-replace-in-line! (@@ (gano CBuffer) op-replace-in-line!))
+(define buf (make-empty-cbuffer))
+(insert-lines! buf 0 '("one" "two" "three"))
+
+;; change "two" to "twoTWO"
+(op-replace-in-line! buf 1 3 3 "TWO")
+
+(test-equal "op-replace-in-line! can replace at EOL"
+  '("one" "twoTWO" "three")
+  (get-text buf))
+
+(undo buf)
+
+(test-equal "can undo op-replace-in-line! at EOL"
+  '("one" "two" "three")
+  (get-text buf))
+
+;; change "three" to "THREE"
+(set-text! buf '("one" "two" "three"))
+(op-replace-in-line! buf 2 0 5 "THREE")
+
+(test-equal "op-replace-in-line! can replace at BOL"
+  '("one" "two" "THREE")
+  (get-text buf))
+
+(undo buf)
+
+(test-equal "can undo op-replace-in-line! at BOL"
+  '("one" "two" "three")
+  (get-text buf))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OP MOVE IN LINE
 (define op-move-in-line! (@@ (gano CBuffer) op-move-in-line!))
 (define buf (make-empty-cbuffer))
