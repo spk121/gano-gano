@@ -57,7 +57,11 @@
 (define (strlist-replace-in-line strlist LReplace PReplaceStart PReplaceEnd txt)
   (let* ((linetxt (list-ref strlist LReplace)))
     (if (string-null? txt)
-        strlist
+        (append
+         (take strlist LReplace)
+         (list (string-append (string-take linetxt PReplaceStart)
+                              (string-drop linetxt PReplaceEnd)))
+         (drop strlist (1+ LReplace)))
         ;; else
         (append
          (take strlist LReplace)
