@@ -69,6 +69,8 @@
 (define op-replace-in-line! (@@ (gano CBuffer) op-replace-in-line!))
 (define buf (make-empty-cbuffer))
 (insert-lines! buf 0 '("one" "two" "three"))
+(op-bookmark-set! buf 1 2 "B1")
+(op-bookmark-set! buf 2 2 "B2")
 
 ;; change "two" to "twoTWO"
 (op-replace-in-line! buf 1 3 3 "TWO")
@@ -96,6 +98,13 @@
 (test-equal "can undo op-replace-in-line! at BOL"
   '("one" "two" "three")
   (get-text buf))
+
+(op-replace-in-line! buf 1 1 2 "W")
+
+(test-equal "op-replace-in-line! can replace 1 character"
+  '("one" "tWo" "three")
+  (get-text buf))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OP MOVE IN LINE
