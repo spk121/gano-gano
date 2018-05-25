@@ -38,15 +38,14 @@
 ;; OP TAGS SET
 (define op-tags-set! (@@ (gano CBuffer) op-tags-set!))
 (define buf (make-empty-cbuffer))
-(insert-lines! buf 0 '("one two three"))
+(insert-lines! buf 0 '("one" "two" "three"))
 
-(op-tags-set! buf '((tag 1 2)))
-(%dump-cbuffer buf)
+(op-tags-set! buf '(("tag" 1 2)))
 
 (test-assert "tag can be set"
   (tag-name-at? (get-tags buf) "tag" 1 2))
 
-(op-tags-set! buf '((1 0 "tag")))
+(op-tags-set! buf '(("tag" 1 0)))
 (test-assert "different tags can have the same name"
   (and (tag-name-at? (get-tags buf) "tag" 1 0)
        (tag-name-at? (get-tags buf) "tag" 1 2)))
@@ -59,20 +58,26 @@
 (undo buf)
 
 (test-equal "tags can be removed"
-  #f
+  '()
   (tag-get-all-by-name (get-tags buf) "tag"))
 
 ;; Test that multiple tags with different names can be at the
 ;; same location
 
-(op-tags-set! buf '((alpha 1 2)
-		    (bravo 1 2)))
+(op-tags-set! buf '(("alpha" 1 2)))
+(op-tags-set! buf '(("bravo" 1 2)))
 (test-assert "can set multiple tags at the same location"
-  (and (tag-name-at? (get-tags buf) 'alpha 1 2)
-       (tag-name-at? (get-tags buf) 'bravo 1 2)))
+  (and (tag-name-at? (get-tags buf) "alpha" 1 2)
+       (tag-name-at? (get-tags buf) "bravo" 1 2)))
 
 ;; Test that removing one tag at a given location doesn't remove all
 ;; tags at the location
+(undo buf)
+
+(test-assert "undo op-tag-set! doesn't remove all tags at a location"
+  (and (tag-name-at? (get-tags buf) "alpha" 1 2)
+       (not (tag-name-at? (get-tags buf) "bravo" 1 2))))
+
 
 ;; Test that trying to set multiple tags with the same name at the
 ;; same location only leave a single tag of that name at the location.
