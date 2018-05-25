@@ -4,6 +4,7 @@
 
 (test-begin "t-gano-CBuffer")
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OP BOOKMARK SET
 (define op-bookmark-set! (@@ (gano CBuffer) op-bookmark-set!))
 (define buf (make-empty-cbuffer))
@@ -28,6 +29,60 @@
 (test-equal "bookmark can be unset"
   #f
   (bookmark-get (get-bookmarks buf) "bmark"))
+
+;; Test that setting an out-of-range bookmark fails
+
+;; Test that setting a bookmark with an invalid name fails
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; OP TAGS SET
+(define op-tags-set! (@@ (gano CBuffer) op-tags-set!))
+(define buf (make-empty-cbuffer))
+(insert-lines! buf 0 '("one two three"))
+
+(op-tags-set! buf '((tag 1 2)))
+(%dump-cbuffer buf)
+
+(test-assert "tag can be set"
+  (tag-name-at? (get-tags buf) "tag" 1 2))
+
+(op-tags-set! buf '((1 0 "tag")))
+(test-assert "different tags can have the same name"
+  (and (tag-name-at? (get-tags buf) "tag" 1 0)
+       (tag-name-at? (get-tags buf) "tag" 1 2)))
+
+(undo buf)
+
+(test-assert "remove a tag doesn't remove all tags with the same name"
+  (tag-name-at? (get-tags buf) "tag" 1 2))
+
+(undo buf)
+
+(test-equal "tags can be removed"
+  #f
+  (tag-get-all-by-name (get-tags buf) "tag"))
+
+;; Test that multiple tags with different names can be at the
+;; same location
+
+(op-tags-set! buf '((alpha 1 2)
+		    (bravo 1 2)))
+(test-assert "can set multiple tags at the same location"
+  (and (tag-name-at? (get-tags buf) 'alpha 1 2)
+       (tag-name-at? (get-tags buf) 'bravo 1 2)))
+
+;; Test that removing one tag at a given location doesn't remove all
+;; tags at the location
+
+;; Test that trying to set multiple tags with the same name at the
+;; same location only leave a single tag of that name at the location.
+
+;; Test that setting multiple tags with the same name at the same location
+;; only sets one undo operation.
+
+;; Test that setting an out of range tag fails
+
+;; Test that setting an invalid tag name fails
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OP INSERT IN LINE
@@ -105,6 +160,11 @@
   '("one" "tWo" "three")
   (get-text buf))
 
+(undo buf)
+
+(test-equal "can undo op-replace-in-line! replace 1 character"
+  '("one" "two" "three")
+  (get-text buf))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OP MOVE IN LINE
