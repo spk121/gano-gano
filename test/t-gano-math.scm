@@ -4,6 +4,19 @@
 (test-begin "t-gano-math")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; INSERT
+;; A position before the insertion shouldn't change.
+(test-equal 0 (x-insert 0 3 4))
+;; A position just before the insertion shouldn't change.
+(test-equal 2 (x-insert 2 3 4))
+;; A position at the insertion location should move forward count
+;; locations.
+(test-equal 7 (x-insert 3 3 4))
+;; A position after the insertion location should move forward
+;; count locations
+(test-equal 8 (x-insert 4 3 4))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; FORWARDS MOVE
 ;; A position before a forward move shouldn't change.
 (test-equal 0 (x-move 0 1 3 10))
