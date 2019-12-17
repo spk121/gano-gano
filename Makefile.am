@@ -105,7 +105,10 @@ CLEANFILES += src/gano-ed
 # TEST
 
 TESTS = \
-  test/t-gano-math.scm
+  test/t-gano-math.scm \
+  test/t-gano-CBuffer.scm \
+  test/t-gano-poslist.scm \
+  test/t-gano-stringlist.scm
 TEST_EXTENSIONS = .scm
 
 XFAIL_TESTS =
@@ -113,6 +116,8 @@ XFAIL_TESTS =
 SCM_LOG_DRIVER = \
   $(top_builddir)/tools/uninstalled-env \
   $(GUILE) --no-auto-compile $(top_srcdir)/build-aux/test-driver.scm
+
+EXTRA_DIST += $(TESTS) $(XFAIL_TESTS)
 
 test: check
 

@@ -62,6 +62,4 @@ AS_CASE(["x$with_gnu_filesystem_hierarchy"], [xyes],
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([tools/uninstalled-env], [chmod +x tools/uninstalled-env])
-AC_REQUIRE_AUX_FILE([test-driver])
-AC_REQUIRE_AUX_FILE([test-driver.scm])
 AC_OUTPUT

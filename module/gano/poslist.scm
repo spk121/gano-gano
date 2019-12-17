@@ -255,7 +255,7 @@
         #t
         #f)))
 
-;; This syntax takes a list of entries of the form ('name Line Pos)
+;; This syntax takes a list of entries of the form ("name" Line Pos)
 ;; and a new name, line, and pos, and it inserts the new entry if it is
 ;; not a duplicate of an existing entry.
 (define-syntax tag-set!
@@ -272,8 +272,8 @@
                     "Sort two tags: A and B"
                     (if (= (second A) (second B))
                         (if (= (third A) (third B))
-                            (string<? (symbol->string (first A))
-                                      (symbol->string (first B)))
+                            (string<? (first A)
+                                      (first B))
                             ;; else
                             (< (third A) (third B)))
                         ;; else
