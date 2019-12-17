@@ -21,9 +21,9 @@
 ;;; <http://www.gnu.org/licenses/>
 
 (use-modules (ice-9 getopt-long)
-	     (gano ed-repl)
-	     (mlg utils)
-	     (mlg strings))
+             (gano ed-repl)
+             (mlg utils)
+             (mlg strings))
 ;; signals
 (define *repl* #f)	     ; If set, the current repl.
 (define mutex 0)	     ; if set, signals set flags

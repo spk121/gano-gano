@@ -198,7 +198,9 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             ;; set-tab-size!
             ;; set-text!
             ;; set-text-cur!
-            ))
+            )
+  #:re-export (get-text-line get-text-cur))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; METHODS
@@ -694,7 +696,7 @@ Even if there are multiple matches in a line, a single Tag is used."
   (warn-if-false (integer-nonnegative? LEnd))
   (warn-if-false (string? RegexString))
   (warn-if-false (string? Tag))
-  
+
   (when (> (get-line-count Buf) 0)
     (let ((rx (make-regexp RegexString)))
       (let loop ((i LStart)
@@ -718,7 +720,7 @@ Even if there are multiple matches in a line, a single Tag is used."
   "This procedure removes any tags with the name Name."
   (op-tags-remove! Buf
                    (tag-get-all-by-name (get-tags Buf) Name)))
-                   
+
 (define-method (for-each-tagged-line (buf <CBuffer>) proc name)
   "For each line that contains the Tag (proceeding from beginning
 to end) the active data position is set to the location of that tag,
@@ -843,7 +845,7 @@ it has LCount lines."
     (op-insert-lines! Buf
                       (get-line-count Buf)
                       (make-list (- LCount (get-line-count Buf)) ""))))
-  
+
 (define (pad-line-with-spaces! Buf L PCount)
   "If necessary, append spaces to the end of line L to ensure that it
 has a length of PCount cells."
@@ -876,7 +878,7 @@ L+1 lines and that line L has a length of at least P+1."
                            (list
                             (make-string spaces-required #\space)))))))))
 
-        
+
 #|
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
