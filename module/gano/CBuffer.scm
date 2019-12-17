@@ -1,6 +1,6 @@
 ;;; -*- mode: scheme; coding: us-ascii; indent-tabs-mode: nil; -*-
 ;;; (gano CBuffer) - an storage model for lines of text
-;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
+;;; Copyright (C) 2017,2019 Michael L. Gran <spk121@yahoo.com>
 ;;;
 ;;; This program is free software: you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License as
@@ -96,6 +96,7 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
                bookmark:pd
                get-bookmarks
                get-line-count
+               get-line-cur
                get-pd-cur
                get-text
                get-tags
