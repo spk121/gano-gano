@@ -1,6 +1,7 @@
 # Untracked files
 *.tar
 *.gz
+nano-*
 
 # Build products
 TAGS
@@ -8,11 +9,26 @@ TAGS
 
  
 # Temp files
+.*
 *~
+\#*
 *.tmp
 *.log
+aclocal.m4
+autom4te.cache
 
-Makefile.am
+build-aux/install-sh
+build-aux/missing
+config.status
+*.old
+*.so
+Makefile
 Makefile.in
 configure
 
+src/gano-ed
+
+*.trs
+*.log
+
+tools/uninstalled-env

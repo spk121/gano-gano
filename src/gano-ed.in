@@ -1,4 +1,4 @@
-#!/usr/bin/guile \
+#!GUILE \
 --debug -e main
 !#
 
@@ -64,7 +64,7 @@
     ;; If I catch a sigint, restart restart processing from here.
 
     (when (file-port? (current-input-port))
-      (setvbuf (current-input-port) _IOLBF))
+      (setvbuf (current-input-port) 'line))
 
     (set! *repl* (make-ed-repl #:promptstring (option-ref options 'prompt #f)
 			       #:scripted (option-ref options 'scripted #f)
