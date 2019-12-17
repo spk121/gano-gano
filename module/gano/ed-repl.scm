@@ -154,7 +154,7 @@
                        homedir
                        interactive)
   (let ((rpl (make <EdRepl>)))
-    (when promptstring (set-prompt-string! repl promptstring))
+    (when promptstring (set-prompt-string! rpl promptstring))
     (when scripted (set-scripted! rpl scripted))
     (when verbose (set-garrulous! rpl verbose))
     (when debug (set-verbose! rpl debug))

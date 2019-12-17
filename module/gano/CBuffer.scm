@@ -862,7 +862,7 @@ L+1 lines and that line L has a length of at least P+1."
                ;; else
                (max 0 (- (1+ P) (string-length (get-text-line Buf L)))))))
       (cond
-       ((and (= 0 lines-requred) (= 0 spaces-required))
+       ((and (= 0 lines-required) (= 0 spaces-required))
         ;; Do nothing
         #f)
        ((and (= 0 lines-required) (< 0 spaces-required))
