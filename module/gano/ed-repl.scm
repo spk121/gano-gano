@@ -286,6 +286,8 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
                              (ed-repl-parse/validate-3rd-address repl port))
                             ((bookmark)
                              (ed-repl-parse/validate-bookmark-name repl port))
+                            ((comment)
+                             (ed-repl-parse-comment repl port))
                             ((file)
                              (ed-repl-parse/validate-filename repl port))
                             ((regex)
@@ -381,6 +383,13 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
       #f)
      (else
       (last addr3)))))
+
+(define-method (ed-repl-parse-comment (repl <EdRepl>) port)
+  "Extracts a comment from the given port.  It will return the string,
+or #f on failure."
+  (if (eof-object? (peek-char port))
+      #f
+      (string-trim-both (read-line port))))
 
 (define-method (ed-repl-parse/validate-filename (repl <EdRepl>) port)
   "Extracts a filename from the given port.  If there is not text to
@@ -686,6 +695,9 @@ A Suffix of 'l', 'n', or 'p' is allowed."
     (ed-repl-display-lines Repl
                            (1+ (get-line-cur Repl))
                            (1+ (get-line-cur Repl)) Suffix))
+  0)
+
+(define-method (op-comment (repl <EdRepl>) addr shcmd suffix append)
   0)
 
 (define-method (op-copy (Repl <EdRepl>) AddrList Addr3 Suffix append)
@@ -1237,6 +1249,7 @@ matched strings with the replacement."
      (#\w    2 1     $     #f file          #f #f  ,op-write)
      (#\=    1 $     #f    #f null          #t #f  ,op-line-number)
      (#\!    0 #f    #f    #f shell         #f #f  ,op-shell-escape)
+     (#\#    0 #f    #f    #f comment       #f #f  ,op-comment)
      (#\nul  1 dot+1 #f    #f null          #t #f  ,op-null))))
 
 (define (ed-repl-read-file Repl FileNameOrCmd)
