@@ -92,14 +92,25 @@ CLEANFILES += \
 ################################################################
 # SRC
 
-dist_bin_SCRIPTS = src/gano-ed
+dist_bin_SCRIPTS = \
+  src/gano-dumb \
+  src/gano-ed
+
+src/gano-dumb: src/gano-dumb.in
+	sed s^GUILE^$(GUILE)^ $< > $@
+	chmod 755 $@
 
 src/gano-ed: src/gano-ed.in
 	sed s^GUILE^$(GUILE)^ $< > $@
 	chmod 755 $@
 
-EXTRA_DIST += src/gano-ed.in
-CLEANFILES += src/gano-ed
+EXTRA_DIST += \
+  src/gano-dumb.in \
+  src/gano-ed.in
+
+CLEANFILES += \
+  src/gano-dumb \
+  src/gano-ed
 
 ################################################################
 # TEST

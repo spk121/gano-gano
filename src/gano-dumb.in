@@ -1,0 +1,104 @@
+#!GUILE \
+--debug -e main
+!#
+
+;;; -*- mode: scheme; coding: us-ascii; indent-tabs-mode: nil; -*-
+;;; gano-dumb - a dumb TTY like editor
+;;; Copyright (C) 2017, 2019 Michael L. Gran <spk121@yahoo.com>
+;;;
+;;; This program is free software: you can redistribute it and/or
+;;; modify it under the terms of the GNU General Public License as
+;;; published by the Free Software Foundataion, either version 3 of
+;;; this License, or (at your option) any later version.
+;;;
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see
+;;; <http://www.gnu.org/licenses/>
+
+(use-modules (ice-9 getopt-long)
+             (ice-9 rdelim)
+             (oop goops)
+             (gano CBuffer))
+
+(define *cbuf* #f)
+(define *interactive* #f)
+
+(define-method (describe-buf (buf <CBuffer>))
+  (format #t "Position: Line ~a, Pos ~a ~%"
+          (get-line-cur buf) (get-pd-cur buf)))
+
+(define-method (write-buf (cbuf <CBuffer>))
+  (let loop ((i 1) (lst (get-text cbuf)))
+    (unless (null? lst)
+      (format #t "~a  |~a| " i (car lst))
+      (newline)
+      (loop (1+ i) (cdr lst)))))
+
+(define (main args)
+  (let* ((option-spec '((prompt (single-char #\p) (value #t))
+                        (verbose (single-char #\v) (value #f))))
+         (options (getopt-long args option-spec))
+         (argv (option-ref options '() '())))
+
+    ;; If one of the remaining arguments is a sole hyphen,
+    ;; some versions of ed make this scripted mode.
+
+    ;; Determine if we're interactive.
+    ;; isatty  | file-port?  |
+    ;; yes     | yes         | interactive
+    ;; no      | yes         | input is piped into
+    ;; no      | no          | probably running under repl
+    (set! *interactive* (or (and (isatty? (current-input-port))
+                                 (file-port? (current-input-port)))
+                            (and (not (isatty? (current-input-port)))
+                                 (not (file-port? (current-input-port))))))
+
+    (when *interactive*
+      (format #t "Enter lines of text.  When done entering text,~%")
+      (format #t "type <Ctrl-D> <Enter>.  The text you typed will be~%")
+      (format #t "returned.~%"))
+
+    (when (file-port? (current-input-port))
+      (setvbuf (current-input-port) 'line))
+
+    (sigaction SIGHUP signal-hup)
+    (sigaction SIGQUIT SIG_IGN)
+    (sigaction SIGINT signal-int)
+
+    (let ((cbuf (make-empty-cbuffer))
+          (prompt (option-ref options 'prompt ""))
+          (verbose (option-ref options 'verbose #f)))
+      (set! *cbuf* cbuf)
+      (display prompt)
+      (let loop ((line (read-line)))
+        (when verbose
+          (describe-buf cbuf))
+        (display prompt)
+        (if (not (eof-object? line))
+
+            ;; Read and insert a line
+            (begin
+              (insert-lines! cbuf (get-line-count cbuf)
+                                (list line))
+              (loop (read-line)))
+
+            ;; Else, output and quit
+            (begin
+              (newline)
+              (write-buf cbuf))))))
+  0)
+
+(define (handle-hup signo)
+  (and=> *cbuf* write-buf)
+  (primitive-_exit 2))
+
+(define (signal-int signo)
+  (handle-hup signo))
+
+(define (signal-hup signo)
+  (handle-hup signo))
