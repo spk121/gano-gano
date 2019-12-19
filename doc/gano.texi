@@ -423,9 +423,9 @@
 @c provided the MMC is eligible for relicensing.
 
 @c %**start of header
-@setfilename CBuffer.info
+@setfilename gano.info
 @include version.texi
-@settitle CBuffer @value{VERSION}
+@settitle The Gano Text Processing Project @value{VERSION}
 
 @syncodeindex fn cp
 @syncodeindex vr cp
@@ -457,7 +457,7 @@ Free Documentation License".
 @end direntry
 
 @titlepage
-@title CBuffer
+@title The Gano Text Processing Project
 @subtitle For version @value{VERSION}, @value{UPDATED}
 @author Michael L. Gran
 
@@ -471,17 +471,53 @@ Free Documentation License".
 @contents
 
 @ifnottex
-@node Top, Reference, (dir), (dir)
+@node Top
 @top CBuffer
 @insertcopying
 @end ifnottex
 
 @menu
+* Preface::
+* Line Editors::
+* On Terminals::
 * Reference::
-* GNU Free Documentation License::
 * Index::
-
 @end menu
+
+@node Preface
+@chapter Preface
+
+In this project, I'm going to develop text processing programs of
+increasing complexity, and in the process, I will develop a generic
+text model, view, and controllers.
+
+The generic text model will be a Guile GOOPS class called
+@code{<CBuffer>}.
+
+@node Line Editors
+@chapter Line Editors
+
+I'm going to start with line editors, which is to say programs that
+operate on text one line at a time.  The platonic ideal is
+@command{ed}, the UNIX line editor.  Other line editors included the
+@command{ex} mode in @command{vi}, and @command{EDLIN}.
+
+@menu
+* The Dumb Line Editor::
+@end menu
+
+@node The Dumb Line Editor
+@section The Dumb Line Editor
+
+Let's start at the very beginning.  The dumb line editor,
+@command{dumble}, is a REPL that receives lines until an end-of-file
+condition received, and then prints those lines.
+
+Remember that to enter an end-of-file from the keyboard, you would
+type @kbd{C-d @key{RET}}.
+
+It exercises the text model's ability to append lines of text and
+retrieve text.
 
 @node On Terminals
 @chapter On Terminals
@@ -494,6 +530,10 @@ stored, and what it all means.
 I'm going to use this information to create a generic text model
 suitable for use in text editing and in terminal and printer
 emulation.
+
+@menu
+* Teletype::
+@end menu
 
 @node Teletype
 @section The 43 Teleprinter by the Teletype Corporation
@@ -620,95 +660,47 @@ number of escape sequences are parsed.  One may move backwards in the
 current line using backspace or carriage-return, but, one may never
 move up in the document.
 
-@node Reference, GNU Free Documentation License, Top, Top
+@node Reference
 @chapter Reference
 
-The Aspell library provides spell checking functionality.
+@menu
+* The CBuffer Class::
+@end menu
 
-To use this library, first the module must be imported, like this:
-@example
-(use-modules (aspell))
-@end example
+@node The CBuffer Class
+@section The CBuffer Class
 
-Then, before any attempt to use it for spell checking, a dictionary
-must be chosen.  If the @code{aspell} command line tool was installed
-when the Aspell library was installed, the available dictionaries can
-be listed from the command line by using the @code{aspell dump dicts}
-command.
+The @code{<CBuffer>} class is a generic model for storing lines of
+text along with associated bookmarks, tags, and spans.  When being
+used for monospace fonts, it has an understanding of single and
+double-with characters and presentation positions.
 
-To set the library, use the @code{aspell-set-lang} procedure.
+The @code{<CBuffer>} class is provided by the @code{(gano CBuffer)}
+module.
 
-@deffn Procedure aspell-set-lang lang
-Sets the dictionary for this aspell session to @var{lang}, where
-@var{lang} is a string containing a the standard two letter ISO 639
-language code, with an optional two letter ISO 3166 country code after
-an underscore.  For example, @var{lang} could be @code{"en_US"} or
-@code{"en_GB"} or perhaps simply @code{"es"}. The @var{lang} string
-must match the name one of aspell's installed dictionaries, as
-described above.
+@subsection Constructors
 
-You may call this function at any time, but, each time the language is
-changed, it will cause any words added to the
-default speller using @code{aspell-add-word} to be forgotten.
-
-On success, the procedure will return @code{#t}.  On failure, it will
-throw an error.
+@deffn Procedure make-empty-cbuffer
+Returns a new, empty @code{<CBuffer>} instance.
 @end deffn
 
-A program may have one or more @emph{spellers}.  A speller holds a
-list of words temporarily added to the dictionary using
-@code{aspell-add-word} as well as a list of suggested replacements
-added using @code{aspell-store-replacement}.  A default speller is
-created when the library is loaded, and extra spellers can be made
-using @code{aspell-new-speller}.  The rest of the procedures will take
-an optional speller argument.  If the optional speller argument is not
-supplied, the default speller is used instead.
+@subsection Dumb Line Editor Methods
 
-@deffn Procedure aspell-new-speller
-This procedure returns a new speller of the type
-@code{#<AspellSpeller>}.  A speller stores words temporarily added to
-the dictionary for this session, as well as suggested word replacement
-pairs.
-@end deffn
+To facilitate the dumb line editor test program @command{dumble}, we
+need just two methods.
 
-@deffn Procedure aspell-speller? x
-Returns @code{#t} if @var{x} is a @code{#<AspellSpeller>} type.
-@end deffn
+@deftypefn Method append-line! (<CBuffer> cbuf) (string line)
+This method appends a line to the end of @var{cbuf}.  Any line
+separator in @var{line} will be removed before storage.
+@end deftypefn
 
-With that out of the way, we can get down to business.
+@deftypefn Method get-text (<CBuffer> cbuf)
+This method returns the list of strings that @var{cbuf} contains.
+@end deftypefn
 
-@deffn Procedure aspell-correct? word [speller]
-Returns @code{#t} if @var{word} appears in the current dictionary, or
-@code{#f} otherwise. If @var{speller} is supplied, its list of added
-words is used.
-@end deffn
-
-@deffn Procedure aspell-word word [speller]
-This procedure returns a list of words that are possible spelling
-corrections to @var{word}. If @var{speller} is supplied, that
-speller's list of added words and suggested replacements is used.
-@end deffn
-
-@deffn Procedure aspell-add-word word [speller]
-This procedure adds the word @var{word} to the dictionary for this
-session.  If @var{speller} is supplied, it adds it to the dictionary
-for that speller, otherwise it adds it to the default dictionary.
-@end deffn
-
-@deffn Procedure aspell-store-replacement misspelled correct [speller]
-This makes the correctly spelled word the preferred replacement for a
-given mispelled word.  In a list of suggested corrections supplied by
-@code{aspell-word}, @var{correct} will appear with high priority when
-@code{aspell-word} is called with @var{mistake}. If a speller is
-supplied, it adds this suggestion to that speller, otherwise it adds
-it to the default list.
-
-The return value is unspecified.
-@end deffn
-
-@node  GNU Free Documentation License, Index, Reference, Top
-@chapter GNU Free Documentation License
-@include fdl-1.3.texi
+@c @node  GNU Free Documentation License, Index, Reference, Top
+@c @chapter GNU Free Documentation License
+@c @include fdl-1.3.texi
 
 @node Index
 @unnumbered Index

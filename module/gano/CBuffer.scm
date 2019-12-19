@@ -110,6 +110,9 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
                undo
                )
   #:export (
+            ;; Dumb line editor operations
+            append-line!
+            ;; reexport: get-text
 
             ;; Dumb TTY Operations
             ;; bell                        ; BEL
@@ -359,6 +362,20 @@ position of the following line."
 
 (define-method (add-tag (buf <CBuffer>) id)
   (tag-set! (get-tags buf) id (get-line-cur buf) (get-pd-cur buf)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Operations inspiried by the dumb line editor
+
+(define (append-line! Buf Str)
+  "Append the Str as a new line at the end of Buf. The active data
+position will be set to the end of the inserted line."
+  (warn-if-false (cbuffer? Buf))
+  (warn-if-false (string? Str))
+
+  (let ((LineCount (get-line-count Buf)))
+    (op-insert-lines! Buf LineCount (list Str))
+    (set-line-cur! Buf LineCount)
+    (set-pd-cur-to-simd-eol! Buf)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  OPERATIONS INSPIRED BY ED

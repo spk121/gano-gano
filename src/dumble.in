@@ -76,15 +76,14 @@
       (set! *cbuf* cbuf)
       (display prompt)
       (let loop ((line (read-line)))
-        (when verbose
-          (describe-buf cbuf))
-        (display prompt)
         (if (not (eof-object? line))
 
             ;; Read and insert a line
             (begin
-              (insert-lines! cbuf (get-line-count cbuf)
-                                (list line))
+	      (append-line! cbuf line)
+	      (when verbose
+		(describe-buf cbuf))
+	      (display prompt)
               (loop (read-line)))
 
             ;; Else, output and quit

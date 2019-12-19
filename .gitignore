@@ -1,12 +1,10 @@
 # Untracked files
 *.tar
 *.gz
-nano-*
 
 # Build products
 TAGS
 *.go
-
  
 # Temp files
 .*
@@ -17,6 +15,24 @@ TAGS
 aclocal.m4
 autom4te.cache
 
+# Document artifacts
+*.info
+*.dvi
+*.aux
+*.cp
+*.toc
+*.cps
+*.dum
+*.err
+*.out
+*.tex
+build-aux/mdate-sh
+doc/stamp-vti
+doc/version.texi
+
+
+
+
 build-aux/install-sh
 build-aux/missing
 config.status
@@ -26,9 +42,10 @@ Makefile
 Makefile.in
 configure
 
+src/dumble
 src/gano-ed
+tools/uninstalled-env
 
 *.trs
 *.log
 
-tools/uninstalled-env
