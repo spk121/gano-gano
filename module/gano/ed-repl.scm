@@ -1,6 +1,6 @@
 ;;; -*- mode: scheme; coding: us-ascii; indent-tabs-mode: nil; -*-
 ;;; (gano ed-repl) - an Ed-like read-eval-print loop
-;;; Copyright (C) 2017 Michael L. Gran <spk121@yahoo.com>
+;;; Copyright (C) 2017, 2019 Michael L. Gran <spk121@yahoo.com>
 ;;;
 ;;; This program is free software: you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License as
@@ -34,6 +34,8 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-2)
 
+  #:re-export (get-text
+               set-text!)
   #:export (make-ed-repl
             ed-repl?
             ed-repl-set-default-dispatch-table!
@@ -160,6 +162,7 @@
     (when debug (set-verbose! rpl debug))
     (when homedir (set-home! rpl homedir))
     (when interactive (set-interactive! rpl interactive))
+    (ed-repl-set-default-dispatch-table! rpl)
     rpl))
 
 (define (ed-repl? buf)
@@ -243,23 +246,27 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
   "Gets the last data line using Ed's 1-indexed coordinate system."
   (get-line-count repl))
 
-(define (ed-repl-do repl PortOrStr)
+(define (ed-repl-do repl Port)
+  "This reads a single complete operation from a port and executes it.
+For multi-line operations, like text entry, it will read all required
+lines with a single call."
   (warn-if-false (cbuffer? repl))
 
   (when (get-verbose repl)
     (%dump-cbuffer repl))
+
+  ;; Maybe display a prompt.
   (when (get-prompt-active repl)
     (display (get-prompt-string repl))
     (force-output))
 
   (set-status! repl OK)
 
-  ;; Read in one line of text from the user.
+  ;; Read in one line of text from the port.
   (catch 'interrupt
     (lambda ()
-      (let ((line (if (string? PortOrStr)
-                      PortOrStr
-                      (read-line (current-input-port)))))
+      (let ((line (read-line Port)))
+
         (if (eof-object? line)
             (begin
               ;; Got a hangup when reading a line from the current
@@ -274,13 +281,14 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
                        (c (read-char-safe port))
                        (test1 (ed-repl-validate-command-key repl c))
                        (test2 (ed-repl-validate-addr-range-for-key repl c addr-range)))
-              ;; So far, so good.  The character C maps to an operation and we
-              ;; have the correct number of addresses for that operation.
+              ;; So far, so good.  The character C maps to an
+              ;; operation and we have the correct number of addresses
+              ;; for that operation.
               (and-let* ((op (assoc c (get-dispatch-table repl)))
                          (addr (ed-repl-unpack-addr-range repl op addr-range))
                          (extra
-                          ;; Maybe there are other things that need to be parsed,
-                          ;; depending on the command.
+                          ;; Maybe there are other things that need to
+                          ;; be parsed, depending on the command.
                           (case (dispatch:parser op)
                             ((address)
                              (ed-repl-parse/validate-3rd-address repl port))
@@ -320,10 +328,10 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
                                   #f)
                                 "")))
                          (txt
-                          ;; Some commands let the user type some lines terminated
-                          ;; by a dot
+                          ;; Some commands let the user type some
+                          ;; lines terminated by a dot
                           (if (dispatch:append? op)
-                              (ed-repl-parse/validate-input-lines repl port)
+                              (ed-repl-parse/validate-input-lines repl Port)
                               '())))
                 ;; So, all the parsing is done, and we can finally
                 ;; run a command.
@@ -401,7 +409,7 @@ instead.  It will return the string, or #f on failure."
         (set! txt (read-whitespace port)))
     (if (= 0 (string-length txt))
         (begin
-          (set-err-msg! repl "a space is requied after this command")
+          (set-err-msg! repl "a space is requied before the filename")
           (set-status! repl ERR)
           #f)
         ;; else
@@ -425,7 +433,7 @@ instead.  It will return the string, or #f on failure."
 a single '.' on its own line"
   ;; (drain-input port)
   (let loop ((out '())
-             (line (read-line (current-input-port))))
+             (line (read-line port)))
     (cond
      ((eof-object? line)
       out)
@@ -433,7 +441,7 @@ a single '.' on its own line"
       out)
      (else
       (loop (append out (list line))
-            (read-line (current-input-port)))))))
+            (read-line port))))))
 
 (define-method (ed-repl-parse/validate-suffix (repl <EdRepl>) port)
   "Some commands allow 'l' 'n' or 'p' afterward to print a result.
@@ -563,7 +571,7 @@ or #f on failure."
   (let ((addr-count-required (dispatch:addr-count Op))
         (addr-list-len (length AddrList))
         (line-cur (ed-repl-get-line-cur-in-ed-coordinates Repl))
-        (line-last (ed-repl-get-line-cur-in-ed-coordinates Repl)))
+        (line-last (ed-repl-get-line-last-in-ed-coordinates Repl)))
 
     (cond
      ((and (= addr-count-required 0) (> addr-list-len 0))
@@ -872,7 +880,7 @@ changes have been made since the last 'w' write command."
                                            (display (get-text-cur repl))
                                            (newline)
                                            (current-input-port))
-                                         cmd-string)))
+                                         (open-input-string cmd-string))))
                                   "_RX")
             (set-prompt-string! repl "command>")
             (clear-tags repl "_RX"))
@@ -1017,7 +1025,8 @@ If the 3rd address is zero, it moves the addressed lines to the beginning."
       ;; else
       (begin
         (cond
-         ((or (= (first AddrList) Addr3)
+         ((or (and (= Addr3 0) (= (first AddrList) 1)) ; moving 1st line to top of buffer
+              (= (first AddrList) Addr3)
               (= (second AddrList) Addr3))
           ;; If MoveTo is MoveStart or MoveEnd, nothing really happens.
           #f)

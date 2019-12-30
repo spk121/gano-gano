@@ -1,6 +1,7 @@
 # Untracked files
 *.tar
 *.gz
+nano*
 
 # Build products
 TAGS
@@ -26,6 +27,7 @@ autom4te.cache
 *.err
 *.out
 *.tex
+*.html
 build-aux/mdate-sh
 doc/stamp-vti
 doc/version.texi

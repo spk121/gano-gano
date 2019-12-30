@@ -121,7 +121,9 @@ TESTS = \
   test/t-gano-math.scm \
   test/t-gano-CBuffer.scm \
   test/t-gano-poslist.scm \
-  test/t-gano-stringlist.scm
+  test/t-gano-stringlist.scm \
+  test/t-gano-ed-repl.scm
+
 TEST_EXTENSIONS = .scm
 
 XFAIL_TESTS =
