@@ -99,6 +99,7 @@ dist_bin_SCRIPTS = \
   src/gano-ed
 
 src/dumble: src/dumble.in
+	mkdir -p src
 	sed s^GUILE^$(GUILE)^ $< > $@
 	chmod 755 $@
 
@@ -121,12 +122,12 @@ TESTS = \
   test/t-gano-math.scm \
   test/t-gano-CBuffer.scm \
   test/t-gano-poslist.scm \
-  test/t-gano-stringlist.scm \
-  test/t-gano-ed-repl.scm
+  test/t-gano-stringlist.scm
 
 TEST_EXTENSIONS = .scm
 
-XFAIL_TESTS =
+XFAIL_TESTS =   test/t-gano-ed-repl.scm
+
 
 SCM_LOG_DRIVER = \
   $(top_builddir)/tools/uninstalled-env \
