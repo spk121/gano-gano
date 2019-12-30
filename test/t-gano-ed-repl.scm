@@ -125,4 +125,19 @@
     (ed-repl-do ed (open-input-string "g/hello /s/lo/p!/"))
     (get-text ed)))
 
+(test-equal "ed test 'g2a'"
+  '("line 1"
+    "BLAMMO"
+    "line 3"
+    "line 4"
+    "line5")
+  (let ((ed (make-ed-repl #:verbose #t)))
+    (set-text! ed '("line 1"
+                    "line 2"
+                    "line 3"
+                    "line 4"
+                    "line5"))
+    (ed-repl-do ed (open-input-string "g/2/c\\\nBLAMMO"))
+    (get-text ed)))
+
 (test-end "t-gano-ed-repl")

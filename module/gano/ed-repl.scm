@@ -246,7 +246,7 @@ to LEnd (1-indexed, inclusive), using the format described in Suffix"
   "Gets the last data line using Ed's 1-indexed coordinate system."
   (get-line-count repl))
 
-(define (ed-repl-do repl Port)
+(define* (ed-repl-do repl Port #:optional global)
   "This reads a single complete operation from a port and executes it.
 For multi-line operations, like text entry, it will read all required
 lines with a single call."
@@ -315,11 +315,14 @@ lines with a single call."
                               (ed-repl-parse/validate-suffix repl port)
                               ""))
                          (leftover
-                          ;; There should be nothing left in the command
-                          ;; line but whitespace
+                          ;; Usually, there should be nothing left in
+                          ;; the command line but whitespace.  The
+                          ;; global commands, 'g' and 'G', may end in
+                          ;; backslash to indicate further input.
                           (let* ((ws (read-whitespace port))
                                  (leftover (peek-char-safe port)))
-                            (if (not (char=? leftover #\null))
+                            (if (not (or (and global (char=? leftover #\\))
+                                         (char=? leftover #\null)))
                                 (begin
                                   (if (isprint? leftover)
                                       (set-err-msg! repl (format #f "invalid suffix character '~a'" leftover))
@@ -331,7 +334,7 @@ lines with a single call."
                           ;; Some commands let the user type some
                           ;; lines terminated by a dot
                           (if (dispatch:append? op)
-                              (ed-repl-parse/validate-input-lines repl Port)
+                              (ed-repl-parse/validate-input-lines repl Port global)
                               '())))
                 ;; So, all the parsing is done, and we can finally
                 ;; run a command.
@@ -428,20 +431,29 @@ instead.  It will return the string, or #f on failure."
                   (set-filename! repl str))
               str)))))
 
-(define-method (ed-repl-parse/validate-input-lines (repl <EdRepl>) port)
+(define-method (ed-repl-parse/validate-input-lines (repl <EdRepl>) port global)
   "Some commands allow the entry of text lines, ended by entering
-a single '.' on its own line"
+a single '.' on its own line.  Global commands, like 'g' expect line-ending
+backslashes instead to indicate continuation."
   ;; (drain-input port)
   (let loop ((out '())
              (line (read-line port)))
+    (format #t "INPUT OUT ~S LINE ~S~%" out line)
     (cond
      ((eof-object? line)
       out)
-     ((string=? line ".")
+     ((and (not global) (string=? line "."))
+      out)
+     ((and global (not (string-ends-with? line #\\)))
       out)
      (else
-      (loop (append out (list line))
-            (read-line port))))))
+      (if global
+          ;; For global continuation lines, drop the backslash at the end
+          (loop (append out (list (string-drop-right line 1)))
+                (read-line port))
+          ;; else
+          (loop (append out (list line))
+                (read-line port)))))))
 
 (define-method (ed-repl-parse/validate-suffix (repl <EdRepl>) port)
   "Some commands allow 'l' 'n' or 'p' afterward to print a result.
@@ -880,7 +892,8 @@ changes have been made since the last 'w' write command."
                                            (display (get-text-cur repl))
                                            (newline)
                                            (current-input-port))
-                                         (open-input-string cmd-string))))
+                                         (open-input-string cmd-string))
+                                     #t)) ; the recursive call flag
                                   "_RX")
             (set-prompt-string! repl "command>")
             (clear-tags repl "_RX"))
