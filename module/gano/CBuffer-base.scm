@@ -132,7 +132,7 @@ deleted text, etc.  Note that only mutation operations are stored.
             set-pd-cur-to-simd-bol!
             set-pd-cur-to-simd-eol!
             set-text!
-            
+
             ;; The operations
             op-bookmark-set!
             op-bookmark-remove!
@@ -150,7 +150,7 @@ deleted text, etc.  Note that only mutation operations are stored.
             op-move-lines!
             op-copy-lines!
             op-split-lines!
-            
+
             ;; The Almighty Undo
             undo
 
@@ -200,7 +200,7 @@ deleted text, etc.  Note that only mutation operations are stored.
 
   ;; The number of spaces per between tab stops
   (m_tabSize #:init-value 8 #:getter get-tab-size #:setter set-tab-size!)
-  
+
   ;; The number of lines per vertical tab stops
   (m_vertTabSize #:init-value 6 #:getter get-vert-tab-size
                  #:setter set-vert-tab-size!)
@@ -212,7 +212,7 @@ deleted text, etc.  Note that only mutation operations are stored.
   ;; The maximum number of lines on a page, in lines.
   (m_pageLMax #:init-value 1024 #:getter get-y-page-max
               #:setter set-y-page-max!)
-  
+
   ;; Homes and Limits.
   ;; A line has a home column and a limit column.  Editing on a line will
   ;; begin at the 'home' column and end at the 'limit' column.  These
@@ -304,10 +304,10 @@ deleted text, etc.  Note that only mutation operations are stored.
           (format #t "~a  |~a| " i (car lst))
           (let ((bmarks (bookmark-get-all-in-line (get-bookmarks buf) (1- i))))
             (when (not (null? bmarks))
-                (write bmarks)))
+              (write bmarks)))
           (let ((tags (tag-get-all-in-line (get-tags buf) (1- i))))
             (when (not (null? tags))
-                (write tags)))
+              (write tags)))
           (newline)
           (loop (1+ i) (cdr lst)))))
   (format #t "====END TEXT====~%")
@@ -530,7 +530,7 @@ The return value is unspecified."
   ;; Move the mark down, if necessary
   (when (and (is-mark-set? buf)
              (>= (get-line-mark buf) lineno))
-        (set-line-mark! buf (+ (get-line-mark buf) n))))
+    (set-line-mark! buf (+ (get-line-mark buf) n))))
 
 (define-method (new-bookmark-at! (buf <CBuffer>) L Pd sym)
   (set-bookmarks! buf
@@ -759,15 +759,15 @@ and the active data position."
     ;; Change the string list
     (set-text! Buf (strlist-replace-in-line (get-text Buf)
                                             LReplace PReplaceStart PReplaceEnd Txt))
-    
-    
+
+
     ;; Move the activive data position
     (let ((newpos (pos-replace-in-line (get-line-cur Buf) (get-pd-cur Buf)
                                        LReplace PReplaceStart PReplaceEnd LenReplace)))
       (if (null? newpos)
           (set-line-and-pd-cur! Buf (list LReplace PReplaceStart))
           (set-line-and-pd-cur! Buf newpos)))
-    
+
     ;; Clear the mark
     (set-mark-flag! Buf #f)))
 
@@ -778,10 +778,10 @@ and the active data position."
         (premovedlen (- PReplaceEnd PReplaceStart)))
     (set-text! Buf
                (strlist-replace-in-line buftxt
-                                       LReplace
-                                       PReplaceStart
-                                       (+ PReplaceStart (string-length newtxt))
-                                       oldtxt))
+                                        LReplace
+                                        PReplaceStart
+                                        (+ PReplaceStart (string-length newtxt))
+                                        oldtxt))
     ;; Clear the mark
     (set-mark-flag! Buf #f)
     ;; Move the active data position
@@ -798,9 +798,9 @@ and the active data position."
               LostBmarks)
     (for-each (lambda (tag)
                 (tag-set! (get-tags Buf)
-                               (tag:name tag)
-                               (tag:line tag)
-                               (tag:pd tag)))
+                          (tag:name tag)
+                          (tag:line tag)
+                          (tag:pd tag)))
               LostTags)))
 
 (define (op-move-in-line! Buf LMove PMoveStart PMoveEnd PMoveTo)
@@ -848,7 +848,7 @@ Start (inclusive) and PCopyEnd (exclusive) at the location PCopyTo."
     ;; Overwrite the text in the line, and adjust bookmarks and tags
     (set-text! Buf
                (strlist-copy-in-line (get-text Buf) LCopy PCopyStart PCopyEnd PCopyTo))
-      
+
     ;; Note that tags are duplicated under a copy operaton, but,
     ;; bookmarks are not duplicated and stay with the original.
     (poslist-copy-in-line (get-tags Buf) LCopy PCopyStart PCopyEnd PCopyTo)
@@ -914,12 +914,12 @@ and PDeleteEnd (exclusive)."
 
     ;; Adjust bookmarks and tags.
     (adjust-poslist-delete-in-line! (get-bookmarks Buf)
-                                   LDelete PDeleteStart PDeleteEnd)
+                                    LDelete PDeleteStart PDeleteEnd)
     (adjust-poslist-delete-in-line! (get-tags Buf)
-                                   LDelete PDeleteStart PDeleteEnd)))
+                                    LDelete PDeleteStart PDeleteEnd)))
 
 (define (undo-delete-in-line! Buf LDelete PDeleteStart PDeleteEnd
-                           deletetxt LostBmarks LostTags LCur PdCur)
+                              deletetxt LostBmarks LostTags LCur PdCur)
   "Undo delete lines."
   (let ((buftxt (get-text Buf))
         (premovedlen (- PDeleteEnd PDeleteStart)))
@@ -944,9 +944,9 @@ and PDeleteEnd (exclusive)."
               LostBmarks)
     (for-each (lambda (tag)
                 (tag-set! (get-tags Buf)
-                               (tag:name tag)
-                               (tag:line tag)
-                               (tag:pd tag)))
+                          (tag:name tag)
+                          (tag:line tag)
+                          (tag:pd tag)))
               LostTags)))
 
 (define (op-insert-lines! Buf LInsert StrList)
@@ -966,7 +966,7 @@ will be pushed down. "
                               (get-pd-cur Buf)))
       ;; Insert the line into the string list
       (set-text! Buf
-                (strlist-insert-lines (get-text Buf) LInsert StrList))
+                 (strlist-insert-lines (get-text Buf) LInsert StrList))
       ;; Clear the mark.
       (set-mark-flag! Buf #f)
 
@@ -1073,7 +1073,7 @@ with strlist"
   (warn-if-false (integer-nonnegative? LEnd))
   (warn-if-false (< LStart LEnd))
   (warn-if-false (<= LEnd (get-line-count Buf)))
-  (warn-if-false (list-of-strings-length-0+? StrList))  
+  (warn-if-false (list-of-strings-length-0+? StrList))
   (let ((strlistlen (length StrList)))
     ;; And undo info.
     (append-undo! Buf (list 'replace-lines
@@ -1095,12 +1095,12 @@ with strlist"
                                      LStart
                                      LEnd
                                      strlistlen)))
-        ;; If newpos is '(), the location of the active data position
-        ;; was overwritten in this operation.  So, put it after the paste,
-        ;; I guess.
-        (if (null? newpos)
-            (set-line-and-pd-cur! Buf (list LEnd 0))
-            (set-line-and-pd-cur! Buf newpos)))))
+      ;; If newpos is '(), the location of the active data position
+      ;; was overwritten in this operation.  So, put it after the paste,
+      ;; I guess.
+      (if (null? newpos)
+          (set-line-and-pd-cur! Buf (list LEnd 0))
+          (set-line-and-pd-cur! Buf newpos)))))
 
 (define-method (undo-replace-lines (Buf <CBuffer>) LStart LEnd RemovedStrList
                                    NewStrList
@@ -1189,9 +1189,9 @@ with strlist"
               LostBmarks)
     (for-each (lambda (tag)
                 (tag-set! (get-tags Buf)
-                               (tag:name tag)
-                               (tag:line tag)
-                               (tag:pd tag)))
+                          (tag:name tag)
+                          (tag:line tag)
+                          (tag:pd tag)))
               LostTags)))
 
 (define (op-move-lines! Buf LMoveStart LMoveEnd LMoveTo)
@@ -1203,7 +1203,7 @@ line LMoveTo."
   (warn-if-false (<= LMoveEnd (get-line-count Buf)))
 
   (when (>= (- LMoveEnd LMoveStart) 1)
-    
+
     ;; Overwrite the text in the line, and adjust bookmarks and tags
     (set-text! Buf
                (strlist-move-lines (get-text Buf) LMoveStart LMoveEnd LMoveTo))
@@ -1314,7 +1314,7 @@ LCopyEnd (exclusive) to the line LCopyTo."
   ;; Clear the mark
   (set-mark-flag! buf #f))
 
-;(define-method (undo (Buf <CBuffer>))
+                                        ;(define-method (undo (Buf <CBuffer>))
 (define (undo Buf)
   ;; Pop the last operation off the list of mutator operations
   ;; Dispatch the operation to its handler.
@@ -1328,15 +1328,15 @@ LCopyEnd (exclusive) to the line LCopyTo."
         (cond
          ((eqv? (car last-op) 'replace-in-line)
           (undo-replace-in-line! Buf
-                              (second last-op) ;LReplace
-                              (third last-op) ;PReplaceStart
-                              (fourth last-op) ;PReplaceEnd
-                              (fifth last-op) ;NewTxt
-                              (sixth last-op) ;replacedtxt
-                              (seventh last-op) ;replaced tags
-                              (eighth last-op) ;replace bmarks
-                              (ninth last-op) ;LCur
-                              (tenth last-op)) ;PdCur
+                                 (second last-op) ;LReplace
+                                 (third last-op) ;PReplaceStart
+                                 (fourth last-op) ;PReplaceEnd
+                                 (fifth last-op) ;NewTxt
+                                 (sixth last-op) ;replacedtxt
+                                 (seventh last-op) ;replaced tags
+                                 (eighth last-op) ;replace bmarks
+                                 (ninth last-op) ;LCur
+                                 (tenth last-op)) ;PdCur
           #t)
          ((eqv? (car last-op) 'move-in-line)
           (undo-move-in-line! Buf
@@ -1388,10 +1388,10 @@ LCopyEnd (exclusive) to the line LCopyTo."
           #t)
          ((eqv? (car last-op) 'insert-lines)
           (undo-insert-lines! Buf
-                             (second last-op)
-                             (third last-op)
-                             (fourth last-op)
-                             (fifth last-op))
+                              (second last-op)
+                              (third last-op)
+                              (fourth last-op)
+                              (fifth last-op))
 
           #t)
          ((eqv? (car last-op) 'replace-lines)
@@ -1433,25 +1433,25 @@ LCopyEnd (exclusive) to the line LCopyTo."
           #t)
          ((eqv? (car last-op) 'move-lines)
           (undo-move-lines! Buf
-                           (second last-op) ;LMoveStart
-                           (third last-op)  ;LMoveEnd
-                           (fourth last-op) ;LMoveTo
-                           (fifth last-op)  ;LCur
-                           (sixth last-op)) ;PdCur
+                            (second last-op) ;LMoveStart
+                            (third last-op)  ;LMoveEnd
+                            (fourth last-op) ;LMoveTo
+                            (fifth last-op)  ;LCur
+                            (sixth last-op)) ;PdCur
           #t)
          ((eqv? (car last-op) 'bookmark-set)
           (undo-bookmark-set! Buf
-                             (second last-op) ;LBookmark
-                             (third last-op) ;PBookmark
-                             (fourth last-op)) ;Name
+                              (second last-op) ;LBookmark
+                              (third last-op) ;PBookmark
+                              (fourth last-op)) ;Name
           #t)
          ((eqv? (car last-op) 'bookmark-move)
           (undo-bookmark-move! Buf
-                             (second last-op) ;LBookmark
-                             (third last-op) ;PBookmark
-                             (fourth last-op) ;Name
-                             (fifth last-op) ;LOldBookmark
-                             (sixth last-op)) ;POldBookmark
+                               (second last-op) ;LBookmark
+                               (third last-op) ;PBookmark
+                               (fourth last-op) ;Name
+                               (fifth last-op) ;LOldBookmark
+                               (sixth last-op)) ;POldBookmark
           #t)
          ((eqv? (car last-op) 'tags-set)
           (undo-tags-set! Buf
@@ -1459,9 +1459,8 @@ LCopyEnd (exclusive) to the line LCopyTo."
           #t)
          ((eqv? (car last-op) 'tags-remove)
           (undo-tags-remove! Buf
-                          (second last-op)) ;ListOfTags
+                             (second last-op)) ;ListOfTags
           #t)
          (else
           (warn-if-reached)
           #f)))))
-
