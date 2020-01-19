@@ -187,7 +187,7 @@ deleted text, etc.  Note that only mutation operations are stored.
 
   ;; The text
   ;; A list of strings.
-  (m_rgText #:init-value '() #:accessor get-text #:setter set-text!)
+  (m_rgText #:init-value '("") #:accessor get-text #:setter set-text!)
 
   ;; The current line number. Zero indexed.
   (m_LCur #:init-value 0 #:getter get-line-cur #:setter %set-line-cur!)

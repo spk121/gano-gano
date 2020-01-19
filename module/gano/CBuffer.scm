@@ -110,13 +110,11 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
                undo
                )
   #:export (
-            ;; Dumb line editor operations
             append-line!
-            ;; reexport: get-text
+            line-feed!                   ; LF
 
             ;; Dumb TTY Operations
             ;; bell                        ; BEL
-            line-feed!                   ; LF
             carriage-return!             ; CR
             insert-character-in-line!
 
@@ -164,7 +162,6 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             character-and-line-position ; HVP
             insert-character-space      ; ICH
             insert-line                 ; IL
-            line-feed                   ; LF
             next-line                   ; NEL
             page-format-selection       ; PFS
             page-position-absolute      ; PPA
@@ -207,6 +204,14 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; METHODS
+
+(define-method (append-line! (Buf <CBuffer>) (Str <string>))
+  "Append the Str as a new line at the end of Buf. The active data
+position will be set to the end of the inserted line."
+  (let ((LineCount (get-line-count Buf)))
+    (op-insert-lines! Buf LineCount (list Str))
+    (set-line-cur! Buf LineCount)
+    (set-pd-cur-to-simd-eol! Buf)))
 
 ;; BS - BACKSPACE
 
@@ -270,10 +275,9 @@ active data position will be set to the end of the inserted text."
 ;; Move the active data position to the corresponding character
 ;; position of the following line.
 
-(define (line-feed! Buf)
+(define-method (line-feed! (Buf <CBuffer>))
   "Move the active data position to the corresponding character
 position of the following line."
-  (warn-if-false (cbuffer? Buf))
   (let ((LCur (get-line-cur Buf))
         (LCount (get-line-count Buf))
         (PdCur (get-pd-cur Buf)))
@@ -365,17 +369,6 @@ position of the following line."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Operations inspiried by the dumb line editor
-
-(define (append-line! Buf Str)
-  "Append the Str as a new line at the end of Buf. The active data
-position will be set to the end of the inserted line."
-  (warn-if-false (cbuffer? Buf))
-  (warn-if-false (string? Str))
-
-  (let ((LineCount (get-line-count Buf)))
-    (op-insert-lines! Buf LineCount (list Str))
-    (set-line-cur! Buf LineCount)
-    (set-pd-cur-to-simd-eol! Buf)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  OPERATIONS INSPIRED BY ED

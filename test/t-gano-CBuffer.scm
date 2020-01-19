@@ -5,6 +5,65 @@
 (test-begin "t-gano-CBuffer")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; append-line!
+
+(test-equal "append-line! to empty buffer adds a line of text"
+  '("" "hello")
+  (let ((buf (make-empty-cbuffer)))
+    (append-line! buf "hello")
+    (get-text buf)))
+
+(test-equal "append-line! to empty buffer moves the display position to the end of buffer"
+  '(1 5)
+  (let ((buf (make-empty-cbuffer)))
+    (append-line! buf "hello")
+    (list
+     (get-line-cur buf)
+     (get-pd-cur buf))))
+
+(test-equal "append-line! to non-empty buffer adds a line of text"
+  '("" "hello" "world")
+  (let ((buf (make-empty-cbuffer)))
+    (append-line! buf "hello")
+    (append-line! buf "world")
+    (get-text buf)))
+
+(test-equal "append-line! to non-empty buffer moves the display position to the end of buffer"
+  '(2 5)
+  (let ((buf (make-empty-cbuffer)))
+    (append-line! buf "hello")
+    (append-line! buf "world")
+    (list
+     (get-line-cur buf)
+     (get-pd-cur buf))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; line-feed!
+
+(test-assert "line-feed! in empty buffer"
+  (let ((buf (make-empty-cbuffer)))
+    (line-feed! buf)
+    (and
+     (= 1 (get-line-cur buf))
+     (= 0 (get-pd-cur buf))
+     (equal? '("" "")
+	     (get-text buf)))))
+
+(test-assert "line-feed! from existing line to existing line"
+  (let ((buf (make-empty-cbuffer)))
+    (append-line! buf "hello")
+    (append-line! buf "world")
+    (set-line-cur! buf 1)
+    (set-pd-cur! buf 3)
+    (line-feed! buf)
+    (and
+     (= 2 (get-line-cur buf))
+     (= 3 (get-pd-cur buf))
+     (equal? '("" "hello" "world")
+	     (get-text buf)))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OP BOOKMARK SET
 (define op-bookmark-set! (@@ (gano CBuffer) op-bookmark-set!))
 (define buf (make-empty-cbuffer))
@@ -100,13 +159,13 @@
 (op-insert-in-line! buf 1 3 "TWO")
 
 (test-equal "op-insert-in-line! can insert at EOL"
-  '("one" "twoTWO" "three")
+  '("one" "twoTWO" "three" "")
   (get-text buf))
 
 (undo buf)
 
 (test-equal "can undo op-insert-in-line! at EOL"
-  '("one" "two" "three")
+  '("one" "two" "three" "")
   (get-text buf))
 
 ;; change "three" to "THREEthree"
@@ -136,13 +195,13 @@
 (op-replace-in-line! buf 1 3 3 "TWO")
 
 (test-equal "op-replace-in-line! can replace at EOL"
-  '("one" "twoTWO" "three")
+  '("one" "twoTWO" "three" "")
   (get-text buf))
 
 (undo buf)
 
 (test-equal "can undo op-replace-in-line! at EOL"
-  '("one" "two" "three")
+  '("one" "two" "three" "")
   (get-text buf))
 
 ;; change "three" to "THREE"
@@ -181,13 +240,13 @@
 (op-move-in-line! buf 1 0 1 2)
 
 (test-equal "op-move-in-line! can move forward"
-  '("one" "wto" "three")
+  '("one" "wto" "three" "")
   (get-text buf))
 
 (undo buf)
 
 (test-equal "can undo move-in-line! forward"
-  '("one" "two" "three")
+  '("one" "two" "three" "")
   (get-text buf))
 
 ;; change "three" to "eethr"
