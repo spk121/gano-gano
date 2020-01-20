@@ -38,6 +38,50 @@
      (get-pd-cur buf))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; carriage-return!
+
+(test-equal "CR when SIMD=forward and HOME=0 moves to column 0"
+  '(1 0)
+  (let ((buf (make-empty-cbuffer)))
+    (append-line! buf "hello")          ; moves position to end of new line
+    (carriage-return! buf)
+    (list
+     (get-line-cur buf)
+     (get-pd-cur buf))))
+
+(test-equal "CR when SIMD=forward and HOME=1 moves to column 1"
+  '(1 1)
+  (let ((buf (make-empty-cbuffer)))
+    (set-home-pos! buf 1)
+    (append-line! buf "hello")          ; moves position to end of new line
+    (carriage-return! buf)
+    (list
+     (get-line-cur buf)
+     (get-pd-cur buf))))
+
+(test-equal "CR when SIMD=backward and LIMIT=80 moves to column 80"
+  '(1 80)
+  (let ((buf (make-empty-cbuffer)))
+    (set-implicit-movement-direction! buf 'backward)
+    (set-limit-pos! buf 80)
+    (append-line! buf "hello")          ; moves position to end of new line
+    (carriage-return! buf)              ; moves position to limit, appending spaces
+    (list
+     (get-line-cur buf)
+     (get-pd-cur buf))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; insert-character-in-line!
+
+(test-equal "insert-character-in-line! in empty buffer"
+  '(("x") 0 1)
+  (let ((buf (make-empty-cbuffer)))
+    (insert-character-in-line! buf 0 0 #\x)
+    (list (get-text buf)
+          (get-line-cur buf)
+          (get-pd-cur buf))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; line-feed!
 
 (test-assert "line-feed! in empty buffer"

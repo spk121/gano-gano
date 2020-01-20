@@ -95,17 +95,15 @@ deleted text, etc.  Note that only mutation operations are stored.
             cbuffer?
 
             ;; Needed for testing for now
-            bookmark:name
-            bookmark:line
-            bookmark:pd
-            tag:name
-            tag:line
-            tag:pd
             %dump-cbuffer
             add-tag
+            bookmark:line
+            bookmark:name
+            bookmark:pd
             get-bookmarks
             get-character-editing-mode
             get-home-pos
+            get-implicit-movement-direction
             get-implicit-movement-direction
             get-insertion-replacement-mode
             get-invalid-movement-mode
@@ -124,6 +122,7 @@ deleted text, etc.  Note that only mutation operations are stored.
             increase-pd-cur!
             set-character-editing-mode!
             set-home-pos!
+            set-implicit-movement-direction!
             set-insertion-replacement-mode!
             set-limit-pos!
             set-line-and-pd-cur!
@@ -132,6 +131,9 @@ deleted text, etc.  Note that only mutation operations are stored.
             set-pd-cur-to-simd-bol!
             set-pd-cur-to-simd-eol!
             set-text!
+            tag:line
+            tag:name
+            tag:pd
 
             ;; The operations
             op-bookmark-set!

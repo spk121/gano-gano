@@ -89,18 +89,23 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
   #:use-module (gano position)
   #:use-module (gano CBuffer-base)
   #:re-export (<CBuffer>
-               cbuffer?
                %dump-cbuffer
                bookmark:line
                bookmark:name
                bookmark:pd
+               cbuffer?
                get-bookmarks
+               get-home-pos
+               get-implicit-movement-direction
                get-line-count
                get-line-cur
                get-pd-cur
-               get-text
                get-tags
+               get-text
                make-empty-cbuffer
+               set-home-pos!
+               set-limit-pos!
+               set-implicit-movement-direction!
                set-line-cur!
                set-pd-cur!
                set-text!
@@ -111,12 +116,12 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
                )
   #:export (
             append-line!
+            carriage-return!             ; CR
+            insert-character-in-line!
             line-feed!                   ; LF
 
             ;; Dumb TTY Operations
             ;; bell                        ; BEL
-            carriage-return!             ; CR
-            insert-character-in-line!
 
             ;; Line-editing Operations
             bookmark-bol!
@@ -231,31 +236,28 @@ direction opposite that of the implicit movement."
 ;; active data position to the line limit position of the current line.
 ;; CR
 
-(define (carriage-return! buf)
+(define-method (carriage-return! (buf <CBuffer>))
   "If the implicit movement direction is 'forward, move the active
 data position to the line home position of the current line.  If the
 implicit movement direction is 'backward, move the active data
 position to the line-limit position of the current line."
-
-  ;; If there is no text, I guess a carriage return should create a
-  ;; line, right?
-  (when (null? (get-text buf))
-    (set-text! buf '("")))
 
   (let ((pos (if (eqv? 'forward (get-implicit-movement-direction buf))
                        (get-home-pos buf)
                        (get-limit-pos buf)))
         (len (get-text-cur-length buf)))
     (if (< len pos)
-        (op-insert-in-line! buf (get-line-cur buf) pos (make-string (- pos len) #\space)))
+        (op-insert-in-line! buf (get-line-cur buf) len (make-string (- pos len) #\space)))
   (set-pd-cur! buf pos)))
 
 (define (insert-character-in-line! Buf LInsert PInsert C)
   "Insert C into the addressed line LInsert at position PInsert.
 If LInsert is the line after the last line in the buffer, C is
 appended as a new line to the end of the text.  If PInsert is after
-the end of the line, Str is appended to the end of the line.  The
-active data position will be set to the end of the inserted text."
+the end of the line, C is appended to the end of the line.  The
+active data position will be set to after the inserted character
+if the implicit movement direction is forward, or will be set
+before the inserted character otherwise."
   (warn-if-false (integer-nonnegative? LInsert))
   (warn-if-false (integer-nonnegative? PInsert))
   (warn-if-false (<= LInsert (get-line-count Buf)))
