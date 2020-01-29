@@ -18,55 +18,12 @@
 
 #|
 
-A CBuffer is a data model for lines of plain text.  It can be
-conceived as a list of strings, where the first element of the list is
-a string that contains the first line of text, and so on.
+This module is the public-facing API for <CBuffer> types
+as described in CBuffer-base.scm.
 
-The strings stored in a CBuffer must only consist of printable
-characters.  No format effectors or presentation control functions are
-stored.  The lone exception is the horizontal tab character.
-
-The strings stored in CBuffers do not explicitly store line
-terminations, like newline or carriage return.
-
-(Someday, a separate list will store the line terminators for each
-line. A line termination will exists for each line in the buffer.  A
-line may be terminated by any of the allowed Unicode terminators, CR,
-LF, NL, CRLF, LS, PS, FF, or VT.)
-
-The text may be "decorated" with various bookmarks, tags, and spans.
-
-A "bookmark" is a string that uniquely identifies one location in the
-text.  No two bookmarks have the same name, and a bookmark points to a
-single (line, column) location in the text.  A location in the text
-shall not have more than one bookmark. One possible use for
-bookmarks are as are intradocument navigation.
-
-A "tag" is a string that labels a location (line, column) in the text.
-There may be more than one tag by the same name, and a location in the
-text may have more than one tag.  An example use for tags is
-sectioning, such as "Chapter" or "Section".
-
-A "span" is label that identifies a range of characters.  There may be
-more than one span with the same name, and a location may be covered
-by multiple spans.  Spans could be used for formatting.  Note that the
-first location in a span points to the (line, column) of the first
-character in the region, but the second (line,column) location in the
-span points to the first character **not** in the region.  It is valid
-for the 2nd location in a span to be the on the column after the end
-of the line.  An example use for spans is markup, such as "bold"
-or "italic".
-
-To facilitate navigation operations in the text buffer, there are two
-important locations: the "active data position" and the "mark".  This
-"active data position"n is a special address that is used in the command set.
-It is the location of a virtual cursor.  The "mark" is another special
-location used to indicate the extreme of a selection of text or a
-range of text used in operations.
-
-To enable undo, redo, and delta operations, an "operations list" is stored.
-And operations list is an ordered list that describes all the mutations
-that have occured to the CBuffer, like inserted text, deleted text, etc.
+By design, the methods in (gano CBuffer) should only call the
+primitive methods provided by (gano CBuffer-base).  None of the
+mutating methods from (gano CBuffer-base) should be re-exported here.
 
 |#
 
@@ -103,22 +60,23 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
                get-tags
                get-text
                make-empty-cbuffer
-               set-home-pos!
-               set-limit-pos!
-               set-implicit-movement-direction!
-               set-line-cur!
-               set-pd-cur!
-               set-text!
                tag:line
                tag:name
                tag:pd
                undo
                )
   #:export (
+            active-position-report      ; CPR
             append-line!
             carriage-return!             ; CR
+            character-position-absolute! ; HPA
             insert-character-in-line!
             line-feed!                   ; LF
+            line-position-absolute!      ; VPA
+            set-line-home!               ; SLH
+            set-line-limit!              ; SLL
+            set-mode!                    ; SM
+            write-character!
 
             ;; Dumb TTY Operations
             ;; bell                        ; BEL
@@ -176,8 +134,6 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
             repeat                      ; REP
             reverse-line-feed           ; RI
             select-graphics-rendition   ; SGR
-            set-line-home               ; SLH
-            set-line-limit              ; SLL
             set-page-home               ; SPH
             set-page-limit              ; SPL
             line-position-absolute      ; VPA
@@ -209,6 +165,12 @@ that have occured to the CBuffer, like inserted text, deleted text, etc.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; METHODS
+
+(define-method (active-position-report (Buf <CBuffer>))
+  "Returns a pair where the car is the n-th line position and the cdr
+is the m-th character position of the active data position."
+  (cons (get-line-cur Buf)
+        (get-pd-cur Buf)))
 
 (define-method (append-line! (Buf <CBuffer>) (Str <string>))
   "Append the Str as a new line at the end of Buf. The active data
@@ -249,6 +211,18 @@ position to the line-limit position of the current line."
     (if (< len pos)
         (op-insert-in-line! buf (get-line-cur buf) len (make-string (- pos len) #\space)))
   (set-pd-cur! buf pos)))
+
+(define-method (character-position-absolute! (buf <CBuffer>) n)
+  "Move the active data position to the n-th codepoint in the active
+line, padding with spaces if necessary.  The position will be bracketed
+by the home and limit columns."
+  (let ((home (get-home-pos buf))
+        (limit (get-limit-pos buf))
+        (len (get-text-cur-length buf)))
+    (let ((pos (min (max home n) limit)))
+      (if (< len pos)
+          (op-insert-in-line! buf (get-line-cur buf) len (make-string (- pos len) #\space)))
+      (set-pd-cur! buf pos))))
 
 (define (insert-character-in-line! Buf LInsert PInsert C)
   "Insert C into the addressed line LInsert at position PInsert.
@@ -302,16 +276,26 @@ position of the following line."
 
     (increase-line-cur! Buf 1)))
 
+(define-method (line-position-absolute! (buf <CBuffer>) n)
+  "Move the active data position to the n-th line"
+  (set-line-cur! buf (min n (get-line-count buf))))
+
 ;; SLH - SET LINE HOME
-(define-method (set-line-home (buf <CBuffer>) n)
+(define-method (set-line-home! (buf <CBuffer>) n)
+  "Sets the home position column of this buffer to the given column index"
+  (warn-if-false (integer-nonnegative? n))
+  (warn-if-false (< (get-home-pos buf) (get-limit-pos buf)))
   (set-home-pos! buf n))
 
 ;; SLL - SET LINE LIMIT
-(define-method (set-line-limit (buf <CBuffer>) n)
+(define-method (set-line-limit! (buf <CBuffer>) n)
+  "Sets the limit position column of this buffer to the given column index"
+  (warn-if-false (integer-nonnegative? n))
+  (warn-if-false (< (get-home-pos buf) (get-limit-pos buf)))
   (set-limit-pos! buf n))
 
 ;; SM - SET MODE
-(define-method (set-mode (buf <CBuffer>) mode val)
+(define-method (set-mode! (buf <CBuffer>) mode val)
   (cond
    ((eqv? mode 'HEM)
     (if (member val (list 'following 'preceding))
@@ -327,11 +311,26 @@ position of the following line."
           val)
         ;; else
         (error "unknown mode value ~a" val)))
+   ((eqv? mode 'SIMD)
+    (if (member val (list 'forward 'backward))
+        (begin
+          (set-implicit-movement-direction! buf val)
+          val)
+        ;; else
+        (error "unknown mode value ~a" val)))
    (else
     (error "unknown mode ~a" mode))))
 
 ;; WC - WRITE-CHARACTER
-(define-method (write-character (buf <CBuffer>) c)
+(define-method (write-character! (buf <CBuffer>) c)
+  "Places the character C at the current data location.  Depending on
+the current insertion-replacement-mode (IRM), this may be either an
+insertion or a replcement.  Depending on the character-editing
+mode (HEM), the current data location will be advanced to after the
+character or remain unchanged.  The implicit-movement-direction (SIMD)
+mode will determine if the the cursor, if advanced, is advanced
+forward or backward.  The invalid movement mode (IMM) determines what
+happens if the limit column is reached."
   (let ((LCur (get-line-cur buf))
         (PdCur (get-pd-cur buf))
         (IRM (get-insertion-replacement-mode buf))
@@ -1208,11 +1207,6 @@ position is visible"
                         (else
                          (+ pp (- col) 2))))))
 
-(define-method (character-position-absolute (buf <CBuffer>) n)
-  "Move the active data position to the n-th codepoint in the active
-line"
-  (let* ([pd (bracket-pd buf n)])
-    (set-positions! buf pd 'data)))
 
 (define-method (character-position-backward (buf <CBuffer>) n)
   "Move the active data position backward n codepoints"
@@ -1475,12 +1469,6 @@ current frame."
     (and (>= line top) (<= line bottom)
          (>= pp left) (<= pp right))))
 
-(define-method (line-position-absolute (buf <CBuffer>) n)
-  "Move the active data position to the n-th line"
-  (set-line-cur! buf (min n (get-line-count buf)))
-  (let ([ppList (compute-pp-list-from-string (get-text-cur buf) (get-tab-size buf))])
-    (set-pp-cur! buf (list-ref ppList (get-pd-cur buf)))
-    (set-pp-goal! buf (get-pp-cur buf))))
 
 (define-method (line-position-backward (buf <CBuffer>) n)
   "Move the active data position up n line positions"

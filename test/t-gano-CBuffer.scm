@@ -5,6 +5,29 @@
 (test-begin "t-gano-CBuffer")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; active-position-report
+
+;; Returns the line and either the data or presentation position,
+;; depending on the current Device Component Select Mode (DSCM)
+
+(test-equal "active-position-report of null buffer"
+  '(0 . 0)
+  (let ((buf (make-empty-cbuffer)))
+    (active-position-report buf)))
+
+(test-equal "active-position-report of 2nd character"
+  '(0 . 1)
+  (let ((buf (make-empty-cbuffer)))
+    (write-character! buf #\x)
+    (active-position-report buf)))
+
+(test-equal "active-position-report of 2nd line"
+  '(1 . 0)
+  (let ((buf (make-empty-cbuffer)))
+    (line-feed! buf)
+    (active-position-report buf)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; append-line!
 
 (test-equal "append-line! to empty buffer adds a line of text"
@@ -14,12 +37,10 @@
     (get-text buf)))
 
 (test-equal "append-line! to empty buffer moves the display position to the end of buffer"
-  '(1 5)
+  '(1 . 5)
   (let ((buf (make-empty-cbuffer)))
     (append-line! buf "hello")
-    (list
-     (get-line-cur buf)
-     (get-pd-cur buf))))
+    (active-position-report buf)))
 
 (test-equal "append-line! to non-empty buffer adds a line of text"
   '("" "hello" "world")
@@ -29,57 +50,84 @@
     (get-text buf)))
 
 (test-equal "append-line! to non-empty buffer moves the display position to the end of buffer"
-  '(2 5)
+  '(2 . 5)
   (let ((buf (make-empty-cbuffer)))
     (append-line! buf "hello")
     (append-line! buf "world")
-    (list
-     (get-line-cur buf)
-     (get-pd-cur buf))))
+    (active-position-report buf)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; carriage-return!
 
 (test-equal "CR when SIMD=forward and HOME=0 moves to column 0"
-  '(1 0)
+  '(1 . 0)
   (let ((buf (make-empty-cbuffer)))
     (append-line! buf "hello")          ; moves position to end of new line
     (carriage-return! buf)
-    (list
-     (get-line-cur buf)
-     (get-pd-cur buf))))
+    (active-position-report buf)))
 
 (test-equal "CR when SIMD=forward and HOME=1 moves to column 1"
-  '(1 1)
+  '(1 . 1)
   (let ((buf (make-empty-cbuffer)))
-    (set-home-pos! buf 1)
+    (set-line-home! buf 1)
     (append-line! buf "hello")          ; moves position to end of new line
     (carriage-return! buf)
-    (list
-     (get-line-cur buf)
-     (get-pd-cur buf))))
+    (active-position-report buf)))
 
 (test-equal "CR when SIMD=backward and LIMIT=80 moves to column 80"
-  '(1 80)
+  '(1 . 80)
   (let ((buf (make-empty-cbuffer)))
-    (set-implicit-movement-direction! buf 'backward)
-    (set-limit-pos! buf 80)
+    (set-mode! buf 'SIMD 'backward)
+    (set-line-limit! buf 80)
     (append-line! buf "hello")          ; moves position to end of new line
     (carriage-return! buf)              ; moves position to limit, appending spaces
-    (list
-     (get-line-cur buf)
-     (get-pd-cur buf))))
+    (active-position-report buf)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; character-position-absolute!
+
+(test-equal "character-position-absolute! to 1st position"
+  '(0 . 0)
+  (let ((buf (make-empty-cbuffer)))
+    (write-character! buf #\x)
+    (character-position-absolute! buf 0)
+    (active-position-report buf)))
+
+(test-equal "character-position-absolute! to right of EOL"
+  '(0 . 10)
+  (let ((buf (make-empty-cbuffer)))
+    (character-position-absolute! buf 10)
+    (active-position-report buf)))
+
+(test-equal "character-position-absolute! will pad with spaces"
+  '("          ")
+  (let ((buf (make-empty-cbuffer)))
+    (character-position-absolute! buf 10)
+    (get-text buf)))
+
+(test-equal "character-position-absolute! is bracketed by the line limit"
+  '(0 . 20)
+  (let ((buf (make-empty-cbuffer)))
+    (set-line-limit! buf 20)
+    (character-position-absolute! buf 30)
+    (active-position-report buf)))
+
+(test-equal "character-position-absolute! is bracketed by the line home"
+  '(0 . 20)
+  (let ((buf (make-empty-cbuffer)))
+    (set-line-home! buf 20)
+    (character-position-absolute! buf 0)
+    (active-position-report buf)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; insert-character-in-line!
 
 (test-equal "insert-character-in-line! in empty buffer"
-  '(("x") 0 1)
+  '(("x") (0 . 1))
   (let ((buf (make-empty-cbuffer)))
     (insert-character-in-line! buf 0 0 #\x)
     (list (get-text buf)
-          (get-line-cur buf)
-          (get-pd-cur buf))))
+          (active-position-report buf))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; line-feed!
@@ -88,8 +136,7 @@
   (let ((buf (make-empty-cbuffer)))
     (line-feed! buf)
     (and
-     (= 1 (get-line-cur buf))
-     (= 0 (get-pd-cur buf))
+     (equal? '(1 . 0) (active-position-report buf))
      (equal? '("" "")
 	     (get-text buf)))))
 
@@ -97,15 +144,16 @@
   (let ((buf (make-empty-cbuffer)))
     (append-line! buf "hello")
     (append-line! buf "world")
-    (set-line-cur! buf 1)
-    (set-pd-cur! buf 3)
+    (line-position-absolute! buf 1)
+    (character-position-absolute! buf 3)
     (line-feed! buf)
     (and
-     (= 2 (get-line-cur buf))
-     (= 3 (get-pd-cur buf))
+     (equal? '(2 . 3) (active-position-report buf))
      (equal? '("" "hello" "world")
 	     (get-text buf)))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; write-character!
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OP BOOKMARK SET
@@ -208,6 +256,7 @@
 
 (undo buf)
 
+#|
 (test-equal "can undo op-insert-in-line! at EOL"
   '("one" "two" "three" "")
   (get-text buf))
@@ -225,7 +274,6 @@
 (test-equal "can undo op-insert-in-line! at BOL"
   '("one" "two" "three")
   (get-text buf))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OP REPLACE IN LINE
 
@@ -330,6 +378,7 @@
   (get-bookmarks buf))
 
 (undo buf)
+|#
 
 #|
 ;; OP REPLACE IN LINE
