@@ -59,6 +59,8 @@ mutating methods from (gano CBuffer-base) should be re-exported here.
                get-pd-cur
                get-tags
                get-text
+               get-text-cur
+               get-text-line
                make-empty-cbuffer
                tag:line
                tag:name
@@ -68,6 +70,7 @@ mutating methods from (gano CBuffer-base) should be re-exported here.
   #:export (
             active-position-report      ; CPR
             append-line!
+            bookmark-bol!
             carriage-return!             ; CR
             character-position-absolute! ; HPA
             insert-character-in-line!
@@ -82,7 +85,6 @@ mutating methods from (gano CBuffer-base) should be re-exported here.
             ;; bell                        ; BEL
 
             ;; Line-editing Operations
-            bookmark-bol!
             copy-lines!
             delete-lines!
             get-bookmark-line
@@ -140,27 +142,7 @@ mutating methods from (gano CBuffer-base) should be re-exported here.
             line-position-backward      ; VPB
             line-position-forward       ; VPR
 
-            ;; ;; get-line-count
-            ;; ;; get-line-cur
-            ;; get-line-frame
-            ;; get-line-frame-size
-            ;; ;; get-pd-cur
-            ;; get-text-cur
-            ;; get-text-cur-length
-            ;; get-text-line
-            ;; increase-pd-cur!
-            ;; render-line
-            ;; set-line-cur!
-            ;; set-line-frame!
-            ;; set-line-frame-size!
-            ;; set-pd-cur!
-            ;; set-pd-goal!
-            ;; set-positions!
-            ;; set-tab-size!
-            ;; set-text!
-            ;; set-text-cur!
-            )
-  #:re-export (get-text-line get-text-cur))
+            ))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -190,6 +172,23 @@ direction opposite that of the implicit movement."
                         -1
                         1)))
 
+
+(define-method (bookmark-bol! (Buf <CBuffer>) (L <integer>) (Name <string>))
+  "Set a bookmark at the beginning of line L using Name.  If the
+implicit movement direction is 'forward, set the bookmark to the beginning
+of the line.  If it is backward, set it to the end of the line."
+
+  (warn-if-false (integer-nonnegative? L))
+  (warn-if-false (>= L 0))
+  (warn-if-false (< L (get-line-count Buf)))
+
+  (op-bookmark-set! Buf
+                    L
+                    (if (eqv? (get-implicit-movement-direction Buf) 'forward)
+                        0
+                        (get-text-cur-length Buf))
+                    Name))
+
 ;; CR - CARRIAGE RETURN
 
 ;; If the implicit movement direction is 'forward, move the active
@@ -211,6 +210,28 @@ position to the line-limit position of the current line."
     (if (< len pos)
         (op-insert-in-line! buf (get-line-cur buf) len (make-string (- pos len) #\space)))
   (set-pd-cur! buf pos)))
+
+(define-method (copy-lines! (Buf <CBuffer>) (LCopyStart <integer>)
+                            (LCopyEnd <integer>) (LCopyTo <integer>))
+  "Make a copy of the lines between LCopyStart (inclusive) and
+LCopyEnd (exclusive) and position that copy at the line LCopyTo.
+
+The active data line will be set to the new location of the last line
+copied."
+  (warn-if-false (integer-nonnegative? LCopyStart))
+  (warn-if-false (integer-nonnegative? LCopyEnd))
+  (warn-if-false (integer-nonnegative? LCopyTo))
+  (warn-if-false (< LCopyStart LCopyEnd))
+
+  (if (> LCopyEnd LCopyStart)
+      (begin
+        (op-copy-lines! Buf LCopyStart LCopyEnd LCopyTo)
+        ;; Move the activive data position
+        (set-line-and-pd-cur! Buf (pos-copy-lines (get-line-cur Buf)
+                                                  (get-pd-cur Buf)
+                                                  LCopyStart LCopyEnd LCopyTo #t))
+
+        (set-pd-cur-to-simd-eol! Buf))))
 
 (define-method (character-position-absolute! (buf <CBuffer>) n)
   "Move the active data position to the n-th codepoint in the active
@@ -374,44 +395,7 @@ happens if the limit column is reached."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  OPERATIONS INSPIRED BY ED
 
-(define (bookmark-bol! Buf L Name)
-  "Set a bookmark at the beginning of line L using Name."
 
-  ;; Unusually, the Ed Mark command doesn't change the current line.
-  (warn-if-false (integer-nonnegative? L))
-  (warn-if-false (string? Name))
-  (warn-if-false (>= L 0))
-  (warn-if-false (< L (get-line-count Buf)))
-  (warn-if-false (cbuffer? Buf))
-
-  (op-bookmark-set! Buf
-                    L
-                    (if (eqv? (get-implicit-movement-direction Buf) 'forward)
-                        0
-                        (get-text-cur-length Buf))
-                    Name))
-
-(define (copy-lines! Buf LCopyStart LCopyEnd LCopyTo)
-  "Make a copy of the lines between LCopyStart (inclusive) and
-LCopyEnd (exclusive) and position that copy at the line LCopyTo.
-
-The active data line will be set to the new location of the last line
-copied."
-  (warn-if-false (cbuffer? Buf))
-  (warn-if-false (integer-nonnegative? LCopyStart))
-  (warn-if-false (integer-nonnegative? LCopyEnd))
-  (warn-if-false (integer-nonnegative? LCopyTo))
-  (warn-if-false (< LCopyStart LCopyEnd))
-
-  (if (> LCopyEnd LCopyStart)
-      (begin
-        (op-copy-lines! Buf LCopyStart LCopyEnd LCopyTo)
-        ;; Move the activive data position
-        (set-line-and-pd-cur! Buf (pos-copy-lines (get-line-cur Buf)
-                                                  (get-pd-cur Buf)
-                                                  LCopyStart LCopyEnd LCopyTo #t))
-
-        (set-pd-cur-to-simd-eol! Buf))))
 
 (define (delete-lines! Buf LStart LEnd)
   "Remove the lines of text from LStart (inclusive) to LEnd (exclusive).

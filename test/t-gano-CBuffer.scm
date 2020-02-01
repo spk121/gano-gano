@@ -57,6 +57,26 @@
     (active-position-report buf)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; bookmark-bol!
+
+(test-assert "bookmark-bol! on empty buffer"
+  (let ((buf (make-empty-cbuffer)))
+    (bookmark-bol! buf 0 "alpha")
+    (bookmark-name-at? (get-bookmarks buf) "alpha" 0 0)))
+
+(test-assert "bookmark-bol! on non-empty line"
+  (let ((buf (make-empty-cbuffer)))
+    (write-character! buf #\x)
+    (bookmark-bol! buf 0 "alpha")
+    (bookmark-name-at? (get-bookmarks buf) "alpha" 0 0)))
+
+(test-assert "bookmark-bol! on second line"
+  (let ((buf (make-empty-cbuffer)))
+    (append-line! buf "foo")
+    (bookmark-name-at? (get-bookmarks buf) "alpha" 1 0)
+    (bookmark-bol! buf 1 "alpha")))    
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; carriage-return!
 
 (test-equal "CR when SIMD=forward and HOME=0 moves to column 0"

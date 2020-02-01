@@ -1,14 +1,16 @@
 ;;; Gano - a simple console text editor     -*- mode: scheme; -*-
 (setlocale LC_ALL "")
 (use-modules (srfi srfi-1)
-	     (srfi srfi-34)
-	     (srfi srfi-35)
+             (srfi srfi-34)
+             (srfi srfi-35)
              (rnrs control)
-	     (ice-9 format)
+             (ice-9 format)
              (ice-9 getopt-long)
-	     (ice-9 rdelim)
+             (ice-9 rdelim)
              (ncurses curses)
-	     (ncurses extra))
+             (ncurses extra)
+
+             )
 
 
 

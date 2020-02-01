@@ -66,7 +66,8 @@ dist_pkgguilesite_DATA = \
   module/gano/poslist.scm \
   module/gano/stringlist.scm \
   module/gano/text.scm \
-  module/gano/utils.scm
+  module/gano/utils.scm \
+  module/gano/winio.scm
 
 pkgguileobject_DATA = \
   $(dist_pkgguilesite_DATA:%.scm=%.go)
@@ -122,7 +123,10 @@ TESTS = \
   test/t-gano-math.scm \
   test/t-gano-CBuffer.scm \
   test/t-gano-poslist.scm \
-  test/t-gano-stringlist.scm
+  test/t-gano-stringlist.scm \
+  test/t-gano-winio.scm \
+  test/t-gano-chars.scm \
+  test/t-gano-utils.scm
 #  test/t-gano-ed-repl.scm
 
 TEST_EXTENSIONS = .scm

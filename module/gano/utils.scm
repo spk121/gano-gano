@@ -31,9 +31,9 @@
   #:use-module (rnrs control)
   #:use-module (ncurses curses)
   #:export (
-            GetIndexFromStringCell
-            CountCellsInString
-            CountCellsInSubstring
+            get-index-from-string-cell
+            count-cells-in-string
+            count-cells-in-substring
             get_page_start
 	    InitDirHome
 	    ParseLineColumn
@@ -42,17 +42,14 @@
 ;; Return the index in s of the character displayed at the given]
 ;; column, i.e. the largest value such that strnlenpt(s, actual_x(s,
 ;; column)) <= column.
-(define (GetIndexFromStringCell str xLim)
+(define* (get-index-from-string-cell str xLim #:optional (tabsize 8))
+  "Return the index in the string of the character displayed at
+the given column."
   (let ([i 0]                       ; The position in s
         [x 0]                    ; The screen display width to s[i]
 	[iLim (string-length str)])
     (while (< i iLim)
-      ;; (format (current-error-port) "actual_x: s ~a col ~a~%" s column)
-      ;; (format (current-error-port) "actual_x: i ~a iLim ~a~%" i iLim)
-      ;; (format (current-error-port) "actual_x: len ~a c ~s~%" len (string-ref s i))
-      ;; (format (current-error-port) "actual_x: vTabSize ~a~%" vTabSize)
-
-      (set! x (+ x (CountCellsInChar (string-ref str i) x vTabSize)))
+      (set! x (+ x (count-cells-in-char (string-ref str i) x tabsize)))
       (if (> x xLim)
 	  (break))
       (set! i (+ i 1)))
@@ -60,19 +57,18 @@
 
 ;; Returns the number of cells that the first MAXLEN characters
 ;; takes up
-(define (CountCellsInSubstring str n)
+(define (count-cells-in-substring str n)
   "Number of screen cells occupied by the first N characters of a string"
-  (CountCellsInString (substring str 0 n)))
+  (count-cells-in-string (substring str 0 n)))
 
 ;; Returns the number of character cells that the string takes up,
 ;; with tabs and multicolumn character factored in.
-(define (CountCellsInString str)
+(define* (count-cells-in-string str #:optional (tabsize 8))
   "Number of screen cells occupied by a string"
   (let ([iLim (string-length str)]
         [x 0])
     (do ([i 0 (1+ i)]) ([>= i iLim])
-      (set! x (+ x (CountCellsInChar (string-ref str i) x vTabSize))))
-    (format (current-error-port) "CountCellsInString: str ~s count ~s~%" str x)
+      (set! x (+ x (count-cells-in-char (string-ref str i) x 8))))
     x))
 
 ;; nano scrolls horizontally within a line in chunks.  Return the

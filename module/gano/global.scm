@@ -106,23 +106,6 @@
 ;; The last replacement string we searched for
 (define last_replace #f)
 
-;; The standard ncurses screen
-(define vWinMain #f)
-;; The top portion of the window, where we display the version
-;; number of nano, the name of the current file, and whether
-;; the current file has been modified
-(define vWinTop #f)
-;; The middle portion of the window, where we display the
-;; file we're editing
-(define vWinEdit #f)
-;; The bottom portion of the window, where we display statusbar
-;; messages, the statusbar primpt, and a list of shortcuts
-(define vWinBottom #f)
-;; How many rows does the window take up
-(define editwinrows 0)
-;; How many usable lines are there (due to soft wrapping)
-(define maxrows 0)
-
 ;; The buffer where we store cut text
 (define cutbuffer #f)
 (define cutbottom #f)
