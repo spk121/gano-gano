@@ -148,7 +148,7 @@
     (init-winio! winio 24 40 #t #t)
     (display-titlebar winio "temp.txt" #t #f #f)
     (refresh (get-top-win winio))
-    (sleep 3)
+    (sleep 1)
     (let ((str (string-trim-both (read-titlebar winio))))
       (endwin)
       str)))
@@ -164,9 +164,58 @@
     (refresh mainwin)
     (display-statusbar winio "This is a sample error message")
     (refresh (get-bottom-win winio))
-    (sleep 3)
+    ;; (sleep 1)
     (let ((str (string-trim-both (read-statusbar winio))))
       (endwin)
       str)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; display-shortcut-list
+(test-equal "display-shortcut-list one shortcut"
+    "^G Help"
+  (let ((winio (make-winio))
+        (mainwin (initscr)))
+    (init-winio! winio 24 40 #t #t)
+    (refresh mainwin)
+    (display-shortcut-list winio '("^G") '("Help"))
+    (refresh (get-bottom-win winio))
+    ;; (sleep 3)
+    (let ((str (string-trim-both (read-shortcut-list winio))))
+      (endwin)
+      str)))
+
+(define shortcuts
+  '("^A" "^B" "^C" "^D" "^E" "^F" "^G" "^H" "^I" "^J" "^K" "^L" "^M" "^N"))
+(define descriptions
+  '("Alpha" "Bravo" "Charlie" "Delta" "Echo" "Foxtrot" "Golf" "Hotel" "India"
+    "Juliet" "Kilo" "Lima" "Mike" "November"))
+
+(test-equal "display-shortcut-list many shortcuts"
+  "^A Alp^C Cha^E Ech^G Gol^I Ind^K Kilo   \n^B Bra^D Del^F Fox^H Hot^J Jul^L Lima"
+  (let ((winio (make-winio))
+        (mainwin (initscr)))
+    (init-winio! winio 24 40 #t #t)
+    (refresh mainwin)
+    (display-shortcut-list winio shortcuts descriptions)
+    (refresh (get-bottom-win winio))
+    ;; (sleep 3)
+    (let ((str (string-trim-both (read-shortcut-list winio))))
+      (endwin)
+      str)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; display-editor
+(test-equal "display-editor two lines"
+  "hello                                   \nworld                                   \n"
+  (let ((winio (make-winio))
+        (mainwin (initscr)))
+    (init-winio! winio 24 40 #t #t)
+    (refresh mainwin)
+    (display-editor winio '("hello" "world") 0)
+    (refresh (get-edit-win winio))
+    ;; (sleep 3)
+    (let ((str (read-editor winio)))
+      (endwin)
+      (substring str 0 82))))
 
 (test-end "t-gano-winio")

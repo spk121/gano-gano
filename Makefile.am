@@ -126,7 +126,8 @@ TESTS = \
   test/t-gano-stringlist.scm \
   test/t-gano-winio.scm \
   test/t-gano-chars.scm \
-  test/t-gano-utils.scm
+  test/t-gano-utils.scm \
+  test/t-gano-input.scm
 #  test/t-gano-ed-repl.scm
 
 TEST_EXTENSIONS = .scm

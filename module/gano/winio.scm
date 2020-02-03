@@ -49,6 +49,7 @@
             blank-titlebar
 
             get-top-win
+            get-edit-win
             get-bottom-win
             get-top-win-lines
             get-edit-win-lines
@@ -59,6 +60,10 @@
             read-titlebar
             display-statusbar
             read-statusbar
+            display-shortcut-list
+            read-shortcut-list
+            display-editor
+            read-editor
             #|
             check-statusblank
 
@@ -84,7 +89,10 @@
   (m_MIN_EDITOR_LINES #:allocation #:class
                       #:init-value 6
                       #:getter get-min-editor-lines)
-
+  (m_MAIN_VISIBLE #:allocation #:class
+                  #:init-value 12
+                  #:getter get-main-visible)
+  
   (m-top-win-lines #:init-value 2 #:getter get-top-win-lines #:setter set-top-win-lines!)
   (m-edit-win-lines #:init-value 19 #:getter get-edit-win-lines #:setter set-edit-win-lines!)
   (m-bottom-win-lines #:init-value 3 #:getter get-bottom-win-lines #:setter set-bottom-win-lines!)
@@ -311,7 +319,7 @@ negative, it is an offset from the right column."
 ;; shortcuts are written
 (define-method (blank-shortcut-list (winio <winio>))
   "Erase all the text in the shortcut list area"
-  (when (= 3 (get-bottom-win-lines winio 3))
+  (when (= 3 (get-bottom-win-lines winio))
     (blank-line (get-bottom-win winio) 1 (get-cols winio))
     (blank-line (get-bottom-win winio) 2 (get-cols winio))))
 
@@ -332,7 +340,7 @@ in the edit window at that location"
         [y (- (get-line-cur cbuf) (get-line-frame cbuf))])
     ;; FIXME: softwrap should be handled here
     (when (< y (get-edit-win-lines winio))
-      (move (get-win-edit winio) y
+      (move (get-edit-win winio) y
             (- xpt (get_page_start xpt))))))
 
 (define-method (display-titlebar (winio <winio>) path file? modified? readonly?)
@@ -419,7 +427,189 @@ is on, it is suspended."
   "Return a string containing the text currently in the titlebar"
   (instr (get-bottom-win winio) #:y 0 #:x 0 #:n (get-cols winio)))
 
+;; Write a shortcut key to the help area at the bottom of the window.
+;; keystroke is e.g. "^G" and desc is e.g. "Get Help".  We are careful
+;; to write at most len characters, even if len is very small and
+;; keystroke and desc are long.  Note that waddnstr(,,(size_t)-1) adds
+;; the whole string!  We do not bother padding the entry with blanks.
+(define-method (onekey (winio <winio>) keystroke desc len)
+  (let ((keystroke-len (+ 1 (count-cells-in-string keystroke))))
+    (attr-on! (get-bottom-win winio) A_REVERSE)
+    (addstr (get-bottom-win winio) keystroke #:n (get-index-from-string-cell keystroke len))
+    (attr-off! (get-bottom-win winio) A_REVERSE)
+
+    (if (> len keystroke-len)
+        (set! len (- len keystroke-len))
+        (set! len 0))
+    (when (> len 0)
+      (addch (get-bottom-win winio) (normal #\space))
+      (addstr (get-bottom-win winio) desc
+              #:n (get-index-from-string-cell desc len)))))
+
+;; Display the shortcut list in S on the last two rows of the bottom
+;; portion of the window
+(define-method (display-shortcut-list (winio <winio>) shortcuts descriptions)
+  "Given a list of keypress shortcuts and identical length list of function names,
+display as many as will fit in the shortcut space."
+  (when (= 3 (get-bottom-win-lines winio))
+    (let* ((slen (min (get-main-visible winio) (length shortcuts)))
+           ;; There will be this many characters per column, except
+           ;; for the last two, which will be longer by (COLS %
+           ;; colwidth) cols so as to not waste space.  We need at
+           ;; least three cols to display anything properly
+           (xLim (get-cols winio))
+           (colwidth (quotient xLim (+ (quotient slen 2) (remainder slen 2)))))
+      (blank-shortcut-list winio)
+      (let loop ((i 0)
+                 (n 0))
+        (when (and (< n (length shortcuts))
+                   (< i slen))
+          (move (get-bottom-win winio) (+ 1 (remainder i 2)) (* colwidth (quotient i 2)))
+          (onekey winio (list-ref shortcuts i) (list-ref descriptions i)
+                  (+ colwidth (remainder (cols) colwidth)))
+          (loop (+ i 1) (+ n 1))))
+      (noutrefresh (get-bottom-win winio))
+      ;; (reset_cursor)
+      (noutrefresh (get-edit-win winio)))))
+
+(define-method (read-shortcut-list (winio <winio>))
+  "Return a string containing the text currently in the titlebar"
+  (string-append (instr (get-bottom-win winio) #:y 1 #:x 0 #:n (get-cols winio))
+                 "\n"
+                 (instr (get-bottom-win winio) #:y 2 #:x 0 #:n (get-cols winio))))
+
+;; Sets an attribute at the current position based on a string
+(define (attr-set win name)
+  (cond
+   ((eqv? name "bold")
+    (attr-on! win A_BOLD))
+   ((eqv? name "/bold")
+    (attr-off! win A_BOLD))
+   ((eqv? name "reverse")
+    (attr-on! win A_REVERSE))
+   ((eqv? name "/reverse")
+    (attr-off! win A_REVERSE))
+   ((eqv? name "blink")
+    (attr-on! win A_BLINK))
+   ((eqv? name "/blink")
+    (attr-off! win A_BLINK))
+   ((eqv? name "dim")
+    (attr-on! win A_DIM))
+   ((eqv? name "/dim")
+    (attr-off! win A_DIM))
+   ((and (> 5 (string-length name))
+         (string= "color" name 0 5 0 5))
+    (let ((num (string->number (substring name 5))))
+      (when (integer? num)
+        (attr-on! win (color-pair num)))))
+   ((and (> 6 (string-length name))
+         (string= "/color" name 0 6 0 6))
+    (let ((num (string->number (substring name 6))))
+      (when (integer? num)
+        (attr-off! win (color-pair num)))))))
+
+;; Displays a string on a line of the editor, starting at a given
+;; presentation ccolumn of the string.  If the string is wider than
+;; the window, it is truncated.  If a list of tags is provided, it is
+;; searched for decorators to be applied to the string.
+(define-method (display-editor-line (winio <winio>) str line #|startcol tags|#)
+  ;; FIXME: ove the cursor to the beginning of the screen line, and then
+  ;; activate all the attributes up to startcol.
+  ;; FIXME: print $ at the beginning of lines if startcol is not zero.
+  (let ((displaystr (display-string str 0 (get-cols winio) #t)))
+    ;; FIXME: iterating through the line, print the characters
+    ;; one by one, activating attributes that appear in tags.
+    (addstr (get-edit-win winio) displaystr #:y line #:x 0)
+    ;; (noutrefresh (get-edit-win winio))
+    )
+  ;; FIXME: print $ at the end of lines that were truncated to fit.
+  ;; FIXME: reset attributes
+  )
+
+;; Displays as many lines of strlist as will fit in the window, starting
+;; at a given presentation column of the string.
+(define-method (display-editor (winio <winio>) strlist startcol)
+  (clear (get-edit-win winio))
+  (for-each (lambda (i)
+              (display-editor-line winio (list-ref strlist i) i))
+            (iota (min (get-edit-win-lines winio)
+                       (length strlist)))))
+
+(define-method (read-editor (winio <winio>))
+  (apply string-append
+         (map (lambda (i)
+                (string-append (instr (get-edit-win winio) #:y i #:x 0) "\n"))
+              (iota (get-edit-win-lines winio)))))
+
 #|
+;; Display a message on the statusbar, and set *disable-cursorpos* to
+;; TRUE, so that the message won't be immediately overwritten if
+;; constant cursor position display is on.
+(define (DisplayStatusbar full-msg)
+  (let ((old_whitespace #f))
+    ;; If curses mode is off, just use regular printing
+    (cond
+     ((isendwin?)
+      (display full-msg (current-error-port))
+      (newline (current-error-port)))
+
+     (else
+      (BlankStatusbar)
+      (set! old_whitespace (ISSET WHITESPACE_DISPLAY))
+      (UNSET WHITESPACE_DISPLAY)
+
+      (set! full-msg (display_string full-msg 0 (- (cols) 4) #f))
+
+      (if old_whitespace
+          (SET WHITESPACE_DISPLAY))
+
+      (let* ((foo-len (CountCellsInString full-msg))
+             (start-x (quotient (+ (cols) (- foo-len) -4) 2)))
+        (move vWinBottom 0 start-x)
+        (attr-on! vWinBottom vAttrReverse)
+        (addstr vWinBottom "[ ")
+        (addstr vWinBottom full-msg)
+        (addstr vWinBottom " ]")
+        (attr-off! vWinBottom vAttrReverse)
+        (noutrefresh vWinBottom)
+        (reset_cursor)
+
+        ;; Leave the cursor at its position in the edit window, not
+        ;; in the statusber
+        (noutrefresh vWinEdit)
+
+        (set! *disable-cursorpos* #t)
+        ;; If we're doing quick statusbar blanking, and constant
+        ;; cursor position display is off, blank the statusbar after
+        ;; only one keystroke.  Otherwise, blank it after twenty-six
+        ;; keystrokes, as Pico does.
+        (set! *statusblank*
+          (if (and (ISSET QUICK_BLANK)
+                   (not (ISSET CONST_UPDATE)))
+              1
+              26)
+          ))))))
+
+
+;; Write a shortcut key to the help area at the bottom of the window.
+;; keystroke is e.g. "^G" and desc is e.g. "Get Help".  We are careful
+;; to write at most len characters, even if len is very small and
+;; keystroke and desc are long.  Note that waddnstr(,,(size_t)-1) adds
+;; the whole string!  We do not bother padding the entry with blanks.
+(define (onekey keystroke desc len)
+  (let ((keystroke_len (+ 1 (CountCellsInString keystroke))))
+    (attr-on! vWinBottom vAttrReverse)
+    (addstr vWinBottom keystroke #:n (GetIndexFromStringCell keystroke len))
+    (attr-off! vWinBottom vAttrReverse)
+
+    (if (> len keystroke_len)
+        (set! len (- len keystroke_len))
+        (set! len 0))
+    (when (> len 0)
+      (addch vWinBottom (normal #\space))
+      (addstr vWinBottom desc #:n (GetIndexFromStringCell desc len)))))
+
+
 ;; If path is NULL, we're in normal editing mode, so display the
 ;; current version of nano, the current filename, and whether the
 ;; current file has been modified on the titlebar.  If path isn't
@@ -598,128 +788,6 @@ state)))
 
 
 
-
-;; Display the shortcut list in S on the last two rows of the bottom
-;; portion of the window
-(define (DisplayShortcutList menu)
-(cond
-((ISSET NO_HELP)
-#t)
-(else
-(let* ((slen (min MAIN_VISIBLE (CountEntriesInMenu menu)))
-;; There will be this many characters per column, except
-;; for the last two, which will be longer by (COLS %
-;; colwidth) cols so as to not waste space.  We need at
-;; least three cols to display anything properly
-(xLim (cadr (getmaxyx vWinMain)))
-(colwidth (quotient xLim (+ (quotient slen 2) (remainder slen 2)))))
-(BlankShortcutList)
-
-(format (current-error-port) "In bottombars, and cols == \"~a\" (should be 80)~%" xLim)
-(format (current-error-port) "In bottombars, and slen == \"~a\" (should be 12)~%" slen)
-(format (current-error-port) "In bottombars, and colwidth == \"~a\" (should be 13)~%" colwidth)
-(let loop ((i 0)
-(n 0))
-(if (and (< n (length vrgFunctions))
-(< i slen))
-(begin
-(let ((func (list-ref vrgFunctions n)))
-
-(format (current-error-port) "Checking menu item....~%");
-
-(if (and (logtest menu (GetFunctionMenus func))
-(GetFunctionDesc func)
-(not (string-null? (GetFunctionDesc func))))
-(begin
-(format (current-error-port) "found one! f->menus = ~a, desc = \"~a\"~%"
-(GetFunctionMenus func) (GetFunctionDesc func))
-(let ((s (FindFirstShortcut menu (GetFunctionId func))))
-(begin
-(if (not s)
-(begin
-(format (current-error-port) "Whoops, gues not, no shortcut key found fo func!~%")
-(loop i (+ n 1)))
-;; else
-(begin
-(move vWinBottom (+ 1 (remainder i 2))
-(* colwidth (quotient i 2)))
-(format (current-error-port) "Calling onekey with keystr \"~a\" and desc \"~a\"~%"
-(GetShortcutKeyStr s) (GetFunctionDesc func))
-(onekey (GetShortcutKeyStr s) (GetFunctionDesc func)
-(+ colwidth (remainder (cols) colwidth)))
-(loop (+ i 1) (+ n 1)))))))
-;; else
-(loop i (+ n 1)))))))
-(noutrefresh vWinBottom)
-(reset_cursor)
-(noutrefresh vWinEdit)))))
-
-;; Display a message on the statusbar, and set *disable-cursorpos* to
-;; TRUE, so that the message won't be immediately overwritten if
-;; constant cursor position display is on.
-(define (DisplayStatusbar full-msg)
-(let ((old_whitespace #f))
-;; If curses mode is off, just use regular printing
-(cond
-((isendwin?)
-(display full-msg (current-error-port))
-(newline (current-error-port)))
-
-(else
-(BlankStatusbar)
-(set! old_whitespace (ISSET WHITESPACE_DISPLAY))
-(UNSET WHITESPACE_DISPLAY)
-
-(set! full-msg (display_string full-msg 0 (- (cols) 4) #f))
-
-(if old_whitespace
-(SET WHITESPACE_DISPLAY))
-
-(let* ((foo-len (CountCellsInString full-msg))
-(start-x (quotient (+ (cols) (- foo-len) -4) 2)))
-(move vWinBottom 0 start-x)
-(attr-on! vWinBottom vAttrReverse)
-(addstr vWinBottom "[ ")
-(addstr vWinBottom full-msg)
-(addstr vWinBottom " ]")
-(attr-off! vWinBottom vAttrReverse)
-(noutrefresh vWinBottom)
-(reset_cursor)
-
-;; Leave the cursor at its position in the edit window, not
-;; in the statusber
-(noutrefresh vWinEdit)
-
-(set! *disable-cursorpos* #t)
-;; If we're doing quick statusbar blanking, and constant
-;; cursor position display is off, blank the statusbar after
-;; only one keystroke.  Otherwise, blank it after twenty-six
-;; keystrokes, as Pico does.
-(set! *statusblank*
-(if (and (ISSET QUICK_BLANK)
-(not (ISSET CONST_UPDATE)))
-1
-26)
-))))))
-
-
-;; Write a shortcut key to the help area at the bottom of the window.
-;; keystroke is e.g. "^G" and desc is e.g. "Get Help".  We are careful
-;; to write at most len characters, even if len is very small and
-;; keystroke and desc are long.  Note that waddnstr(,,(size_t)-1) adds
-;; the whole string!  We do not bother padding the entry with blanks.
-(define (onekey keystroke desc len)
-(let ((keystroke_len (+ 1 (CountCellsInString keystroke))))
-(attr-on! vWinBottom vAttrReverse)
-(addstr vWinBottom keystroke #:n (GetIndexFromStringCell keystroke len))
-(attr-off! vWinBottom vAttrReverse)
-
-(if (> len keystroke_len)
-(set! len (- len keystroke_len))
-(set! len 0))
-(when (> len 0)
-(addch vWinBottom (normal #\space))
-(addstr vWinBottom desc #:n (GetIndexFromStringCell desc len)))))
 
 
 

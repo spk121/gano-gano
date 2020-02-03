@@ -120,11 +120,11 @@
                     "line 3"
                     "line 4"
                     "line5"))
-    (ed-repl-do ed (open-input-string ",g/./m0"))
-    (ed-repl-do ed (open-input-string "g/./s/$/ hello world/"))
-    (ed-repl-do ed (open-input-string "g/hello /s/lo/p!/"))
+    (ed-repl-do ed (open-input-string "g/./m0"))
+    (ed-repl-do ed (open-input-string "g/./s/$/\\\nhello world\n"))
+    ;(ed-repl-do ed (open-input-string "g/hello /s/lo/p!/\\\na\\\norder"))
     (get-text ed)))
-
+#|
 (test-equal "ed test 'g2a'"
   '("line 1"
     "BLAMMO"
@@ -139,5 +139,5 @@
                     "line5"))
     (ed-repl-do ed (open-input-string "g/2/c\\\nBLAMMO"))
     (get-text ed)))
-
+|#
 (test-end "t-gano-ed-repl")

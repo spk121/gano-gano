@@ -265,6 +265,7 @@ lines with a single call."
   ;; Read in one line of text from the port.
   (catch 'interrupt
     (lambda ()
+      (format #t "READLINE 1~%")
       (let ((line (read-line Port)))
 
         (if (eof-object? line)
@@ -321,20 +322,48 @@ lines with a single call."
                           ;; backslash to indicate further input.
                           (let* ((ws (read-whitespace port))
                                  (leftover (peek-char-safe port)))
-                            (if (not (or (and global (char=? leftover #\\))
-                                         (char=? leftover #\null)))
-                                (begin
-                                  (if (isprint? leftover)
-                                      (set-err-msg! repl (format #f "invalid suffix character '~a'" leftover))
-                                      (set-err-msg! repl (format #f "invalid suffix character ~s" leftover)))
-                                  (set-status! repl ERR)
-                                  #f)
-                                "")))
+                            (cond
+
+                             ;; Except for global ops, no character
+                             ;; should appear after the command.
+                             ((and (not global) (not (char=? leftover #\null)))
+                              (if (isprint? leftover)
+                                  (set-err-msg! repl (format #f "invalid suffix character '~a'" leftover))
+                                  (set-err-msg! repl (format #f "invalid suffix character ~s" leftover)))
+                              (set-status! repl ERR)
+                              ;; give up
+                              #f)
+
+                             ;; On global ops, unless there is a backslash, we're done
+                             ;; parsing. FIXME: structly should test for backslash + EOL.
+                             ((and global (char=? leftover #\\))
+                              ;; Clear out the rest of this line, including the
+                              ;; already-peeked backslash.
+
+                              (format #t "FOUND A LEFTOVER BACKSLASH~%")
+                              (format #t "READLINE 2~%")
+                              
+                              (let ((tmp(read-line port)))
+                                (format #t "LEFTOVER ~S~%" tmp)
+                                tmp))
+
+                             (else
+                              ;; On global ops with no backslash, we're done parsing.
+                              (set! global #f)
+                              #\null))))
+
                          (txt
                           ;; Some commands let the user type some
                           ;; lines terminated by a dot
                           (if (dispatch:append? op)
-                              (ed-repl-parse/validate-input-lines repl Port global)
+                              ;; FIXME: this whole 'use current input
+                              ;; port if global' is a hack.  Need a
+                              ;; better strategy to handle
+                              ;; continuation lines of global ops that
+                              ;; recurse to here.
+                              (ed-repl-parse/validate-input-lines repl
+                                                                  (if global (current-input-port) Port)
+                                                                  global)
                               '())))
                 ;; So, all the parsing is done, and we can finally
                 ;; run a command.
@@ -398,6 +427,8 @@ lines with a single call."
 (define-method (ed-repl-parse-comment (repl <EdRepl>) port)
   "Extracts a comment from the given port.  It will return the string,
 or #f on failure."
+  (format #t "READLINE 3~%")
+  
   (if (eof-object? (peek-char port))
       #f
       (string-trim-both (read-line port))))
@@ -410,6 +441,8 @@ instead.  It will return the string, or #f on failure."
   (let ((txt ""))
     (if (not (eof-object? (peek-char port)))
         (set! txt (read-whitespace port)))
+    (format #t "READLINE 4~%")
+    
     (if (= 0 (string-length txt))
         (begin
           (set-err-msg! repl "a space is requied before the filename")
@@ -436,6 +469,8 @@ instead.  It will return the string, or #f on failure."
 a single '.' on its own line.  Global commands, like 'g' expect line-ending
 backslashes instead to indicate continuation."
   ;; (drain-input port)
+  (format #t "READLINE 5~%")
+  
   (let loop ((out '())
              (line (read-line port)))
     (format #t "INPUT OUT ~S LINE ~S~%" out line)
@@ -445,7 +480,7 @@ backslashes instead to indicate continuation."
      ((and (not global) (string=? line "."))
       out)
      ((and global (not (string-ends-with? line #\\)))
-      out)
+      (append out (list line)))
      (else
       (if global
           ;; For global continuation lines, drop the backslash at the end
@@ -464,7 +499,7 @@ Returns a string containing zero or more of 'l', 'n', and 'p'."
 (define-method (ed-repl-parse-regex (repl <EdRepl>) port)
   "Returns the regex string, which
 begins and ends with the delimeter characters (usually '/')."
-  (write (current-source-location))
+  ;; (write (current-source-location))
   (read-regex-string port))
 
 (define-method (ed-repl-parse-regex+cmd (repl <EdRepl>) port)
@@ -665,6 +700,7 @@ A Suffix of 'l', 'n', or 'p' is allowed."
   (warn-if-false (list-of-integers-length-1+? AddrList))
   (warn-if-false (list-of-strings-length-0+? StrList))
   (warn-if-false (string? Suffix))
+  (format #t "OP APPEND STRLIST ~S~%" StrList)
   ;; The CBuffer primitive 'insert-lines' expects the line number
   ;; where the insertions happens, and its line numbers are
   ;; zero-indexed.
@@ -695,6 +731,8 @@ The current line number will become the address of the last changed
 line, or, if STRLIST was an empty list, to the last deleted line.
 
 A Suffix of 'l', 'n', or 'p' is allowed."
+  (format #t "IN OP CHANGE AddrList ~S Special ~S Suffix ~S StrList ~S~%"
+          AddrList Special Suffix StrList)
   (warn-if-false (list-of-integers-length-2? AddrList))
   (warn-if-false (list-of-strings? StrList))
   (warn-if-false (string? Suffix))
@@ -853,17 +891,16 @@ changes have been made since the last 'w' write command."
   (let ((delimited-regex-string (car regex+cmd))
         (cmd-string (cdr regex+cmd)))
     (let ((regex-string
-           (if (not delimited-regex-string)
-               #f
-               ;; else
-               (if (= 2 (string-length delimited-regex-string))
-                   (begin
-                     ;; FIXME, set regex to last successful regex
-                     (throw 'fixme))
-                   ;; else
-                   (substring delimited-regex-string
-                              1
-                              (1- (string-length delimited-regex-string)))))))
+           (cond
+            ((not delimited-regex-string)
+             #f)
+            ((= 2 (string-length delimited-regex-string))
+             ;; FIXME, set regex to last successful regex
+             (throw 'fixme))
+            (else
+             (substring delimited-regex-string
+                        1
+                        (1- (string-length delimited-regex-string)))))))
       (if regex-string
           (begin
             (if match?
@@ -881,20 +918,39 @@ changes have been made since the last 'w' write command."
             ;; N.B.  In this function below, we actually recurse back
             ;; into ed-repl-do, but this time we get the commands from a
             ;; the cmd-string instead of the current input port.
+
+            ;; In the non-interactive case, if the cmd-string ends with a '\',
+            ;; we have more commands to gather.
+            (while (and (not interactive?) (string-ends-with? cmd-string #\\))
+              (when (get-prompt-active repl)
+                (display "..."))
+              (set! cmd-string
+                (string-append
+                 (string-drop-right cmd-string 1)
+                 "\n"
+                 (read-line))))
+            (format #t "CMD STRING ~S~%" cmd-string)
             (for-each-tagged-line repl
+                                  
                                   (lambda (repl)
-                                    (ed-repl-do
-                                     repl
-                                     (if interactive?
-                                         (begin
-                                           (when (get-prompt-active repl)
-                                             (set-prompt-string! repl "global>"))
-                                           (display (get-text-cur repl))
-                                           (newline)
-                                           (current-input-port))
-                                         (open-input-string cmd-string))
-                                     #t)) ; the recursive call flag
+                                    (if interactive?
+                                        (begin
+                                          (when (get-prompt-active repl)
+                                            (set-prompt-string! repl "global>"))
+                                          ;; In interactive mode, display the line
+                                          ;; to be modified.
+                                          (format #t "IN INTERACTIVE~%")
+                                          (display (get-text-cur repl))
+                                          (newline)
+                                          ;; and use the current input port
+                                          (ed-repl-do repl (current-input-port) #t))
+                                        ;; When not interactive, use
+                                        ;; the cmd-string from above
+                                        ;; with a new string port each
+                                        ;; time.
+                                        (ed-repl-do repl (open-input-string cmd-string) #t)))
                                   "_RX")
+            
             (set-prompt-string! repl "command>")
             (clear-tags repl "_RX"))
 
