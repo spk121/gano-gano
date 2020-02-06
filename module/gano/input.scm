@@ -61,7 +61,7 @@
 
   (let ((c (get-key-or-hangup win (not block?))))
     (when (eq? c 'hangup)
-          (handle-hupterm 0))
+      (handle-hupterm 0))
     (allow-pending-sigwinch #f)
     (nodelay! win #t)
     (if (eq? c 'hangup)
@@ -105,11 +105,11 @@
   (allow-pending-sigwinch #f)
 
   (when win
-        ;; Add any waiting keys to the key buffer.  If the key buffer
-        ;; is empty, wait around for a key.
-        (let ((new-keys (get-key-buffer win (null? key-buffer))))
-          (when new-keys
-                (set! key-buffer (append! key-buffer new-keys)))))
+    ;; Add any waiting keys to the key buffer.  If the key buffer
+    ;; is empty, wait around for a key.
+    (let ((new-keys (get-key-buffer win (null? key-buffer))))
+      (when new-keys
+        (set! key-buffer (append! key-buffer new-keys)))))
 
   (if (>= (length key-buffer) input-len)
       (let ((returned-keys (take key-buffer input-len)))
@@ -152,39 +152,30 @@
 
          [else
           ;; One escape followed by multiple keystrokes.  The multiple
-	  ;; keystrokes are some unhandled function key
-          ;;(unget-key kbinput)
-          ;;(list 'raw (parse-escape-seq-kbinput win))
-	  #f])]
+          ;; keystrokes are some unhandled function key
+          (unget-key kbinput)
+          (and=> (parse-escape-seq-kbinput win)
+                 (lambda (x)
+                   (list 'raw x)))])]
 
        [(= escapes 2)
         (cond
-         [(and (null? key-buffer)
-               (char? kbinput)
-               (char>=? kbinput #\0)
-               (char<=? kbinput #\9))
-          ;; Two escapes followed by a decimal number indicates that we
-          ;; are going to search for a decimal number, and then convert
-          ;; it to a char
-          (unget-key kbinput)
-          (let ((codepoint (get-codepoint-kbinput win)))
-            (if (and codepoint (false-if-exception (integer->char codepoint)))
-                (list 'raw (integer->char codepoint))
-                ;; else
-                ;; number was not a valid codepoint.
-                #f))]
+         [(and (char? kbinput) (null? key-buffer))
+          ;; Two escapes followed by a non-escape, and there aren't any
+          ;; other keystrokes waiting.  Treat this as a meta key.
+          (list 'meta (char-downcase kbinput))]
 
          [(null? key-buffer)
-          ;; Two escapes followed by a char could be mapped to
-	  ;; Control-X.  But, for now, it is unused.
-	  #f]
+          ;; Two escapes followed by a control key.  Meta the control key
+          (list 'meta kbinput)]
 
          [else
-          ;; Two escapes followed by multiple keystrokes, means that
-          ;; we're meta'ing an unhandled function key.
-          ;;(unget-key kbinput)
-          ;;(list 'meta (parse-escape-seq-kbinput win))])]
-	  #f])]
+          ;; Two escapes followed by multiple keystrokes.  The multiple
+          ;; keystrokes are some unhandled function key
+          (unget-key kbinput)
+          (and=> (parse-escape-seq-kbinput win)
+                 (lambda (x)
+                   (list 'raw x)))])]
 
        [(= escapes 3)
         (cond
@@ -204,7 +195,7 @@
           ;;     (if k
           ;;         (list 'meta (get-control-kbinput k))
           ;;         (list 'raw #f))))])]))))
-	  #f])]))))
+          #f])]))))
 
 ;; Translate escape sequences that ncurses didn't handle.  If the
 ;; terminfo for the terminal you are using were complete, you would
@@ -227,6 +218,8 @@
     ("\x1b02P" . (key-f 13))))               ; F13 on xterm-xf86-v40, xterm+pcf0
 
 (define (parse-escape-seq-kbinput win)
+  ;; We're here if we got an escape followed by an apparent escape sequence
+  ;; that ncurses didn't handle
   (let ((key (assoc-ref escape-seq (apply string key-buffer))))
     (set! key-buffer '())
     key))
@@ -290,5 +283,7 @@
     (let loop ((lst (parse-kbinput win)))
       (addstr win "--> ")
       (when loop
-            (addstr win (format #f "~s~%" lst))
-            (loop (parse-kbinput win))))))
+        (if (and lst (integer? (cadr lst)))
+            (addstr win (format #f "(~s ~s)~%" (car lst) (keyname (cadr lst))))
+            (addstr win (format #f "~s~%" lst)))
+        (loop (parse-kbinput win))))))
