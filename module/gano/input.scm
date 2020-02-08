@@ -1,3 +1,22 @@
+;;; gano.scm
+;;;
+;;; Copyright (C) 2020 Michael L. Gran
+
+;;; This program is free software; you can redistribute it and/or
+;;; modify it under the terms of the GNU General Public License as
+;;; published by the Free Software Foundation; either version 3, or
+;;; (at your option) any later version.
+
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program; if not, write to the Free Software
+;;; Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+;;; 02110-1301, USA.
+
 (define-module (gano input)
   ;; #:use-module (gano config)
   #:use-module (ncurses curses)
@@ -5,9 +24,13 @@
   #:use-module (srfi srfi-1)
   #:export (
             get-kbinput
+            enable-mouse-support
+            disable-mouse-support
             kbinput-test
             ))
 
+;; Used to store the user's original mouse click interval
+(define *oldinterval* -1)
 
 ;; The maximum number of bytes buffered at one time.
 (define MAX-TRIES 128)
@@ -130,6 +153,10 @@
       (cond
        [(not kbinput)
         #f]
+
+       [(eqv? kbinput KEY_MOUSE)
+        (let ([m (getmouse)])
+          (list 'mouse (second m) (third m) (fifth m)))]
 
        ;; The escape key prefixes an extended sequence.
        [(eq? kbinput #\esc)
@@ -271,6 +298,18 @@
           #; (when (eq? win edit) (check-statusblank))
           kbinput))))
 
+(define (disable-mouse-support)
+  "Disables mouse support and restores old mouse-click interval."
+  (mousemask 0)
+  ;; Note that when oldinterval is -1, the mouse click interval
+  ;; is unchanged.
+  (mouseinterval *oldinterval*))
+
+(define (enable-mouse-support)
+  "Enables mouse support and returns previous mouse-click interval."
+  (mousemask ALL_MOUSE_EVENTS)
+  (set! *oldinterval* (mouseinterval 50)))
+
 (define (kbinput-test)
   (let ((win (initscr)))
     (cbreak!)
@@ -279,11 +318,17 @@
     (intrflush! #f)
     (keypad! win #t)
     (scrollok! win #t)
+    (enable-mouse-support)
     (addstr win (format #f "Go~%"))
     (let loop ((lst (parse-kbinput win)))
       (addstr win "--> ")
       (when loop
-        (if (and lst (integer? (cadr lst)))
-            (addstr win (format #f "(~s ~s)~%" (car lst) (keyname (cadr lst))))
-            (addstr win (format #f "~s~%" lst)))
+        (cond
+         ([and lst (eqv? 'mouse (car lst))]
+          (addstr win (format #f "~s~%" lst)))
+         ([and lst (integer? (cadr lst))]
+          (addstr win (format #f "(~s ~s)~%" (car lst) (keyname (cadr lst)))))
+         (else
+          (addstr win (format #f "~s~%" lst)))))
+      (unless (and lst (eqv? (cadr lst) #\us))
         (loop (parse-kbinput win))))))
