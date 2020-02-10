@@ -68,11 +68,6 @@
 
   (print_opt "-h, -?" "--help" (N_ "Show this message"))
   (print_opt (G_ "+LINE,COLUMN") "" (N_ "Start at line LINE, column COLUMN"))
-  (print_opt "-A" "--smarthome" (N_ "Enable smart home key"))
-  (print_opt "-B" "--backup" (N_ "Save backups of existing files"))
-  (print_opt (G_ "-C <dir>") (G_ "--backupdir=<dir>")
-             (N_ "Directory for saving unique backup files"))
-
   (print_opt "-D" "--boldtext" (N_ "Use bold instead of reverse video text"))
   (print_opt "-E" "--tabstospaces" (N_ "Convert typed tabs to spaces"))
 
@@ -273,9 +268,6 @@
             (nowrap (single-char #\w) (value #f))
             (nohelp (single-char #\x) (value #f))
             (suspend (single-char #\z) (value #f))
-            (smarthome (single-char #\A) (value #f))
-            (backup (single-char #\B) (value #f))
-            (backupdir (single-char #\C) (value #t))
             (tabstospaces (single-char #\E) (value #f))
             (historylog (single-char #\H) (value #f))
             (noconvert (single-char #\N) (value #f))
@@ -305,121 +297,98 @@
     ;; exist before we parse an rcfile.
 
     ;; Load the RC file
-    (when (option-ref options 'ignorercfiles #f)
-      (set! fRcFileEnable #f))
-    (when (and (not (char=? #\r (string-ref (first args) 0)))
-               fRcFileEnable)
-      (LoadRcFile)
-      #f)
+    ;; (when (option-ref options 'ignorercfiles #f)
+    ;;  (load-rc-file))
 
     ;; Command line options
-    (when (option-ref options 'smarthome #f)
-      (SET SMART_HOME))
-    (when (option-ref options 'backup #f)
-      (SET BACKUP_FILE))
-    (let ((d (option-ref options 'backupdir #f)))
-      (if d (set! vDirBackup d)))
-    (when (option-ref options 'boldtext #f)
-      (SET BOLD_TEXT))
-    (when (option-ref options 'tabstospaces #f)
-      (SET TABS_TO_SPACES))
-    (when (option-ref options 'multibuffer #f)
-      (SET MULTIBUFFER))
-    (when (option-ref options 'historylog #f)
-      (SET HISTORYLOG))
-    (when (option-ref options 'rebindkeypad #f)
-      (SET REBIND_KEYPAD))
-    (when (option-ref options 'nonewlines #f)
-      (SET NO_NEWLINES))
-    (when (option-ref options 'noconvert #f)
-      (SET NO_CONVERT))
-    (when (option-ref options 'morespace #f)
-      (SET MORE_SPACE))
-    (let ((q (option-ref options 'quotestr #f)))
-      (if q (set! vQuoteStr q)))
-    (when (option-ref options 'restricted #f)
-      (SET RESTRICTED))
-    (when (option-ref options 'smooth #f)
-      (SET SMOOTH_SCROLL))
-    (let ((tabsizestr (option-ref options 'tabsize #f)))
-      (when tabsizestr
-        (set! vTabSize (string->number tabsizestr))
-        (when (or (not vTabSize)
-                  (<= vTabSize 0))
-          (format (current-error-port)
-                  "Requested tab size \"~A\" is invalid~%"
-                  tabsizestr)
-          (exit 1))))
-    (when (option-ref options 'quickblank #f)
-      (SET QUICK_BLANK))
-    (when (option-ref options 'version #f)
-      (version)
-      (exit 0))
-    (when (option-ref options 'wordbounds #f)
-      (SET WORD_BOUNDS))
-    (set! vSyntaxStr (option-ref options 'syntax #f))
-    (when (option-ref options 'const #f)
-      (SET CONST_UPDATE))
-    (when (option-ref options 'rebinddelete #f)
-      (SET REBIND_DELETE))
-    (when (option-ref options 'autoindent #f)
-      (SET AUTOINDENT))
-    (when (option-ref options 'cut #f)
-      (SET CUT_TO_END))
-    (when (option-ref options 'nofollow #f)
-      (SET NOFOLLOW_SYMLINKS))
-    (when (option-ref options 'mouse #f)
-      (set! *use-mouse* #t))
-    (set! vDirOperating (option-ref options 'operating #f))
-    (when (option-ref options 'preserve #f)
-      (SET PRESERVE))
-    (when (option-ref options 'quiet #f)
-      (SET QUIET))
-    (let ((w (option-ref options 'fill #f)))
-      (when w
-        (set! viColWrap (string->number w))
-        (when (not viColWrap)
-          (format (current-error-port) "Requested fill size \"~s\" is invalid!%"
-                  viColWrap)
-          (exit 1))
-        (set! fFillUsed #t)))
-    (set! vSpellerAlt (option-ref options 'speller #f))
-    (when (option-ref options 'tempfile #f)
-      (SET TEMP_FILE))
-    (when (option-ref options 'undo #f)
-      (SET UNDOABLE))
-    (when (option-ref options 'view #f)
-      (SET VIEW_MODE))
-    (when (option-ref options 'nowrap #f)
-      (SET NO_WRAP)
-      (set! fFillUsed #f))
-    (when (option-ref options 'nohelp #f)
-      (SET NO_HELP))
-    (when (option-ref options 'suspend #f)
-      (set! *suspend* #t))
-    (when (option-ref options 'softwrap #f)
-      (SET SOFTWRAP))
+    ;; (when (option-ref options 'boldtext #f)
+    ;;   (SET BOLD_TEXT))
+    ;; (when (option-ref options 'tabstospaces #f)
+    ;;   (SET TABS_TO_SPACES))
+    ;; (when (option-ref options 'multibuffer #f)
+    ;;   (SET MULTIBUFFER))
+    ;; (when (option-ref options 'historylog #f)
+    ;;   (SET HISTORYLOG))
+    ;; (when (option-ref options 'rebindkeypad #f)
+    ;;   (SET REBIND_KEYPAD))
+    ;; (when (option-ref options 'nonewlines #f)
+    ;;   (SET NO_NEWLINES))
+    ;; (when (option-ref options 'noconvert #f)
+    ;;   (SET NO_CONVERT))
+    ;; (when (option-ref options 'morespace #f)
+    ;;   (SET MORE_SPACE))
+    ;; (let ((q (option-ref options 'quotestr #f)))
+    ;;   (if q (set! vQuoteStr q)))
+    ;; (when (option-ref options 'restricted #f)
+    ;;   (SET RESTRICTED))
+    ;; (when (option-ref options 'smooth #f)
+    ;;   (SET SMOOTH_SCROLL))
+    ;; (let ((tabsizestr (option-ref options 'tabsize #f)))
+    ;;   (when tabsizestr
+    ;;     (set! vTabSize (string->number tabsizestr))
+    ;;     (when (or (not vTabSize)
+    ;;               (<= vTabSize 0))
+    ;;       (format (current-error-port)
+    ;;               "Requested tab size \"~A\" is invalid~%"
+    ;;               tabsizestr)
+    ;;       (exit 1))))
+    ;; (when (option-ref options 'quickblank #f)
+    ;;   (SET QUICK_BLANK))
+    ;; (when (option-ref options 'version #f)
+    ;;   (version)
+    ;;   (exit 0))
+    ;; (when (option-ref options 'wordbounds #f)
+    ;;   (SET WORD_BOUNDS))
+    ;; (set! vSyntaxStr (option-ref options 'syntax #f))
+    ;; (when (option-ref options 'const #f)
+    ;;   (SET CONST_UPDATE))
+    ;; (when (option-ref options 'rebinddelete #f)
+    ;;   (SET REBIND_DELETE))
+    ;; (when (option-ref options 'autoindent #f)
+    ;;   (SET AUTOINDENT))
+    ;; (when (option-ref options 'cut #f)
+    ;;   (SET CUT_TO_END))
+    ;; (when (option-ref options 'nofollow #f)
+    ;;   (SET NOFOLLOW_SYMLINKS))
+    ;; (when (option-ref options 'mouse #f)
+    ;;   (set! *use-mouse* #t))
+    ;; (set! vDirOperating (option-ref options 'operating #f))
+    ;; (when (option-ref options 'preserve #f)
+    ;;   (SET PRESERVE))
+    ;; (when (option-ref options 'quiet #f)
+    ;;   (SET QUIET))
+    ;; (let ((w (option-ref options 'fill #f)))
+    ;;   (when w
+    ;;     (set! viColWrap (string->number w))
+    ;;     (when (not viColWrap)
+    ;;       (format (current-error-port) "Requested fill size \"~s\" is invalid!%"
+    ;;               viColWrap)
+    ;;       (exit 1))
+    ;;     (set! fFillUsed #t)))
+    ;; (set! vSpellerAlt (option-ref options 'speller #f))
+    ;; (when (option-ref options 'tempfile #f)
+    ;;   (SET TEMP_FILE))
+    ;; (when (option-ref options 'undo #f)
+    ;;   (SET UNDOABLE))
+    ;; (when (option-ref options 'view #f)
+    ;;   (SET VIEW_MODE))
+    ;; (when (option-ref options 'nowrap #f)
+    ;;   (SET NO_WRAP)
+    ;;   (set! fFillUsed #f))
+    ;; (when (option-ref options 'nohelp #f)
+    ;;   (SET NO_HELP))
+    ;; (when (option-ref options 'suspend #f)
+    ;;   (set! *suspend* #t))
+    ;; (when (option-ref options 'softwrap #f)
+    ;;   (SET SOFTWRAP))
 
     ;; If the executable filename starts with 'r', enable restricted mode
-    (when (eq? (string-ref (first (command-line)) 0) #\r)
-      (SET RESTRICTED))
-
-    ;; If we're using restricted mode, disable suspending, backups, and reading
-    ;; rcfiles, since they all would allow reading from or writing to files
-    ;; not specified on the command line
-    (when (ISSET RESTRICTED)
-      (set! *suspend* #f)
-      (UNSET BACKUP_FILE)
-      (set! fRcFileEnable #f))
-
-    ;; Usually, we don't wrap when root unless specifically requested
-    (when (and (eq? 0 (geteuid))
-               (not fFillUsed))
-      (SET NO_WRAP))
+    ;; (when (eq? (string-ref (first (command-line)) 0) #\r)
+    ;;   (SET RESTRICTED))
 
     ;; If we're using bold text instead of reverse video text, set it up now
-    (when (ISSET BOLD_TEXT)
-      (set! vAttrReverse A_BOLD))
+    ;; (when (ISSET BOLD_TEXT)
+    ;;   (set! vAttrReverse A_BOLD))
 
     ;; Set up the search/replace history
     ;;(InitHistory)
@@ -431,58 +400,58 @@
     ;; allow reading from or writing to files not specified on the
     ;; command line).  This entails making sure it exists and is a
     ;; directory, so that backup files will be saved there.
-    (unless (ISSET RESTRICTED)
-      (InitBackupDir))
+    ;; (unless (ISSET RESTRICTED)
+    ;;   (InitBackupDir))
 
     ;; Set up the operating directory.  This entains chdir'ing there,
     ;; So that the file reads and writes will all be based there
-    (InitOperatingDir)
+    ;; (InitOperatingDir)
 
     ;; If punct wasn't specified, set its default value
-    (unless vPunct
-      (set! vPunct "!.?"))
+    ;; (unless vPunct
+    ;;   (set! vPunct "!.?"))
     ;; If brackets wasn't specified, set its default value
-    (unless vBrackets
-      (set! vBrackets "\"')>)}"))
+    ;; (unless vBrackets
+    ;;   (set! vBrackets "\"')>)}"))
     ;; If quotestr wasn't specified, set its default value
-    (unless vQuoteStr
-      (set! vQuoteStr "^(( \t)*(#:>|}))+"))
+    ;; (unless vQuoteStr
+    ;;  (set! vQuoteStr "^(( \t)*(#:>|}))+"))
 
-    (set! vQuoteReg (make-regexp vQuoteStr regexp/extended))
+    ;; (set! vQuoteReg (make-regexp vQuoteStr regexp/extended))
     ;; We no longer need vQuoteStr, just quotereg
-    (set! vQuoteStr #f)
+    ;; (set! vQuoteStr #f)
 
     ;; If we don't have an alternative spell checker after reading
     ;; the command line and/or rcfile(s), check $SPELL for one, as
     ;; Pico does (unless we're using restricted mode, in which case
     ;; spell checking is disabled, since it would allow reading from
     ;; or writing to files not specified on the command line).
-    (when (and (not (ISSET RESTRICTED))
-               (not vSpellerAlt))
-      (let ((spellenv (getenv "SPELL")))
-        (when spellenv
-          (set! vSpellerAlt spellenv))))
+    ;; (when (and (not (ISSET RESTRICTED))
+    ;;            (not vSpellerAlt))
+    ;;   (let ((spellenv (getenv "SPELL")))
+    ;;     (when spellenv
+    ;;       (set! vSpellerAlt spellenv))))
 
     ;; If matchbrackets wasn't specified, set its default value
-    (unless vMatchBrackets
-      (set! vMatchBrackets "(<({)>)}"))
+    ;; (unless vMatchBrackets
+    ;;   (set! vMatchBrackets "(<({)>)}"))
 
     ;; If whitespace wasn't specified, set its default value
-    (unless vWhiteSpace
-      (set! vWhiteSpace "  ")
-      (set! vWhiteSpaceLen '(1 1)))
+    ;; (unless vWhiteSpace
+    ;;   (set! vWhiteSpace "  ")
+    ;;   (set! vWhiteSpaceLen '(1 1)))
 
     ;; If tabsize wasn't specified, set its default value
-    (when (= -1 vTabSize)
-      (set! vTabSize WIDTH_OF_TAB))
+    ;; (when (= -1 vTabSize)
+    ;;  (set! vTabSize WIDTH_OF_TAB))
 
     ;; Set the output terminal.  Normally this is stdin/stdout, but,
     ;; if this is running in guile-ncurses-shell, use that terminal
     ;; instead
-    (if (defined? '%guile-ncurses-shell-read-port)
-        (set! vTerminalPort %guile-ncurses-shell-read-port)
-        ;; else
-        (set! vTerminalPort 0))
+    ;; (if (defined? '%guile-ncurses-shell-read-port)
+    ;;     (set! vTerminalPort %guile-ncurses-shell-read-port)
+    ;;     ;; else
+    ;;     (set! vTerminalPort 0))
 
     ;; Back up the old terminal settings so that they can be restored
     (save-terminal-settings)
