@@ -28,17 +28,17 @@
   #:use-module (gano global)
   #:use-module (rnrs control)
   #:export (
-	    LoadRcFile
+	    load-rcfile
 	    ))
 
 ;; The main rcfile function.  It tried to open the system-wide rcfile, followed
 ;; by the current user's rcfile.
-(define (LoadRcFile)
+(define (load-rcfile)
   "Parse the system-wide rcfile, followed by the current user's rcfile"
   (let* ([systemRc (string-append %vDirSysConf "/ganorc")])
 
-    (when (IsRegularFile? systemRc)
-	  (format #t "Is ~a a regular file? ~a~%" systemRc (IsRegularFile? systemRc))
+    (when (is-regular-file? systemRc)
+	  ;; (format #t "Is ~a a regular file? ~a~%" systemRc (is-regular-file? systemRc))
 	  (primitive-load systemRc)))
 
   ;; We already read the system ganorc, if it's there.  If we're root,
@@ -52,11 +52,11 @@
       (format (current-error-port) "Can't find home directory.~%")
       ;; else
       (let ([ganoRc (string-append vDirHome "/.nanorc")])
-        (when (IsRegularFile? ganoRc)
+        (when (is-regular-file? ganoRc)
 	      (primitive-load ganoRc)))))
 
 ;; Returns #t if FILENAME is a regular file
-(define (IsRegularFile? fileName)
+(define (is-regular-file? fileName)
   (let ([fileInfo (false-if-exception (stat fileName))])
     ;; Don't open directories, character files, or block files
     (if (and fileInfo

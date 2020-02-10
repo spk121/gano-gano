@@ -1,8 +1,8 @@
 (use-modules (srfi srfi-64)
              (ncurses curses)
-             (gano input))
+             (gano winio))
 
-(test-begin "t-gano-input")
+(test-begin "t-gano-winio-input")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; getch
@@ -62,4 +62,4 @@
 (chartest "get-kbinput #\\esc #\\X" '(meta #\X) #\esc #\X)
 (chartest "get-kbinput #\\esc #\\newline" '(meta #\newline) #\esc #\newline)
 
-(test-end "t-gano-input")
+(test-end "t-gano-winio-input")

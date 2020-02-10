@@ -16,9 +16,9 @@
 (test-equal "init-winio! when more-space? is #f and help? is #f"
   '(1 22 1 80)
   (let ((winio (make-winio)))
-    (initscr)
+    (initialize-ncurses winio)
     (init-winio! winio 24 80 #f #f)
-    (endwin)
+    (move-cursor-to-last-line-and-endwin winio)
     (list
      (get-top-win-lines winio)
      (get-edit-win-lines winio)
@@ -28,9 +28,9 @@
 (test-equal "init-winio! when more-space? is #f and help? is #t"
   '(1 20 3 80)
   (let ((winio (make-winio)))
-    (initscr)
+    (initialize-ncurses winio)
     (init-winio! winio 24 80 #f #t)
-    (endwin)
+    (move-cursor-to-last-line-and-endwin winio)
     (list
      (get-top-win-lines winio)
      (get-edit-win-lines winio)
@@ -40,9 +40,9 @@
 (test-equal "init-winio! when more-space? is #t and help? is #f"
   '(2 21 1 80)
   (let ((winio (make-winio)))
-    (initscr)
+    (initialize-ncurses winio)
     (init-winio! winio 24 80 #t #f)
-    (endwin)
+    (move-cursor-to-last-line-and-endwin winio)
     (list
      (get-top-win-lines winio)
      (get-edit-win-lines winio)
@@ -52,9 +52,9 @@
 (test-equal "init-winio! when more-space? is #t and help? is #t"
   '(2 19 3 80)
   (let ((winio (make-winio)))
-    (initscr)
+    (initialize-ncurses winio)
     (init-winio! winio 24 80 #t #t)
-    (endwin)
+    (move-cursor-to-last-line-and-endwin winio)
     (list
      (get-top-win-lines winio)
      (get-edit-win-lines winio)
@@ -114,43 +114,43 @@
 (test-equal "display-titlebar no path, file, not modified, not readonly"
   "Gano 0.0  New Buffer"
   (let ((winio (make-winio)))
-    (initscr)
+    (initialize-ncurses winio)
     (init-winio! winio 24 40 #t #t)
     (display-titlebar winio "" #t #f #f)
     (let ((str (string-trim-both (read-titlebar winio))))
-      (endwin)
+      (move-cursor-to-last-line-and-endwin winio)
       str)))
 
 (test-equal "display-titlebar no path, file, modified, not readonly"
   "Gano 0.0  New Buffer Modified"
   (let ((winio (make-winio)))
-    (initscr)
+    (initialize-ncurses winio)
     (init-winio! winio 24 40 #t #t)
     (display-titlebar winio "" #t #t #f)
     (let ((str (string-trim-both (read-titlebar winio))))
-      (endwin)
+      (move-cursor-to-last-line-and-endwin winio)
       str)))
 
 (test-equal "display-titlebar path, file, not modified, not readonly"
   "Gano 0.0  File:  temp.txt"
   (let ((winio (make-winio)))
-    (initscr)
+    (initialize-ncurses winio)
     (init-winio! winio 24 40 #t #t)
     (display-titlebar winio "temp.txt" #t #f #f)
     (let ((str (string-trim-both (read-titlebar winio))))
-      (endwin)
+      (move-cursor-to-last-line-and-endwin winio)
       str)))
 
 (test-equal "display-titlebar path, file, not modified, not readonly"
   "Gano 0.0  File:  temp.txt"
-  (let* ((winio (make-winio))
-         (mainwin (initscr)))
+  (let* ((winio (make-winio)))
+    (initialize-ncurses winio)
     (init-winio! winio 24 40 #t #t)
     (display-titlebar winio "temp.txt" #t #f #f)
     (refresh (get-top-win winio))
     (sleep 1)
     (let ((str (string-trim-both (read-titlebar winio))))
-      (endwin)
+      (move-cursor-to-last-line-and-endwin winio)
       str)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -158,30 +158,30 @@
 
 (test-equal "display-statusbar short ascii"
   "[ This is a sample error message ]"
-  (let ((winio (make-winio))
-        (mainwin (initscr)))
+  (let* ((winio (make-winio)))
+    (initialize-ncurses winio)
     (init-winio! winio 24 40 #t #t)
-    (refresh mainwin)
+    (refresh (get-main-win winio))
     (display-statusbar winio "This is a sample error message")
     (refresh (get-bottom-win winio))
     ;; (sleep 1)
     (let ((str (string-trim-both (read-statusbar winio))))
-      (endwin)
+      (move-cursor-to-last-line-and-endwin winio)
       str)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; display-shortcut-list
 (test-equal "display-shortcut-list one shortcut"
-    "^G Help"
-  (let ((winio (make-winio))
-        (mainwin (initscr)))
+  "^G Help"
+  (let* ((winio (make-winio)))
+      (initialize-ncurses winio)
     (init-winio! winio 24 40 #t #t)
-    (refresh mainwin)
+    (refresh (get-main-win winio))
     (display-shortcut-list winio '("^G") '("Help"))
     (refresh (get-bottom-win winio))
     ;; (sleep 3)
     (let ((str (string-trim-both (read-shortcut-list winio))))
-      (endwin)
+      (move-cursor-to-last-line-and-endwin winio)
       str)))
 
 (define shortcuts
@@ -192,30 +192,30 @@
 
 (test-equal "display-shortcut-list many shortcuts"
   "^A Alp^C Cha^E Ech^G Gol^I Ind^K Kilo   \n^B Bra^D Del^F Fox^H Hot^J Jul^L Lima"
-  (let ((winio (make-winio))
-        (mainwin (initscr)))
+  (let ((winio (make-winio)))
+    (initialize-ncurses winio)
     (init-winio! winio 24 40 #t #t)
-    (refresh mainwin)
+    (refresh (get-main-win winio))
     (display-shortcut-list winio shortcuts descriptions)
     (refresh (get-bottom-win winio))
     ;; (sleep 3)
     (let ((str (string-trim-both (read-shortcut-list winio))))
-      (endwin)
+      (move-cursor-to-last-line-and-endwin winio)
       str)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; display-editor
 (test-equal "display-editor two lines"
   "hello                                   \nworld                                   \n"
-  (let ((winio (make-winio))
-        (mainwin (initscr)))
+  (let* ((winio (make-winio)))
+    (initialize-ncurses winio)
     (init-winio! winio 24 40 #t #t)
-    (refresh mainwin)
+    (refresh (get-main-win winio))
     (display-editor winio '("hello" "world") 0)
     (refresh (get-edit-win winio))
     ;; (sleep 3)
     (let ((str (read-editor winio)))
-      (endwin)
+      (move-cursor-to-last-line-and-endwin winio)
       (substring str 0 82))))
 
 (test-end "t-gano-winio")

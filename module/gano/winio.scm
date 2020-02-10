@@ -22,25 +22,34 @@
 
 (define-module (gano winio)
   #:use-module (oop goops)
-  #:use-module (gano config)
-  #:use-module (gano CBuffer)
-  #:use-module (gano CFunction)
-  #:use-module (gano CShortcut)
-  #:use-module (gano CText)
+  #:use-module (srfi srfi-1)
+  ;; #:use-module (gano config)
+  ;; #:use-module (gano CBuffer)
+  ;; #:use-module (gano CFunction)
+  ;; #:use-module (gano CShortcut)
+  ;; #:use-module (gano CText)
   #:use-module (gano chars)
-  #:use-module (gano flags)
-  #:use-module (gano global)
-  #:use-module (gano nano-h)
   #:use-module (gano utils)
-  #:use-module (rnrs control)
-  #:use-module (mlg logging)
+  ;; #:use-module (gano flags)
+  ;; #:use-module (gano global)
+  ;; #:use-module (gano nano-h)
+  ;; #:use-module (gano utils)
+  ;; #:use-module (rnrs control)
+  ;; #:use-module (mlg logging)
   #:use-module (ncurses curses)
   #:use-module (ncurses extra)
   #:export (
+            
             make-winio
             winio?
+            initialize-ncurses
+            initialize-keyboard-handling
+            turn-on-cursor
+            move-cursor-to-last-line-and-endwin
+            initialize-windows
             init-winio!
-
+            initialize-mouse-support
+            
             display-string
             
             blank-editor
@@ -48,6 +57,7 @@
             blank-statusbar
             blank-titlebar
 
+            get-main-win
             get-top-win
             get-edit-win
             get-bottom-win
@@ -64,6 +74,18 @@
             read-shortcut-list
             display-editor
             read-editor
+
+            handle-sigwinch
+
+            save-terminal-settings
+            restore-terminal-settings
+            disable-terminal-extended-io
+            disable-terminal-signals
+            enable-terminal-signals
+            disable-terminal-flow-control
+            enable-terminal-flow-control
+
+            get-kbinput
             #|
             check-statusblank
 
@@ -80,7 +102,11 @@
             reset_cursor
             set_modified
             update_line |#
-            ))
+            )
+  )
+
+  ;; The maximum number of bytes buffered at one time.
+(define MAX_TRIES 128)
 
 (define-class <winio> ()
   (m_MIN_EDITOR_COLS #:allocation #:class
@@ -92,20 +118,14 @@
   (m_MAIN_VISIBLE #:allocation #:class
                   #:init-value 12
                   #:getter get-main-visible)
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Screens
   
-  (m-top-win-lines #:init-value 2 #:getter get-top-win-lines #:setter set-top-win-lines!)
-  (m-edit-win-lines #:init-value 19 #:getter get-edit-win-lines #:setter set-edit-win-lines!)
-  (m-bottom-win-lines #:init-value 3 #:getter get-bottom-win-lines #:setter set-bottom-win-lines!)
-  (m-cols #:init-value 80 #:getter get-cols #:setter set-cols!)
-  (m-fill-column #:init-value 80 #:getter get-fill-column #:setter set-fill-column!)
-  
-  (m-default-title #:init-value "Gano 0.0"
-                   #:getter get-default-title
-                   #:setter set-default-title!)
   ;; The standard ncurses screen
-  (m-win-main #:init-value #f
-              #:getter get-win-main
-              #:setter set-win-main!)
+  (m-main-win #:init-value #f
+              #:getter get-main-win
+              #:setter set-main-win!)
   ;; The top portion of the window, where we display the version
   ;; number of nano, the name of the current file, and whether the
   ;; current file has been modified
@@ -122,6 +142,60 @@
   (m-bottom-win #:init-value #f
                 #:getter get-bottom-win
                 #:setter set-bottom-win!)
+
+  ;; The geometry of the windows
+  (m-top-win-lines #:init-value 2
+                   #:getter get-top-win-lines
+                   #:setter set-top-win-lines!)
+  (m-edit-win-lines #:init-value 19
+                    #:getter get-edit-win-lines
+                    #:setter set-edit-win-lines!)
+  (m-bottom-win-lines #:init-value 3
+                      #:getter get-bottom-win-lines
+                      #:setter set-bottom-win-lines!)
+  (m-cols #:init-value 80
+          #:getter get-cols
+          #:setter set-cols!)
+  (m-fill-column #:init-value 80
+                 #:getter get-fill-column
+                 #:setter set-fill-column!)
+  (m-tab-size #:init-value 8
+              #:getter get-tab-size
+              #:setter set-tab-size!)
+
+  ;; When true, add space between the title and the editor
+  (m-more-space-p #:init-value #t
+                  #:getter get-more-space-p
+                  #:setter set-more-space-p!)
+  ;; When true, show the onscreen help
+  (m-help-p #:init-value #t
+            #:getter get-help-p
+            #:setter set-help-p)
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Terminal attributes
+  
+  ;; When true, flow control characters are not disabled
+  (m-flow-control-p #:init-value #f
+                    #:getter get-flow-control-p
+                    #:setter set-flow-control-p!)
+  ;; When true, mouse support is enabled
+  (m-use-mouse-p #:init-value #f
+                 #:getter get-use-mouse-p
+                 #:setter set-use-mouse-p!)
+
+  ;; Used to store the user's original mouse click interval
+  (m-old-mouse-click-interval #:init-value -1
+                              #:getter get-old-mouse-click-interval
+                              #:setter set-old-mouse-click-interval!)
+  ;; Used to store the user's original terminal settings
+  (m-old-terminal-settings #:init-value (tcgetattr 0)
+                           #:getter get-old-terminal-settings
+                           #:setter set-old-terminal-settings!)
+
+  (m-default-title #:init-value "Gano 0.0"
+                   #:getter get-default-title
+                   #:setter set-default-title!)
   ;; The number of keystrokes left until the statubar is blanked.
   ;; or #f if there is not message to blank in the statusbar.
   (m-status-blank #:init-value #f
@@ -135,6 +209,38 @@
 (define (winio? x)
   "Returns #t if argument is of type <winio>"
   (is-a? x <winio>))
+
+(define-method (initialize-ncurses (winio <winio>))
+  "Kick off ncurses"
+  (if (get-main-win winio)
+      (refresh (get-main-win winio))
+      ;; else
+      (begin
+        (set-main-win! winio (initscr))
+        (when (has-colors?)
+          (start-color!)))))
+
+(define-method (initalize-keyboard-handling (winio <winio>))
+  "Set interpretation of keypresses to what we need."
+  (unless (get-main-win winio)
+    (error "terminal has not been initialized"))
+  (raw!)
+  (nonl!)
+  (noecho!)
+  (disable-terminal-extended-io)
+  (when (get-flow-control-p winio)
+    (enable-terminal-flow-control))
+  (disable-terminal-signals))
+
+(define (turn-on-cursor)
+  ;; Turn the cursor on for sure
+  (curs-set 1))
+
+(define-method  (move-cursor-to-last-line-and-endwin (winio <winio>))
+  (move (get-main-win winio)
+        (- (lines) 1)
+        0)
+  (endwin))
 
 (define-method (init-winio! (winio <winio>)
                             (lines <integer>)
@@ -178,11 +284,22 @@
                                     (get-edit-win-lines winio))
                                  0))
 
-  (log-debug "Editor window ~a by ~a~%" cols (get-edit-win-lines winio))
+  ;; (log-debug "Editor window ~a by ~a~%" cols (get-edit-win-lines winio))
 
   (keypad! (get-top-win winio) #t)
   (keypad! (get-edit-win winio) #t)
   (keypad! (get-bottom-win winio) #t))
+
+(define-method (initialize-windows (winio <winio>))
+    ;; Calling doupdate ensures that the stdscr has the rows, cols set
+  ;; by any resizing operation.
+  (doupdate)
+  (init-winio! winio
+               (car (getmaxyx (get-main-win winio)))
+               (cadr (getmaxyx (get-main-win winio)))
+               (get-more-space-p winio)
+               (get-help-p winio)))
+
 
 (define-method (set-fill-column! (winio <winio>) wrap-column)
   "Set up fill column, based on the screen width and the wrap column.
@@ -262,7 +379,8 @@ negative, it is an offset from the right column."
             (set! start-col (+ start-col 1))
             
             ;; advance to the next tab column
-            (let ((n (- tabsize (remainder start-col tabsize))))
+            (let ((n (- tabsize
+                        (remainder start-col tabsize))))
               (set! converted (string-append converted (make-string n #\space)))
               (set! start-col (+ start-col n))
               (set! index (+ index n))))
@@ -331,6 +449,7 @@ negative, it is an offset from the right column."
 (define-method (blank-titlebar (winio <winio>))
   (blank-line (get-top-win winio) 0 (get-cols winio)))
 
+#|
 ;; Reset current_y, based on the position of current, and put the cursor
 ;; in the edit window at (current_y, current_x).
 (define-method (reset-cursor (winio <winio>) (cbuf <CBuffer>))
@@ -342,6 +461,7 @@ in the edit window at that location"
     (when (< y (get-edit-win-lines winio))
       (move (get-edit-win winio) y
             (- xpt (get_page_start xpt))))))
+|#
 
 (define-method (display-titlebar (winio <winio>) path file? modified? readonly?)
   "Display the titlebar. When file? is true, assume PATH holds a
@@ -540,6 +660,339 @@ display as many as will fit in the shortcut space."
          (map (lambda (i)
                 (string-append (instr (get-edit-win winio) #:y i #:x 0) "\n"))
               (iota (get-edit-win-lines winio)))))
+
+(define-method (save-terminal-settings (winio <winio>))
+  (set-old-terminal-settings! winio (tcgetattr 0)))
+
+(define-method (restore-terminal-settings (winio <winio>))
+  (tcsetattr! 0 TCSANOW (get-old-terminal-settings winio)))
+
+;; Disable extended input and output processing in our terminal
+;; settings.
+(define (disable-terminal-extended-io)
+  (let ((term (tcgetattr 0)))
+    (termios-lflag-set! term (logand (termios-lflag term)
+                                     (lognot IEXTEN)))
+    (termios-oflag-set! term (logand (termios-oflag term)
+                                     (lognot OPOST)))
+    (tcsetattr! 0 TCSANOW term)))
+
+;; Disable interpretation of the special control keys in our terminal
+;; settings.
+(define (disable-terminal-signals)
+  (let ((term (tcgetattr 0)))
+    (termios-lflag-set! term (logand (termios-lflag term)
+                                     (lognot ISIG)))
+    (tcsetattr! 0 TCSANOW term)))
+
+;; Enable interpretation of the special control keys in our terminal
+;; settings.
+(define (enable-terminal-signals)
+  (let ((term (tcgetattr 0)))
+    (termios-cflag-set! term (logior (termios-lflag term)
+                                     ISIG))
+    (tcsetattr! 0 TCSANOW term)))
+
+;; Disable interpretation of the flow control characters in our terminal
+;; settings.
+(define (disable-terminal-flow-control)
+  (let ((term (tcgetattr 0)))
+    (termios-iflag-set! term (logand (termios-iflag term)
+                                     (lognot ISIG)))
+    (tcsetattr! 0 TCSANOW term)))
+
+;; Enable interpretation of the flow control characters in our terminal
+;; settings.
+(define (enable-terminal-flow-control)
+  (let ((term (tcgetattr 0)))
+    (termios-cflag-set! term (logior (termios-cflag term)
+                                     IXON))
+    (tcsetattr! 0 TCSANOW term)))
+
+(define-method (disable-mouse-support (winio <winio>))
+  "Disables mouse support and restores old mouseinterval"
+  (mousemask 0)
+  ;; Note that when oldinterval is -1, the mousinterval
+  ;; is unchanged.
+  (mouseinterval (get-old-mouse-click-interval winio)))
+
+(define-method (enable-mouse-support (winio <winio>))
+  "Enables mouse support and returns previous mouseinterval"
+  (mousemask ALL_MOUSE_EVENTS)
+  (set-old-mouse-click-interval! winio (mouseinterval 50)))
+
+(define-method (initialize-mouse-support (winio <winio>))
+  (if (get-use-mouse-p winio)
+      (enable-mouse-support winio)
+      (disable-mouse-support winio)))
+
+
+
+
+
+;; Call the low-level getch() , trying up to MAX_TRIES times to get
+;; a valid character.  Return ERR on failure.
+(define (try-getch win max-tries)
+  (let ((c (getch win)))
+    (cond
+     (c
+      ;; sucessfully got key
+      c)
+
+     ((> max-tries 0)
+      ;; try again
+      (try-getch win (1- max-tries)))
+
+     (else
+      #f))))
+
+;; Get a key.  If nodelay-mode is true, try only once.  If it is
+;; false, try multiple times to get a valid character
+(define (get-key-or-hangup win nodelay-mode)
+  (if nodelay-mode
+      (try-getch win 0)
+      ;; else
+      (let ((c (try-getch win MAX_TRIES)))
+        (or c
+            ;; If we've failed to get a character MAX-TRIES times in
+            ;; a row, assume that the input source we were using is
+            ;; gone and we'll need to die gracefully.
+            'hangup))))
+
+(define (allow-pending-sigwinch allow)
+  ;; Don't know how to do this in Guile.
+  #f)
+
+;; Read in the first character, possibly with blocking input
+(define (get-initial-key win block?)
+  (if block?
+      (nodelay! win #f)
+      (nodelay! win #t))
+
+  (allow-pending-sigwinch #t)
+
+  ;; Just before reading in the first character, display any pending
+  ;; screen updates.
+  (doupdate)
+
+  (let ((c (get-key-or-hangup win (not block?))))
+    (when (eq? c 'hangup)
+      (handle-hupterm 0))
+    (allow-pending-sigwinch #f)
+    (nodelay! win #t)
+    (if (eq? c 'hangup)
+        #f
+        c)))
+
+;; Read in subsequent characters with non-blocking input
+(define (get-subsequent-key win)
+  (nodelay! win #t)
+  (allow-pending-sigwinch #t)
+  (let ((c (get-key-or-hangup win #t)))
+    (allow-pending-sigwinch #f)
+    c))
+
+(define (get-key-buffer win block?)
+  (let ((initial (get-initial-key win block?)))
+    (if (not initial)
+        ;; No keys available, or port is dead
+        #f
+
+        ;; Found 1 key.  Look for more
+        (let loop ((c (get-subsequent-key win))
+                   (lst (list initial)))
+          (if (not c)
+              ;; no more keys waiting.  Return now.
+              lst
+              ;; else check for another key
+              (loop (get-subsequent-key win) (append lst (list c))))))))
+
+;; Buffer for unprocessed keypresses
+(define key-buffer '())
+
+(define (unget-key k)
+  (set! key-buffer (append (list k) key-buffer)))
+
+;; Update the keystroke buffer with any waiting characters, if any.
+;; Then return the first INPUT-LEN characters of the buffer.  If less
+;; than INPUT-LEN characters are available, just return what we have.
+(define (get-input win input-len)
+  (allow-pending-sigwinch #t)
+  (allow-pending-sigwinch #f)
+
+  (when win
+    ;; Add any waiting keys to the key buffer.  If the key buffer
+    ;; is empty, wait around for a key.
+    (let ((new-keys (get-key-buffer win (null? key-buffer))))
+      (when new-keys
+        (set! key-buffer (append! key-buffer new-keys)))))
+
+  (if (>= (length key-buffer) input-len)
+      (let ((returned-keys (take key-buffer input-len)))
+        (set! key-buffer (drop key-buffer input-len))
+        returned-keys)
+      ;; else
+      (let ((returned-keys (list-copy key-buffer)))
+        (set! key-buffer '())
+        returned-keys)))
+
+;; Translate ASCII characters, extended keypad values, and escape
+;; sequences into their corresponding key values.
+(define (parse-kbinput win)
+  (let loop ((kbinput-list (get-input win 1))
+             (escapes 0)
+             (byte-digits 0))
+    (let ((kbinput (if kbinput-list (car kbinput-list) #f)))
+      (cond
+       [(not kbinput)
+        #f]
+
+       [(eqv? kbinput KEY_MOUSE)
+        (let ([m (getmouse)])
+          (list 'mouse (second m) (third m) (fifth m)))]
+
+       ;; The escape key prefixes an extended sequence.
+       [(eq? kbinput #\esc)
+        (loop (get-input win 1) (1+ (modulo escapes 3)) byte-digits)]
+
+       [(= escapes 0)
+        ;; A normal non-escaped input
+        (list 'raw kbinput)]
+
+       [(= escapes 1)
+        (cond
+         [(and (char? kbinput) (null? key-buffer))
+          ;; One escape followed by a non-escape, and there aren't any
+          ;; other keystrokes waiting.  Treat this as a meta key.
+          (list 'meta (char-downcase kbinput))]
+
+         [(null? key-buffer)
+          ;; One escape followed by a control key.  Meta the control key
+          (list 'meta kbinput)]
+
+         [else
+          ;; One escape followed by multiple keystrokes.  The multiple
+          ;; keystrokes are some unhandled function key
+          (unget-key kbinput)
+          (and=> (parse-escape-seq-kbinput win)
+                 (lambda (x)
+                   (list 'raw x)))])]
+
+       [(= escapes 2)
+        (cond
+         [(and (char? kbinput) (null? key-buffer))
+          ;; Two escapes followed by a non-escape, and there aren't any
+          ;; other keystrokes waiting.  Treat this as a meta key.
+          (list 'meta (char-downcase kbinput))]
+
+         [(null? key-buffer)
+          ;; Two escapes followed by a control key.  Meta the control key
+          (list 'meta kbinput)]
+
+         [else
+          ;; Two escapes followed by multiple keystrokes.  The multiple
+          ;; keystrokes are some unhandled function key
+          (unget-key kbinput)
+          (and=> (parse-escape-seq-kbinput win)
+                 (lambda (x)
+                   (list 'raw x)))])]
+
+       [(= escapes 3)
+        (cond
+         [(null? key-buffer)
+          ;; Three escapes followed by a non escape with no other
+          ;; character waiting just returns that character.
+          (list 'raw kbinput)]
+
+         [else
+          ;; Three escapes followed by multiple keystrokes indicates
+          ;; two escapes plus an unhandled function key.  Try to
+          ;; parse the function key.  If yes, return the control'ed version
+          ;; of that key.  If no, return #f.
+          ;; (let ((seq (append (list kbinput) key-buffer)))
+          ;;   (unget-key kbinput)
+          ;;   (let ((k (parse-escape-seq-kbinput win)))
+          ;;     (if k
+          ;;         (list 'meta (get-control-kbinput k))
+          ;;         (list 'raw #f))))])]))))
+          #f])]))))
+
+;; Translate escape sequences that ncurses didn't handle.  If the
+;; terminfo for the terminal you are using were complete, you would
+;; never fall into this function.  Any time you're in this function,
+;; you've used the wrong terminfo or (much less likely) it is a bug
+;; upstream.
+(define escape-seq
+  '(("\x1b01;2A" . KEY-SR)                ; shift-up on terminal
+    ("\x1b01;2B" . KEY-SF)                ; shift-down on terminal
+    ("\x1b01;2C" . KEY-SRIGHT)            ; shift-right on terminal
+    ("\x1b01;2D" . KEY-SLEFT)             ; shift-left on terminal
+    ("\x1b01;2P" . (key-f 13))            ; f13 on gnome+pcfkeys
+    ("\x1b01;2Q" . (key-f 14))            ; f14 on
+    ("\x1b01;2R" . (key-f 15))
+    ("\x1b01;2S" . (key-f 16))
+    ("\x1b01;5A" . kUP5)                  ; ctrl-up on Terminal
+    ("\x1b01;5B" . kDN5)                  ; ctrl-down on Terminal
+    ("\x1b01;5C" . kRIT5)                  ; ctrl-right on Terminal
+    ("\x1b01;5D" . kLFT5)                  ; ctrl-left on Terminal
+    ("\x1b02P" . (key-f 13))))               ; F13 on xterm-xf86-v40, xterm+pcf0
+
+(define (parse-escape-seq-kbinput win)
+  ;; We're here if we got an escape followed by an apparent escape sequence
+  ;; that ncurses didn't handle
+  (let ((key (assoc-ref escape-seq (apply string key-buffer))))
+    (set! key-buffer '())
+    key))
+
+;; Translate a control character sequence: turn an ASCII non-control
+;; character into its corresponding control character
+(define (get-control-kbinput win)
+  (let ((k (car key-buffer)))
+    (set! key-buffer (drop key-buffer 1))
+    (if (integer? k)
+        ;; This is a keycode
+        (list 'control k)
+        ;; else
+        (cond
+         ((or (char=? k #\space) (char=? k #\2))
+          #\nul)
+         ((char=? k #\\)
+          #\us)
+         ((and (char>=? k #\3) (char<=? k #\7))
+          (integer->char (- (char->integer k) 24)))
+         ((or (char=? k #\8) (char=? k #\?))
+          #\del)
+         ((and (char>=? k #\@) (char<=? k #\-))
+          (integer->char (- (char->integer k) 64)))
+         ((and (char>=? k #\`) (char<=? k #\~))
+          (integer->char (- (char->integer k) 96)))
+         (else
+          k)))))
+
+
+;; Read in a single character.  If it's ignored, swallow it and go on.
+;; Otherwise, try to translate it from ASCII, meta key sequences,
+;; escape sequences, and/or extended keypad values.  Set meta-key to
+;; TRUE when we get a meta key sequence, and set func-key to TRUE when
+;; we get an extended keypad value.  Supported extended keypad values
+;; consist of [arrow key], Ctrl-[arrow key], Shift-[arrow key], Enter,
+;; Backspace, the editing keypad (Insert, Delete, Home, End, PageUp,
+;; and PageDown), the function keypad (F1-F16), and the numeric keypad
+;; with NumLock off.  Assume nodelay(win) is FALSE.
+(define (get-kbinput win)
+  ;; Read in a character and interpret it.  Continue doing this until
+  ;; we get a recognized value or sequence. */
+  (let ((kbinput (parse-kbinput win)))
+    (if (not kbinput)
+        (begin
+          (usleep 100)
+          (get-kbinput win))
+        (begin
+          #; (when (eq? win edit) (check-statusblank))
+          kbinput))))
+
+
+
 
 #|
 ;; Display a message on the statusbar, and set *disable-cursorpos* to
@@ -1075,3 +1528,4 @@ char-cur char-max char-ratio))))
 2
 0))
 |#
+
