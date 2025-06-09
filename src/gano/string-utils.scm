@@ -36,11 +36,6 @@
     string-find-string
     string-count-char
     
-    ;; Splitting and joining
-    string-split-at-char
-    string-split-at-index
-    string-join-with
-    
     ;; Unicode-aware utilities
     ;; string-for-each-index
     string-map-with-index))
@@ -172,29 +167,105 @@
 (define (string-insert-multiple str insertions)
   "Insert multiple characters/strings at various positions.
    INSERTIONS is a list of (index . value) pairs.
-   Applied from right to left to avoid index shifting."
-  (fold (lambda (insertion acc)
-          (let ([index (car insertion)]
-                [value (cdr insertion)])
-            (if (char? value)
-                (string-insert-char acc index value)
-                (string-insert-string acc index value))))
-        str
-        ;; Sort by index in descending order
-        (sort insertions (lambda (a b) (> (car a) (car b))))))
+   All indices refer to positions in the original string.
+   Multiple insertions at the same index are applied left-to-right.
+   Throws an error if indices are negative."
+  (if (null? insertions)
+      str
+      (let ([str-len (string-length str)])
+        
+        ;; Validate indices (negative indices are errors, beyond-end is ok for inserts)
+        (for-each
+         (lambda (insertion)
+           (let ([index (car insertion)])
+             (when (< index 0)
+               (error "string-insert-multiple: negative index" index))))
+         insertions)
+        
+        ;; Proceed with insertions
+        (let* ([sorted (stable-sort insertions (lambda (a b) (< (car a) (car b))))]
+               [segments '()]
+               [pos 0])
+          
+          (for-each
+           (lambda (insertion)
+             (let ([insert-pos (car insertion)]
+                   [insert-val (cdr insertion)])
+               ;; Add original string segment if we've moved to a new position
+               (when (> insert-pos pos)
+                 (set! segments (append segments (list (substring str pos (min insert-pos str-len)))))
+                 (set! pos insert-pos))
+               ;; Add the insertion
+               (set! segments (append segments (list (if (char? insert-val) 
+                                                         (string insert-val) 
+                                                         insert-val))))))
+           sorted)
+          
+          ;; Add remaining original string
+          (when (< pos str-len)
+            (set! segments (append segments (list (substring str pos str-len)))))
+          
+          (string-concatenate segments)))))
 
 (define (string-replace-multiple str replacements)
   "Replace multiple ranges in a string.
    REPLACEMENTS is a list of (start-index end-index replacement) tuples.
-   Applied from right to left to avoid index shifting."
-  (fold (lambda (replacement acc)
-          (let ([start (car replacement)]
-                [end (cadr replacement)]
-                [repl (caddr replacement)])
-            (string-replace-range acc start end repl)))
-        str
-        ;; Sort by start index in descending order
-        (sort replacements (lambda (a b) (> (car a) (car b))))))
+   All indices refer to positions in the original string.
+   Throws an error if ranges overlap or are out of bounds."
+  (if (null? replacements)
+      str
+      (let ([str-len (string-length str)])
+        
+        ;; Validate all ranges first
+        (for-each
+         (lambda (replacement)
+           (let ([start (car replacement)]
+                 [end (cadr replacement)])
+             ;; Check bounds
+             (when (< start 0)
+               (error "string-replace-multiple: start index out of bounds" start))
+             (when (> end str-len)
+               (error "string-replace-multiple: end index out of bounds" end str-len))
+             (when (> start end)
+               (error "string-replace-multiple: invalid range, start > end" start end))))
+         replacements)
+        
+        ;; Check for overlapping ranges
+        (let ([sorted-ranges (sort (map (lambda (r) (list (car r) (cadr r) (caddr r))) replacements)
+                                   (lambda (a b) (< (car a) (car b))))])
+          (let check-overlap ([ranges sorted-ranges])
+            (when (>= (length ranges) 2)
+              (let ([first (car ranges)]
+                    [second (cadr ranges)])
+                (when (> (cadr first) (car second))  ; first-end > second-start
+                  (error "string-replace-multiple: overlapping ranges" 
+                         (list (car first) (cadr first)) 
+                         (list (car second) (cadr second))))
+                (check-overlap (cdr ranges)))))
+          
+          ;; All validations passed, perform replacements
+          (let ([segments '()]
+                [pos 0])
+            
+            (for-each
+             (lambda (replacement)
+               (let ([start (car replacement)]
+                     [end (cadr replacement)]
+                     [repl (caddr replacement)])
+                 ;; Add original string segment before this replacement
+                 (when (> start pos)
+                   (set! segments (append segments (list (substring str pos start)))))
+                 ;; Add the replacement
+                 (set! segments (append segments (list repl)))
+                 ;; Update position
+                 (set! pos end)))
+             sorted-ranges)
+            
+            ;; Add remaining original string
+            (when (< pos str-len)
+              (set! segments (append segments (list (substring str pos str-len)))))
+            
+            (string-concatenate segments))))))
 
 ;;; =================================================================
 ;;; SAFE ACCESSORS
@@ -275,41 +346,6 @@
         (if (char=? (string-ref str i) char)
             (loop (+ i 1) (+ count 1))
             (loop (+ i 1) count)))))
-
-;;; =================================================================
-;;; SPLITTING AND JOINING
-;;; =================================================================
-
-(define (string-split-at-char str char)
-  "Split string at all occurrences of CHAR, returning list of substrings."
-  (let ([positions (cons -1 (append (string-char-positions str char) 
-                                    (list (string-length str))))])
-    (let loop ([pos-list positions] [result '()])
-      (if (< (length pos-list) 2)
-          (reverse result)
-          (let ([start (+ (car pos-list) 1)]
-                [end (cadr pos-list)])
-            (loop (cdr pos-list) 
-                  (cons (substring str start end) result)))))))
-
-(define (string-split-at-index str index)
-  "Split string at INDEX, returning two values: (before . after)."
-  (let ([safe-index (max 0 (min index (string-length str)))])
-    (values (substring str 0 safe-index)
-            (substring str safe-index))))
-
-(define (string-join-with string-list separator)
-  "Join list of strings with SEPARATOR between them."
-  (cond
-    [(null? string-list) ""]
-    [(null? (cdr string-list)) (car string-list)]
-    [else
-     (let loop ([remaining (cdr string-list)]
-                [result (car string-list)])
-       (if (null? remaining)
-           result
-           (loop (cdr remaining)
-                 (string-append result separator (car remaining)))))]))
 
 ;;; =================================================================
 ;;; UNICODE-AWARE UTILITIES

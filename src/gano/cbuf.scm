@@ -33,6 +33,7 @@
   #:use-module (gano rendering)     ; SGR support
   #:use-module (gano list-utils)    ; Immutable list operations
   #:use-module (gano char)          ; Character utilities
+  #:use-module (gano string-split)  ; String splitting and joining
   #:use-module (srfi srfi-9)        ; Record types
   #:use-module (srfi srfi-1)        ; List utilities
   #:use-module (srfi srfi-11)       ; let-values
@@ -2706,14 +2707,7 @@ backward tabulation. This function does not do bracketing."
   (let* ([detected-ending (if (string=? line-ending "\n")
                              (detect-line-ending text)
                              line-ending)]
-         [lines (cond
-		 ;; FIXME: handle CRLF
-                 [(string-contains text "\r\n") (string-split text #\newline)]
-                 [(string-contains text "\r") (string-split text #\return)]
-                 [(string-contains text "\n") (string-split text #\newline)]
-                 [(string-contains text "\u2028") (string-split text '\u2028')]
-                 [else (list text)])]
-         
+         [lines (string-split-lines text)]
          ;; Build all metrics in one pass
          [metrics (map (lambda (line) 
                         (compute-text-metrics line tab-size #:cjk? cjk?))
@@ -2729,11 +2723,7 @@ backward tabulation. This function does not do bracketing."
 
 (define (detect-line-ending text)
   "Detect line ending type in text"
-  (cond
-   [(string-contains text "\r\n") "\r\n"]     ; Windows
-   [(string-contains text "\r") "\r"]         ; Classic Mac
-   [(string-contains text "\u2028") "\u2028"] ; Unicode Line Separator
-   [else "\n"]))                              ; Unix/Linux (default)
+  (string-detect-line-ending text))
 
 ;;; CONVENIENCE FUNCTIONS (placeholders)
 (define (cbuf-save-json cbuf filename)
