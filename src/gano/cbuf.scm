@@ -1128,6 +1128,35 @@ backward tabulation. This function does not do bracketing."
   "Insert string without combining mark validation."
   (cbuf-insert-string-with-current-sgr cbuf str #:strict? #f))
 
+(define (cbuf-insert-codepoint-internal cbuf char-new sgr)
+    "Internal string insertion"
+  
+  (let* ([metrics (cbuf-metrics-cur cbuf)]
+         [x-data (cbuf-x-data cbuf)]
+         [x-index (cbuf-x-data->x-index cbuf x-data)]
+         
+         ;; Use text-metrics insertion function
+         [new-metrics (text-metrics-insert-string-with-sgr metrics x-index (string char-new) (list sgr))])
+    
+    ;; Single atomic update to the metrics
+    (cbuf-update-metrics-cur! cbuf new-metrics)
+    
+    ;; Update cursor and mark positions
+    (let ([inserted-chars 1]
+          [inserted-data-positions (if (or (char=? char-new #\space)
+					   (char-base? char-new))
+				       1
+				       0)])
+      
+      ;; Move mark if necessary
+      (when (and (cbuf-mark-set? cbuf)
+                 (= (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))
+                 (>= (cbuf-mark-x-data cbuf) x-data))
+        (set-cbuf-mark-x-data! cbuf (+ (cbuf-mark-x-data cbuf) inserted-data-positions)))
+      
+      ;; Move cursor to end of inserted text
+      (cbuf-set-x! cbuf (+ x-data inserted-data-positions) 'data))))
+
 (define* (cbuf-insert-codepoint-with-sgr cbuf char-new sgr #:key (strict? #t))
   "Insert single codepoint - optimized for the single character case."
   
@@ -2678,10 +2707,11 @@ backward tabulation. This function does not do bracketing."
                              (detect-line-ending text)
                              line-ending)]
          [lines (cond
-                 [(string-contains text "\r\n") (string-split text "\r\n")]
-                 [(string-contains text "\r") (string-split text "\r")]
-                 [(string-contains text "\n") (string-split text "\n")]
-                 [(string-contains text "\u2028") (string-split text "\u2028")]
+		 ;; FIXME: handle CRLF
+                 [(string-contains text "\r\n") (string-split text #\newline)]
+                 [(string-contains text "\r") (string-split text #\return)]
+                 [(string-contains text "\n") (string-split text #\newline)]
+                 [(string-contains text "\u2028") (string-split text '\u2028')]
                  [else (list text)])]
          
          ;; Build all metrics in one pass

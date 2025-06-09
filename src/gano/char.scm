@@ -4,7 +4,8 @@
 (define-module (gano char)
   #:use-module (gano wcwidth)
   #:export (char-latin1? char-C0-control? char-control? char-blank?
-			 char-combining-mark? char-base? char-count-cells
+			 char-combining-mark? char-graphic?
+			 char-base? char-count-cells
 			 char-get-display-representation-of-control-char))
 (define (char-latin1? c)
   "Return #t if C is one of the first 256 codepoints"
@@ -27,6 +28,10 @@ tab."
 (define (char-combining-mark? c)
   "Return #t if this is a combining mark, like an accent"
   (member (char-general-category c) '(Mn Mc Me)))
+
+(define (char-graphic? c)
+  "Return #t if this is a graphic character."
+  (char-set-contains? char-set:graphic c))
 
 (define (char-base? c)
   "Return #t if this is a character than can be the base for a

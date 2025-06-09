@@ -30,180 +30,513 @@
 ;; SPL - set page limit
 ;; SR - scroll right
 ;; SU - scroll up
+;;;; Modernized Frame Module - ECMA-48 Viewport for Character Cell Buffers
+;;;
+;;; A frame defines a rectangular viewport into a character cell buffer.
+;;; Coordinates are in character cells: Latin characters are 1 cell wide,
+;;; CJK characters are 2 cells wide, all characters are 1 cell high.
+;;;
+;;; The frame provides view operations that move the viewport without
+;;; changing the active cursor position or buffer content.
 
-;; The Old-school R5RS 'class' for the character-cell buffer's frame.
+(define-module (gano frame)
+  #:use-module (gano cbuf)          ; Character buffer module
+  #:use-module (gano rendering)     ; For make-default-sgr
+  #:use-module (srfi srfi-1)        ; List utilities (for iota)
+  #:use-module (srfi srfi-9)        ; Record types
+  #:use-module (srfi srfi-11)       ; let-values
+  #:use-module (srfi srfi-35)       ; Condition types
+  #:export (
+    ;; Record type and constructor
+    <frame>
+    make-frame
+    frame?
+    
+    ;; Field accessors
+    frame-width frame-height
+    frame-x-start frame-y-start
+    frame-left-padding frame-right-padding
+    
+    ;; Field setters
+    set-frame-width! set-frame-height!
+    set-frame-x-start! set-frame-y-start!
+    set-frame-left-padding! set-frame-right-padding!
+    
+    ;; ECMA-48 frame operations
+    frame-next-page frame-next-page-strict           ; NP
+    frame-preceding-page frame-preceding-page-strict ; PP
+    frame-scroll-down frame-scroll-down-strict       ; SD
+    frame-scroll-up frame-scroll-up-strict           ; SU
+    frame-scroll-left frame-scroll-left-strict       ; SL
+    frame-scroll-right frame-scroll-right-strict     ; SR
+    
+    ;; Page positioning
+    frame-page-position-absolute frame-page-position-absolute-strict  ; PPA
+    frame-page-position-forward frame-page-position-forward-strict    ; PPR
+    frame-page-position-backward frame-page-position-backward-strict  ; PPB
+    
+    ;; ECMA-48 aliases
+    frame-ppa frame-ppr frame-ppb
+    frame-np frame-pp frame-sd frame-su frame-sl frame-sr
+    
+    ;; Frame management
+    frame-update-frame
+    frame-render-frame
+    frame-render-frame-with-sgr
+    
+    ;; Utility functions
+    frame-cursor-visible?
+    frame-get-cursor-position
+    frame-get-visible-line-range
+    frame-get-visible-column-range
+    frame-compute-page-start
+    
+    ;; Query predicates
+    frame-at-beginning? frame-at-end?
+    frame-can-scroll-up? frame-can-scroll-down?
+    frame-can-scroll-left? frame-can-scroll-right?
+    
+    ;; Error conditions
+    &frame-beginning-of-buffer frame-beginning-of-buffer?
+    &frame-end-of-buffer frame-end-of-buffer?
+    &frame-range-error frame-range-error?
+    frame-range-error:operation frame-range-error:requested
+    frame-range-error:actual frame-range-error:reason))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; CLASS and PRIMITIVES
+;;;; Error Conditions (Following CBuf Pattern)
 
-(define-condition-type &frame-beginning-of-buffer &condition
+(define-condition-type &frame-range-error &error
+  frame-range-error?
+  (operation frame-range-error:operation)
+  (requested frame-range-error:requested)
+  (actual frame-range-error:actual)
+  (reason frame-range-error:reason))
+
+(define-condition-type &frame-beginning-of-buffer &frame-range-error
   frame-beginning-of-buffer?)
-(define-condition-type &frame-end-of-buffer &condition
+
+(define-condition-type &frame-end-of-buffer &frame-range-error
   frame-end-of-buffer?)
 
-(define FRAME_WIDTH 1)
-(define FRAME_HEIGHT 2)
-(define FRAME_X_START 3)
-(define FRAME_Y_START 4)
-(define FRAME_LEFT_PADDING 5)
-(define FRAME_RIGHT_PADDING 6)
-(define FRAME_LENGTH (+ 1 FRAME_RIGHT_PADDING))
+;;;; Frame Record Type
 
-(define (frame-make-frame width height)
-  "Create a frame."
-  (let ((frame (make-vector FRAME_LENGTH #f)))
-    (vector-set! frame 0 'frame)
-    (vector-set! frame FRAME_WIDTH width)
-    (vector-set! frame FRAME_HEIGHT height)
-    (vector-set! frame FRAME_X_START 0)
-    (vector-set! frame FRAME_Y_START 0)
-    (vector-set! frame FRAME_LEFT_PADDING #\$)
-    (vector-set! frame FRAME_RIGHT_PADDING #\$)
-    frame))
+(define-record-type <frame>
+  (%make-frame width height x-start y-start left-padding right-padding)
+  frame?
+  (width frame-width set-frame-width!)
+  (height frame-height set-frame-height!)
+  (x-start frame-x-start set-frame-x-start!)
+  (y-start frame-y-start set-frame-y-start!)
+  (left-padding frame-left-padding set-frame-left-padding!)
+  (right-padding frame-right-padding set-frame-right-padding!))
 
-(define (frame-get-width frame)         (vector-ref frame FRAME_WIDTH))
-(define (frame-get-height frame)        (vector-ref frame FRAME_HEIGHT))
-(define (frame-get-x-start frame)       (vector-ref frame FRAME_X_START))
-(define (frame-get-y-start frame)       (vector-ref frame FRAME_Y_START))
-;; Left padding is either #f, or is a character that will be prepended
-;; to any line that has characters to the left of the frame.
-(define (frame-get-left-padding frame)  (vector-ref frame FRAME_LEFT_PADDING))
-;; Right padding is either #f, or is a character that will be appended
-;; to any line that has characters to the right of the frame.
-(define (frame-get-right-padding frame) (vector-ref frame FRAME_RIGHT_PADDING))
+;;;; Constructor
 
-(define (frame-set-width! frame x)       (vector-set! frame FRAME_WIDTH x))
-(define (frame-set-height! frame x)      (vector-set! frame FRAME_HEIGHT x))
-(define (frame-set-x-start! frame x)     (vector-set! frame FRAME_X_START x))
-(define (frame-set-y-start! frame x)     (vector-set! frame FRAME_Y_START x))
+(define* (make-frame width height #:key (x-start 0) (y-start 0)
+                     (left-padding #\$) (right-padding #\$))
+  "Create a frame with specified dimensions and optional positioning.
+   
+   Arguments:
+   - width, height: Frame dimensions in character cells
+   - x-start, y-start: Top-left corner position (default: 0, 0)
+   - left-padding: Character shown when content extends left of frame
+   - right-padding: Character shown when content extends right of frame"
+  (when (<= width 0)
+    (error "Frame width must be positive" width))
+  (when (<= height 0)
+    (error "Frame height must be positive" height))
+  (%make-frame width height x-start y-start left-padding right-padding))
+
+;;;; Helper Functions
+
+(define (frame-raise-boundary-error frame operation target actual boundary-type)
+  "Centralized boundary error raising following cbuf pattern"
+  (let ([condition-constructor
+         (case boundary-type
+           [(beginning-of-buffer) &frame-beginning-of-buffer]
+           [(end-of-buffer) &frame-end-of-buffer]
+           [else &frame-range-error])])
+    (raise (condition (condition-constructor
+                       (operation operation)
+                       (requested target)
+                       (actual actual)
+                       (reason boundary-type))))))
 
 (define (frame-compute-page-start pos lines-per-page n)
-  "If N is positive, compute the start line of the Nth next page
-tabulation.  If N is negative, compute the star lines of the Nth
-preceding page.  This function does not do bracketing."
+  "Compute the start line of the page N pages away from current position.
+   If N is positive, move forward; if negative, move backward.
+   Returns the start line of the target page."
   (cond
    [(< n 0)
-    ;; Back up n pages
-    (let* ([pp1 (+ pos (* n lines-per-page))]
-           ;; Move forward to a page start
-           [pp2 (cond
-                 [(zero? (remainder pp1 lines-per-page))
-                  pp1]
-                 [(> pp1 0)
-                  (* lines-per-page (+ (quotient pp1 lines-per-page) 1))]
-                 [(< pp1 0)
-                  (* lines-per-page (quotient pp1 lines-per-page))])])
-      pp2)]
-   [(>= n 0)
-    ;; Advance n pages
-    (let* ([pp1 (+ pos (* n lines-per-page))]
-           ;; Move backward to the start of a page
-           [pp2 (* lines-per-page (quotient pp1 lines-per-page))])
-      pp2)]))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; METHODS
-
-;; NP - Next Page
-(define (frame-next-page buf frame n)
-  "Moves the frame to the Nth following page.  The active data
-position is not modified, and the cursor will likely be moved out of
-the frame.  Attempting to move the frame past the last page will cause
-a frame-end-of-buffer error."
-  (let* ([page-size (cbuf-get-page-size buf)]
-         [y (frame-get-y-start frame)]
-         [new-y (frame-compute-page-start y page-size n)]
-         [last-page-y (frame-compute-page-start (cbuf-get-line-count buf) page-size 0)])
-    (cond
-     [(> new-y last-page-y)
-      (frame-set-x-start! frame 0)
-      (frame-set-y-start! frame last-page-y)
-      (raise (condition (&frame-end-of-buffer)))]
-     [else
-      (frame-set-x-start! frame 0)
-      (frame-set-y-start! frame new-y)])))
-
-;; PP
-(define (frame-preceding-page buf frame n)
-  "Moves the frame to the Nth preceding page.  The active data position
-is not modified, and the cursor will likely be moved out of the frame.
-Attempting to move the frame before the beginning of the buffer will
-cause a frame-beginning-of-buffer error."
-  (let* ([page-size (cbuf-get-page-size buf)]
-         [y (frame-get-y-start frame)]
-         [new-y (frame-compute-page-start y page-size (- n))])
-    (cond
-     [(< new-y 0)
-      (frame-set-x-start! frame 0)
-      (frame-set-y-start! frame 0)
-      (raise (condition (&frame-beginning-of-buffer)))]
-     [else
-      (frame-set-x-start! frame 0)
-      (frame-set-y-start! frame new-y)])))
-
-;; SD
-(define (frame-scroll-down frame n)
-  "Moves the frame up N line positions so that the data appears to
-move down.  Attempting to move the frame before the beginning of the buffer
-will cause an frame-beginning-of-buffer error."
-  (cond
-   [(>= (frame-get-y-start frame) n)
-    (frame-set-y-start! frame (- (frame-get-y-start frame) n))]
+    ;; Back up n pages, then find page start
+    (let* ([current-page (quotient pos lines-per-page)]
+           [target-page (+ current-page n)]
+           [page-start (* target-page lines-per-page)])
+      (max 0 page-start))]
+   
+   [(= n 0) 
+    ;; Current page start
+    (* lines-per-page (quotient pos lines-per-page))]
+   
    [else
-    (frame-set-y-start! frame 0)
-    (raise (condition (&frame-beginning-of-buffer)))]))
+    ;; Advance n pages
+    (let* ([current-page (quotient pos lines-per-page)]
+           [target-page (+ current-page n)]
+           [page-start (* target-page lines-per-page)])
+      page-start)]))
 
-;; SL
-(define (frame-scroll-left frame n)
-  "Moves the frame right N cell positions so that the data appears to
-move left."
-  (frame-set-x-start! frame (+ (frame-get-x-start frame) n)))
+;;;; Page Operations
 
-;; SR
-(define (frame-scroll-right frame n)
-  "Moves the frame left N cell positions so that the data appears to
-move right."
-  (frame-set-x-start! frame (- (frame-get-x-start frame) n)))
+(define* (frame-next-page buf frame n #:key (strict? #f))
+  "NP - Move frame to the Nth following page. If strict?, raise error when hitting end."
+  (let* ([page-size (cbuf-form-size buf)]
+         [current-y (frame-y-start frame)]
+         [target-y (frame-compute-page-start current-y page-size n)]
+         [max-line (- (cbuf-line-count buf) 1)]
+         [last-page-y (frame-compute-page-start max-line page-size 0)]
+         [clamped-y (min target-y last-page-y)]
+         [clamped? (not (= target-y clamped-y))])
+    
+    ;; Always perform the movement
+    (set-frame-x-start! frame 0)
+    (set-frame-y-start! frame clamped-y)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (frame-raise-boundary-error frame 'next-page target-y clamped-y 'end-of-buffer))))
+
+(define (frame-next-page-strict buf frame n)
+  "Move frame to next page, raising error if hitting end."
+  (frame-next-page buf frame n #:strict? #t))
+
+(define* (frame-preceding-page buf frame n #:key (strict? #f))
+  "PP - Move frame to the Nth preceding page. If strict?, raise error when hitting beginning."
+  (let* ([page-size (cbuf-form-size buf)]
+         [current-y (frame-y-start frame)]
+         [target-y (frame-compute-page-start current-y page-size (- n))]
+         [clamped-y (max 0 target-y)]
+         [clamped? (not (= target-y clamped-y))])
+    
+    ;; Always perform the movement
+    (set-frame-x-start! frame 0)
+    (set-frame-y-start! frame clamped-y)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (frame-raise-boundary-error frame 'preceding-page target-y clamped-y 'beginning-of-buffer))))
+
+(define (frame-preceding-page-strict buf frame n)
+  "Move frame to preceding page, raising error if hitting beginning."
+  (frame-preceding-page buf frame n #:strict? #t))
+
+;;;; Scroll Operations
+
+(define* (frame-scroll-down frame n #:key (strict? #f))
+  "SD - Move frame up N line positions (data appears to move down).
+   If strict?, raise error when hitting beginning."
+  (let* ([current-y (frame-y-start frame)]
+         [target-y (- current-y n)]
+         [clamped-y (max 0 target-y)]
+         [clamped? (not (= target-y clamped-y))])
+    
+    ;; Always perform the movement
+    (set-frame-y-start! frame clamped-y)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (frame-raise-boundary-error frame 'scroll-down target-y clamped-y 'beginning-of-buffer))))
+
+(define (frame-scroll-down-strict frame n)
+  "Scroll down, raising error if hitting beginning."
+  (frame-scroll-down frame n #:strict? #t))
+
+(define* (frame-scroll-up buf frame n #:key (strict? #f))
+  "SU - Move frame down N line positions (data appears to move up).
+   If strict?, raise error when hitting end."
+  (let* ([current-y (frame-y-start frame)]
+         [target-y (+ current-y n)]
+         [max-y (max 0 (- (cbuf-line-count buf) (frame-height frame)))]
+         [clamped-y (min target-y max-y)]
+         [clamped? (not (= target-y clamped-y))])
+    
+    ;; Always perform the movement
+    (set-frame-y-start! frame clamped-y)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (frame-raise-boundary-error frame 'scroll-up target-y clamped-y 'end-of-buffer))))
+
+(define (frame-scroll-up-strict buf frame n)
+  "Scroll up, raising error if hitting end."
+  (frame-scroll-up buf frame n #:strict? #t))
+
+(define* (frame-scroll-left frame n #:key (strict? #f))
+  "SL - Move frame right N cell positions (data appears to move left).
+   Note: No upper bound checking - frames can scroll arbitrarily far left."
+  (let ([current-x (frame-x-start frame)]
+        [target-x (+ (frame-x-start frame) n)])
+    (set-frame-x-start! frame target-x)))
+
+(define (frame-scroll-left-strict frame n)
+  "Scroll left - same as non-strict since no bounds checking."
+  (frame-scroll-left frame n))
+
+(define* (frame-scroll-right frame n #:key (strict? #f))
+  "SR - Move frame left N cell positions (data appears to move right).
+   If strict?, raise error when hitting left edge."
+  (let* ([current-x (frame-x-start frame)]
+         [target-x (- current-x n)]
+         [clamped-x (max 0 target-x)]
+         [clamped? (not (= target-x clamped-x))])
+    
+    ;; Always perform the movement
+    (set-frame-x-start! frame clamped-x)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (frame-raise-boundary-error frame 'scroll-right target-x clamped-x 'beginning-of-buffer))))
+
+(define (frame-scroll-right-strict frame n)
+  "Scroll right, raising error if hitting left edge."
+  (frame-scroll-right frame n #:strict? #t))
+
+;;;; Absolute Positioning
+
+(define* (frame-page-position-absolute buf frame page #:key (strict? #f))
+  "PPA - Move frame to absolute page number. If strict?, raise error when clamping."
+  (let* ([page-size (cbuf-form-size buf)]
+         [target-y (* page page-size)]
+         [max-line (- (cbuf-line-count buf) 1)]
+         [clamped-y (max 0 (min target-y max-line))]
+         [clamped? (not (= target-y clamped-y))])
+    
+    ;; Always perform the positioning
+    (set-frame-x-start! frame 0)
+    (set-frame-y-start! frame clamped-y)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (if (< target-y 0)
+          (frame-raise-boundary-error frame 'page-position-absolute target-y clamped-y 'beginning-of-buffer)
+          (frame-raise-boundary-error frame 'page-position-absolute target-y clamped-y 'end-of-buffer)))))
+
+(define (frame-page-position-absolute-strict buf frame page)
+  "Move to absolute page, raising error on clamping."
+  (frame-page-position-absolute buf frame page #:strict? #t))
+
+(define* (frame-page-position-forward buf frame n #:key (strict? #f))
+  "PPR - Move frame forward N pages relative to current position."
+  (frame-next-page buf frame n #:strict? strict?))
+
+(define (frame-page-position-forward-strict buf frame n)
+  "Move forward N pages, raising error on boundary."
+  (frame-page-position-forward buf frame n #:strict? #t))
+
+(define* (frame-page-position-backward buf frame n #:key (strict? #f))
+  "PPB - Move frame backward N pages relative to current position."
+  (frame-preceding-page buf frame n #:strict? strict?))
+
+(define (frame-page-position-backward-strict buf frame n)
+  "Move backward N pages, raising error on boundary."
+  (frame-page-position-backward buf frame n #:strict? #t))
+
+;;;; ECMA-48 Command Aliases
+
+(define frame-np frame-next-page)
+(define frame-pp frame-preceding-page)
+(define frame-sd frame-scroll-down)
+(define frame-su frame-scroll-up)
+(define frame-sl frame-scroll-left)
+(define frame-sr frame-scroll-right)
+(define frame-ppa frame-page-position-absolute)
+(define frame-ppr frame-page-position-forward)
+(define frame-ppb frame-page-position-backward)
+
+;;;; Frame Management
 
 (define (frame-update-frame buf frame)
-  "Adjust the frame so that the cursor is present. If the cursor
-is beyond the view of the current frame, the frame is adjusted
-so the cursor is one-third of the distance to the edge of the frame."
-  (let ([x-frame (frame-get-x-start frame)]
-        [y-frame (frame-get-y-start frame)]
-        [height (frame-get-height frame)]
-        [width (frame-get-width frame)]
-        [x-cell (cbuf-get-x-cell buf)]
-        [y (cbuf-get-y buf)])
+  "Adjust frame so cursor is visible. If cursor is outside frame,
+   position cursor 1/3 from appropriate edge for smooth scrolling."
+  (let ([x-frame (frame-x-start frame)]
+        [y-frame (frame-y-start frame)]
+        [height (frame-height frame)]
+        [width (frame-width frame)]
+        [x-cell (cbuf-x-cell buf)]
+        [y (cbuf-line-cur buf)])
+    
+    ;; Vertical adjustments
     (when (>= y (+ y-frame height))
       (let ([y-frame-target (- y (floor (* 2/3 height)))])
-        (frame-set-y-start! frame (max 0 y-frame-target))))
+        (set-frame-y-start! frame (max 0 y-frame-target))))
+    
     (when (< y y-frame)
       (let ([y-frame-target (- y (floor (* 1/3 height)))])
-        (frame-set-y-start! frame (max 0 y-frame-target))))
+        (set-frame-y-start! frame (max 0 y-frame-target))))
+    
+    ;; Horizontal adjustments
     (when (>= x-cell (+ x-frame width))
       (let ([x-frame-target (- x-cell (floor (* 2/3 width)))])
-        (frame-set-x-start! frame (max 0 x-frame-target))))
+        (set-frame-x-start! frame (max 0 x-frame-target))))
+    
     (when (< x-cell x-frame)
       (let ([x-frame-target (- x-cell (floor (* 1/3 width)))])
-        (frame-set-x-start! frame (max 0 x-frame-target))))))
+        (set-frame-x-start! frame (max 0 x-frame-target))))))
 
-(define (frame-render-frame buf frame)
-  (let ([txt (get-text buf)]
-        [tabsize (get-tab-size buf)]
-        [x-frame (frame-get-x-start frame)]
-        [y-frame (frame-get-y-start frame)]
-        [height (frame-get-height frame)]
-        [width (frame-get-width frame)])
-    (map (lambda (i)
-           (let ([y (+ i y-frame)])
-             (if (< y (length txt))
-                 (string-render-line (list-ref txt y)
-                                     #:tabsize tabsize
-                                     #:x-cell-start x-frame
-                                     #:x-width width)
-                 ;; else
-                 (make-string width #\space))))
+;;;; Rendering
 
-         (iota height))))
+(define* (frame-render-frame buf frame #:key (pad? #t))
+  "Render the frame view of the buffer as a list of strings.
+   Returns list of strings, one per visible line."
+  (let ([x-frame (frame-x-start frame)]
+        [y-frame (frame-y-start frame)]
+        [height (frame-height frame)]
+        [width (frame-width frame)]
+        [line-count (cbuf-line-count buf)])
+    
+    ;; Save current cursor position
+    (let ([old-line (cbuf-line-cur buf)])
+      (let ([result
+             (map (lambda (i)
+                    (let ([y (+ i y-frame)])
+                      (if (< y line-count)
+                          ;; Line exists - render it
+                          (begin
+                            (cbuf-set-y! buf y)
+                            (cbuf-render-line-string-only buf x-frame width #:pad? pad?))
+                          ;; Line doesn't exist - return spaces
+                          (make-string width #\space))))
+                  (iota height))])
+        ;; Restore cursor position
+        (cbuf-set-y! buf old-line)
+        result))))
+
+(define* (frame-render-frame-with-sgr buf frame #:key (pad? #t))
+  "Render frame with SGR formatting information.
+   Returns list of (string . sgr-list) pairs."
+  (let ([x-frame (frame-x-start frame)]
+        [y-frame (frame-y-start frame)]
+        [height (frame-height frame)]
+        [width (frame-width frame)]
+        [line-count (cbuf-line-count buf)])
+    
+    ;; Save current cursor position
+    (let ([old-line (cbuf-line-cur buf)])
+      (let ([result
+             (map (lambda (i)
+                    (let ([y (+ i y-frame)])
+                      (if (< y line-count)
+                          ;; Line exists - render with SGR
+                          (begin
+                            (cbuf-set-y! buf y)
+                            (let-values ([(rendered-string sgr-list) 
+                                          (cbuf-render-line buf x-frame width #:pad? pad?)])
+                              (cons rendered-string sgr-list)))
+                          ;; Line doesn't exist - return spaces with default SGR
+                          (let ([spaces (make-string width #\space)]
+                                [default-sgrs (make-list width (make-default-sgr))])
+                            (cons spaces default-sgrs)))))
+                  (iota height))])
+        ;; Restore cursor position
+        (cbuf-set-y! buf old-line)
+        result))))
+
+;;;; Query Functions
+
+(define (frame-cursor-visible? buf frame)
+  "Return #t if the cursor is currently visible in the frame."
+  (let ([x-frame (frame-x-start frame)]
+        [y-frame (frame-y-start frame)]
+        [height (frame-height frame)]
+        [width (frame-width frame)]
+        [x-cell (cbuf-x-cell buf)]
+        [y (cbuf-line-cur buf)])
+    
+    (and (>= y y-frame)
+         (< y (+ y-frame height))
+         (>= x-cell x-frame)
+         (< x-cell (+ x-frame width)))))
+
+(define (frame-get-cursor-position buf frame)
+  "Get cursor position relative to frame. Returns (x . y) or #f if not visible."
+  (if (frame-cursor-visible? buf frame)
+      (let ([x-cell (cbuf-x-cell buf)]
+            [y (cbuf-line-cur buf)]
+            [x-frame (frame-x-start frame)]
+            [y-frame (frame-y-start frame)])
+        (cons (- x-cell x-frame) (- y y-frame)))
+      #f))
+
+(define (frame-get-visible-line-range buf frame)
+  "Return (start-line . end-line) of lines visible in frame."
+  (let ([y-frame (frame-y-start frame)]
+        [height (frame-height frame)]
+        [line-count (cbuf-line-count buf)])
+    (cons y-frame (min (+ y-frame height) line-count))))
+
+(define (frame-get-visible-column-range frame)
+  "Return (start-column . end-column) of columns visible in frame."
+  (let ([x-frame (frame-x-start frame)]
+        [width (frame-width frame)])
+    (cons x-frame (+ x-frame width))))
+
+;;;; Predicates Following CBuf Pattern
+
+(define (frame-at-beginning? frame)
+  "Return #t if frame is at the top-left origin."
+  (and (= (frame-x-start frame) 0)
+       (= (frame-y-start frame) 0)))
+
+(define (frame-at-end? buf frame)
+  "Return #t if frame is positioned at the end of the buffer."
+  (let ([y-frame (frame-y-start frame)]
+        [height (frame-height frame)]
+        [line-count (cbuf-line-count buf)])
+    (>= (+ y-frame height) line-count)))
+
+(define (frame-can-scroll-up? buf frame n)
+  "Return #t if frame can scroll up N lines without hitting end."
+  (let ([current-y (frame-y-start frame)]
+        [height (frame-height frame)]
+        [line-count (cbuf-line-count buf)])
+    (<= (+ current-y n height) line-count)))
+
+(define (frame-can-scroll-down? frame n)
+  "Return #t if frame can scroll down N lines without hitting beginning."
+  (>= (- (frame-y-start frame) n) 0))
+
+(define (frame-can-scroll-left? frame n)
+  "Return #t if frame can scroll left N columns (always true - no right bound)."
+  #t)
+
+(define (frame-can-scroll-right? frame n)
+  "Return #t if frame can scroll right N columns without hitting left edge."
+  (>= (- (frame-x-start frame) n) 0))
+
+;;;; Range Query Functions
+
+(define (frame-scroll-up-range buf frame)
+  "Return maximum lines frame can scroll up."
+  (let ([current-y (frame-y-start frame)]
+        [height (frame-height frame)]
+        [line-count (cbuf-line-count buf)])
+    (max 0 (- line-count height current-y))))
+
+(define (frame-scroll-down-range frame)
+  "Return maximum lines frame can scroll down."
+  (frame-y-start frame))
+
+(define (frame-scroll-right-range frame)
+  "Return maximum columns frame can scroll right."
+  (frame-x-start frame))
+
+(define (frame-page-count buf)
+  "Return total number of pages in buffer."
+  (let ([line-count (cbuf-line-count buf)]
+        [page-size (cbuf-form-size buf)])
+    (ceiling (/ line-count page-size))))
+
+(define (frame-current-page buf frame)
+  "Return current page number (0-based)."
+  (let ([y-frame (frame-y-start frame)]
+        [page-size (cbuf-form-size buf)])
+    (quotient y-frame page-size)))
