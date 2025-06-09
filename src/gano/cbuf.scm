@@ -242,8 +242,47 @@
     color->json
     json->color
     detect-line-ending
-    
-    ;; Error conditions
+
+    ;; Efficient string operations
+    cbuf-insert-string-with-sgr
+    cbuf-insert-string-with-current-sgr
+    cbuf-insert-string-permissive
+    cbuf-insert-lines
+  
+    ;; Efficient validation
+    validate-string-combining-marks
+    validate-combining-marks-at-insertion
+  
+    ;; Internal functions for advanced use
+    cbuf-insert-string-internal
+    cbuf-insert-lines-internal
+    text->cbuf-internal
+    count-base-characters    
+
+    ;;; Error conditions for combining sequences
+    &cbuf-too-many-combining-marks
+    cbuf-too-many-combining-marks-error?
+    cbuf-too-many-combining-marks-error:base-char
+    cbuf-too-many-combining-marks-error:combining-char
+    cbuf-too-many-combining-marks-error:current-count
+    cbuf-too-many-combining-marks-error:max-count
+
+    ;;; Error condition for too many combining marks
+    &cbuf-too-many-combining-marks
+    cbuf-too-many-combining-marks-error?
+    cbuf-too-many-combining-marks-error:base-char
+    cbuf-too-many-combining-marks-error:combining-char
+    cbuf-too-many-combining-marks-error:current-count
+    cbuf-too-many-combining-marks-error:max-count
+
+    ;;; Error conditions for ranges and motion
+    &cbuf-range-error
+    cbuf-range-error?
+    cbuf-range-error:operation
+    cbuf-range-error:requested
+    cbuf-range-error:actual
+    cbuf-range-error:reason
+
     &cbuf-beginning-of-buffer
     cbuf-beginning-of-buffer-error?
     &cbuf-end-of-buffer
@@ -252,20 +291,23 @@
     cbuf-beginning-of-line-error?
     &cbuf-end-of-line
     cbuf-end-of-line-error?
-    &cbuf-combining-mark-error
-    &cbuf-too-many-combining-marks
-    cbuf-too-many-combining-marks-error?
-    cbuf-too-many-combining-marks-error:base-char
-    cbuf-too-many-combining-marks-error:combining-char
-    cbuf-too-many-combining-marks-error:current-count
-    cbuf-too-many-combining-marks-error:max-count
-    ))
+    &cbuf-line-limit-exceeded
+    cbuf-line-limit-exceeded-error?
+    cbuf-line-limit-exceeded-error:limit
+))
 
 
 ;; Maximum combining marks per base character (matches ncurses cchar_t)
 (define MAX-COMBINING-MARKS 4)
 
-;;; Error condition for too many combining marks
+;;; Error conditions for combining marks
+(define-condition-type &cbuf-invalid-combining-sequence &serious
+  cbuf-invalid-combining-sequence-error?
+  (base-char cbuf-invalid-combining-sequence-error:base-char)
+  (combining-char cbuf-invalid-combining-sequence-error:combining-char)
+  (current-count cbuf-invalid-combining-sequence-error:current-count)
+  (max-count cbuf-invalid-combining-sequence-error:max-count))
+
 (define-condition-type &cbuf-too-many-combining-marks &serious
   cbuf-too-many-combining-marks-error?
   (base-char cbuf-too-many-combining-marks-error:base-char)
@@ -273,24 +315,29 @@
   (current-count cbuf-too-many-combining-marks-error:current-count)
   (max-count cbuf-too-many-combining-marks-error:max-count))
 
-;;; Error conditions
-(define-condition-type &cbuf-beginning-of-buffer &condition
+;;; Error conditions for ranges and motion
+(define-condition-type &cbuf-range-error &error
+  cbuf-range-error?
+  (operation cbuf-range-error:operation)
+  (requested cbuf-range-error:requested)
+  (actual cbuf-range-error:actual)
+  (reason cbuf-range-error:reason))
+
+(define-condition-type &cbuf-beginning-of-buffer &cbuf-range-error
   cbuf-beginning-of-buffer-error?)
 
-(define-condition-type &cbuf-end-of-buffer &condition
+(define-condition-type &cbuf-end-of-buffer &cbuf-range-error
   cbuf-end-of-buffer-error?)
 
-(define-condition-type &cbuf-beginning-of-line &condition
+(define-condition-type &cbuf-beginning-of-line &cbuf-range-error
   cbuf-beginning-of-line-error?)
 
-(define-condition-type &cbuf-end-of-line &condition
+(define-condition-type &cbuf-end-of-line &cbuf-range-error
   cbuf-end-of-line-error?)
 
-(define-condition-type &cbuf-combining-mark-error &serious
-  cbuf-combining-mark-error?
-  (previous cbuf-combining-mark-error:previous)
-  (current cbuf-combining-mark-error:current)
-  (next cbuf-combining-mark-error:next))
+(define-condition-type &cbuf-line-limit-exceeded &cbuf-range-error
+  cbuf-line-limit-exceeded-error?
+  (limit cbuf-line-limit-exceeded-error:limit))
 
 ;;; CBuf record type
 (define-record-type <cbuf>
@@ -561,6 +608,112 @@
 ;;; HELPER FUNCTIONS
 ;;; =================================================================
 
+;;;; Validation Helper Functions
+
+(define (cbuf-validate-line-movement cbuf current-line delta operation)
+  "Validate line movement, return (target-line . clamped-line . clamped?)"
+  (let* ([target-line (+ current-line delta)]
+         [max-line (- (cbuf-line-count cbuf) 1)]
+         [clamped-line (max 0 (min target-line max-line))]
+         [clamped? (not (= target-line clamped-line))])
+    (list target-line clamped-line clamped? operation)))
+
+(define (cbuf-validate-column-movement cbuf current-column delta operation)
+  "Validate column movement, return (target-column . clamped-column . clamped?)"
+  (let* ([target-column (+ current-column delta)]
+         [max-column (cbuf-text-cur-cell-length cbuf)]
+         [clamped-column (max 0 (min target-column max-column))]
+         [clamped? (not (= target-column clamped-column))])
+    (list target-column clamped-column clamped? operation)))
+
+(define (cbuf-validate-absolute-position cbuf line column operation)
+  "Validate absolute positioning, return detailed validation info"
+  (let* ([max-line (- (cbuf-line-count cbuf) 1)]
+         [clamped-line (max 0 (min line max-line))]
+         [line-clamped? (not (= line clamped-line))]
+         [max-column (if (< clamped-line (cbuf-line-count cbuf))
+                        (text-metrics-cell-length 
+                         (list-ref (cbuf-text-metrics cbuf) clamped-line))
+                        0)]
+         [clamped-column (max 0 (min column max-column))]
+         [column-clamped? (not (= column clamped-column))])
+    (list clamped-line clamped-column line-clamped? column-clamped? operation)))
+
+(define (cbuf-raise-boundary-error cbuf operation target actual boundary-type)
+  "Centralized boundary error raising"
+  (let ([condition-constructor
+         (case boundary-type
+           [(beginning-of-buffer) &cbuf-beginning-of-buffer]
+           [(end-of-buffer) &cbuf-end-of-buffer]
+           [(beginning-of-line) &cbuf-beginning-of-line]
+           [(end-of-line) &cbuf-end-of-line]
+           [else &cbuf-range-error])])
+    (raise (condition (condition-constructor
+                       (operation operation)
+                       (requested target)
+                       (actual actual)
+                       (reason boundary-type))))))
+
+(define (validate-string-combining-marks str)
+  "Validate entire string for combining mark limits.
+   Returns: (valid? violations-list) where violations-list contains all issues found."
+  (let ([violations '()]
+        [current-base-char #f]
+        [current-base-index #f]
+        [combining-count 0])
+    
+    (let loop ([i 0])
+      (cond
+       [(>= i (string-length str)) 
+        ;; End of string - return results
+        (list (null? violations) (reverse violations))]
+       
+       [else
+        (let ([ch (string-ref str i)])
+          (cond
+           [(char-combining-mark? ch)
+            ;; This is a combining mark
+            (cond
+             [(not current-base-char)
+              ;; No base character for this combining mark
+              (set! violations (cons (list 'no-base-character ch i 0) violations))
+              (loop (+ i 1))]
+             
+             [else
+              ;; Have a base character - check count
+              (set! combining-count (+ combining-count 1))
+              (when (> combining-count MAX-COMBINING-MARKS)
+                (set! violations (cons (list 'too-many-combining 
+                                            current-base-char ch 
+                                            current-base-index i 
+                                            combining-count) violations)))
+              (loop (+ i 1))])]
+           
+           [else
+            ;; This is a base character - reset state
+            (set! current-base-char ch)
+            (set! current-base-index i)
+            (set! combining-count 0)
+            (loop (+ i 1))]))]))))
+
+(define (validate-combining-marks-at-insertion str insertion-point insert-str)
+  "Validate combining marks when inserting INSERT-STR at INSERTION-POINT in STR.
+   Only validates the boundary conditions around the insertion point.
+   Returns: (valid? violation-info)"
+  (let* ([before-str (substring str 0 insertion-point)]
+         [after-str (substring str insertion-point)]
+         [new-str (string-append before-str insert-str after-str)]
+         
+         ;; Only need to validate around the insertion boundaries
+         [start-check (max 0 (- insertion-point 10))]  ; Check a few chars before
+         [end-check (min (string-length new-str) 
+                        (+ insertion-point (string-length insert-str) 10))] ; Check a few chars after
+         [check-region (substring new-str start-check end-check)])
+    
+    ;; Validate just the region around the insertion
+    (validate-string-combining-marks check-region)))
+
+;;;;;
 (define (cbuf-update-line! cbuf line-num new-text new-sgr-list)
   "Update the text and SGR list for a specific line"
   ;; Simple validation
@@ -871,54 +1024,164 @@ backward tabulation. This function does not do bracketing."
 ;;; TEXT MODIFICATION OPERATIONS (Updated for Immutable)
 ;;; =================================================================
 
-;;; Character insertion and modification
-(define (cbuf-insert-codepoint-with-sgr cbuf char-new sgr)
-  "Insert codepoint with specific SGR (used internally)"
-  ;; Validate combining mark limits FIRST
-  (validate-combining-mark-insertion cbuf char-new)
-  
-  ;; Save undo state with current line metrics before modification
-  (let ([old-metrics (cbuf-metrics-cur cbuf)])
-    (cbuf-save-line-modification-undo! cbuf (cbuf-line-cur cbuf) old-metrics 'insert-codepoint-with-sgr char-new sgr))
-  
-  (let* ([metrics (cbuf-metrics-cur cbuf)]
-         [x-data (cbuf-x-data cbuf)]
-         [x-index (cbuf-x-data->x-index cbuf x-data)])
-    
-    (cond
-     [(char-combining-mark? char-new)
-      ;; Combining marks inherit SGR from base character
-      (let* ([base-data-pos (- x-data 1)]
-             [base-index (cbuf-x-data->x-index cbuf base-data-pos)]
-             [base-sgr (text-metrics-get-sgr-at-index metrics base-index)])
-        
-        ;; Insert combining mark with inherited SGR (using immutable function)
-        (let ([new-metrics (text-metrics-insert-char-with-sgr metrics x-index char-new base-sgr)])
-          (cbuf-update-metrics-cur! cbuf new-metrics)))]
-     
-     [else
-      ;; Insert regular character with specified SGR (using immutable function)
-      (let ([new-metrics (text-metrics-insert-char-with-sgr metrics x-index char-new sgr)])
-        (cbuf-update-metrics-cur! cbuf new-metrics)
-        
-        ;; Move mark if necessary
-        (when (and (cbuf-mark-set? cbuf)
-                   (= (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))
-                   (>= (cbuf-mark-x-data cbuf) x-data))
-          (set-cbuf-mark-x-data! cbuf (+ (cbuf-mark-x-data cbuf) 1)))
-        
-        (cbuf-set-x! cbuf (+ x-data 1) 'data))])))
 
 (define (cbuf-insert-codepoint cbuf char-new)
   "Enhanced version: Insert codepoint using current SGR state"
   (cbuf-insert-codepoint-with-sgr cbuf char-new (cbuf-current-sgr cbuf)))
 
-(define (cbuf-insert-string-with-current-sgr cbuf str)
-  "Insert string using current SGR for all characters"
-  (let ([current-sgr (cbuf-current-sgr cbuf)])
-    (string-for-each (lambda (ch) 
-                       (cbuf-insert-codepoint-with-sgr cbuf ch current-sgr)) 
-                     str)))
+(define* (cbuf-insert-string-with-sgr cbuf str sgr-list #:key (strict? #t))
+  "Insert string with SGR list.
+   Validates entire operation first, then performs single atomic update."
+  
+  (when (not (= (string-length str) (length sgr-list)))
+    (error "String length and SGR list length must match" 
+           (string-length str) (length sgr-list)))
+  
+  ;; Save undo state before any modifications
+  (let ([old-metrics (cbuf-metrics-cur cbuf)])
+    (cbuf-save-line-modification-undo! cbuf (cbuf-line-cur cbuf) old-metrics 
+                                      'insert str))
+  
+  (cond
+   [(not strict?)
+    ;; Permissive mode - perform insertion without validation
+    (cbuf-insert-string-internal cbuf str sgr-list)]
+   
+   [else
+    ;; Strict mode - validate first, then perform operation
+    (let* ([current-str (cbuf-text-cur cbuf)]
+           [insertion-point (cbuf-x-data->x-index cbuf (cbuf-x-data cbuf))]
+           [validation (validate-combining-marks-at-insertion current-str insertion-point str)])
+      
+      (if (car validation)
+          ;; Validation passed - perform insertion
+          (cbuf-insert-string-internal cbuf str sgr-list)
+          
+          ;; Validation failed - raise error with first violation
+          (let ([violations (cadr validation)])
+            (when (not (null? violations))
+              (let ([first-violation (car violations)])
+                (case (car first-violation)
+                  [(no-base-character)
+                   (raise (condition (&cbuf-invalid-combining-sequence
+                                      (operation 'insert-string)
+                                      (base-char #f)
+                                      (combining-char (cadr first-violation))
+                                      (current-count 0)
+                                      (max-count MAX-COMBINING-MARKS)
+                                      (reason "String contains combining mark without base character"))))]
+                  
+                  [(too-many-combining)
+                   (raise (condition (&cbuf-too-many-combining-marks
+                                      (operation 'insert-string)
+                                      (base-char (cadr first-violation))
+                                      (combining-char (caddr first-violation))
+                                      (current-count (list-ref first-violation 6))
+                                      (max-count MAX-COMBINING-MARKS)
+                                      (reason "String contains too many combining marks"))))]))))))]))
+  
+(define (cbuf-insert-string-internal cbuf str sgr-list)
+    "Internal string insertion"
+  
+  (let* ([metrics (cbuf-metrics-cur cbuf)]
+         [x-data (cbuf-x-data cbuf)]
+         [x-index (cbuf-x-data->x-index cbuf x-data)]
+         
+         ;; Use text-metrics insertion function
+         [new-metrics (text-metrics-insert-string-with-sgr metrics x-index str sgr-list)])
+    
+    ;; Single atomic update to the metrics
+    (cbuf-update-metrics-cur! cbuf new-metrics)
+    
+    ;; Update cursor and mark positions
+    (let ([inserted-chars (string-length str)]
+          [inserted-data-positions (count-base-characters str)])
+      
+      ;; Move mark if necessary
+      (when (and (cbuf-mark-set? cbuf)
+                 (= (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))
+                 (>= (cbuf-mark-x-data cbuf) x-data))
+        (set-cbuf-mark-x-data! cbuf (+ (cbuf-mark-x-data cbuf) inserted-data-positions)))
+      
+      ;; Move cursor to end of inserted text
+      (cbuf-set-x! cbuf (+ x-data inserted-data-positions) 'data))))
+
+(define (count-base-characters str)
+  "Count non-combining characters in string efficiently"
+  (let loop ([i 0] [count 0])
+    (if (>= i (string-length str))
+        count
+        (if (char-combining-mark? (string-ref str i))
+            (loop (+ i 1) count)
+            (loop (+ i 1) (+ count 1))))))
+
+(define* (cbuf-insert-string-with-current-sgr cbuf str #:key (strict? #t))
+  "Insert string using current SGR for all characters."
+  (let ([current-sgr (cbuf-current-sgr cbuf)]
+        [str-length (string-length str)])
+    (if (= str-length 0)
+        #f  ; Nothing to insert
+        (let ([sgr-list (make-list str-length current-sgr)])
+          (cbuf-insert-string-with-sgr cbuf str sgr-list #:strict? strict?)))))
+
+(define (cbuf-insert-string-permissive cbuf str)
+  "Insert string without combining mark validation."
+  (cbuf-insert-string-with-current-sgr cbuf str #:strict? #f))
+
+(define* (cbuf-insert-codepoint-with-sgr cbuf char-new sgr #:key (strict? #t))
+  "Insert single codepoint - optimized for the single character case."
+  
+  ;; Save undo state first
+  (let ([old-metrics (cbuf-metrics-cur cbuf)])
+    (cbuf-save-line-modification-undo! cbuf (cbuf-line-cur cbuf) old-metrics 
+                                      'insert-codepoint-with-sgr char-new sgr))
+  
+  (cond
+   [(not strict?)
+    ;; Permissive mode - use efficient single character insertion
+    (cbuf-insert-codepoint-internal cbuf char-new sgr)]
+   
+   [else
+    ;; Strict mode - validate then use efficient insertion
+    (if (char-combining-mark? char-new)
+        ;; Combining mark - need validation
+        (let* ([position (cbuf-x-data cbuf)]
+               [validation (cbuf-validate-combining-mark-insertion cbuf char-new position)])
+          (if (car validation)
+              (cbuf-insert-codepoint-internal cbuf char-new sgr)
+              (let ([reason (cadddr validation)]
+                    [base-char (cadr validation)]
+                    [current-count (caddr validation)])
+                (case reason
+                  [(no-base-character)
+                   (raise (condition (&cbuf-invalid-combining-sequence
+                                      (operation 'insert-codepoint)
+                                      (base-char #f)
+                                      (combining-char char-new)
+                                      (current-count 0)
+                                      (max-count MAX-COMBINING-MARKS)
+                                      (reason "Combining mark without base character"))))]
+                  
+                  [(base-is-combining)
+                   (raise (condition (&cbuf-invalid-combining-sequence
+                                      (operation 'insert-codepoint)
+                                      (base-char base-char)
+                                      (combining-char char-new)
+                                      (current-count current-count)
+                                      (max-count MAX-COMBINING-MARKS)
+                                      (reason "Cannot attach combining mark to another combining mark"))))]
+                  
+                  [(too-many-combining)
+                   (raise (condition (&cbuf-too-many-combining-marks
+                                      (operation 'insert-codepoint)
+                                      (base-char base-char)
+                                      (combining-char char-new)
+                                      (current-count current-count)
+                                      (max-count MAX-COMBINING-MARKS)
+                                      (reason "Too many combining marks for base character"))))]))))
+        
+        ;; Not a combining mark - direct insertion
+        (cbuf-insert-codepoint-internal cbuf char-new sgr))]))
 
 (define (cbuf-insert-newline cbuf)
   "Splits the current line into two lines (INL)."
@@ -1049,179 +1312,337 @@ backward tabulation. This function does not do bracketing."
           (cbuf-set-sgr-range cbuf start-data end-data sgr))))))
 
 ;;; =================================================================
+;;; RANGE PREDICATES
+;;; =================================================================
+
+(define (cbuf-can-cursor-up? cbuf n)
+  "Return #t if cursor can move up N lines without hitting boundary."
+  (>= (- (cbuf-line-cur cbuf) n) 0))
+
+(define (cbuf-can-cursor-down? cbuf n)
+  "Return #t if cursor can move down N lines without hitting boundary."
+  (< (+ (cbuf-line-cur cbuf) n) (cbuf-line-count cbuf)))
+
+(define (cbuf-can-cursor-forward? cbuf n)
+  "Return #t if cursor can move forward N cells without hitting boundary."
+  (<= (+ (cbuf-x-cell cbuf) n) (cbuf-text-cur-cell-length cbuf)))
+
+(define (cbuf-can-cursor-backward? cbuf n)
+  "Return #t if cursor can move backward N cells without hitting boundary."
+  (>= (- (cbuf-x-cell cbuf) n) 0))
+
+(define (cbuf-position-valid? cbuf line column)
+  "Return #t if the given line/column position is valid."
+  (and (>= line 0)
+       (< line (cbuf-line-count cbuf))
+       (>= column 0)
+       (<= column (text-metrics-cell-length 
+                   (list-ref (cbuf-text-metrics cbuf) line)))))
+
+(define (cbuf-at-beginning-of-buffer? cbuf)
+  "Return #t if cursor is at beginning of buffer."
+  (and (= (cbuf-line-cur cbuf) 0)
+       (= (cbuf-x-data cbuf) 0)))
+
+(define (cbuf-at-end-of-buffer? cbuf)
+  "Return #t if cursor is at end of buffer."
+  (and (= (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 1))
+       (= (cbuf-x-data cbuf) (cbuf-text-cur-base-length cbuf))))
+
+(define (cbuf-at-beginning-of-line? cbuf)
+  "Return #t if cursor is at beginning of line."
+  (= (cbuf-x-data cbuf) 0))
+
+(define (cbuf-at-end-of-line? cbuf)
+  "Return #t if cursor is at end of line."
+  (= (cbuf-x-data cbuf) (cbuf-text-cur-base-length cbuf)))
+
+;;;; Query Functions (return values or #f)
+
+(define (cbuf-cursor-up-range cbuf)
+  "Return maximum lines cursor can move up."
+  (cbuf-line-cur cbuf))
+
+(define (cbuf-cursor-down-range cbuf)
+  "Return maximum lines cursor can move down."
+  (- (cbuf-line-count cbuf) (cbuf-line-cur cbuf) 1))
+
+(define (cbuf-cursor-forward-range cbuf)
+  "Return maximum cells cursor can move forward."
+  (- (cbuf-text-cur-cell-length cbuf) (cbuf-x-cell cbuf)))
+
+(define (cbuf-cursor-backward-range cbuf)
+  "Return maximum cells cursor can move backward."
+  (cbuf-x-cell cbuf))
+
+(define (cbuf-valid-line-range cbuf)
+  "Return (min . max) valid line numbers."
+  (cons 0 (- (cbuf-line-count cbuf) 1)))
+
+(define (cbuf-valid-column-range cbuf line)
+  "Return (min . max) valid column numbers for given line."
+  (if (and (>= line 0) (< line (cbuf-line-count cbuf)))
+      (cons 0 (text-metrics-cell-length 
+               (list-ref (cbuf-text-metrics cbuf) line)))
+      (cons 0 0)))
+
+;;; =================================================================
 ;;; ECMA-48 CONTROL FUNCTIONS
 ;;; =================================================================
 
 ;;; Cursor movement functions
-(define (cbuf-cursor-up cbuf n)
-  "CUU - Move the active presentation position upwards"
-  (let ([y (cbuf-line-cur cbuf)]
-        [x-goal (cbuf-x-goal cbuf)])
-    (if (> y 0)
-        (begin
-          (cbuf-set-y! cbuf (max 0 (- y n)))
-          (cbuf-set-x! cbuf x-goal 'cell))
-        (raise (condition (&cbuf-beginning-of-buffer))))))
+(define* (cbuf-cursor-up cbuf n #:key (strict? #f))
+  "CUU - Move cursor up N lines. If strict?, raise exception when clamping occurs."
+  (let* ([current-line (cbuf-line-cur cbuf)]
+         [validation (cbuf-validate-line-movement cbuf current-line (- n) 'cursor-up)]
+         [target-line (car validation)]
+         [clamped-line (cadr validation)]
+         [clamped? (caddr validation)]
+         [x-goal (cbuf-x-goal cbuf)])
+    
+    ;; Always perform the movement
+    (cbuf-set-y! cbuf clamped-line)
+    (cbuf-set-x! cbuf x-goal 'cell)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (cbuf-raise-boundary-error cbuf 'cursor-up target-line clamped-line
+                                (if (< target-line 0) 'beginning-of-buffer 'end-of-buffer)))))
 
-(define (cbuf-cursor-down cbuf n)
-  "CUD - Move the active presentation position downwards"
-  (let ([y (cbuf-line-cur cbuf)]
-        [max-y (- (cbuf-line-count cbuf) 1)]
-        [x-goal (cbuf-x-goal cbuf)])
-    (if (< y max-y)
-        (begin
-          (cbuf-set-y! cbuf (min max-y (+ y n)))
-          (cbuf-set-x! cbuf x-goal 'cell))
-        (raise (condition (&cbuf-end-of-buffer))))))
+(define (cbuf-cursor-up-strict cbuf n)
+  "Move cursor up N lines, raising exception on any boundary hit."
+  (cbuf-cursor-up cbuf n #:strict? #t))
 
-(define (cbuf-cursor-forward cbuf n)
-  "CUF - Move the active presentation position rightwards"
-  (let* ([x-cell (cbuf-x-cell cbuf)]
-         [max-cell (cbuf-text-cur-cell-length cbuf)])
-    (if (< x-cell max-cell)
-        (cbuf-set-x! cbuf (min max-cell (+ x-cell n)) 'cell)
-        (raise (condition (&cbuf-end-of-line))))))
+(define* (cbuf-cursor-down cbuf n #:key (strict? #f))
+  "CUD - Move cursor down N lines. If strict?, raise exception when clamping occurs."
+  (let* ([current-line (cbuf-line-cur cbuf)]
+         [validation (cbuf-validate-line-movement cbuf current-line n 'cursor-down)]
+         [target-line (car validation)]
+         [clamped-line (cadr validation)]
+         [clamped? (caddr validation)]
+         [x-goal (cbuf-x-goal cbuf)])
+    
+    ;; Always perform the movement
+    (cbuf-set-y! cbuf clamped-line)
+    (cbuf-set-x! cbuf x-goal 'cell)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (cbuf-raise-boundary-error cbuf 'cursor-down target-line clamped-line
+                                (if (>= target-line (cbuf-line-count cbuf)) 'end-of-buffer 'beginning-of-buffer)))))
 
-(define (cbuf-cursor-backward cbuf n)
-  "CUB - Move the active presentation position leftwards"
-  (let ([x-cell (cbuf-x-cell cbuf)])
-    (if (> x-cell 0)
-        (cbuf-set-x! cbuf (max 0 (- x-cell n)) 'cell)
-        (raise (condition (&cbuf-beginning-of-line))))))
+(define (cbuf-cursor-down-strict cbuf n)
+  "Move cursor down N lines, raising exception on any boundary hit."
+  (cbuf-cursor-down cbuf n #:strict? #t))
 
-(define (cbuf-cursor-next-line cbuf n)
-  "CNL - Move to 1st character position of nth following line"
-  (let ([y (cbuf-line-cur cbuf)]
-        [max-y (- (cbuf-line-count cbuf) 1)])
-    (if (< y max-y)
-        (begin
-          (cbuf-set-y! cbuf (min max-y (+ y n)))
-          (cbuf-set-positions! cbuf 0 'data))
-        (raise (condition (&cbuf-end-of-buffer))))))
+;;; Cursor Movement - Horizontal
+(define* (cbuf-cursor-forward cbuf n #:key (strict? #f))
+  "CUF - Move cursor forward N cells. If strict?, raise exception when clamping occurs."
+  (let* ([current-cell (cbuf-x-cell cbuf)]
+         [validation (cbuf-validate-column-movement cbuf current-cell n 'cursor-forward)]
+         [target-cell (car validation)]
+         [clamped-cell (cadr validation)]
+         [clamped? (caddr validation)])
+    
+    ;; Always perform the movement
+    (cbuf-set-x! cbuf clamped-cell 'cell)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (cbuf-raise-boundary-error cbuf 'cursor-forward target-cell clamped-cell 'end-of-line))))
 
-(define (cbuf-cursor-preceding-line cbuf n)
-  "CPL - Move to 1st character position of nth preceding line"
-  (let ([y (cbuf-line-cur cbuf)])
-    (if (> y 0)
-        (begin
-          (cbuf-set-y! cbuf (max 0 (- y n)))
-          (cbuf-set-positions! cbuf 0 'data))
-        (raise (condition (&cbuf-beginning-of-buffer))))))
+(define (cbuf-cursor-forward-strict cbuf n)
+  "Move cursor forward N cells, raising exception on any boundary hit."
+  (cbuf-cursor-forward cbuf n #:strict? #t))
 
-(define (cbuf-cursor-character-absolute cbuf n)
-  "CHA - Move to character position n in active line"
-  (let ([max-cell (cbuf-text-cur-cell-length cbuf)])
-    (cond
-     [(< n 0)
-      (cbuf-set-x! cbuf 0 'cell)
-      (raise (condition (&cbuf-beginning-of-line)))]
-     [(> n max-cell)
-      (cbuf-set-x! cbuf max-cell 'cell)
-      (raise (condition (&cbuf-end-of-line)))]
-     [else
-      (cbuf-set-x! cbuf n 'cell)])))
+(define* (cbuf-cursor-backward cbuf n #:key (strict? #f))
+  "CUB - Move cursor backward N cells. If strict?, raise exception when clamping occurs."
+  (let* ([current-cell (cbuf-x-cell cbuf)]
+         [validation (cbuf-validate-column-movement cbuf current-cell (- n) 'cursor-backward)]
+         [target-cell (car validation)]
+         [clamped-cell (cadr validation)]
+         [clamped? (caddr validation)])
+    
+    ;; Always perform the movement
+    (cbuf-set-x! cbuf clamped-cell 'cell)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (cbuf-raise-boundary-error cbuf 'cursor-backward target-cell clamped-cell 'beginning-of-line))))
 
-(define (cbuf-cursor-line-absolute cbuf n)
-  "VPA - Move to line N, preserving column"
-  (let ([max-line (- (cbuf-line-count cbuf) 1)])
-    (cond
-     [(< n 0)
-      (cbuf-set-y! cbuf 0)
-      (raise (condition (&cbuf-beginning-of-buffer)))]
-     [(> n max-line)
-      (cbuf-set-y! cbuf max-line)
-      (raise (condition (&cbuf-end-of-buffer)))]
-     [else
-      (cbuf-set-y! cbuf n)])))
+(define (cbuf-cursor-backward-strict cbuf n)
+  "Move cursor backward N cells, raising exception on any boundary hit."
+  (cbuf-cursor-backward cbuf n #:strict? #t))
 
-(define (cbuf-cursor-position cbuf line column)
-  "CUP/HVP - Move the active presentation position to the n-th line and m-th character position"
-  (let ([max-line (- (cbuf-line-count cbuf) 1)])
-    (cond
-     [(and (< line (cbuf-line-count cbuf))
-           (<= column (text-metrics-cell-length 
-                       (list-ref (cbuf-text-metrics cbuf) line))))
-      (cbuf-set-y! cbuf line)
-      (cbuf-set-x! cbuf column 'cell)]
-     [(and (< line (cbuf-line-count cbuf))
-           (> column (text-metrics-cell-length 
-                      (list-ref (cbuf-text-metrics cbuf) line))))
-      ;; Too wide
-      (cbuf-set-y! cbuf line)
-      (cbuf-set-x! cbuf (text-metrics-string-base-length 
-                         (list-ref (cbuf-text-metrics cbuf) line)) 'data)
-      (set-cbuf-x-goal! cbuf column)
-      (raise (condition (&cbuf-end-of-line)))]
-     [(and (>= line (cbuf-line-count cbuf))
-           (<= column (cbuf-text-cur-cell-length cbuf)))
-      ;; Too far down
-      (cbuf-set-y! cbuf max-line)
-      (cbuf-set-x! cbuf column 'cell)
-      (raise (condition (&cbuf-end-of-buffer)))]
-     [else
-      ;; Too wide and too far
-      (cbuf-set-y! cbuf max-line)
-      (cbuf-set-x! cbuf (cbuf-text-cur-base-length cbuf) 'data)
-      (set-cbuf-x-goal! cbuf column)
-      (raise (condition (&cbuf-end-of-buffer)))])))
+(define* (cbuf-cursor-next-line cbuf n #:key (strict? #f))
+  "CNL - Move to 1st character position of nth following line."
+  (cbuf-cursor-down cbuf n #:strict? strict?)
+  (cbuf-set-positions! cbuf 0 'data))
+
+(define (cbuf-cursor-next-line-strict cbuf n)
+  "Move to first position of nth following line, raising exception on boundary."
+  (cbuf-cursor-next-line cbuf n #:strict? #t))
+
+(define* (cbuf-cursor-preceding-line cbuf n #:key (strict? #f))
+  "CPL - Move to 1st character position of nth preceding line."
+  (cbuf-cursor-up cbuf n #:strict? strict?)
+  (cbuf-set-positions! cbuf 0 'data))
+
+(define (cbuf-cursor-preceding-line-strict cbuf n)
+  "Move to first position of nth preceding line, raising exception on boundary."
+  (cbuf-cursor-preceding-line cbuf n #:strict? #t))
+
+(define* (cbuf-cursor-character-absolute cbuf n #:key (strict? #f))
+  "CHA - Move to character position N in active line. If strict?, raise error when clamping."
+  (let* ([max-cell (cbuf-text-cur-cell-length cbuf)]
+         [clamped-n (max 0 (min n max-cell))]
+         [clamped? (not (= n clamped-n))])
+    
+    ;; Always perform the positioning
+    (cbuf-set-x! cbuf clamped-n 'cell)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (cbuf-raise-boundary-error cbuf 'cursor-character-absolute n clamped-n
+                                (if (< n 0) 'beginning-of-line 'end-of-line)))))
+
+(define (cbuf-cursor-character-absolute-strict cbuf n)
+  "Move to character position N, raising exception on clamping."
+  (cbuf-cursor-character-absolute cbuf n #:strict? #t))
+
+(define* (cbuf-cursor-line-absolute cbuf n #:key (strict? #f))
+  "VPA - Move to line N, preserving column. If strict?, raise error when clamping."
+  (let* ([max-line (- (cbuf-line-count cbuf) 1)]
+         [clamped-n (max 0 (min n max-line))]
+         [clamped? (not (= n clamped-n))])
+    
+    ;; Always perform the positioning
+    (cbuf-set-y! cbuf clamped-n)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (cbuf-raise-boundary-error cbuf 'cursor-line-absolute n clamped-n
+                                (if (< n 0) 'beginning-of-buffer 'end-of-buffer)))))
+
+(define (cbuf-cursor-line-absolute-strict cbuf n)
+  "Move to line N, raising exception on clamping."
+  (cbuf-cursor-line-absolute cbuf n #:strict? #t))
+
+(define* (cbuf-cursor-position cbuf line column #:key (strict? #f))
+  "CUP/HVP - Move to absolute position. If strict?, raise error when clamping occurs."
+  (let* ([validation (cbuf-validate-absolute-position cbuf line column 'cursor-position)]
+         [clamped-line (car validation)]
+         [clamped-column (cadr validation)]
+         [line-clamped? (caddr validation)]
+         [column-clamped? (cadddr validation)])
+    
+    ;; Always perform the positioning
+    (cbuf-set-y! cbuf clamped-line)
+    (cbuf-set-x! cbuf clamped-column 'cell)
+    
+    ;; Conditionally raise after successful operation
+    (when strict?
+      (cond
+       [line-clamped? 
+        (cbuf-raise-boundary-error cbuf 'cursor-position line clamped-line
+                                  (if (< line 0) 'beginning-of-buffer 'end-of-buffer))]
+       [column-clamped?
+        (cbuf-raise-boundary-error cbuf 'cursor-position column clamped-column
+                                  (if (< column 0) 'beginning-of-line 'end-of-line))]))))
+
+(define (cbuf-cursor-position-strict cbuf line column)
+  "Move to absolute position, raising exception on any clamping."
+  (cbuf-cursor-position cbuf line column #:strict? #t))
 
 ;;; Tab operations
-(define (cbuf-cursor-forward-tabulation cbuf n)
-  "CHT - Move to nth following character tabulation stop"
+(define* (cbuf-cursor-forward-tabulation cbuf n #:key (strict? #f))
+  "CHT - Move to nth following character tabulation stop."
   (let* ([x-cell (cbuf-x-cell cbuf)]
          [tabsize (cbuf-tab-size cbuf)]
-         [new-x (cbuf-compute-tab-column x-cell tabsize n)]
-         [max-cell (cbuf-text-cur-cell-length cbuf)])
-    (cond
-     [(< new-x 0)
-      (cbuf-set-x! cbuf 0 'cell)
-      (raise (condition (&cbuf-beginning-of-line)))]
-     [(> new-x max-cell)
-      (cbuf-set-x! cbuf max-cell 'cell)
-      (raise (condition (&cbuf-end-of-line)))]
-     [else
-      (cbuf-set-x! cbuf new-x 'cell)])))
+         [target-x (cbuf-compute-tab-column x-cell tabsize n)]
+         [max-cell (cbuf-text-cur-cell-length cbuf)]
+         [clamped-x (max 0 (min target-x max-cell))]
+         [clamped? (not (= target-x clamped-x))])
+    
+    ;; Always perform the movement
+    (cbuf-set-x! cbuf clamped-x 'cell)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (cbuf-raise-boundary-error cbuf 'cursor-forward-tabulation target-x clamped-x
+                                (if (< target-x 0) 'beginning-of-line 'end-of-line)))))
 
-(define (cbuf-cursor-backward-tabulation cbuf n)
-  "CBT - Move to nth preceding character tabulation stop"
-  (cbuf-cursor-forward-tabulation cbuf (- n)))
+(define (cbuf-cursor-forward-tabulation-strict cbuf n)
+  "Move to nth following tab stop, raising exception on boundary."
+  (cbuf-cursor-forward-tabulation cbuf n #:strict? #t))
+
+(define* (cbuf-cursor-backward-tabulation cbuf n #:key (strict? #f))
+  "CBT - Move to nth preceding character tabulation stop."
+  (cbuf-cursor-forward-tabulation cbuf (- n) #:strict? strict?))
+
+(define (cbuf-cursor-backward-tabulation-strict cbuf n)
+  "Move to nth preceding tab stop, raising exception on boundary."
+  (cbuf-cursor-backward-tabulation cbuf n #:strict? #t))
 
 (define (cbuf-character-tabulation cbuf)
   "HT - Character tabulation (horizontal tab)"
   (cbuf-cursor-forward-tabulation cbuf 1))
 
 ;;; Character operations
-(define (cbuf-character-position-forward cbuf n)
-  "HPR - Move the active data position forward n characters"
-  (let* ([x-data (cbuf-x-data cbuf)]
-         [max-data (cbuf-text-cur-base-length cbuf)])
-    (if (<= (+ x-data n) max-data)
-        (cbuf-set-x! cbuf (+ x-data n) 'data)
-        (begin
-          (cbuf-set-x! cbuf max-data 'data)
-          (raise (condition (&cbuf-end-of-line)))))))
+(define* (cbuf-character-position-forward cbuf n #:key (strict? #f))
+  "HPR - Move forward N character positions (data positions)."
+  (let* ([current-data (cbuf-x-data cbuf)]
+         [max-data (cbuf-text-cur-base-length cbuf)]
+         [target-data (+ current-data n)]
+         [clamped-data (max 0 (min target-data max-data))]
+         [clamped? (not (= target-data clamped-data))])
+    
+    ;; Always perform the movement
+    (cbuf-set-x! cbuf clamped-data 'data)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (cbuf-raise-boundary-error cbuf 'character-position-forward target-data clamped-data 'end-of-line))))
 
-(define (cbuf-character-position-backward cbuf n)
-  "HPB - Move the active data position backward n characters"
-  (let ([x-data (cbuf-x-data cbuf)])
-    (if (>= (- x-data n) 0)
-        (cbuf-set-x! cbuf (- x-data n) 'data)
-        (begin
-          (cbuf-set-x! cbuf 0 'data)
-          (raise (condition (&cbuf-beginning-of-line)))))))
+(define (cbuf-character-position-forward-strict cbuf n)
+  "Move forward N character positions, raising exception on boundary."
+  (cbuf-character-position-forward cbuf n #:strict? #t))
 
-(define (cbuf-character-position-absolute cbuf n)
-  "HPA - Move the active data position to the n-th character in the active line"
-  (let ([max-data (cbuf-text-cur-base-length cbuf)])
-    (cond
-     [(and (>= n 0) (<= n max-data))
-      (cbuf-set-x! cbuf n 'data)]
-     [(> n max-data)
-      (cbuf-set-x! cbuf max-data 'data)
-      (raise (condition (&cbuf-end-of-line)))]
-     [else
-      (cbuf-set-x! cbuf 0 'data)
-      (raise (condition (&cbuf-beginning-of-line)))])))
+(define* (cbuf-character-position-backward cbuf n #:key (strict? #f))
+  "HPB - Move backward N character positions (data positions)."
+  (let* ([current-data (cbuf-x-data cbuf)]
+         [target-data (- current-data n)]
+         [clamped-data (max 0 target-data)]
+         [clamped? (not (= target-data clamped-data))])
+    
+    ;; Always perform the movement
+    (cbuf-set-x! cbuf clamped-data 'data)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (cbuf-raise-boundary-error cbuf 'character-position-backward target-data clamped-data 'beginning-of-line))))
+
+(define (cbuf-character-position-backward-strict cbuf n)
+  "Move backward N character positions, raising exception on boundary."
+  (cbuf-character-position-backward cbuf n #:strict? #t))
+
+(define* (cbuf-character-position-absolute cbuf n #:key (strict? #f))
+  "HPA - Move to character position N in the active line."
+  (let* ([max-data (cbuf-text-cur-base-length cbuf)]
+         [clamped-n (max 0 (min n max-data))]
+         [clamped? (not (= n clamped-n))])
+    
+    ;; Always perform the positioning
+    (cbuf-set-x! cbuf clamped-n 'data)
+    
+    ;; Conditionally raise after successful operation
+    (when (and strict? clamped?)
+      (cbuf-raise-boundary-error cbuf 'character-position-absolute n clamped-n
+                                (if (< n 0) 'beginning-of-line 'end-of-line)))))
+
+(define (cbuf-character-position-absolute-strict cbuf n)
+  "Move to character position N, raising exception on clamping."
+  (cbuf-character-position-absolute cbuf n #:strict? #t))
 
 ;;; Format effectors
 (define (cbuf-backspace cbuf)
@@ -1452,6 +1873,86 @@ backward tabulation. This function does not do bracketing."
     ;; Move cursor to home position of first new line
     (cbuf-set-positions! cbuf (cbuf-home-pos cbuf) (cbuf-limit-type cbuf))
     (set-cbuf-modified?! cbuf #t)))
+
+(define* (cbuf-insert-lines cbuf lines #:key (strict? #t))
+  "Insert multiple lines."
+  (when (not (null? lines))
+    ;; Save undo state for multi-line insertion
+    (cbuf-save-line-insertion-undo! cbuf (+ (cbuf-line-cur cbuf) 1) (length lines) 'insert-lines)
+    
+    (cond
+     [(not strict?)
+      ;; Permissive mode - build metrics and insert
+      (cbuf-insert-lines-internal cbuf lines)]
+     
+     [else
+      ;; Strict mode - validate all lines first
+      (let ([all-valid? #t]
+            [first-violation #f])
+        
+        ;; Check each line for combining mark violations
+        (let loop ([remaining-lines lines])
+          (when (and all-valid? (not (null? remaining-lines)))
+            (let ([validation (validate-string-combining-marks (car remaining-lines))])
+              (if (car validation)
+                  (loop (cdr remaining-lines))
+                  (begin
+                    (set! all-valid? #f)
+                    (set! first-violation (caadr validation)))))))
+        
+        (if all-valid?
+            ;; All lines valid - perform insertion
+            (cbuf-insert-lines-internal cbuf lines)
+            
+            ;; Found violation - raise error
+            (case (car first-violation)
+              [(no-base-character)
+               (raise (condition (&cbuf-invalid-combining-sequence
+                                  (operation 'insert-lines)
+                                  (base-char #f)
+                                  (combining-char (cadr first-violation))
+                                  (current-count 0)
+                                  (max-count MAX-COMBINING-MARKS)
+                                  (reason "Lines contain combining mark without base character"))))]
+              
+              [(too-many-combining)
+               (raise (condition (&cbuf-too-many-combining-marks
+                                  (operation 'insert-lines)
+                                  (base-char (cadr first-violation))
+                                  (combining-char (caddr first-violation))
+                                  (current-count (list-ref first-violation 6))
+                                  (max-count MAX-COMBINING-MARKS)
+                                  (reason "Lines contain too many combining marks"))))])))])))
+
+(define (cbuf-insert-lines-internal cbuf lines)
+  "Internal multi-line insertion - efficient operation."
+  (let* ([y (cbuf-line-cur cbuf)]
+         [metrics-list (cbuf-text-metrics cbuf)]
+         
+         ;; Build all new line metrics in one pass
+         [new-line-metrics (map (lambda (line)
+                                 (compute-text-metrics line 
+                                                       (cbuf-tab-size cbuf) 
+                                                       #:cjk? (cbuf-cjk? cbuf)))
+                               lines)]
+         
+         ;; Insert all lines
+         [new-metrics-list (append (take metrics-list (+ y 1))
+                                   new-line-metrics
+                                   (drop metrics-list (+ y 1)))])
+    
+    (set-cbuf-text-metrics! cbuf new-metrics-list)
+    
+    ;; Adjust mark if necessary
+    (when (and (cbuf-mark-set? cbuf)
+               (> (cbuf-mark-line cbuf) y))
+      (set-cbuf-mark-line! cbuf (+ (cbuf-mark-line cbuf) (length lines))))
+    
+    ;; Move cursor to beginning of last inserted line
+    (cbuf-set-y! cbuf (+ y (length lines)))
+    (cbuf-set-positions! cbuf (cbuf-home-pos cbuf) (cbuf-limit-type cbuf))
+    (set-cbuf-modified?! cbuf #t)))
+
 (define (cbuf-delete-character cbuf n)
   "DCH - Delete n grapheme clusters (character positions) from the current position"
   ;; Save undo state before modification
@@ -2130,36 +2631,71 @@ backward tabulation. This function does not do bracketing."
         [line-ending (cbuf-line-ending cbuf)])
     (string-join lines line-ending)))
 
+
 (define* (text->cbuf text #:key (tab-size 8) (vert-tab-size 6) (form-size 66)
-                     (cjk? #f) (default-grcm 'replacing) (line-ending "\n"))
-  "Convert plain text to cbuf with default SGR for all text"
-  ;; Validate entire input text first
-  (validate-combining-mark-limits text)
+                     (cjk? #f) (default-grcm 'replacing) (line-ending "\n")
+                     (strict? #t))
+  "Convert plain text to cbuf with efficient validation and construction."
   
-  ;; Detect line ending if using default
+  (cond
+   [(not strict?)
+    ;; Permissive mode - build directly without validation
+    (text->cbuf-internal text tab-size vert-tab-size form-size cjk? default-grcm line-ending)]
+   
+   [else
+    ;; Strict mode - validate entire text efficiently, then build
+    (let ([validation (validate-string-combining-marks text)])
+      (if (car validation)
+          ;; Text is valid - build normally
+          (text->cbuf-internal text tab-size vert-tab-size form-size cjk? default-grcm line-ending)
+          
+          ;; Text has violations - raise error with first violation
+          (let ([violations (cadr validation)])
+            (when (not (null? violations))
+              (let ([first-violation (car violations)])
+                (case (car first-violation)
+                  [(no-base-character)
+                   (raise (condition (&cbuf-invalid-combining-sequence
+                                      (operation 'text->cbuf)
+                                      (base-char #f)
+                                      (combining-char (cadr first-violation))
+                                      (current-count 0)
+                                      (max-count MAX-COMBINING-MARKS)
+                                      (reason "Input text contains combining mark without base character"))))]
+                  
+                  [(too-many-combining)
+                   (raise (condition (&cbuf-too-many-combining-marks
+                                      (operation 'text->cbuf)
+                                      (base-char (cadr first-violation))
+                                      (combining-char (caddr first-violation))
+                                      (current-count (list-ref first-violation 6))
+                                      (max-count MAX-COMBINING-MARKS)
+                                      (reason "Input text contains too many combining marks"))))]))))))]))
+
+(define (text->cbuf-internal text tab-size vert-tab-size form-size cjk? default-grcm line-ending)
+  "Internal text->cbuf implementation without validation."
   (let* ([detected-ending (if (string=? line-ending "\n")
                              (detect-line-ending text)
                              line-ending)]
          [lines (cond
-                 ;; Handle different line ending types
                  [(string-contains text "\r\n") (string-split text "\r\n")]
                  [(string-contains text "\r") (string-split text "\r")]
                  [(string-contains text "\n") (string-split text "\n")]
-                 [(string-contains text "\u2028") (string-split text "\u2028")] ; Unicode LS
-                 [else (list text)])] ; Single line
+                 [(string-contains text "\u2028") (string-split text "\u2028")]
+                 [else (list text)])]
+         
+         ;; Build all metrics in one pass
          [metrics (map (lambda (line) 
-                         ;; Validate each line individually
-                         (validate-combining-mark-limits line)
-                         (compute-text-metrics line tab-size #:cjk? cjk?))
-                       lines)])
+                        (compute-text-metrics line tab-size #:cjk? cjk?))
+                      lines)])
     
     (%make-cbuf metrics 0 0 0 0 
                tab-size vert-tab-size form-size 0 79 'data
                cjk? #f #f 0 0 #f #f '()
-               (make-default-sgr)     ; current-sgr
-               default-grcm           ; default-grcm  
-               '()                    ; sgr-stack
-               detected-ending)))     ; line-ending
+               (make-default-sgr)
+               default-grcm
+               '()
+               detected-ending)))
 
 (define (detect-line-ending text)
   "Detect line ending type in text"
