@@ -36,8 +36,11 @@ tab."
 (define (char-base? c)
   "Return #t if this is a character than can be the base for a
 combining mark, like an accent."
-  (and (not (char-combining-mark? c))
-       (char-set-contains? char-set:graphic c)))
+  (member (char-general-category c)
+	  '(Lu Ll Lt Lm Lo  ; Letters
+               Nd Nl No              ; Numbers
+               Pc Pd Ps Pe Pi Pf Po  ; Punctuation
+               Sm Sc Sk So)))       ; Symbols
 
 (define* (char-count-cells chr x tabSize #:key (cjk? #f))
   "Number of cells a character CHR at column X would take up"
