@@ -1,9 +1,11 @@
-;;; Gano Character Buffer Serialization Module
+;;; Gano Character Buffer Serialization Module - Updated Version
 ;;; Import/export functionality for character buffers
 ;;; Supports JSON span format and plain text format
+;;; Updated to align with cbuf-core and cbuf-basic changes
 
 (define-module (gano cbuf-serialization)
   #:use-module (gano cbuf-core)     ; Core record definitions
+  #:use-module (gano cbuf-basic)    ; Basic operations (for load/save)
   #:use-module (gano cbuf-utils)    ; Utility functions
   #:use-module (gano text-metrics)  ; Text metrics module
   #:use-module (gano rendering)     ; SGR support
@@ -18,7 +20,7 @@
     cbuf-save-json
     cbuf-load-json
     
-    ;; Text format  
+    ;; Text format (now delegates to cbuf-basic)
     cbuf->text
     text->cbuf
     cbuf-save-text
@@ -31,12 +33,20 @@
     json->color
     
     ;; Internal functions for advanced use
-    text->cbuf-internal
     line-metrics->json-line
-    json-line->metrics))
+    json-line->metrics
+    
+    ;; Version information
+    cbuf-serialization-version))
 
 ;;; =================================================================
-;;; SGR TO/FROM JSON CONVERSION
+;;; VERSION AND COMPATIBILITY
+;;; =================================================================
+
+(define cbuf-serialization-version "2.0")  ; Updated for new cbuf structure
+
+;;; =================================================================
+;;; SGR TO/FROM JSON CONVERSION (Updated)
 ;;; =================================================================
 
 (define (sgr->json sgr)
@@ -179,18 +189,18 @@
      [else 'color-default])))
 
 ;;; =================================================================
-;;; JSON SPAN FORMAT SERIALIZATION
+;;; JSON SPAN FORMAT SERIALIZATION (Updated)
 ;;; =================================================================
 
 (define (cbuf->json cbuf)
-  "Convert cbuf to JSON span format"
+  "Convert cbuf to JSON span format with all current fields"
   (let* ([lines (cbuf-text cbuf)]
          [metrics-list (cbuf-text-metrics cbuf)]
          [json-lines (map (lambda (line metrics)
                            (line-metrics->json-line line metrics))
                          lines metrics-list)])
     
-    `((version . "1.0")
+    `((version . ,cbuf-serialization-version)
       (format . "spans")
       (lines . ,json-lines)
       (metadata . ((tab_size . ,(cbuf-tab-size cbuf))
@@ -202,19 +212,37 @@
                    (cjk_mode . ,(cbuf-cjk? cbuf))
                    (line_ending . ,(cbuf-line-ending cbuf))
                    (default_grcm . ,(symbol->string (cbuf-default-grcm cbuf)))
+                   
+                   ;; NEW: Final newline handling
+                   (final_newline . ,(cbuf-final-newline? cbuf))
+                   (final_newline_policy . ,(symbol->string (cbuf-final-newline-policy cbuf)))
+                   
+                   ;; Cursor state
                    (cursor . ((line . ,(cbuf-line-cur cbuf))
                              (data . ,(cbuf-x-data cbuf))
                              (cell . ,(cbuf-x-cell cbuf))
                              (goal . ,(cbuf-x-goal cbuf))))
+                   
+                   ;; Mark state
                    (mark . ,(if (cbuf-mark-set? cbuf)
                                `((set . #t)
                                  (line . ,(cbuf-mark-line cbuf))
                                  (data . ,(cbuf-mark-x-data cbuf)))
                                `((set . #f))))
+                   
+                   ;; SGR state
                    (current_sgr . ,(sgr->json (cbuf-current-sgr cbuf)))
                    (sgr_stack . ,(map sgr->json (cbuf-sgr-stack cbuf)))
+                   
+                   ;; Buffer state
                    (modified . ,(cbuf-modified? cbuf))
-                   (bell . ,(cbuf-bell? cbuf)))))))
+                   (bell . ,(cbuf-bell? cbuf))
+                   
+                   ;; Optional: Cut buffer (if you want to serialize it)
+                   (cut_buffer . ,(cbuf-cut-buffer cbuf))
+                   
+                   ;; Note: undo-list is intentionally NOT serialized for security/size reasons
+                   )))))
 
 (define (line-metrics->json-line text metrics)
   "Convert a line's text and metrics to JSON line representation"
@@ -228,71 +256,83 @@
                     spans)))))
 
 (define (json->cbuf json-obj)
-  "Convert JSON span format to cbuf"
+  "Convert JSON span format to cbuf (updated for new cbuf structure)"
   (let* ([version (cdr (assq 'version json-obj))]
          [format (cdr (assq 'format json-obj))]
          [lines (cdr (assq 'lines json-obj))]
          [metadata (cdr (assq 'metadata json-obj))])
     
-    ;; Validate format
-    (unless (and (string=? version "1.0") (string=? format "spans"))
+    ;; Validate format (support both old and new versions)
+    (unless (and (member version '("1.0" "2.0")) (string=? format "spans"))
       (error "Unsupported JSON format" version format))
     
-    ;; Extract metadata
-    (let* ([tab-size (cdr (assq 'tab_size metadata))]
-           [vert-tab-size (cdr (assq 'vert_tab_size metadata))]
-           [form-size (cdr (assq 'form_size metadata))]
-           [home-pos (cdr (assq 'home_pos metadata))]
-           [limit-pos (cdr (assq 'limit_pos metadata))]
-           [limit-type (string->symbol (cdr (assq 'limit_type metadata)))]
-           [cjk-mode (cdr (assq 'cjk_mode metadata))]
-           [line-ending (cdr (assq 'line_ending metadata))]
-           [default-grcm (string->symbol (cdr (assq 'default_grcm metadata)))]
-           [cursor (cdr (assq 'cursor metadata))]
-           [mark (cdr (assq 'mark metadata))]
-           [current-sgr-json (cdr (assq 'current_sgr metadata))]
-           [sgr-stack-json (cdr (assq 'sgr_stack metadata))]
-           [modified (cdr (assq 'modified metadata))]
-           [bell (cdr (assq 'bell metadata))])
+    ;; Extract metadata with defaults for missing fields
+    (let* ([tab-size (or (assq-ref metadata 'tab_size) 8)]
+           [vert-tab-size (or (assq-ref metadata 'vert_tab_size) 6)]
+           [form-size (or (assq-ref metadata 'form_size) 66)]
+           [home-pos (or (assq-ref metadata 'home_pos) 0)]
+           [limit-pos (or (assq-ref metadata 'limit_pos) 79)]
+           [limit-type (string->symbol (or (assq-ref metadata 'limit_type) "data"))]
+           [cjk-mode (or (assq-ref metadata 'cjk_mode) #f)]
+           [line-ending (or (assq-ref metadata 'line_ending) "\n")]
+           [default-grcm (string->symbol (or (assq-ref metadata 'default_grcm) "replacing"))]
+           
+           ;; NEW: Final newline fields (with defaults for old format)
+           [final-newline? (or (assq-ref metadata 'final_newline) #t)]
+           [final-newline-policy (string->symbol (or (assq-ref metadata 'final_newline_policy) "preserve"))]
+           
+           [cursor (or (assq-ref metadata 'cursor) '((line . 0) (data . 0) (cell . 0) (goal . 0)))]
+           [mark (or (assq-ref metadata 'mark) '((set . #f)))]
+           [current-sgr-json (or (assq-ref metadata 'current_sgr) '())]
+           [sgr-stack-json (or (assq-ref metadata 'sgr_stack) '())]
+           [modified (or (assq-ref metadata 'modified) #f)]
+           [bell (or (assq-ref metadata 'bell) #f)]
+           [cut-buffer (or (assq-ref metadata 'cut_buffer) '())])
       
       ;; Reconstruct text-metrics for each line
       (let* ([reconstructed-metrics 
               (map (lambda (line-obj)
-                    (json-line->metrics (cdr (assq 'text line-obj))
-                                       (cdr (assq 'spans line-obj))
+                    (json-line->metrics (assq-ref line-obj 'text)
+                                       (assq-ref line-obj 'spans)
                                        tab-size cjk-mode))
                    lines)]
+             
+             ;; Create cbuf using updated constructor signature
              [cbuf (%make-cbuf reconstructed-metrics 0 0 0 0
                                tab-size vert-tab-size form-size 
                                home-pos limit-pos limit-type
-                               cjk-mode modified #f 0 0 bell #f '()
-                               (json->sgr current-sgr-json)
+                               cjk-mode modified #f 0 0 bell cut-buffer '()
+                               (if (null? current-sgr-json) 
+                                   (make-default-sgr) 
+                                   (json->sgr current-sgr-json))
                                default-grcm
                                (map json->sgr sgr-stack-json)
-                               line-ending)])
+                               line-ending
+                               final-newline?
+                               final-newline-policy)])
         
-        ;; Set cursor position
-        (let ([cursor-line (cdr (assq 'line cursor))]
-              [cursor-data (cdr (assq 'data cursor))]
-              [cursor-cell (cdr (assq 'cell cursor))]
-              [cursor-goal (cdr (assq 'goal cursor))])
-          (set-cbuf-line-cur! cbuf (max 0 (min cursor-line (- (cbuf-line-count cbuf) 1))))
-          (set-cbuf-x-data! cbuf cursor-data)  ; Will be bracketed when position functions are called
+        ;; Set cursor position using safe methods
+        (let ([cursor-line (or (assq-ref cursor 'line) 0)]
+              [cursor-data (or (assq-ref cursor 'data) 0)]
+              [cursor-cell (or (assq-ref cursor 'cell) 0)]
+              [cursor-goal (or (assq-ref cursor 'goal) 0)])
+          (set-cbuf-line-cur! cbuf (cbuf-bracket-line cbuf cursor-line))
+          (set-cbuf-x-data! cbuf (cbuf-bracket-x-data cbuf cursor-data))
           (set-cbuf-x-cell! cbuf cursor-cell)
           (set-cbuf-x-goal! cbuf cursor-goal))
         
         ;; Set mark if present
-        (when (cdr (assq 'set mark))
+        (when (assq-ref mark 'set)
           (set-cbuf-mark-set?! cbuf #t)
-          (set-cbuf-mark-line! cbuf (max 0 (min (cdr (assq 'line mark)) (- (cbuf-line-count cbuf) 1))))
-          (set-cbuf-mark-x-data! cbuf (cdr (assq 'data mark))))
+          (set-cbuf-mark-line! cbuf (cbuf-bracket-line cbuf (or (assq-ref mark 'line) 0)))
+          (set-cbuf-mark-x-data! cbuf (or (assq-ref mark 'data) 0)))
         
         cbuf))))
 
 (define (json-line->metrics text spans tab-size cjk-mode)
   "Reconstruct text-metrics from JSON line representation"
-  (if (null? spans)
-      ;; Empty line or line with no spans
+  (if (or (null? spans) (not spans))
+      ;; Empty line or line with no spans - use default SGR
       (compute-text-metrics text tab-size #:cjk? cjk-mode)
       
       ;; Reconstruct SGR list from spans
@@ -301,9 +341,11 @@
         
         ;; Process each span
         (for-each (lambda (span-obj)
-                   (let ([span-text (cdr (assq 'text span-obj))]
-                         [span-sgr-json (cdr (assq 'sgr span-obj))])
-                     (let ([span-sgr (json->sgr span-sgr-json)]
+                   (let ([span-text (assq-ref span-obj 'text)]
+                         [span-sgr-json (assq-ref span-obj 'sgr)])
+                     (let ([span-sgr (if span-sgr-json 
+                                         (json->sgr span-sgr-json) 
+                                         (make-default-sgr))]
                            [span-length (string-length span-text)])
                        ;; Add SGR for each character in span
                        (set! sgr-list (append sgr-list 
@@ -311,71 +353,45 @@
                        (set! text-pos (+ text-pos span-length)))))
                  spans)
         
+        ;; Ensure SGR list matches text length
+        (let ([text-length (string-length text)])
+          (cond
+            [(< (length sgr-list) text-length)
+             ;; Pad with default SGR
+             (set! sgr-list (append sgr-list 
+                                   (make-list (- text-length (length sgr-list)) 
+                                             (make-default-sgr))))]
+            [(> (length sgr-list) text-length)
+             ;; Truncate 
+             (set! sgr-list (take sgr-list text-length))]))
+        
         ;; Create text-metrics with reconstructed SGR list
         (compute-text-metrics-with-sgr text sgr-list tab-size #:cjk? cjk-mode))))
 
 ;;; =================================================================
-;;; TEXT FORMAT SERIALIZATION
+;;; TEXT FORMAT SERIALIZATION (Now delegates to cbuf-basic)
 ;;; =================================================================
 
 (define (cbuf->text cbuf)
-  "Convert cbuf to plain text using configured line endings"
-  (let ([lines (cbuf-text cbuf)]
-        [line-ending (cbuf-line-ending cbuf)])
-    (string-join lines line-ending)))
+  "Convert cbuf to plain text using cbuf-basic functionality"
+  (cbuf-save-to-string cbuf))
 
 (define* (text->cbuf text #:key (tab-size 8) (vert-tab-size 6) (form-size 66)
                      (cjk? #f) (default-grcm 'replacing) (line-ending "\n")
-                     (strict? #t))
-  "Convert plain text to cbuf with efficient validation and construction."
-  
-  (cond
-   [(not strict?)
-    ;; Permissive mode - build directly without validation
-    (text->cbuf-internal text tab-size vert-tab-size form-size cjk? default-grcm line-ending)]
-   
-   [else
-    ;; Strict mode - validate entire text efficiently, then build
-    (let ([validation (validate-string-combining-marks text)])
-      (if (car validation)
-          ;; Text is valid - build normally
-          (text->cbuf-internal text tab-size vert-tab-size form-size cjk? default-grcm line-ending)
-          
-          ;; Text has violations - raise error with first violation
-          (let ([violations (cadr validation)])
-            (when (not (null? violations))
-              (let ([first-violation (car violations)])
-                (case (car first-violation)
-                  [(no-base-character)
-                   (error "Input text contains combining mark without base character"
-                          (cadr first-violation))]
-                  
-                  [(too-many-combining)
-                   (error "Input text contains too many combining marks"
-                          (cadr first-violation) (caddr first-violation)
-                          (list-ref first-violation 4))])))))]))
-
-(define (text->cbuf-internal text tab-size vert-tab-size form-size cjk? default-grcm line-ending)
-  "Internal text->cbuf implementation without validation."
-  (let* ([detected-ending (if (string=? line-ending "\n")
-                             (detect-line-ending text)
-                             line-ending)]
-         [lines (string-split-lines text)]
-         ;; Build all metrics in one pass
-         [metrics (map (lambda (line) 
-                        (compute-text-metrics line tab-size #:cjk? cjk?))
-                      lines)])
-    
-    (%make-cbuf metrics 0 0 0 0 
-               tab-size vert-tab-size form-size 0 79 'data
-               cjk? #f #f 0 0 #f #f '()
-               (make-default-sgr)
-               default-grcm
-               '()
-               detected-ending)))
+                     (final-newline-policy 'preserve))
+  "Convert plain text to cbuf using cbuf-basic functionality"
+  (let ([cbuf (make-cbuf #:tab-size tab-size 
+                         #:vert-tab-size vert-tab-size
+                         #:form-size form-size
+                         #:cjk? cjk?
+                         #:default-grcm default-grcm
+                         #:line-ending line-ending
+                         #:final-newline-policy final-newline-policy)])
+    (cbuf-load-from-string! cbuf text)
+    cbuf))
 
 ;;; =================================================================
-;;; FILE I/O CONVENIENCE FUNCTIONS
+;;; FILE I/O CONVENIENCE FUNCTIONS (Updated)
 ;;; =================================================================
 
 (define (cbuf-save-json cbuf filename)
@@ -391,19 +407,84 @@
       (json->cbuf (read port)))))
 
 (define (cbuf-save-text cbuf filename)
-  "Save cbuf to plain text file"
+  "Save cbuf to plain text file using cbuf-basic functionality"
   (call-with-output-file filename
     (lambda (port)
-      (display (cbuf->text cbuf) port))))
+      (display (cbuf-save-to-string cbuf) port))))
 
 (define* (cbuf-load-text filename #:key (tab-size 8) (vert-tab-size 6) 
                          (form-size 66) (cjk? #f) (default-grcm 'replacing) 
-                         (line-ending "\n") (strict? #t))
-  "Load cbuf from plain text file"
-  (call-with-input-file filename
-    (lambda (port)
-      (let ([text (get-string-all port)])
-        (text->cbuf text #:tab-size tab-size #:vert-tab-size vert-tab-size
-                    #:form-size form-size #:cjk? cjk? #:default-grcm default-grcm
-                    #:line-ending line-ending #:strict? strict?)))))
-                    
+                         (line-ending "\n") (final-newline-policy 'preserve))
+  "Load cbuf from plain text file using cbuf-basic functionality"
+  (let ([cbuf (make-cbuf #:tab-size tab-size 
+                         #:vert-tab-size vert-tab-size
+                         #:form-size form-size
+                         #:cjk? cjk?
+                         #:default-grcm default-grcm
+                         #:line-ending line-ending
+                         #:final-newline-policy final-newline-policy)])
+    (call-with-input-file filename
+      (lambda (port)
+        (let ([text (get-string-all port)])
+          (cbuf-load-from-string! cbuf text))))
+    cbuf))
+
+;;; =================================================================
+;;; UTILITY FUNCTIONS
+;;; =================================================================
+
+(define (assq-ref alist key)
+  "Safe association list reference"
+  (let ([pair (assq key alist)])
+    (if pair (cdr pair) #f)))
+
+;;; =================================================================
+;;; MIGRATION UTILITIES
+;;; =================================================================
+
+(define (cbuf-migrate-json-format json-obj)
+  "Migrate old JSON format to new format"
+  (let ([version (assq-ref json-obj 'version)])
+    (cond
+      [(string=? version "1.0")
+       ;; Add missing fields with defaults
+       (let ([metadata (assq-ref json-obj 'metadata)])
+         (set! metadata (cons '(final_newline . #t) metadata))
+         (set! metadata (cons '(final_newline_policy . "preserve") metadata))
+         (set! metadata (cons '(cut_buffer . ()) metadata))
+         `((version . "2.0")
+           (format . ,(assq-ref json-obj 'format))
+           (lines . ,(assq-ref json-obj 'lines))
+           (metadata . ,metadata)))]
+      
+      [else json-obj])))  ; Already current version
+
+(define (cbuf-validate-json-format json-obj)
+  "Validate JSON format compatibility"
+  (let ([version (assq-ref json-obj 'version)]
+        [format (assq-ref json-obj 'format)])
+    (and version
+         format
+         (member version '("1.0" "2.0"))
+         (string=? format "spans"))))
+
+;;; =================================================================
+;;; DEBUG AND INSPECTION UTILITIES
+;;; =================================================================
+
+(define (cbuf-json-summary json-obj)
+  "Return summary information about JSON cbuf format"
+  (let ([metadata (assq-ref json-obj 'metadata)]
+        [lines (assq-ref json-obj 'lines)])
+    `((version . ,(assq-ref json-obj 'version))
+      (format . ,(assq-ref json-obj 'format))
+      (line_count . ,(length lines))
+      (tab_size . ,(assq-ref metadata 'tab_size))
+      (cjk_mode . ,(assq-ref metadata 'cjk_mode))
+      (line_ending . ,(assq-ref metadata 'line_ending))
+      (final_newline . ,(assq-ref metadata 'final_newline))
+      (final_newline_policy . ,(assq-ref metadata 'final_newline_policy))
+      (cursor_position . ((line . ,(assq-ref (assq-ref metadata 'cursor) 'line))
+                          (data . ,(assq-ref (assq-ref metadata 'cursor) 'data))))
+      (mark_set . ,(assq-ref (assq-ref metadata 'mark) 'set))
+      (modified . ,(assq-ref metadata 'modified)))))
