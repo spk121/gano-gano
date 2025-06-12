@@ -34,6 +34,7 @@
   #:use-module (gano list-utils)    ; Immutable list operations
   #:use-module (gano char)          ; Character utilities
   #:use-module (gano string-split)  ; String splitting and joining
+  #:use-module (gano cbuf-utils)    ; Pure utility functions
   #:use-module (srfi srfi-9)        ; Record types
   #:use-module (srfi srfi-1)        ; List utilities
   #:use-module (srfi srfi-11)       ; let-values
@@ -233,16 +234,15 @@
     cbuf-save-text
     cbuf-load-text
 
-    ;; Combining marks
-    validate-combining-mark-limits
-    MAX-COMBINING-MARKS
-
+    ;; Permissive (non-validating) versions
+    cbuf-update-line-permissive!
+    cbuf-set-text-cur-permissive!
+    json->cbuf-permissive
     ;; Utilities
     sgr->json
     json->sgr
     color->json
     json->color
-    detect-line-ending
 
     ;; Efficient string operations
     cbuf-insert-string-with-sgr
@@ -250,15 +250,10 @@
     cbuf-insert-string-permissive
     cbuf-insert-lines
   
-    ;; Efficient validation
-    validate-string-combining-marks
-    validate-combining-marks-at-insertion
-  
     ;; Internal functions for advanced use
     cbuf-insert-string-internal
     cbuf-insert-lines-internal
     text->cbuf-internal
-    count-base-characters    
 
     ;;; Error conditions for combining sequences
     &cbuf-too-many-combining-marks
@@ -295,11 +290,25 @@
     &cbuf-line-limit-exceeded
     cbuf-line-limit-exceeded-error?
     cbuf-line-limit-exceeded-error:limit
+)
+  #:re-export (
+    ;; Re-export utilities from cbuf-utils for backwards compatibility
+    MAX-COMBINING-MARKS
+    validate-combining-mark-limits
+    validate-string-combining-marks
+    validate-combining-marks-at-insertion
+    count-base-characters
+    detect-line-ending
+    compute-tab-column
+    find-word-end-forward
+    find-word-begin-backward
+    skip-word-chars-forward
+    skip-word-chars-backward
+    skip-whitespace-forward
+    skip-whitespace-backward
+    char-word-delimiter?
 ))
 
-
-;; Maximum combining marks per base character (matches ncurses cchar_t)
-(define MAX-COMBINING-MARKS 4)
 
 ;;; Error conditions for combining marks
 (define-condition-type &cbuf-invalid-combining-sequence &serious
@@ -447,7 +456,80 @@
   (text-metrics-string-base-length (cbuf-metrics-cur cbuf)))
 
 ;;; =================================================================
-;;; UNDO SYSTEM
+;;; HELPER FUNCTIONS (adapted to use utilities from cbuf-utils)
+;;; =================================================================
+
+;;;; Validation Helper Functions
+
+(define (cbuf-validate-line-movement cbuf current-line delta operation)
+  "Validate line movement, return (target-line . clamped-line . clamped?)"
+  (validate-line-movement-pure current-line delta (- (cbuf-line-count cbuf) 1) operation))
+
+(define (cbuf-validate-column-movement cbuf current-column delta operation)
+  "Validate column movement, return (target-column . clamped-column . clamped?)"
+  (validate-column-movement-pure current-column delta (cbuf-text-cur-cell-length cbuf) operation))
+
+(define (cbuf-validate-absolute-position cbuf line column operation)
+  "Validate absolute positioning, return detailed validation info"
+  (let* ([max-line (- (cbuf-line-count cbuf) 1)]
+         [max-column (if (< line (cbuf-line-count cbuf))
+                        (text-metrics-cell-length 
+                         (list-ref (cbuf-text-metrics cbuf) 
+                                   (max 0 (min line max-line))))
+                        0)])
+    (validate-absolute-position-pure line column max-line max-column operation)))
+
+(define (cbuf-raise-boundary-error cbuf operation target actual boundary-type)
+  "Centralized boundary error raising"
+  (let ([condition-constructor
+         (case boundary-type
+           [(beginning-of-buffer) &cbuf-beginning-of-buffer]
+           [(end-of-buffer) &cbuf-end-of-buffer]
+           [(beginning-of-line) &cbuf-beginning-of-line]
+           [(end-of-line) &cbuf-end-of-line]
+           [else &cbuf-range-error])])
+    (raise (condition (condition-constructor
+                       (operation operation)
+                       (requested target)
+                       (actual actual)
+                       (reason boundary-type))))))
+
+(define (cbuf-validate-combining-mark-insertion cbuf char-new position)
+  "Validate that inserting CHAR-NEW at POSITION won't exceed limits.
+   Only checks if CHAR-NEW is a combining mark."
+  (when (char-combining-mark? char-new)
+    (let* ([txt (cbuf-text-cur cbuf)])
+      
+      ;; Check we're not at beginning of line
+      (when (= position 0)
+        (list #f (make-combining-mark-error-info 'insert-codepoint #f char-new 0 MAX-COMBINING-MARKS 'no-base-character)))
+      
+      ;; Find the base character for this cluster
+      (let* ([base-data-pos (- position 1)]
+             [base-index (cbuf-x-data->x-index cbuf base-data-pos)]
+             [base-char (string-ref txt base-index)]
+             [current-count (count-combining-marks-in-cluster txt base-index)])
+        
+        ;; Verify base character is valid
+        (when (char-combining-mark? base-char)
+          (list #f (make-combining-mark-error-info 'insert-codepoint base-char char-new current-count MAX-COMBINING-MARKS 'base-is-combining)))
+        
+        ;; Check combining mark limit
+        (when (>= current-count MAX-COMBINING-MARKS)
+          (list #f (make-combining-mark-error-info 'insert-codepoint base-char char-new current-count MAX-COMBINING-MARKS 'too-many-combining)))
+        
+        ;; If we get here, validation passed
+        (list #t #f)))))
+
+;;; Tab computation helper - use utility function
+(define (cbuf-compute-tab-column pos tabsize n)
+  "If N is positive, compute the presentation position of the nth next
+forward tabulation. If N is negative, compute the position of the
+backward tabulation. This function does not do bracketing."
+  (compute-tab-column pos tabsize n))
+
+;;; =================================================================
+;;; UNDO SYSTEM (unchanged from original)
 ;;; =================================================================
 
 (define (cbuf-save-undo-state! cbuf operation . args)
@@ -714,12 +796,35 @@
     ;; Validate just the region around the insertion
     (validate-string-combining-marks check-region)))
 
-;;;;;
-(define (cbuf-update-line! cbuf line-num new-text new-sgr-list)
+(define* (cbuf-update-line! cbuf line-num new-text new-sgr-list #:key (strict? #t))
   "Update the text and SGR list for a specific line"
   ;; Simple validation
   (unless (= (string-length new-text) (length new-sgr-list))
     (error "Text length and SGR list length must match"))
+  ;; Validate combining marks if in strict mode
+  (when strict?
+    (let ([validation (validate-string-combining-marks new-text)])
+      (unless (car validation)
+        (let ([violations (cadr validation)])
+          (when (not (null? violations))
+            (let ([first-violation (car violations)])
+              (case (car first-violation)
+                [(no-base-character)
+                 (raise (condition (&cbuf-invalid-combining-sequence
+                                    (operation 'cbuf-update-line!)
+                                    (base-char #f)
+                                    (combining-char (cadr first-violation))
+                                    (current-count 0)
+                                    (max-count MAX-COMBINING-MARKS)
+                                    (reason "New line text contains combining mark without base character"))))]
+                [(too-many-combining)
+                 (raise (condition (&cbuf-too-many-combining-marks
+                                    (operation 'cbuf-update-line!)
+                                    (base-char (cadr first-violation))
+                                    (combining-char (caddr first-violation))
+                                    (current-count (list-ref first-violation 6))
+                                    (max-count MAX-COMBINING-MARKS)
+                                    (reason "New line text contains too many combining marks"))))])))))))
   
   ;; Save undo state
   (let ([old-metrics (list-ref (cbuf-text-metrics cbuf) line-num)])
@@ -2266,7 +2371,7 @@ backward tabulation. This function does not do bracketing."
                           [(big-word) char-whitespace?]
                           [else char-word-delimiter?])])
     
-    ;; Find end of current word
+    ;; Find end of current word using utility function
     (let ([end-index (find-word-end-forward txt start-index delimiter-pred)])
       (cond
        [(>= end-index len)

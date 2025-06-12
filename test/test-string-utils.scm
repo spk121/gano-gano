@@ -175,7 +175,7 @@
     "hxllo" (string-apply-operations "hello" '((update 1 #\x))))
   
   (test-equal "multiple operations (right to left)"
-    "hyxllo" (string-apply-operations "hello" 
+    "hyexlo" (string-apply-operations "hello" 
                                      '((insert 1 #\y) (update 2 #\x))))
   
   (test-equal "complex operations sequence"

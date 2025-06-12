@@ -6,7 +6,7 @@
 ;;; This module provides a comprehensive system for representing and
 ;;; manipulating keyboard input in a text editor context. It handles:
 ;;;
-;;; - String representation of keys (e.g., "^C", "M-A", "F6")
+;;; - String representation of keys (e.g., "^C", "A-a", "F6")
 ;;; - Conversion between string and internal representations
 ;;; - Key sequence parsing and validation
 ;;; - Modifier key combinations
@@ -15,11 +15,11 @@
 ;;; Key String Format:
 ;;; - Single characters: "a", "1", "!"
 ;;; - Control keys: "^A", "^C" (Control + letter)
-;;; - Alt/Meta keys: "M-a", "M-1" (Alt + key)
+;;; - Alt keys: "A-a", "A-1" (Alt + key)
 ;;; - Function keys: "F1", "F2", ..., "F12"
 ;;; - Named special keys: "kup", "kdown", "kleft", "kright", etc.
 ;;; - Shift combinations: "S-F1", "S-kup"
-;;; - Complex combinations: "C-M-a" (Control + Alt + a)
+;;; - Complex combinations: "C-A-a" (Control + Alt + a)
 
 (define-module (gano keys)
   #:use-module (gano char)
@@ -38,7 +38,6 @@
     key-ctrl?
     key-alt?
     key-shift?
-    key-meta?
     
     ;; Key parsing and formatting
     string->key
@@ -70,7 +69,28 @@
     ;; Utility functions
     describe-key
     key-combination->string
-    parse-modifiers))
+    parse-modifiers
+    
+    ;; Convenience constructors
+    ctrl-key
+    alt-key
+    function-key
+    special-key
+    
+    ;; Predefined key constants
+    key-enter
+    key-escape
+    key-tab
+    key-backspace
+    key-delete
+    key-up
+    key-down
+    key-left
+    key-right
+    
+    ;; Debug and testing
+    key-debug-info
+    test-key-parsing))
 
 ;;; =================================================================
 ;;; KEY REPRESENTATION
@@ -78,18 +98,17 @@
 
 ;;; Key record type
 (define-record-type <key>
-  (%make-key char symbol ctrl? alt? shift? meta?)
+  (%make-key char symbol ctrl? alt? shift?)
   key?
   (char key-char set-key-char!)         ; character for printable keys
   (symbol key-symbol set-key-symbol!)   ; symbol for special keys
   (ctrl? key-ctrl? set-key-ctrl!)       ; Control modifier
   (alt? key-alt? set-key-alt!)          ; Alt modifier  
-  (shift? key-shift? set-key-shift!)    ; Shift modifier
-  (meta? key-meta? set-key-meta!))      ; Meta modifier (same as Alt)
+  (shift? key-shift? set-key-shift!))   ; Shift modifier
 
-(define* (make-key #:key char symbol (ctrl? #f) (alt? #f) (shift? #f) (meta? #f))
+(define* (make-key #:key char symbol (ctrl? #f) (alt? #f) (shift? #f))
   "Create a new key representation"
-  (%make-key char symbol ctrl? alt? shift? (or meta? alt?)))
+  (%make-key char symbol ctrl? alt? shift?))
 
 ;;; =================================================================
 ;;; SPECIAL KEY MAPPINGS
@@ -97,27 +116,27 @@
 
 (define *special-keys*
   '(;; Arrow keys
-    ("kup" . up)
-    ("kdown" . down) 
-    ("kleft" . left)
-    ("kright" . right)
+    ("up" . up)
+    ("down" . down) 
+    ("left" . left)
+    ("right" . right)
     
     ;; Editing keys
-    ("kins" . insert)
-    ("kdel" . delete)
-    ("kbsp" . backspace)
-    ("khome" . home)
-    ("kend" . end)
-    ("kpgup" . page-up)
-    ("kpgdn" . page-down)
+    ("insert" . insert)
+    ("delete" . delete)
+    ("backspace" . backspace)
+    ("home" . home)
+    ("end" . end)
+    ("pageup" . page-up)
+    ("pagedown" . page-down)
     
     ;; Other special keys
-    ("ktab" . tab)
-    ("kenter" . enter)
-    ("kesc" . escape)
-    ("kspace" . space)
+    ("tab" . tab)
+    ("enter" . enter)
+    ("escape" . escape)
+    ("space" . space)
     
-    ;; Keypad
+    ;; Keypad (keep kp prefix as it makes sense)
     ("kp0" . keypad-0) ("kp1" . keypad-1) ("kp2" . keypad-2)
     ("kp3" . keypad-3) ("kp4" . keypad-4) ("kp5" . keypad-5)
     ("kp6" . keypad-6) ("kp7" . keypad-7) ("kp8" . keypad-8)
@@ -147,40 +166,35 @@
   (let loop ([str key-string]
              [ctrl? #f]
              [alt? #f]
-             [shift? #f]
-             [meta? #f])
+             [shift? #f])
     (cond
      ;; Control modifier: ^X or C-X
      [(string-prefix? "^" str)
-      (loop (substring str 1) #t alt? shift? meta?)]
+      (loop (substring str 1) #t alt? shift?)]
      [(string-prefix? "C-" str)
-      (loop (substring str 2) #t alt? shift? meta?)]
-     
-     ;; Alt/Meta modifier: M-X
-     [(string-prefix? "M-" str)
-      (loop (substring str 2) ctrl? #t shift? #t)]
+      (loop (substring str 2) #t alt? shift?)]
      
      ;; Alt modifier: A-X
      [(string-prefix? "A-" str)
-      (loop (substring str 2) ctrl? #t shift? meta?)]
+      (loop (substring str 2) ctrl? #t shift?)]
      
      ;; Shift modifier: S-X
      [(string-prefix? "S-" str)
-      (loop (substring str 2) ctrl? alt? #t meta?)]
+      (loop (substring str 2) ctrl? alt? #t)]
      
-     ;; Combined modifiers: C-M-X, C-S-X, etc.
-     [(string-prefix? "C-M-" str)
-      (loop (substring str 4) #t #t shift? #t)]
+     ;; Combined modifiers: C-A-X, C-S-X, etc.
+     [(string-prefix? "C-A-" str)
+      (loop (substring str 4) #t #t shift?)]
      [(string-prefix? "C-S-" str)
-      (loop (substring str 4) #t alt? #t meta?)]
-     [(string-prefix? "M-S-" str)
-      (loop (substring str 4) ctrl? #t #t #t)]
-     [(string-prefix? "C-M-S-" str)
-      (loop (substring str 6) #t #t #t #t)]
+      (loop (substring str 4) #t alt? #t)]
+     [(string-prefix? "A-S-" str)
+      (loop (substring str 4) ctrl? #t #t)]
+     [(string-prefix? "C-A-S-" str)
+      (loop (substring str 6) #t #t #t)]
      
      ;; No more modifiers
      [else
-      (cons (list ctrl? alt? shift? meta?) str)])))
+      (cons (list ctrl? alt? shift?) str)])))
 
 (define (string->key key-string)
   "Convert key string to key record"
@@ -190,27 +204,26 @@
          [base-key (cdr parsed)]
          [ctrl? (first modifiers)]
          [alt? (second modifiers)]
-         [shift? (third modifiers)]
-         [meta? (fourth modifiers)])
+         [shift? (third modifiers)])
     
     (cond
      ;; Function keys
      [(assoc base-key *function-keys*)
       => (lambda (entry)
            (make-key #:symbol (cdr entry) #:ctrl? ctrl? #:alt? alt? 
-                    #:shift? shift? #:meta? meta?))]
+                    #:shift? shift?))]
      
      ;; Special named keys
      [(assoc base-key *special-keys*)
       => (lambda (entry)
            (make-key #:symbol (cdr entry) #:ctrl? ctrl? #:alt? alt?
-                    #:shift? shift? #:meta? meta?))]
+                    #:shift? shift?))]
      
      ;; Single character
      [(= (string-length base-key) 1)
       (let ([ch (string-ref base-key 0)])
         (make-key #:char ch #:ctrl? ctrl? #:alt? alt? 
-                 #:shift? shift? #:meta? meta?))]
+                 #:shift? shift?))]
      
      ;; Invalid key string
      [else
@@ -220,16 +233,14 @@
   "Convert key record to string representation"
   (let* ([modifiers (string-append
                     (if (key-ctrl? key) "C-" "")
-                    (if (and (key-meta? key) (not (key-alt? key))) "M-" "")
-                    (if (and (key-alt? key) (not (key-meta? key))) "A-" "")
-                    (if (and (key-alt? key) (key-meta? key)) "M-" "")
+                    (if (key-alt? key) "A-" "")
                     (if (key-shift? key) "S-" ""))]
          [base (cond
                 [(key-char key)
                  (string (key-char key))]
                 [(key-symbol key)
-                 (or (find (lambda (entry) (eq? (cdr entry) (key-symbol key)))
-                          (append *special-keys* *function-keys*))
+                 (or (car (find (lambda (entry) (eq? (cdr entry) (key-symbol key)))
+                               (append *special-keys* *function-keys*)))
                      (symbol->string (key-symbol key)))]
                 [else "?"])])
     
@@ -244,7 +255,7 @@
 
 (define (normalize-key-string str)
   "Normalize key string format"
-  (string-trim str))
+  (string-trim-both str))
 
 (define (valid-key-string? str)
   "Check if string represents a valid key"
@@ -286,20 +297,20 @@
 
 (define (key-printable? key)
   "Check if key represents a printable character"
-  (and (key-char key)
-       (not (key-ctrl? key))
-       (char-graphic? (key-char key))))
+  (let ([ch (key-char key)])
+    (and ch
+         (not (key-ctrl? key))
+         (or (char-graphic? ch) (char-blank? ch)))))
 
 (define (key-special? key)
   "Check if key is a special named key"
   (and (key-symbol key)
-       (assoc (symbol->string (key-symbol key)) *special-keys*)))
+       (memq (key-symbol key) (map cdr *special-keys*))))
 
 (define (key-function? key)
   "Check if key is a function key"
   (and (key-symbol key)
-       (let ([sym-str (symbol->string (key-symbol key))])
-         (assoc sym-str *function-keys*))))
+       (memq (key-symbol key) (map cdr *function-keys*))))
 
 (define (key-arrow? key)
   "Check if key is an arrow key"
@@ -308,7 +319,7 @@
 
 (define (key-modifier? key)
   "Check if key has any modifiers"
-  (or (key-ctrl? key) (key-alt? key) (key-shift? key) (key-meta? key)))
+  (or (key-ctrl? key) (key-alt? key) (key-shift? key)))
 
 (define (key-equivalent? key1 key2)
   "Check if two keys are equivalent"
@@ -316,8 +327,7 @@
        (equal? (key-symbol key1) (key-symbol key2))
        (equal? (key-ctrl? key1) (key-ctrl? key2))
        (equal? (key-alt? key1) (key-alt? key2))
-       (equal? (key-shift? key1) (key-shift? key2))
-       (equal? (key-meta? key1) (key-meta? key2))))
+       (equal? (key-shift? key1) (key-shift? key2))))
 
 ;;; =================================================================
 ;;; UTILITY FUNCTIONS
@@ -328,8 +338,7 @@
   (let* ([modifiers (filter identity
                            (list (and (key-ctrl? key) "Control")
                                 (and (key-alt? key) "Alt") 
-                                (and (key-shift? key) "Shift")
-                                (and (key-meta? key) "Meta")))]
+                                (and (key-shift? key) "Shift")))]
          [base-desc (cond
                      [(key-char key)
                       (format #f "'~a'" (key-char key))]
@@ -365,12 +374,11 @@
   (let* ([ctrl-str (if (key-ctrl? key) "Ctrl+" "")]
          [alt-str (if (key-alt? key) "Alt+" "")]
          [shift-str (if (key-shift? key) "Shift+" "")]
-         [meta-str (if (and (key-meta? key) (not (key-alt? key))) "Meta+" "")]
          [base-str (cond
                     [(key-char key) (string (key-char key))]
                     [(key-symbol key) (symbol->string (key-symbol key))]
                     [else "?"])])
-    (string-append ctrl-str alt-str shift-str meta-str base-str)))
+    (string-append ctrl-str alt-str shift-str base-str)))
 
 ;;; =================================================================
 ;;; DEBUGGING AND TESTING
@@ -383,13 +391,12 @@
     (ctrl? ,(key-ctrl? key))
     (alt? ,(key-alt? key))
     (shift? ,(key-shift? key))
-    (meta? ,(key-meta? key))
     (string ,(key->string key))
     (description ,(describe-key key))))
 
 (define (test-key-parsing)
   "Test key parsing functionality"
-  (let ([test-keys '("a" "^C" "M-a" "F6" "kup" "C-M-a" "S-F1" "^X")])
+  (let ([test-keys '("a" "^C" "A-a" "F6" "up" "C-A-a" "S-F1" "^X")])
     (format #t "Key Parsing Tests:~%")
     (for-each (lambda (key-str)
                 (let ([key (string->key key-str)])

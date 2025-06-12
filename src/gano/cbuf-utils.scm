@@ -3,11 +3,9 @@
 
 (define-module (gano cbuf-utils)
   #:use-module (gano char)          ; Character utilities
-  #:use-module (gano string-split)  ; String splitting and joining
   #:use-module (srfi srfi-1)        ; List utilities
-  #:use-module (srfi srfi-13)       ; String utilities
+  #:use-module (srfi srfi-34)       ; Raise for conditions
   #:use-module (srfi srfi-35)       ; Condition types
-  #:use-module (ice-9 format)       ; Format function
   #:export (
     ;; Constants
     MAX-COMBINING-MARKS
@@ -44,7 +42,37 @@
     ;; Error condition constructors (pure data)
     make-boundary-error-info
     make-combining-mark-error-info
+    
+    ;;; Error conditions for combining sequences
+    &cbuf-invalid-combining-sequence
+    cbuf-invalid-combining-sequence-error?
+    cbuf-invalid-combining-sequence-error:base-char
+    cbuf-invalid-combining-sequence-error:combining-char
+    cbuf-invalid-combining-sequence-error:current-count
+    cbuf-invalid-combining-sequence-error:max-count
+    
+    &cbuf-too-many-combining-marks
+    cbuf-too-many-combining-marks-error?
+    cbuf-too-many-combining-marks-error:base-char
+    cbuf-too-many-combining-marks-error:combining-char
+    cbuf-too-many-combining-marks-error:current-count
+    cbuf-too-many-combining-marks-error:max-count    
   ))
+
+;;; Error conditions for combining marks
+(define-condition-type &cbuf-invalid-combining-sequence &serious
+  cbuf-invalid-combining-sequence-error?
+  (base-char cbuf-invalid-combining-sequence-error:base-char)
+  (combining-char cbuf-invalid-combining-sequence-error:combining-char)
+  (current-count cbuf-invalid-combining-sequence-error:current-count)
+  (max-count cbuf-invalid-combining-sequence-error:max-count))
+
+(define-condition-type &cbuf-too-many-combining-marks &serious
+  cbuf-too-many-combining-marks-error?
+  (base-char cbuf-too-many-combining-marks-error:base-char)
+  (combining-char cbuf-too-many-combining-marks-error:combining-char)
+  (current-count cbuf-too-many-combining-marks-error:current-count)
+  (max-count cbuf-too-many-combining-marks-error:max-count))
 
 ;; Maximum combining marks per base character (matches ncurses cchar_t)
 (define MAX-COMBINING-MARKS 4)
@@ -112,9 +140,10 @@
     ;; Validate just the region around the insertion
     (validate-string-combining-marks check-region)))
 
-(define (validate-combining-mark-limits str)
+
+#;(define (validate-combining-mark-limits str)
   "Validate that no grapheme cluster in STR exceeds the combining mark limit.
-   Returns #t if valid, raises condition if limit exceeded."
+   Raises &cbuf-too-many-combining-marks if limit exceeded."
   (let ([current-base-char #f]
         [combining-count 0])
     
@@ -124,17 +153,60 @@
         [(char-combining-mark? ch)
          ;; This is a combining mark
          (unless current-base-char
-           (error "Combining mark without base character" ch))
+           ;; Use proper condition raising - create condition first, then raise
+           (let ([condition (make-condition &cbuf-invalid-combining-sequence
+                                           'base-char #f
+                                           'combining-char ch
+                                           'current-count 0
+                                           'max-count MAX-COMBINING-MARKS)])
+             (raise condition)))
          (set! combining-count (+ combining-count 1))
          (when (> combining-count MAX-COMBINING-MARKS)
-           (error "Too many combining marks" current-base-char ch combining-count MAX-COMBINING-MARKS))]
+           ;; Use proper condition raising
+           (let ([condition (make-condition &cbuf-too-many-combining-marks
+                                           'base-char current-base-char
+                                           'combining-char ch
+                                           'current-count combining-count
+                                           'max-count MAX-COMBINING-MARKS)])
+             (raise condition)))]
         
         [else
          ;; This is a base character, reset the count
          (set! current-base-char ch)
          (set! combining-count 0)]))
-     str)
-    #t))
+     str)))
+
+(define (validate-combining-mark-limits str)
+  "Validate that no grapheme cluster in STR exceeds the combining mark limit.
+   Raises &cbuf-too-many-combining-marks if limit exceeded."
+  (let ([current-base-char #f]
+        [combining-count 0])
+    
+    (string-for-each
+     (lambda (ch)
+       (cond
+        [(char-combining-mark? ch)
+         ;; This is a combining mark
+         (unless current-base-char
+	   (raise (condition (&cbuf-invalid-combining-sequence
+			      (base-char #f)
+			      (combining-char ch)
+			      (current-count combining-count)
+			      (max-count MAX-COMBINING-MARKS)))))
+         (set! combining-count (+ combining-count 1))
+         (when (> combining-count MAX-COMBINING-MARKS)
+           (raise (condition (&cbuf-too-many-combining-marks
+                              (base-char current-base-char)
+                              (combining-char ch)
+                              (current-count combining-count)
+                              (max-count MAX-COMBINING-MARKS)))))]
+        
+        [else
+         ;; This is a base character, reset the count
+         (set! current-base-char ch)
+         (set! combining-count 0)]))
+     str)))
+
 
 (define (count-combining-marks-in-cluster str start-index)
   "Count combining marks starting from start-index until next base character or end of string"
@@ -146,6 +218,10 @@
         (loop (+ i 1) (+ count 1))]
        [else count]))))
 
+
+;;; =================================================================
+;;; STRING ANALYSIS
+;;; =================================================================
 (define (count-base-characters str)
   "Count non-combining characters in string efficiently"
   (let loop ([i 0] [count 0])
@@ -154,6 +230,56 @@
         (if (char-combining-mark? (string-ref str i))
             (loop (+ i 1) count)
             (loop (+ i 1) (+ count 1))))))
+;;; =================================================================
+;;; LINE ENDING DETECTION
+;;; =================================================================
+
+(define (detect-line-ending str)
+  "Detect the primary line ending used in string.
+   Counts all 5 line ending types and returns the most common one.
+   Priority order for ties: LF, CRLF, CR, LS, PS.
+   Returns \\n as default if no line endings found."
+  (let* ([len (string-length str)])
+    ;; Helper function to safely check character at position
+    (define (char-at-pos? i char)
+      (and (< i len) (char=? (string-ref str i) char)))
+    ;; Count all line ending types using recursion
+    (let loop ([i 0] [crlf-count 0] [lf-count 0] [cr-count 0] [ls-count 0] [ps-count 0])
+      (cond
+        ;; Check for CRLF first (2 characters)
+        [(and (char-at-pos? i #\return) 
+              (char-at-pos? (+ i 1) #\newline))
+         (loop (+ i 2) (+ crlf-count 1) lf-count cr-count ls-count ps-count)]
+        ;; Single character line endings
+        [(char-at-pos? i #\newline)
+         (loop (+ i 1) crlf-count (+ lf-count 1) cr-count ls-count ps-count)]
+        [(char-at-pos? i #\return)
+         (loop (+ i 1) crlf-count lf-count (+ cr-count 1) ls-count ps-count)]
+        [(char-at-pos? i #\x2028)  ; Line Separator
+         (loop (+ i 1) crlf-count lf-count cr-count (+ ls-count 1) ps-count)]
+        [(char-at-pos? i #\x2029)  ; Paragraph Separator
+         (loop (+ i 1) crlf-count lf-count cr-count ls-count (+ ps-count 1))]
+        ;; Regular character - continue
+        [(< i len)
+         (loop (+ i 1) crlf-count lf-count cr-count ls-count ps-count)]
+        ;; End of string - find most common with priority
+        [else
+         (let* ([counts (list (cons lf-count "\n")      ; Priority 1
+                             (cons crlf-count "\r\n")   ; Priority 2  
+                             (cons cr-count "\r")       ; Priority 3
+                             (cons ls-count "\u2028")   ; Priority 4
+                             (cons ps-count "\u2029"))] ; Priority 5
+                [max-count (apply max (map car counts))])
+           (cond
+             ;; No line endings found
+             [(= max-count 0) "\n"]
+             ;; Find first (highest priority) entry with max count
+             [else
+              (let find-max ([remaining counts])
+                (cond
+                  [(null? remaining) "\n"]  ; Fallback
+                  [(= (caar remaining) max-count) (cdar remaining)]
+                  [else (find-max (cdr remaining))]))]))]))))
 
 ;;; =================================================================
 ;;; TAB COMPUTATION
@@ -224,9 +350,12 @@ backward tabulation. This function does not do bracketing."
   "Skip backward through word characters, return index at word start"
   (let loop ([i start-index])
     (cond
-     [(< i 0) 0]
-     [(delimiter-pred (string-ref txt i)) (+ i 1)]
-     [else (loop (- i 1))])))
+     [(< i 0)
+      0]
+     [(and (< i (string-length txt)) (delimiter-pred (string-ref txt i)))
+      (+ i 1)]
+     [else
+      (loop (- i 1))])))
 
 (define (skip-whitespace-forward txt start-index)
   "Skip forward through whitespace, return index after whitespace"
@@ -269,14 +398,6 @@ backward tabulation. This function does not do bracketing."
       (char-set-contains? char-set:symbol ch)))
 
 ;;; =================================================================
-;;; LINE ENDING DETECTION
-;;; =================================================================
-
-(define (detect-line-ending text)
-  "Detect line ending type in text"
-  (string-detect-line-ending text))
-
-;;; =================================================================
 ;;; POSITION VALIDATION HELPERS (Pure functions)
 ;;; =================================================================
 
@@ -287,6 +408,7 @@ backward tabulation. This function does not do bracketing."
          [clamped-line (max 0 (min target-line max-line))]
          [clamped? (not (= target-line clamped-line))])
     (list target-line clamped-line clamped? operation)))
+    
 
 (define (validate-column-movement-pure current-column delta max-column operation)
   "Pure version of column movement validation.

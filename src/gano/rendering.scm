@@ -62,42 +62,10 @@
     sgr-differences
     sgr-minimal-sequence
     
-    ;; Attribute group symbols
-    ;; Intensity
-    ;; 'intensity-normal 'intensity-bold 'intensity-faint
-    
-    ;; Font style  
-    ;; 'font-style-normal 'font-style-italic 'font-style-fraktur
-    
-    ;; Underline
-    ;; 'underline-none 'underline-single 'underline-double
-    
-    ;; Blink
-    ;; 'blink-none 'blink-slow 'blink-rapid
-    
-    ;; Polarity
-    ;; 'polarity-positive 'polarity-negative
-    
-    ;; Visibility
-    ;; 'visibility-revealed 'visibility-concealed
-    
-    ;; Strikethrough
-    ;; 'strikethrough-normal 'strikethrough-crossed
-    
-    ;; Frame
-    ;; 'frame-none 'frame-framed 'frame-encircled
-    
-    ;; Overline
-    ;; 'overline-normal 'overline-overlined
-    
-    ;; Colors (standard 8 colors + default + extended)
-    ;; 'color-default 'color-black 'color-red 'color-green 'color-yellow
-    ;; 'color-blue 'color-magenta 'color-cyan 'color-white
-    
     ;; Extended color types
     <color-256> make-color-256 color-256? color-256-index
     <color-rgb> make-color-rgb color-rgb? color-rgb-red color-rgb-green color-rgb-blue
-    
+
     ;; Color utilities
     color-type
     color->ansi-params
@@ -111,6 +79,35 @@
     sgr-parameters
     parameter->attribute
     attribute->parameter))
+
+;;; =================================================================
+;;; EXTENDED COLOR SUPPORT
+;;; =================================================================
+
+;;; Extended color record types for 256-color and RGB support
+
+;; 256-color palette entry (0-255)
+(define-record-type <color-256>
+  (make-color-256 index)
+  color-256?
+  (index color-256-index))  ; 0-255
+
+;; RGB color (24-bit true color)
+(define-record-type <color-rgb>
+  (make-color-rgb red green blue)
+  color-rgb?
+  (red color-rgb-red)      ; 0-255
+  (green color-rgb-green)  ; 0-255  
+  (blue color-rgb-blue))   ; 0-255
+
+;;; Color type detection
+(define (color-type color)
+  "Determine the type of a color value"
+  (cond
+   [(symbol? color) 'standard]     ; Standard 8 colors + default
+   [(color-256? color) '256-color]
+   [(color-rgb? color) 'rgb]
+   [else 'unknown]))
 
 ;;; =================================================================
 ;;; COLOR UTILITIES
@@ -178,7 +175,10 @@
    [(and (= (length params) 3) 
          (or (= (car params) 38) (= (car params) 48))
          (= (cadr params) 5))
-    (make-color-256 (caddr params))]
+    (let ([index (caddr params)])
+      (if (and (>= index 0) (< index 256))
+	  (make-color-256 (caddr params))
+	  'color-default))]
    
    ;; RGB color: [38|48];2;r;g;b
    [(and (= (length params) 5)
@@ -253,34 +253,6 @@
    ;; Invalid index
    [else (make-color-rgb 0 0 0)]))
 
-;;; =================================================================
-;;; EXTENDED COLOR SUPPORT
-;;; =================================================================
-
-;;; Extended color record types for 256-color and RGB support
-
-;; 256-color palette entry (0-255)
-(define-record-type <color-256>
-  (make-color-256 index)
-  color-256?
-  (index color-256-index))  ; 0-255
-
-;; RGB color (24-bit true color)
-(define-record-type <color-rgb>
-  (make-color-rgb red green blue)
-  color-rgb?
-  (red color-rgb-red)      ; 0-255
-  (green color-rgb-green)  ; 0-255  
-  (blue color-rgb-blue))   ; 0-255
-
-;;; Color type detection
-(define (color-type color)
-  "Determine the type of a color value"
-  (cond
-   [(symbol? color) 'standard]     ; Standard 8 colors + default
-   [(color-256? color) '256-color]
-   [(color-rgb? color) 'rgb]
-   [else 'unknown]))
 
 ;;; =================================================================
 ;;; SGR ATTRIBUTE GROUPS AND SYMBOLS

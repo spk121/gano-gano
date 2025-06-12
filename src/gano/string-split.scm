@@ -11,6 +11,7 @@
     
     ;; Line ending utilities
     string-split-lines
+    string-split-lines-with-final-newline-info
     string-detect-line-ending
     string-normalize-line-endings
     
@@ -142,6 +143,33 @@
   "Split string into lines, handling multiple line ending types.
    Recognizes \\r\\n, \\n, \\r, and Unicode line separators."
   (string-split-on-any str '("\r\n" "\n" "\r" "\u2028" "\u2029")))
+
+(define (string-split-lines-with-final-newline-info str)
+  "Split string into lines, handling multiple line ending types.
+   Recognizes \\r\\n, \\n, \\r, and Unicode line separators."
+  (cond
+   [(string-null? str)
+    (cons '("") #f)]
+   [else
+    (let* ([lines (string-split-lines str)]
+           ;; Check if original string ended with any line ending
+           [str-len (string-length str)]
+           [last-char (string-ref str (- str-len 1))]
+           [ends-with-newline? (or (char=? last-char #\newline)
+                                   (char=? last-char #\return)
+                                   (char=? last-char #\x2028)  ; Line separator
+                                   (char=? last-char #\x2029)  ; Paragraph separator
+                                   ;; Check for CRLF
+                                   (and (>= str-len 2)
+                                        (char=? (string-ref str (- str-len 2)) #\return)
+                                        (char=? last-char #\newline)))])
+       
+      ;; If string ended with line ending, remove the extra empty line that split creates
+      (if (and ends-with-newline? 
+               (not (null? lines))
+               (string-null? (last lines)))
+          (cons (drop-right lines 1) #t)
+          (cons lines #f)))]))
 
 (define (string-detect-line-ending str)
   "Detect the primary line ending used in string.
