@@ -21,6 +21,10 @@
   #:use-module (ice-9 format)            ; Format function
   #:use-module (ice-9 textual-ports)     ; get-string-all
   #:export (
+    ;; Helper functions
+    cbuf-x-data->x-index
+    cbuf-x-index->x-data	    
+    
     ;; Character operations
     cbuf-insert-char!
     cbuf-delete-char!

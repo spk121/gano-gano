@@ -333,7 +333,7 @@ backward tabulation. This function does not do bracketing."
    [(<= start-index 0) 0]
    [else
     ;; Skip preceding whitespace first (if we're on whitespace)
-    (let ([before-whitespace (skip-whitespace-backward txt (- start-index 1))])
+    (let ([before-whitespace (skip-whitespace-backward txt (- start-index 0))])
       ;; Skip back through word characters
       (skip-word-chars-backward txt before-whitespace delimiter-pred))]))
 
