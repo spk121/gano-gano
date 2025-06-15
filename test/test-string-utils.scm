@@ -395,6 +395,32 @@
   (test-equal "count all same chars"
     5 (string-count-char "aaaaa" #\a)))
 
+(test-group "line-ending-detection"
+  (test-group "string-detect-line-ending"
+    (test-assert "string-detect-line-ending is callable"
+                 (procedure? string-detect-line-ending))
+    
+    ;; Basic functionality tests
+    (test-equal "Unix line ending" "\n" (string-detect-line-ending "line1\nline2\n"))
+    (test-equal "Windows line ending" "\r\n" (string-detect-line-ending "line1\r\nline2\r\n"))
+    (test-equal "Mac line ending" "\r" (string-detect-line-ending "line1\rline2\r"))
+    (test-equal "No line ending defaults to LF" "\n" (string-detect-line-ending "single line"))
+    
+    ;; Edge cases
+    (test-equal "Mixed line endings prefers most common" "\n" (string-detect-line-ending "line1\nline2\r\nline3\n"))
+    (test-equal "Empty string defaults to LF" "\n" (string-detect-line-ending ""))
+    (test-equal "Single newline" "\n" (string-detect-line-ending "\n"))
+    (test-equal "Single CRLF" "\r\n" (string-detect-line-ending "\r\n"))
+    
+    ;; Unicode line separators
+    (test-equal "Line separator" "\u2028" (string-detect-line-ending "line1\u2028line2\u2028"))
+    (test-equal "Paragraph separator" "\u2029" (string-detect-line-ending "line1\u2029line2\u2029"))
+    
+    ;; Tie-breaking priority (LF wins ties)
+    (test-equal "LF vs CRLF tie goes to LF" "\n" (string-detect-line-ending "a\nb\r\nc"))
+    (test-equal "Complex tie scenario" "\n" (string-detect-line-ending "a\nb\r\nc\rd\u2028e\u2029f"))))
+    
+
 ;;; =================================================================
 ;;; UNICODE-AWARE UTILITIES TESTS
 ;;; =================================================================

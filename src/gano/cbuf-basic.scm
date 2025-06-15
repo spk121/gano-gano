@@ -1219,7 +1219,7 @@
   (cbuf-save-undo-state! cbuf 'load-from-string)
 
   ;; Detect line ending and final newline status
-  (let* ([detected-ending (detect-line-ending str)]
+  (let* ([detected-ending (string-detect-line-ending str)]
          [split-result (string-split-lines-with-final-newline-info str)]
          [lines (car split-result)]
          [has-final-newline? (cdr split-result)])

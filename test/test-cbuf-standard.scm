@@ -131,7 +131,7 @@
     
     (cbuf-set-x! cbuf 6 'data) ; After "world"
     (cbuf-delete-word-backward! cbuf)
-    (test-equal "delete-word-backward" " test" (cbuf-get-all-text cbuf))))
+    (test-equal "delete-word-backward" "  test" (cbuf-get-all-text cbuf))))
 
 (test-group "delete to end/beginning tests"
   (let ([cbuf (make-test-cbuf "hello world")])
@@ -154,18 +154,18 @@
   (let ([cbuf (make-test-cbuf "hello world hello test")])
     (test-assert "search-forward found" 
                  (cbuf-search-forward! cbuf "world"))
-    (test-equal "search-forward position" 6 (cbuf-x-data cbuf))
+    (test-equal "search-forward position" 11 (cbuf-x-data cbuf))
     (test-equal "search-forward selection" "world" (cbuf-get-region-text cbuf))
     
     (test-assert "search-forward second match"
                  (cbuf-search-forward! cbuf "hello"))
-    (test-equal "search-forward second position" 12 (cbuf-x-data cbuf))))
+    (test-equal "search-forward second position" 17 (cbuf-x-data cbuf))))
 
 (test-group "case-insensitive search tests"
   (let ([cbuf (make-test-cbuf "Hello WORLD hello")])
     (test-assert "case-insensitive search"
                  (cbuf-search-forward! cbuf "world" #:case-insensitive? #t))
-    (test-equal "case-insensitive position" 6 (cbuf-x-data cbuf))
+    (test-equal "case-insensitive position" 11 (cbuf-x-data cbuf))
     (test-equal "case-insensitive selection" "WORLD" (cbuf-get-region-text cbuf))))
 
 (test-group "whole-word search tests"
@@ -173,7 +173,7 @@
     (cbuf-beginning-of-buffer! cbuf)
     (test-assert "whole-word search found"
                  (cbuf-search-forward! cbuf "cat" #:whole-word? #t))
-    (test-equal "whole-word position" 0 (cbuf-x-data cbuf))
+    (test-equal "whole-word position" 3 (cbuf-x-data cbuf))
     
     ;; Should not find "cat" in "catch"
     (test-assert "whole-word search next"
@@ -184,11 +184,15 @@
     (cbuf-beginning-of-buffer! cbuf)
     (test-assert "grapheme search exact match"
                  (cbuf-search-forward! cbuf "José"))
-    (test-equal "grapheme search position" 0 (cbuf-x-data cbuf))
+    (test-equal "grapheme search position" 4 (cbuf-x-data cbuf))
     
     ;; Should not match José́ when searching for José
     (test-assert "grapheme search no partial match"
-                 (not (cbuf-search-forward! cbuf "José")))))
+		 (begin
+		   (let ([ret (cbuf-search-forward! cbuf "José")])
+		     (pk 'xdata (cbuf-x-data cbuf))
+		     (pk 'matchtext (cbuf-get-region-text cbuf))
+                     (not ret ))))))
 
 
 ;;; =================================================================

@@ -124,8 +124,8 @@
     (if (string-null? text)
         (list current-line 0 current-line 0)
         (let* ([current-index (cbuf-x-data->x-index cbuf current-x)]
-               [start-index (find-word-begin-backward text current-index char-word-delimiter?)]
-               [end-index (find-word-end-forward text current-index char-word-delimiter?)]
+               [start-index (skip-word-chars-backward text current-index char-word-delimiter?)]
+               [end-index (skip-word-chars-forward text current-index char-word-delimiter?)]
                [start-x-data (cbuf-x-index->x-data cbuf start-index)]
                [end-x-data (cbuf-x-index->x-data cbuf end-index)])
           (list current-line start-x-data current-line end-x-data)))))
@@ -418,7 +418,7 @@
     (set! *search-history* (cons pattern *search-history*))
     
     ;; Search from current position
-    (let search-loop ([line current-line] [start-x (+ current-x 1)])
+    (let search-loop ([line current-line] [start-x current-x])
       (cond
        [(>= line line-count) #f] ; End of buffer
        
@@ -428,7 +428,7 @@
                                (cbuf-x-data->x-index cbuf start-x)
                                0)]
                [match (find-pattern-in-text text pattern search-from 
-                                           case-insensitive? whole-word?)])
+                                            case-insensitive? whole-word?)])
           
           (if match
               (begin

@@ -296,13 +296,8 @@
          [actual-end (min str-len end-index)])
     (if (< actual-start actual-end)
         (let ([new-sgr-list 
-               (let loop ([lst sgr-list] [i 0] [result '()])
-                 (cond
-                   [(null? lst) (reverse result)]
-                   [(and (>= i actual-start) (< i actual-end))
-                    (loop (cdr lst) (+ i 1) (cons sgr result))]
-                   [else
-                    (loop (cdr lst) (+ i 1) (cons (car lst) result))]))])
+               (list-replace-range sgr-list actual-start actual-end
+                           (make-list (- actual-end actual-start) sgr))])
           (make-text-metrics (text-metrics-string metrics)
                              new-sgr-list
                              (text-metrics-base-indices metrics)
@@ -342,9 +337,7 @@
   (let* ([str (text-metrics-string metrics)]
          [sgr-list (text-metrics-sgr-list metrics)]
          [new-str (string-insert-string str index insert-str)]  ; Using immutable string-utils
-         [new-sgr-list (append (take sgr-list index)
-                               insert-sgr-list
-                               (drop sgr-list index))])
+         [new-sgr-list new-sgr-list (list-insert-multiple sgr-list index insert-sgr-list)])
     (compute-text-metrics-with-sgr new-str new-sgr-list 
                                    (text-metrics-tabsize metrics)
                                    #:cjk? (text-metrics-cjk? metrics))))
