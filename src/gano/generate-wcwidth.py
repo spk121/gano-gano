@@ -13,7 +13,7 @@ import argparse
 import re
 import urllib.request
 import sys
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict, Set, Optional
 
 # URLs for Unicode data files
 EAST_ASIAN_WIDTH_URL = "https://unicode.org/Public/UCD/latest/ucd/EastAsianWidth.txt"
@@ -46,6 +46,23 @@ def download_file(url: str) -> str:
     except Exception as e:
         print(f"Error downloading {url}: {e}")
         sys.exit(1)
+
+def extract_unicode_version(content: str) -> Optional[str]:
+    """Extract Unicode version from file header comments."""
+    for line in content.split('\n')[:20]:  # Check first 20 lines for version info
+        line = line.strip()
+        if line.startswith('#'):
+            # Look for patterns like "# Version: 15.1.0" or "# Unicode 15.1.0"
+            version_match = re.search(r'(?:Version|Unicode)[:\s]+(\d+\.\d+\.\d+)', line, re.IGNORECASE)
+            if version_match:
+                return version_match.group(1)
+            
+            # Alternative pattern: "# UnicodeData-15.1.0.txt"
+            version_match = re.search(r'(\d+\.\d+\.\d+)', line)
+            if version_match and 'Unicode' in line:
+                return version_match.group(1)
+    
+    return None
 
 def parse_codepoint_range(cp_str: str) -> Tuple[int, int]:
     """Parse a codepoint or range string like '1F600' or '1F600..1F64F'."""
@@ -92,10 +109,11 @@ def parse_east_asian_width(content: str) -> Dict[str, List[UnicodeRange]]:
     
     return categories
 
-def parse_unicode_data_for_combining(content: str) -> Tuple[List[UnicodeRange], List[UnicodeRange]]:
-    """Parse UnicodeData.txt to find combining marks and zero-width characters (both width 0)."""
+def parse_unicode_data_for_combining_and_control(content: str) -> Tuple[List[UnicodeRange], List[UnicodeRange], List[UnicodeRange]]:
+    """Parse UnicodeData.txt to find combining marks, zero-width characters, and control characters."""
     combining_ranges = []
     zero_width_ranges = []
+    control_ranges = []
     
     for line in content.split('\n'):
         line = line.strip()
@@ -119,8 +137,17 @@ def parse_unicode_data_for_combining(content: str) -> Tuple[List[UnicodeRange], 
         # Zero-width characters (by name)
         elif "ZERO WIDTH" in name.upper():
             zero_width_ranges.append(UnicodeRange(cp, cp, 0))
+        
+        # Control characters: Cc (control), Cf (format)
+        elif general_category in ['Cc', 'Cf']:
+            control_ranges.append(UnicodeRange(cp, cp, -1))
+        
+        # Additional format characters that should be treated as control
+        elif general_category in ['Cs', 'Co']:  # Surrogates and Private Use
+            # These are generally not printable
+            control_ranges.append(UnicodeRange(cp, cp, -1))
     
-    return combining_ranges, zero_width_ranges
+    return combining_ranges, zero_width_ranges, control_ranges
 
 def merge_ranges(ranges: List[UnicodeRange]) -> List[UnicodeRange]:
     """Merge adjacent and overlapping ranges with the same width."""
@@ -143,51 +170,64 @@ def merge_ranges(ranges: List[UnicodeRange]) -> List[UnicodeRange]:
     
     return merged
 
-def generate_scheme_table(ranges: List[UnicodeRange], table_name: str) -> str:
-    """Generate Scheme code for a lookup table."""
+def generate_scheme_table(ranges: List[UnicodeRange], table_name: str, target_line_length: int = 70) -> str:
+    """Generate Scheme code for a lookup table with optimized formatting."""
     if not ranges:
         return f"(define {table_name} '())"
     
-    pairs = [r.to_scheme_pair() for r in ranges]
+    # Pre-calculate all pairs and their lengths
+    pair_data = [(r.to_scheme_pair(), len(r.to_scheme_pair())) for r in ranges]
     
-    # Format nicely with multiple pairs per line
+    # Build lines efficiently
     lines = []
-    current_line = []
-    line_length = 0
+    current_line_parts = []
+    current_line_length = 0
+    indent = '           '  # 11 spaces for alignment
     
-    for pair in pairs:
-        if line_length + len(pair) > 70 and current_line:  # Wrap long lines
-            lines.append('           ' + ' '.join(current_line))
-            current_line = [pair]
-            line_length = len(pair)
+    for pair_str, pair_length in pair_data:
+        # Check if adding this pair would exceed target length
+        space_needed = pair_length + (1 if current_line_parts else 0)  # +1 for space separator
+        
+        if current_line_length + space_needed > target_line_length and current_line_parts:
+            # Finish current line and start new one
+            lines.append(indent + ' '.join(current_line_parts))
+            current_line_parts = [pair_str]
+            current_line_length = pair_length
         else:
-            current_line.append(pair)
-            line_length += len(pair) + 1
+            # Add to current line
+            current_line_parts.append(pair_str)
+            current_line_length += space_needed
     
-    if current_line:
-        lines.append('           ' + ' '.join(current_line))
+    # Add final line
+    if current_line_parts:
+        lines.append(indent + ' '.join(current_line_parts))
     
-    return f"""(define {table_name}
-  '({lines[0].strip()}
-{chr(10).join(lines[1:])}))"""
+    # Format the definition
+    if len(lines) == 1:
+        return f"(define {table_name}\n  '({lines[0].strip()}))"
+    else:
+        first_line = lines[0].strip()
+        remaining_lines = '\n'.join(lines[1:])
+        return f"(define {table_name}\n  '({first_line}\n{remaining_lines}))"
 
 def generate_wcwidth_module(eaw_categories: Dict[str, List[UnicodeRange]], 
                           combining_ranges: List[UnicodeRange],
-                          zero_width_ranges: List[UnicodeRange]) -> str:
+                          zero_width_ranges: List[UnicodeRange],
+                          control_ranges: List[UnicodeRange],
+                          unicode_version: str) -> str:
     """Generate the complete Guile wcwidth module."""
     
     # Merge ranges by width - combine combining marks and zero-width characters
     width_0_ranges = merge_ranges(combining_ranges + zero_width_ranges)
     width_2_ranges = merge_ranges(eaw_categories['F'] + eaw_categories['W'])
     ambiguous_ranges = merge_ranges(eaw_categories['A'])
+    control_merged_ranges = merge_ranges(control_ranges)
     
     # Generate lookup tables
     zero_width_table = generate_scheme_table(width_0_ranges, "zero-width-ranges")
     wide_table = generate_scheme_table(width_2_ranges, "wide-ranges") 
     ambiguous_table = generate_scheme_table(ambiguous_ranges, "ambiguous-ranges")
-    
-    # Get Unicode version info
-    unicode_version = "15.1.0"  # Current as of 2024
+    control_table = generate_scheme_table(control_merged_ranges, "control-ranges")
     
     return f''';;; wcwidth.scm - Unicode character width calculation
 ;;;
@@ -212,6 +252,9 @@ def generate_wcwidth_module(eaw_categories: Dict[str, List[UnicodeRange]],
 
 ;; East Asian Ambiguous characters (width 1 normally, 2 in CJK mode)
 {ambiguous_table}
+
+;; Control characters - Cc (control), Cf (format), Cs (surrogate), Co (private) (width -1)
+{control_table}
 
 ;;; =================================================================
 ;;; BINARY SEARCH HELPER
@@ -245,7 +288,7 @@ def generate_wcwidth_module(eaw_categories: Dict[str, List[UnicodeRange]],
     - 0 for null character, combining marks, and zero-width characters
     - 1 for most characters
     - 2 for wide characters (CJK ideographs, etc.)
-    - -1 for control characters
+    - -1 for control characters (including Unicode format/control categories)
     - For strings: sum of individual character widths
     - For invalid input: -1
   
@@ -277,11 +320,15 @@ def generate_wcwidth_module(eaw_categories: Dict[str, List[UnicodeRange]],
          ;; Null character
          ((= ucs 0) 0)
          
-         ;; C0 control characters (0x00-0x1F) and DEL (0x7F)
+         ;; Basic C0 control characters (0x00-0x1F) and DEL (0x7F)
+         ;; These are handled first for efficiency (common case)
          ((or (< ucs 32) (= ucs 127)) -1)
          
-         ;; C1 control characters (0x80-0x9F)
+         ;; Basic C1 control characters (0x80-0x9F)
          ((and (>= ucs #x80) (<= ucs #x9F)) -1)
+         
+         ;; Unicode control characters (comprehensive check)
+         ((bisearch-ranges ucs control-ranges) -1)
          
          ;; Zero-width characters (combining marks + zero-width named chars)
          ((bisearch-ranges ucs zero-width-ranges) 0)
@@ -307,6 +354,7 @@ def generate_wcwidth_module(eaw_categories: Dict[str, List[UnicodeRange]],
 (define wcwidth-zero-width-count {len(width_0_ranges)})
 (define wcwidth-wide-count {len(width_2_ranges)})  
 (define wcwidth-ambiguous-count {len(ambiguous_ranges)})
+(define wcwidth-control-count {len(control_merged_ranges)})
 
 ;; Unicode version
 (define wcwidth-unicode-version "{unicode_version}")
@@ -317,7 +365,8 @@ def generate_wcwidth_module(eaw_categories: Dict[str, List[UnicodeRange]],
   `((unicode-version . ,wcwidth-unicode-version)
     (zero-width-ranges . ,wcwidth-zero-width-count)
     (wide-ranges . ,wcwidth-wide-count)
-    (ambiguous-ranges . ,wcwidth-ambiguous-count)))
+    (ambiguous-ranges . ,wcwidth-ambiguous-count)
+    (control-ranges . ,wcwidth-control-count)))
 '''
 
 def main():
@@ -340,7 +389,7 @@ def main():
     else:
         eaw_content = download_file(EAST_ASIAN_WIDTH_URL)
     
-    # Get Unicode data for combining marks
+    # Get Unicode data for combining marks and control characters
     if args.offline_unicode_data:
         print(f"Reading UnicodeData from {args.offline_unicode_data}")
         with open(args.offline_unicode_data, 'r', encoding='utf-8') as f:
@@ -348,14 +397,20 @@ def main():
     else:
         unicode_data_content = download_file(UNICODE_DATA_URL)
     
+    # Extract Unicode version
+    unicode_version = (extract_unicode_version(eaw_content) or 
+                      extract_unicode_version(unicode_data_content) or 
+                      "unknown")
+    print(f"Detected Unicode version: {unicode_version}")
+    
     print("Parsing East Asian Width data...")
     eaw_categories = parse_east_asian_width(eaw_content)
     
-    print("Parsing combining marks from Unicode data...")
-    combining_ranges, zero_width_ranges = parse_unicode_data_for_combining(unicode_data_content)
+    print("Parsing combining marks and control characters from Unicode data...")
+    combining_ranges, zero_width_ranges, control_ranges = parse_unicode_data_for_combining_and_control(unicode_data_content)
     
     print("Generating wcwidth module...")
-    module_code = generate_wcwidth_module(eaw_categories, combining_ranges, zero_width_ranges)
+    module_code = generate_wcwidth_module(eaw_categories, combining_ranges, zero_width_ranges, control_ranges, unicode_version)
     
     print(f"Writing output to {args.output}")
     with open(args.output, 'w', encoding='utf-8') as f:
@@ -363,9 +418,11 @@ def main():
     
     print(f"Generated {args.output} successfully!")
     print(f"Statistics:")
+    print(f"  - Unicode version: {unicode_version}")
     print(f"  - Combining mark ranges: {len(merge_ranges(combining_ranges))}")
     print(f"  - Zero-width character ranges: {len(merge_ranges(zero_width_ranges))}")
     print(f"  - Total zero-width ranges: {len(merge_ranges(combining_ranges + zero_width_ranges))}")
+    print(f"  - Control character ranges: {len(merge_ranges(control_ranges))}")
     print(f"  - Wide character ranges: {len(merge_ranges(eaw_categories['F'] + eaw_categories['W']))}")
     print(f"  - Ambiguous character ranges: {len(merge_ranges(eaw_categories['A']))}")
 

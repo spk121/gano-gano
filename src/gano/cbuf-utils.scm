@@ -122,8 +122,15 @@
                                             combining-count) violations)))
               (loop (+ i 1))])]
            
-           [else
+           [(char-base? ch)
             ;; This is a base character - reset state
+            (set! current-base-char ch)
+            (set! current-base-index i)
+            (set! combining-count 0)
+            (loop (+ i 1))]
+           
+           [else
+            ;; Neither combining mark nor base character - treat as base
             (set! current-base-char ch)
             (set! current-base-index i)
             (set! combining-count 0)
@@ -170,8 +177,13 @@
                               (current-count combining-count)
                               (max-count MAX-COMBINING-MARKS)))))]
         
-        [else
+        [(char-base? ch)
          ;; This is a base character, reset the count
+         (set! current-base-char ch)
+         (set! combining-count 0)]
+        
+        [else
+         ;; Neither combining nor base - treat as base character
          (set! current-base-char ch)
          (set! combining-count 0)]))
      str)))
@@ -191,24 +203,27 @@
 ;;; =================================================================
 
 (define (count-base-characters str)
-  "Count non-combining characters in string efficiently"
-  ;; Keep the optimized version for performance
+  "Count base characters in string efficiently"
   (let loop ([i 0] [count 0])
     (if (>= i (string-length str))
         count
-        (if (char-combining-mark? (string-ref str i))
-            (loop (+ i 1) count)
-            (loop (+ i 1) (+ count 1))))))
+        (if (char-base? (string-ref str i))
+            (loop (+ i 1) (+ count 1))
+            (loop (+ i 1) count)))))
 
-;;; Alternative implementation using string-utils (commented out for performance):
-#;(define (count-base-characters str)
-  "Count non-combining characters in string using string-utils"
+;;; Alternative implementations using string-utils:
+#;(define (count-base-characters-functional str)
+  "Count base characters using functional string-utils approach"
   (string-count-char 
    (string-map-with-index 
     (lambda (char index)
-      (if (char-combining-mark? char) #\space #\x))
+      (if (char-base? char) #\x #\space))
     str)
    #\x))
+
+#;(define (count-base-characters-filter str)
+  "Count base characters by filtering string to list and counting"
+  (length (filter char-base? (string->list str))))
 
 ;;; =================================================================
 ;;; TAB COMPUTATION
@@ -504,34 +519,20 @@ skip to the previous word first."
     (cond
      [(null? matches) (cons text 0)]  ; No matches
      [replace-all?
-      ;; Replace all matches (work backwards to preserve indices)
-      (let ([sorted-matches (sort matches 
-                                 (lambda (a b) 
-                                   (> (pattern-match-start a) 
-                                      (pattern-match-start b))))])
-        (fold (lambda (match acc-text)
-                (let ([start (pattern-match-start match)]
-                      [end (pattern-match-end match)])
-                  (string-append (substring acc-text 0 start)
-                                replacement
-                                (substring acc-text end))))
-              text sorted-matches)
-        (cons (fold (lambda (match acc-text)
-                      (let ([start (pattern-match-start match)]
-                            [end (pattern-match-end match)])
-                        (string-append (substring acc-text 0 start)
-                                      replacement
-                                      (substring acc-text end))))
-                    text sorted-matches)
-              (length matches)))]
+      ;; Replace all matches using string-utils for efficiency
+      (let* ([replacements (map (lambda (match)
+                                 (list (pattern-match-start match)
+                                       (pattern-match-end match)
+                                       replacement))
+                               matches)]
+             [new-text (string-replace-multiple text replacements)])
+        (cons new-text (length matches)))]
      [else
       ;; Replace only first match
       (let* ([first-match (car matches)]
              [start (pattern-match-start first-match)]
              [end (pattern-match-end first-match)]
-             [new-text (string-append (substring text 0 start)
-                                     replacement
-                                     (substring text end))])
+             [new-text (string-replace-range text start end replacement)])
         (cons new-text 1))])))
         
 ;;; =================================================================
@@ -619,18 +620,13 @@ skip to the previous word first."
   (let ([matches (find-all-literal-matches text pattern case-insensitive? whole-word?)])
     (if (null? matches)
         (cons text 0)  ; No matches
-        ;; Apply replacements from right to left to preserve indices
-        (let* ([sorted-matches (sort matches 
-                                    (lambda (a b) 
-                                      (> (pattern-match-start a) 
-                                         (pattern-match-start b))))]
-               [new-text (fold (lambda (match acc-text)
-                                (let ([start (pattern-match-start match)]
-                                      [end (pattern-match-end match)])
-                                  (string-append (substring acc-text 0 start)
-                                                replacement
-                                                (substring acc-text end))))
-                              text sorted-matches)])
+        ;; Use string-utils for efficient bulk replacement
+        (let* ([replacements (map (lambda (match)
+                                   (list (pattern-match-start match)
+                                         (pattern-match-end match)
+                                         replacement))
+                                 matches)]
+               [new-text (string-replace-multiple text replacements)])
           (cons new-text (length matches))))))
 
 (define (replace-all-regex-in-text text pattern replacement case-insensitive? whole-word?)
@@ -639,18 +635,13 @@ skip to the previous word first."
   (let ([matches (find-all-regex-matches text pattern case-insensitive? whole-word?)])
     (if (null? matches)
         (cons text 0)  ; No matches
-        ;; Apply replacements from right to left to preserve indices
-        (let* ([sorted-matches (sort matches 
-                                    (lambda (a b) 
-                                      (> (pattern-match-start a) 
-                                         (pattern-match-start b))))]
-               [new-text (fold (lambda (match acc-text)
-                                (let ([start (pattern-match-start match)]
-                                      [end (pattern-match-end match)])
-                                  (string-append (substring acc-text 0 start)
-                                                replacement
-                                                (substring acc-text end))))
-                              text sorted-matches)])
+        ;; Use string-utils for efficient bulk replacement
+        (let* ([replacements (map (lambda (match)
+                                   (list (pattern-match-start match)
+                                         (pattern-match-end match)
+                                         replacement))
+                                 matches)]
+               [new-text (string-replace-multiple text replacements)])
           (cons new-text (length matches))))))
 
 ;;; =================================================================
@@ -681,9 +672,7 @@ skip to the previous word first."
           (if match-record
               (let* ([start (pattern-match-start match-record)]
                      [end (pattern-match-end match-record)]
-                     [new-text (string-append (substring text 0 start)
-                                             replacement
-                                             (substring text end))])
+                     [new-text (string-replace-range text start end replacement)])
                 (cons new-text match-record))
               (cons #f #f)))
         (cons #f #f))))
@@ -718,20 +707,19 @@ skip to the previous word first."
    Example: (highlight-pattern-matches \"hello world\" matches \"<mark>\" \"</mark>\")"
   (if (null? matches)
       text
-      ;; Sort matches by position (right to left for stable insertion)
-      (let ([sorted-matches (sort matches 
-                                 (lambda (a b) 
-                                   (> (pattern-match-start a) 
-                                      (pattern-match-start b))))])
-        (fold (lambda (match acc-text)
-                (let ([start (pattern-match-start match)]
-                      [end (pattern-match-end match)])
-                  (string-append (substring acc-text 0 start)
-                                open-tag
-                                (substring acc-text start end)
-                                close-tag
-                                (substring acc-text end))))
-              text sorted-matches))))
+      ;; Use string-utils for efficient bulk insertion
+      (let* ([insertions (append
+                          ;; Opening tags (insert at start positions)
+                          (map (lambda (match)
+                                (cons (pattern-match-start match) open-tag))
+                               matches)
+                          ;; Closing tags (insert at end positions, adjusted for opening tags)
+                          (map (lambda (match)
+                                (cons (+ (pattern-match-end match) 
+                                        (string-length open-tag)) close-tag))
+                               matches))]
+             [sorted-insertions (sort insertions (lambda (a b) (< (car a) (car b))))])
+        (string-insert-multiple text sorted-insertions))))
 
 ;;; =================================================================
 ;;; POSITION VALIDATION HELPERS (Pure functions)

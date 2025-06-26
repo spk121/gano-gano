@@ -1,6 +1,6 @@
 ;;; wcwidth.scm - Unicode character width calculation
 ;;;
-;;; Generated from Unicode 15.1.0 East Asian Width data
+;;; Generated from Unicode unknown East Asian Width data
 ;;; Source: https://unicode.org/Public/UCD/latest/ucd/EastAsianWidth.txt
 ;;; 
 ;;; This module implements wcwidth() for determining the display width
@@ -231,6 +231,20 @@
            ( #x1F18F . #x1F190 ) ( #x1F19B . #x1F1AC ) ( #xE0100 . #xE01EF )
            ( #xF0000 . #xFFFFD ) ( #x100000 . #x10FFFD )))
 
+;; Control characters - Cc (control), Cf (format), Cs (surrogate), Co (private) (width -1)
+(define control-ranges
+  '(( #x0000 . #x001F ) ( #x007F . #x009F ) ( #x00AD . #x00AD )
+           ( #x0600 . #x0605 ) ( #x061C . #x061C ) ( #x06DD . #x06DD )
+           ( #x070F . #x070F ) ( #x0890 . #x0891 ) ( #x08E2 . #x08E2 )
+           ( #x180E . #x180E ) ( #x200E . #x200F ) ( #x202A . #x202E )
+           ( #x2060 . #x2064 ) ( #x2066 . #x206F ) ( #xD800 . #xD800 )
+           ( #xDB7F . #xDB80 ) ( #xDBFF . #xDC00 ) ( #xDFFF . #xE000 )
+           ( #xF8FF . #xF8FF ) ( #xFFF9 . #xFFFB ) ( #x110BD . #x110BD )
+           ( #x110CD . #x110CD ) ( #x13430 . #x1343F ) ( #x1BCA0 . #x1BCA3 )
+           ( #x1D173 . #x1D17A ) ( #xE0001 . #xE0001 ) ( #xE0020 . #xE007F )
+           ( #xF0000 . #xF0000 ) ( #xFFFFD . #xFFFFD ) ( #x100000 . #x100000 )
+           ( #x10FFFD . #x10FFFD )))
+
 ;;; =================================================================
 ;;; BINARY SEARCH HELPER
 ;;; =================================================================
@@ -263,7 +277,7 @@
     - 0 for null character, combining marks, and zero-width characters
     - 1 for most characters
     - 2 for wide characters (CJK ideographs, etc.)
-    - -1 for control characters
+    - -1 for control characters (including Unicode format/control categories)
     - For strings: sum of individual character widths
     - For invalid input: -1
   
@@ -295,11 +309,15 @@
          ;; Null character
          ((= ucs 0) 0)
          
-         ;; C0 control characters (0x00-0x1F) and DEL (0x7F)
+         ;; Basic C0 control characters (0x00-0x1F) and DEL (0x7F)
+         ;; These are handled first for efficiency (common case)
          ((or (< ucs 32) (= ucs 127)) -1)
          
-         ;; C1 control characters (0x80-0x9F)
+         ;; Basic C1 control characters (0x80-0x9F)
          ((and (>= ucs #x80) (<= ucs #x9F)) -1)
+         
+         ;; Unicode control characters (comprehensive check)
+         ((bisearch-ranges ucs control-ranges) -1)
          
          ;; Zero-width characters (combining marks + zero-width named chars)
          ((bisearch-ranges ucs zero-width-ranges) 0)
@@ -325,9 +343,10 @@
 (define wcwidth-zero-width-count 323)
 (define wcwidth-wide-count 122)  
 (define wcwidth-ambiguous-count 179)
+(define wcwidth-control-count 31)
 
 ;; Unicode version
-(define wcwidth-unicode-version "15.1.0")
+(define wcwidth-unicode-version "unknown")
 
 ;; Export statistics for debugging
 (define (wcwidth-statistics)
@@ -335,4 +354,5 @@
   `((unicode-version . ,wcwidth-unicode-version)
     (zero-width-ranges . ,wcwidth-zero-width-count)
     (wide-ranges . ,wcwidth-wide-count)
-    (ambiguous-ranges . ,wcwidth-ambiguous-count)))
+    (ambiguous-ranges . ,wcwidth-ambiguous-count)
+    (control-ranges . ,wcwidth-control-count)))

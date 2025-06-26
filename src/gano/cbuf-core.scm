@@ -1,12 +1,14 @@
 ;;; Gano Character Buffer Core Module
 ;;; Core record definitions and basic accessors
 ;;; This module contains only the fundamental data structures
+;;; Updated for bidirectional text support
 
 (define-module (gano cbuf-core)
-  #:use-module (gano text-metrics)  ; Text metrics module
+  #:use-module (gano text-metrics)  ; Text metrics module with bidi support
   #:use-module (gano rendering)     ; SGR support
-  #:use-module (gano cbuf-utils)       ; Utility functions
-  #:use-module (gano string-split)     ; Enhanced string splitting
+  #:use-module (gano cbuf-utils)    ; Utility functions
+  #:use-module (gano string-split)  ; Enhanced string splitting
+  #:use-module (gano uax9-bidi)     ; Bidirectional text support
   #:use-module (srfi srfi-9)        ; Record types
   #:use-module (srfi srfi-35)       ; Condition types
   #:export (
@@ -49,16 +51,24 @@
     cbuf-text-cur
     cbuf-metrics-cur
     cbuf-sgr-list-cur
+    cbuf-bidi-state-list-cur
     cbuf-get-line-text
     cbuf-text-cur-length
     cbuf-text-cur-cell-length
     cbuf-text-cur-base-length
+    
+    ;; Bidi-specific accessors
+    cbuf-get-paragraph-direction
+    cbuf-get-resolved-levels
+    cbuf-is-rtl-at-position
+    cbuf-get-bidi-state-at-position
     
     ;; Validation functions
     cbuf-validate-line
     cbuf-validate-position
     cbuf-line-valid?
     cbuf-position-valid?
+    
     ;; Error conditions for ranges and motion
     &cbuf-range-error
     cbuf-range-error?
@@ -117,13 +127,13 @@
              current-sgr default-grcm sgr-stack line-ending final-newline?
 	     final-newline-policy)
   cbuf?
-  ;; Text content
-  (text-metrics cbuf-text-metrics set-cbuf-text-metrics!) ; list of <text-metrics>
+  ;; Text content (now with bidi support)
+  (text-metrics cbuf-text-metrics set-cbuf-text-metrics!) ; list of <text-metrics> with bidi
   
   ;; Current position
   (line-cur cbuf-line-cur set-cbuf-line-cur!)        ; current line (y)
   (x-data cbuf-x-data set-cbuf-x-data!)              ; data position
-  (x-cell cbuf-x-cell set-cbuf-x-cell!)              ; cell position
+  (x-cell cbuf-x-cell set-cbuf-x-cell!)              ; cell position (now bidi-aware)
   (x-goal cbuf-x-goal set-cbuf-x-goal!)              ; goal cell position
   
   ;; Tab and formatting configuration
@@ -166,14 +176,17 @@
 ;;; =================================================================
 ;;; VALIDATION FUNCTIONS
 ;;; =================================================================
+
 (define (cbuf-line-valid? cbuf line-num)
   "Check if line-num is a valid line index for cbuf"
   (and (>= line-num 0) (< line-num (cbuf-line-count cbuf))))
+
 (define (cbuf-position-valid? cbuf line-num x-data)
   "Check if the position is valid within the buffer"
   (and (cbuf-line-valid? cbuf line-num)
        (>= x-data 0)
        (<= x-data (string-length (cbuf-get-line-text cbuf line-num)))))
+
 (define (cbuf-validate-line cbuf line-num operation)
   "Validate line number, raise appropriate condition if invalid"
   (let ([line-count (cbuf-line-count cbuf)])
@@ -190,6 +203,7 @@
                           (requested line-num)
                           (actual (- line-count 1))
                           (reason "Line number beyond buffer end"))))])))
+
 (define (cbuf-validate-position cbuf line-num x-data operation)
   "Validate position, raise appropriate condition if invalid"
   (cbuf-validate-line cbuf line-num operation)
@@ -207,6 +221,7 @@
                           (requested x-data)
                           (actual line-length)
                           (reason "Position beyond line end"))))])))
+
 ;;; =================================================================
 ;;; CONSTRUCTOR
 ;;; =================================================================
@@ -215,7 +230,8 @@
                     (cjk? #f) (initial-text "") (default-grcm 'replacing)
                     (line-ending "\n") (limit-pos #f) (final-newline? #t)
 		    (final-newline-policy 'always-add))
-  "Create a new character buffer with specified configuration."
+  "Create a new character buffer with specified configuration.
+   Now includes bidirectional text support."
   ;; Input validation
   (when (<= tab-size 0)
     (error "tab-size must be positive" tab-size))
@@ -225,14 +241,17 @@
     (error "form-size must be positive" form-size))
   (unless (member default-grcm '(replacing overwriting))
     (error "default-grcm must be 'replacing or 'overwriting" default-grcm))
+  
   ;; Use line splitting that respects different line endings
   (let* ([lines (if (string-null? initial-text) 
                     (list "")
                     (string-split-lines initial-text))]
+         ;; Create text-metrics with bidi support
          [metrics (map (lambda (line) 
                          (compute-text-metrics line tab-size #:cjk? cjk?))
                        lines)]
          [actual-limit-pos (or limit-pos 79)])  ; Default limit if not specified
+    
     (%make-cbuf metrics 0 0 0 0 
                tab-size vert-tab-size form-size 0 actual-limit-pos 'data
                cjk? #f #f 0 0 #f '() '()
@@ -241,7 +260,7 @@
                '()                    ; sgr-stack
                line-ending            ; line-ending
 	       final-newline?         ; final-newline?
-	       'always-add)))         ; final-newline-policy
+	       final-newline-policy))) ; final-newline-policy
 
 ;;; =================================================================
 ;;; DERIVED ACCESSORS
@@ -276,6 +295,10 @@
   "Return the SGR list of the current line (safe)"
   (text-metrics-sgr-list (cbuf-metrics-cur cbuf)))
 
+(define (cbuf-bidi-state-list-cur cbuf)
+  "Return the bidi state list of the current line (safe)"
+  (text-metrics-bidi-state-list (cbuf-metrics-cur cbuf)))
+
 (define (cbuf-get-line-text cbuf n)
   "Return the text of line N (safe)"
   (let ([metrics (cbuf-text-metrics cbuf)])
@@ -288,10 +311,37 @@
   (string-length (cbuf-text-cur cbuf)))
 
 (define (cbuf-text-cur-cell-length cbuf)
-  "Return the number of cells in the current line (safe)"
+  "Return the number of cells in the current line (safe, now bidi-aware)"
   (text-metrics-cell-length (cbuf-metrics-cur cbuf)))
 
 (define (cbuf-text-cur-base-length cbuf)
   "Return the number of base characters in the current line (safe)"
   (text-metrics-string-base-length (cbuf-metrics-cur cbuf)))
 
+;;; =================================================================
+;;; BIDIRECTIONAL TEXT ACCESSORS
+;;; =================================================================
+
+(define (cbuf-get-paragraph-direction cbuf)
+  "Get the paragraph direction for the current line"
+  (text-metrics-get-paragraph-direction (cbuf-metrics-cur cbuf)))
+
+(define (cbuf-get-resolved-levels cbuf)
+  "Get resolved bidi levels for the current line"
+  (text-metrics-get-resolved-levels (cbuf-metrics-cur cbuf)))
+
+(define (cbuf-is-rtl-at-position cbuf x-data)
+  "Check if the character at x-data position is in RTL context"
+  (let* ([metrics (cbuf-metrics-cur cbuf)]
+         [x-index (text-metrics-x-data->x-index metrics x-data)])
+    (if x-index
+        (text-metrics-is-rtl-at-position metrics x-index)
+        #f)))
+
+(define (cbuf-get-bidi-state-at-position cbuf x-data)
+  "Get bidi state at x-data position"
+  (let* ([metrics (cbuf-metrics-cur cbuf)]
+         [x-index (text-metrics-x-data->x-index metrics x-data)])
+    (if x-index
+        (text-metrics-get-bidi-state-at-index metrics x-index)
+        (make-bidi-state 0 'neutral 'none))))
