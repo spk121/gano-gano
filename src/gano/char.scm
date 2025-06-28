@@ -1,12 +1,18 @@
+;;; -*- mode: scheme; coding: utf-8; -*-
+
 ;;; chars.scm - utility functions that operate on single characters
 ;;;
 
 (define-module (gano char)
   #:use-module (gano wcwidth)
-  #:export (char-latin1? char-C0-control? char-control? char-blank?
-			 char-combining-mark? char-graphic?
-			 char-base? char-count-cells
-			 char-get-display-representation-of-control-char))
+  #:export (char-latin1?
+	    char-C0-control?
+	    char-control?
+	    char-blank?
+	    char-combining-mark?
+	    char-graphic?
+	    char-base?))
+
 (define (char-latin1? c)
   "Return #t if C is one of the first 256 codepoints"
   (< (char->integer c) 256))
@@ -37,24 +43,7 @@ tab."
   "Return #t if this is a character than can be the base for a
 combining mark, like an accent."
   (member (char-general-category c)
-	  '(Lu Ll Lt Lm Lo  ; Letters
-               Nd Nl No              ; Numbers
-               Pc Pd Ps Pe Pi Pf Po  ; Punctuation
-               Sm Sc Sk So)))       ; Symbols
-
-(define* (char-count-cells chr x tabSize #:key (cjk? #f))
-  "Number of cells a character CHR at column X would take up"
-  (cond
-   [(eqv? chr #\nul)
-    0]
-   [(eqv? chr #\tab)
-    (- tabSize (modulo x tabSize))]
-   [(char-C0-control? chr)
-    ;; Add 1 for the caret '^'
-    (+ 1 (wcwidth (char-get-display-representation-of-control-char chr)))]
-   [else
-    (wcwidth chr cjk?)]))
-
-(define (char-get-display-representation-of-control-char c)
-  "The character to use when displaying controls in \"^X\" form"
-  (integer->char (+ (char->integer c) 64)))
+	  '(Lu Ll Lt Lm Lo		; Letters
+               Nd Nl No			; Numbers
+               Pc Pd Ps Pe Pi Pf Po	; Punctuation
+               Sm Sc Sk So)))		; Symbols

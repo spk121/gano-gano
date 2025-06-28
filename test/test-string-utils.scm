@@ -1,3 +1,5 @@
+;;; -*- mode: scheme; coding: utf-8; -*-
+
 ;;; Test Suite for Gano String Utilities Module
 ;;; Uses SRFI-64 testing framework
 
@@ -176,39 +178,39 @@
   
   (test-equal "multiple operations (right to left)"
     "hyexlo" (string-apply-operations "hello" 
-                                     '((insert 1 #\y) (update 2 #\x))))
+				      '((insert 1 #\y) (update 2 #\x))))
   
   (test-equal "complex operations sequence"
     "hxabc" (string-apply-operations "hello" 
-                                    '((delete 2 5) (insert 2 "abc") (update 1 #\x)))))
+				     '((delete 2 5) (insert 2 "abc") (update 1 #\x)))))
 
 (test-group "string-insert-multiple"
   (test-equal "insert nothing"
-   "hello" (string-insert-multiple "hello" '()))
+    "hello" (string-insert-multiple "hello" '()))
 
   (test-equal "insert at index 0"
-   "|hello" (string-insert-multiple "hello" '((0 . #\|))))
+    "|hello" (string-insert-multiple "hello" '((0 . #\|))))
 
   (test-equal "insert at index 1"
-   "h|ello" (string-insert-multiple "hello" '((1 . #\|))))
+    "h|ello" (string-insert-multiple "hello" '((1 . #\|))))
 
   (test-equal "insert at index 2"
-   "he|llo" (string-insert-multiple "hello" '((2 . #\|))))
+    "he|llo" (string-insert-multiple "hello" '((2 . #\|))))
 
   (test-equal "insert at index 5"
-   "hello|" (string-insert-multiple "hello" '((5 . #\|))))
+    "hello|" (string-insert-multiple "hello" '((5 . #\|))))
 
   (test-equal "insert at index 0 then 0"
-   "|:hello" (string-insert-multiple "hello" '((0 . #\|) (0 . #\:))))
+    "|:hello" (string-insert-multiple "hello" '((0 . #\|) (0 . #\:))))
 
   (test-equal "insert at index 1 then 0"
-   ":h|ello" (string-insert-multiple "hello" '((1 . #\|) (0 . #\:))))
+    ":h|ello" (string-insert-multiple "hello" '((1 . #\|) (0 . #\:))))
 
   (test-equal "insert at index 2 then 2"
-   "he|:llo" (string-insert-multiple "hello" '((2 . #\|) (2 . #\:))))
+    "he|:llo" (string-insert-multiple "hello" '((2 . #\|) (2 . #\:))))
 
   (test-equal "insert at index 5 then 3"
-   "hel:lo|" (string-insert-multiple "hello" '((5 . #\|) (3 . #\:))))
+    "hel:lo|" (string-insert-multiple "hello" '((5 . #\|) (3 . #\:))))
 
   (test-equal "insert multiple chars"
     "hxelyloz" (string-insert-multiple "hello" '((1 . #\x) (3 . #\y) (5 . #\z))))
@@ -221,35 +223,35 @@
 
 (test-group "string-insert-multiple-errors"
   (test-error "negative index"
-    (string-insert-multiple "hello" '((-1 . #\x))))
+	      (string-insert-multiple "hello" '((-1 . #\x))))
   
   (test-error "multiple negative indices"
-    (string-insert-multiple "hello" '((-1 . #\x) (-2 . #\y)))))
+	      (string-insert-multiple "hello" '((-1 . #\x) (-2 . #\y)))))
 
 (test-group "string-replace-multiple"
   (test-equal "replace multiple ranges"
     "hxyzo " (string-replace-multiple "hello world" 
-                                   '((1 4 "xyz") (6 11 ""))))
+				      '((1 4 "xyz") (6 11 ""))))
 
-   (test-equal "replace adjacent ranges"
+  (test-equal "replace adjacent ranges"
     "habco" (string-replace-multiple "hello" 
-                                    '((1 2 "a") (2 4 "bc")))))
+				     '((1 2 "a") (2 4 "bc")))))
 
 (test-group "string-replace-multiple-errors"
   (test-error "overlapping ranges" 
-    (string-replace-multiple "hello" '((1 3 "xy") (2 4 "zw"))))
+	      (string-replace-multiple "hello" '((1 3 "xy") (2 4 "zw"))))
   
   (test-error "end index out of bounds" 
-    (string-replace-multiple "hello" '((3 10 "xyz"))))
+	      (string-replace-multiple "hello" '((3 10 "xyz"))))
   
   (test-error "negative start index"
-    (string-replace-multiple "hello" '((-1 2 "xyz"))))
+	      (string-replace-multiple "hello" '((-1 2 "xyz"))))
   
   (test-error "start greater than end"
-    (string-replace-multiple "hello" '((3 1 "xyz"))))
+	      (string-replace-multiple "hello" '((3 1 "xyz"))))
   
   (test-error "multiple overlapping ranges"
-    (string-replace-multiple "hello" '((1 3 "a") (2 4 "b") (5 6 "c")))))
+	      (string-replace-multiple "hello" '((1 3 "a") (2 4 "b") (5 6 "c")))))
 
 ;;; =================================================================
 ;;; SAFE ACCESSORS TESTS
@@ -398,7 +400,7 @@
 (test-group "line-ending-detection"
   (test-group "string-detect-line-ending"
     (test-assert "string-detect-line-ending is callable"
-                 (procedure? string-detect-line-ending))
+      (procedure? string-detect-line-ending))
     
     ;; Basic functionality tests
     (test-equal "Unix line ending" "\n" (string-detect-line-ending "line1\nline2\n"))
@@ -419,7 +421,7 @@
     ;; Tie-breaking priority (LF wins ties)
     (test-equal "LF vs CRLF tie goes to LF" "\n" (string-detect-line-ending "a\nb\r\nc"))
     (test-equal "Complex tie scenario" "\n" (string-detect-line-ending "a\nb\r\nc\rd\u2028e\u2029f"))))
-    
+
 
 ;;; =================================================================
 ;;; UNICODE-AWARE UTILITIES TESTS
@@ -428,27 +430,27 @@
 (test-group "string-map-with-index"
   (test-equal "map with index (uppercase if even index)"
     "HeLlO" (string-map-with-index 
-             (lambda (char index)
-               (if (even? index)
-                   (char-upcase char)
-                   char))
-             "hello"))
+	     (lambda (char index)
+	       (if (even? index)
+		   (char-upcase char)
+		   char))
+	     "hello"))
   
   (test-equal "map with index (add index to char code)"
     "hfnos" (string-map-with-index 
-             (lambda (char index)
-               (integer->char (+ (char->integer char) index)))
-             "hello"))
+	     (lambda (char index)
+	       (integer->char (+ (char->integer char) index)))
+	     "hello"))
   
   (test-equal "map empty string"
     "" (string-map-with-index 
-        (lambda (char index) char)
-        ""))
+	(lambda (char index) char)
+	""))
   
   (test-equal "map single char"
     "H" (string-map-with-index 
-         (lambda (char index) (char-upcase char))
-         "h")))
+	 (lambda (char index) (char-upcase char))
+	 "h")))
 
 ;;; =================================================================
 ;;; EDGE CASES AND STRESS TESTS
@@ -485,4 +487,9 @@
 ;;; Run the tests when this file is executed
 (when (batch-mode?)
   (test-runner-current (test-runner-simple)))
-  
+
+;; Local Variables:
+;; eval: (put 'test-group 'scheme-indent-function 1)
+;; eval: (put 'test-assert 'scheme-indent-function 1)
+;; eval: (put 'test-equal 'scheme-indent-function 1)
+;; End:

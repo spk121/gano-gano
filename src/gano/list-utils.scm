@@ -329,7 +329,9 @@
         ;; Sort operations by position (right to left) using stable sort
         ;; to preserve original order for operations at the same position
         (stable-sort operations (lambda (a b) 
-                                 (let ([pos-a (cadr a)]
-                                       [pos-b (cadr b)])
-                                   (> pos-a pos-b))))))
-                              
+				  (let ([pos-a (cadr a)]
+					[pos-b (cadr b)])
+				    (cond
+				     [(> pos-a pos-b) #t]
+				     [(< pos-a pos-b) #f]
+				     [else #t])))))) ; For same position, keep original order, then reverse

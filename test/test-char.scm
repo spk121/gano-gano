@@ -1,3 +1,8 @@
+;;; -*- mode: scheme; coding: utf-8; -*-
+
+;;;; Copyright (C) 1996-2025 Michael L. Gran
+;;;; License GPL 3+
+
 ;;; Test suite for Gano Char Utilities Module
 ;;; Using SRFI-64 testing framework
 
@@ -196,155 +201,10 @@
     (not (char-base? #\newline))))
 
 ;;; =================================================================
-;;; CHAR-COUNT-CELLS TESTS
-;;; =================================================================
-
-;;; Tests for char-count-cells
-(test-group "char-count-cells"
-  ;; Test NUL character
-  (test-equal "NUL takes 0 cells"
-    0
-    (char-count-cells #\nul 0 8))
-  
-  ;; Test tab character at different positions
-  (test-equal "tab at column 0 with tabsize 8"
-    8
-    (char-count-cells #\tab 0 8))
-  
-  (test-equal "tab at column 1 with tabsize 8"
-    7
-    (char-count-cells #\tab 1 8))
-  
-  (test-equal "tab at column 4 with tabsize 8"
-    4
-    (char-count-cells #\tab 4 8))
-  
-  (test-equal "tab at column 7 with tabsize 8"
-    1
-    (char-count-cells #\tab 7 8))
-  
-  (test-equal "tab at column 8 with tabsize 8"
-    8
-    (char-count-cells #\tab 8 8))
-  
-  (test-equal "tab at column 0 with tabsize 4"
-    4
-    (char-count-cells #\tab 0 4))
-  
-  (test-equal "tab at column 2 with tabsize 4"
-    2
-    (char-count-cells #\tab 2 4))
-  
-  ;; Test C0 control characters (excluding NUL and tab)
-  (test-equal "SOH (^A) takes 2 cells"
-    2
-    (char-count-cells (integer->char 1) 0 8))
-  
-  (test-equal "newline (^J) takes 2 cells"
-    2
-    (char-count-cells #\newline 0 8))
-  
-  (test-equal "carriage return (^M) takes 2 cells"
-    2
-    (char-count-cells #\return 0 8))
-  
-  (test-equal "ESC (^[) takes 2 cells"
-    2
-    (char-count-cells (integer->char 27) 0 8))
-  
-  ;; Test regular ASCII characters
-  (test-equal "space takes 1 cell"
-    1
-    (char-count-cells #\space 0 8))
-  
-  (test-equal "ASCII 'A' takes 1 cell"
-    1
-    (char-count-cells #\A 0 8))
-  
-  (test-equal "digit '5' takes 1 cell"
-    1
-    (char-count-cells #\5 0 8))
-  
-  ;; Test CJK parameter (if wcwidth supports it)
-  (test-equal "regular char with CJK disabled"
-    1
-    (char-count-cells #\A 0 8 #:cjk? #f))
-  
-  (test-equal "regular char with CJK enabled"
-    1
-    (char-count-cells #\A 0 8 #:cjk? #t))
-  
-  ;; Test edge cases
-  (test-equal "character at different column positions gives same result"
-    1
-    (char-count-cells #\A 5 8))
-  
-  (test-equal "character with different tab sizes gives same result"
-    1
-    (char-count-cells #\A 0 4)))
-
-;;; =================================================================
-;;; CHAR-GET-DISPLAY-REPRESENTATION-OF-CONTROL-CHAR TESTS
-;;; =================================================================
-
-;;; Tests for char-get-display-representation-of-control-char
-(test-group "char-get-display-representation-of-control-char"
-  (test-equal "NUL becomes @"
-    #\@
-    (char-get-display-representation-of-control-char #\nul))
-  
-  (test-equal "SOH becomes A"
-    #\A
-    (char-get-display-representation-of-control-char (integer->char 1)))
-  
-  (test-equal "tab becomes I"
-    #\I
-    (char-get-display-representation-of-control-char #\tab))
-  
-  (test-equal "newline becomes J"
-    #\J
-    (char-get-display-representation-of-control-char #\newline))
-  
-  (test-equal "carriage return becomes M"
-    #\M
-    (char-get-display-representation-of-control-char #\return))
-  
-  (test-equal "ESC becomes ["
-    #\[
-    (char-get-display-representation-of-control-char (integer->char 27)))
-  
-  (test-equal "US (31) becomes _"
-    #\_
-    (char-get-display-representation-of-control-char (integer->char 31)))
-  
-  ;; Test the mathematical relationship
-  (test-assert "control char + 64 gives display char"
-    (let ([ctrl-char (integer->char 5)])  ; ENQ
-      (equal? (char-get-display-representation-of-control-char ctrl-char)
-              (integer->char (+ (char->integer ctrl-char) 64)))))
-  
-  ;; Test all C0 control characters
-  (test-assert "all C0 controls map to printable characters"
-    (every (lambda (i)
-             (let* ([ctrl-char (integer->char i)]
-                    [display-char (char-get-display-representation-of-control-char ctrl-char)])
-               (and (char? display-char)
-                    (>= (char->integer display-char) 64)
-                    (<= (char->integer display-char) 95))))
-           (iota 32))))  ; 0 through 31
-
-;;; =================================================================
 ;;; INTEGRATION TESTS
 ;;; =================================================================
 
 (test-group "integration-tests"
-  ;; Test that char-count-cells uses char-get-display-representation-of-control-char correctly
-  (test-equal "control character cell count includes caret"
-    2
-    (let* ([ctrl-char (integer->char 5)]  ; ENQ
-           [display-char (char-get-display-representation-of-control-char ctrl-char)])
-      (char-count-cells ctrl-char 0 8)))
-  
   ;; Test character classification consistency
   (test-assert "all C0 controls are also controls"
     (every (lambda (i)
@@ -367,8 +227,8 @@
   ;; Test combining marks are not base characters
   (test-assert "combining marks are not base characters"
     (let ([combining-chars (list (integer->char #x0301)  ; combining acute
-                                (integer->char #x0300)  ; combining grave
-                                (integer->char #x0308))])  ; combining diaeresis
+                                 (integer->char #x0300)  ; combining grave
+                                 (integer->char #x0308))])  ; combining diaeresis
       (every (lambda (c)
                (if (char-combining-mark? c)
                    (not (char-base? c))
@@ -392,25 +252,12 @@
     (char-C0-control? (integer->char 31)))
   
   (test-assert "char 32 is first non-C0 control character"
-    (not (char-C0-control? (integer->char 32))))
+    (not (char-C0-control? (integer->char 32)))))
   
-  ;; Test tab behavior at tab boundaries
-  (test-equal "tab at exact tab boundary"
-    8
-    (char-count-cells #\tab 16 8))
-  
-  (test-equal "tab just before tab boundary"
-    1
-    (char-count-cells #\tab 15 8))
-  
-  ;; Test with different tab sizes
-  (test-equal "tab with tabsize 1"
-    1
-    (char-count-cells #\tab 5 1))
-  
-  (test-equal "tab with large tabsize"
-    16
-    (char-count-cells #\tab 0 16)))
-
 ;;; Test suite cleanup
 (test-end "gano-char")
+
+;; Local Variables:
+;; eval: (put 'test-group 'scheme-indent-function 1)
+;; eval: (put 'test-assert 'scheme-indent-function 1)
+;; End:
