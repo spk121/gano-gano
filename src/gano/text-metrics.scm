@@ -25,182 +25,87 @@
   #:use-module (srfi srfi-9)        ; record types
   #:use-module (srfi srfi-1)        ; list utilities
   #:use-module (srfi srfi-11)       ; let-values
+  #:use-module (gano binary-search) ; binary-search
   #:use-module (gano list-utils)    ; immutable list operations
   #:use-module (gano string-utils)  ; immutable string operations
   #:use-module (gano wcwidth)       ; wcwidth function
   #:use-module (gano char)          ; char-combining-mark? function
   #:use-module (gano rendering)     ; SGR support
-  #:use-module (gano uax9-bidi)     ; Bidirectional text support
+  #:use-module (gano uax9-core)     ; Bidirectional text support
   #:export (
-    ;; Binary search utilities
-    binary-search
-    binary-search-floor
-    binary-search-ceiling
-    
-    ;; Enhanced text metrics record type
-    <text-metrics>
-    make-text-metrics
-    text-metrics?
-    compute-text-metrics
-    compute-text-metrics-with-sgr
-    compute-text-metrics-with-sgr-and-bidi
-    
-    ;; Accessors
-    text-metrics-string
-    text-metrics-sgr-list
-    text-metrics-bidi-state-list
-    text-metrics-base-indices
-    text-metrics-cell-positions
-    text-metrics-tabsize
-    text-metrics-cjk?
-    
-    ;; Core functionality
-    text-metrics-string-base
-    text-metrics-string-base-length
-    text-metrics-string-base-indices
-    text-metrics-x-index->x-data
-    text-metrics-x-index->x-cell
-    text-metrics-x-data->x-index
-    text-metrics-x-data->x-cell
-    text-metrics-x-cell->x-index
-    text-metrics-x-cell->x-data
-    text-metrics-cell-length
-    
-    ;; SGR-specific operations (immutable)
-    text-metrics-get-sgr-at-index
-    text-metrics-get-sgr-at-data
-    text-metrics-get-sgr-at-cell
-    text-metrics-set-sgr-at-index
-    text-metrics-set-sgr-at-data
-    text-metrics-set-sgr-range
-    text-metrics-copy-sgr-range
-    
-    ;; Bidi State operations (immutable)
-    text-metrics-get-bidi-state-at-index
-    text-metrics-get-bidi-state-at-data
-    text-metrics-get-bidi-state-at-cell
-    text-metrics-set-bidi-state-at-index
-    text-metrics-set-bidi-state-at-data
-    text-metrics-set-bidi-state-range
-    text-metrics-copy-bidi-state-range
-    text-metrics-recompute-bidi-states
-    
-    ;; SGR and Bidi-aware text modification (immutable)
-    text-metrics-insert-char-with-sgr-and-bidi
-    text-metrics-insert-string-with-sgr-and-bidi
-    text-metrics-delete-range
-    text-metrics-replace-range
-    
-    ;; SGR and Bidi inheritance and propagation (immutable)
-    text-metrics-propagate-sgr
-    text-metrics-propagate-bidi-state
-    text-metrics-inherit-sgr-for-combining
-    text-metrics-inherit-bidi-state-for-combining
-    text-metrics-default-sgr-for-range
-    text-metrics-default-bidi-state-for-range
-    
-    ;; Bidirectional text utilities
-    text-metrics-split-at-bidi-boundary
-    text-metrics-get-paragraph-direction
-    text-metrics-get-resolved-levels
-    text-metrics-is-rtl-at-position
-    
-    ;; Rendering with SGR and Bidi awareness
-    text-metrics-render-line             ; The string plus the full list of <sgr>
-    text-metrics-render-line-string-only ; just the strings
-    text-metrics-render-line-with-sgr    ; The string split into spans
-    text-metrics-get-rendered-spans))
-
-;;; =================================================================
-;;; Binary Search Utilities (unchanged)
-;;; =================================================================
-
-(define (binary-search lst value mode)
-  "Binary search for VALUE in sorted list LST with specified MODE.
-   Returns (index . closest-value) where behavior depends on MODE:
-   
-   MODE 'floor (or 'leq):
-   - index: position of exact match, or closest entry ≤ value, or -1
-   - closest-value: the actual value at that position, or #f if index is -1
-   - If first entry > value, returns (-1 . #f)
-   
-   MODE 'ceiling (or 'geq):
-   - index: position of exact match, or closest entry ≥ value, or (length lst)
-   - closest-value: the actual value at that position, or #f if index is (length lst)"
-  
-  (let ([len (length lst)])
-    (cond
-     ;; Empty list
-     [(null? lst) 
-      (cons (if (eq? mode 'ceiling) 0 -1) #f)]
-     
-     ;; Single element
-     [(= len 1)
-      (let ([single-val (car lst)])
-        (cond
-         [(= single-val value) (cons 0 single-val)]
-         [(eq? mode 'floor)
-          (if (<= single-val value) (cons 0 single-val) (cons -1 #f))]
-         [else ; ceiling mode
-          (if (>= single-val value) (cons 0 single-val) (cons 1 #f))]))]
-     
-     ;; Handle edge cases based on mode
-     [(eq? mode 'floor)
-      (cond
-       [(> (car lst) value) (cons -1 #f)]
-       [(<= (last lst) value) (cons (- len 1) (last lst))]
-       [else (binary-search-core lst value mode len)])]
-     
-     [else ; ceiling mode  
-      (cond
-       [(< (last lst) value) (cons len #f)]
-       [(>= (car lst) value) (cons 0 (car lst))]
-       [else (binary-search-core lst value mode len)])])))
-
-(define (binary-search-core lst value mode len)
-  "Core binary search implementation."
-  (let loop ([low 0]
-             [high (- len 1)]
-             [best-idx (if (eq? mode 'floor) -1 len)]
-             [best-val #f])
-    
-    (if (> low high)
-        ;; Search complete - return best match found
-        (cons best-idx best-val)
-        
-        ;; Continue searching
-        (let* ([mid (quotient (+ low high) 2)]
-               [mid-val (list-ref lst mid)])
-          
-          (cond
-           ;; Exact match found
-           [(= mid-val value)
-            (cons mid mid-val)]
-           
-           ;; Mid value is less than target
-           [(< mid-val value)
-            (if (eq? mode 'floor)
-                ;; Floor: this is a candidate, search right
-                (loop (+ mid 1) high mid mid-val)
-                ;; Ceiling: search right for something ≥ target
-                (loop (+ mid 1) high best-idx best-val))]
-           
-           ;; Mid value is greater than target
-           [else
-            (if (eq? mode 'floor)
-                ;; Floor: search left for something ≤ target
-                (loop low (- mid 1) best-idx best-val)
-                ;; Ceiling: this is a candidate, search left
-                (loop low (- mid 1) mid mid-val))])))))
-
-;; Convenience functions with descriptive names
-(define (binary-search-floor lst value)
-  "Find largest value ≤ target, or -1 if none exists."
-  (binary-search lst value 'floor))
-
-(define (binary-search-ceiling lst value)
-  "Find smallest value ≥ target, or (length lst) if none exists."
-  (binary-search lst value 'ceiling))
+	    ;; Enhanced text metrics record type
+	    <text-metrics>
+	    make-text-metrics
+	    text-metrics?
+	    compute-text-metrics
+	    compute-text-metrics-with-sgr
+	    compute-text-metrics-with-sgr-and-bidi
+	    
+	    ;; Accessors
+	    text-metrics-string
+	    text-metrics-sgr-list
+	    text-metrics-bidi-state-list
+	    text-metrics-base-indices
+	    text-metrics-cell-positions
+	    text-metrics-tabsize
+	    text-metrics-cjk?
+	    
+	    ;; Core functionality
+	    text-metrics-string-base
+	    text-metrics-string-base-length
+	    text-metrics-string-base-indices
+	    text-metrics-x-index->x-data
+	    text-metrics-x-index->x-cell
+	    text-metrics-x-data->x-index
+	    text-metrics-x-data->x-cell
+	    text-metrics-x-cell->x-index
+	    text-metrics-x-cell->x-data
+	    text-metrics-cell-length
+	    
+	    ;; SGR-specific operations (immutable)
+	    text-metrics-get-sgr-at-index
+	    text-metrics-get-sgr-at-data
+	    text-metrics-get-sgr-at-cell
+	    text-metrics-set-sgr-at-index
+	    text-metrics-set-sgr-at-data
+	    text-metrics-set-sgr-range
+	    text-metrics-copy-sgr-range
+	    
+	    ;; Bidi State operations (immutable)
+	    text-metrics-get-bidi-state-at-index
+	    text-metrics-get-bidi-state-at-data
+	    text-metrics-get-bidi-state-at-cell
+	    text-metrics-set-bidi-state-at-index
+	    text-metrics-set-bidi-state-at-data
+	    text-metrics-set-bidi-state-range
+	    text-metrics-copy-bidi-state-range
+	    text-metrics-recompute-bidi-states
+	    
+	    ;; SGR and Bidi-aware text modification (immutable)
+	    text-metrics-insert-char-with-sgr-and-bidi
+	    text-metrics-insert-string-with-sgr-and-bidi
+	    text-metrics-delete-range
+	    text-metrics-replace-range
+	    
+	    ;; SGR and Bidi inheritance and propagation (immutable)
+	    text-metrics-propagate-sgr
+	    text-metrics-propagate-bidi-state
+	    text-metrics-inherit-sgr-for-combining
+	    text-metrics-inherit-bidi-state-for-combining
+	    text-metrics-default-sgr-for-range
+	    text-metrics-default-bidi-state-for-range
+	    
+	    ;; Bidirectional text utilities
+	    text-metrics-split-at-bidi-boundary
+	    text-metrics-get-paragraph-direction
+	    text-metrics-get-resolved-levels
+	    text-metrics-is-rtl-at-position
+	    
+	    ;; Rendering with SGR and Bidi awareness
+	    text-metrics-render-line             ; The string plus the full list of <sgr>
+	    text-metrics-render-line-string-only ; just the strings
+	    text-metrics-render-line-with-sgr    ; The string split into spans
+	    text-metrics-get-rendered-spans))
 
 ;;; =================================================================
 ;;; Enhanced Text Metrics Record Type with Bidi Support
@@ -261,11 +166,27 @@
            (set! base-indices (append base-indices (list i))))))
      str)
     
-    (make-text-metrics str sgr-list bidi-state-list base-indices cell-positions tabsize cjk?))
+    (make-text-metrics str sgr-list bidi-state-list base-indices cell-positions tabsize cjk?)))
 
 ;;; =================================================================
 ;;; Bidirectional Cell Position Computation
 ;;; =================================================================
+
+(define (compute-cell-positions-for-runs str runs tabsize cjk? base-level)
+  "Compute cell positions for bidi runs using stack-based algorithm.
+   Handles nested RTL/LTR runs correctly."
+  (let* ([str-len (string-length str)]
+         [positions (make-vector (+ str-len 1) 0)])  ; +1 for final position
+    
+    ;; Process runs in logical order, but assign positions based on visual order
+    (let ([run-infos (compute-run-visual-info str runs tabsize cjk?)])
+      ;; Sort runs by visual position for assignment
+      (let ([sorted-runs (sort run-infos (lambda (a b) (< (cadddr a) (cadddr b))))])
+        ;; Assign positions based on visual order
+        (assign-positions-to-runs str sorted-runs positions tabsize cjk?)))
+    
+    ;; Convert vector to list
+    (vector->list positions)))
 
 (define* (compute-bidi-aware-cell-positions str tabsize cjk?)
   "Compute visual cell positions for each character considering bidirectional text layout.
@@ -306,89 +227,121 @@
          ;; Same level - continue current run
          [else (loop (+ i 1) current-level run-start runs)]))))
 
-(define (compute-cell-positions-for-runs str runs tabsize cjk? base-level)
-  "Compute cell positions for bidi runs using stack-based algorithm.
-   Handles nested RTL/LTR runs correctly."
-  (let ([str-len (string-length str)]
-        [positions (make-vector (+ str-len 1) 0)])  ; +1 for final position
-    
-    ;; Process runs in logical order, but assign positions based on visual order
-    (let ([run-infos (compute-run-visual-info str runs tabsize cjk?)])
-      ;; Sort runs by visual position for assignment
-      (let ([sorted-runs (sort run-infos (lambda (a b) (< (cadddr a) (cadddr b))))])
-        ;; Assign positions based on visual order
-        (assign-positions-to-runs str sorted-runs positions tabsize cjk?)))
-    
-    ;; Convert vector to list
-    (vector->list positions)))
+#;(define (find-bidi-runs-with-context str levels)
+  "Find BIDI runs considering both levels and embedding context.
+   Returns list of (start-index end-index level direction) tuples."
+  (if (null? levels)
+      '()
+      (let loop ([i 0]
+                 [current-level (car levels)]
+                 [current-direction (get-effective-direction str levels 0)]
+                 [run-start 0]
+                 [runs '()])
+        (cond
+         ;; End of string - add final run
+         [(>= i (length levels))
+          (reverse (cons (list run-start i current-level current-direction) runs))]
+         
+         ;; Check if we need to start a new run
+         [else
+          (let ([new-level (list-ref levels i)]
+                [new-direction (get-effective-direction str levels i)])
+            (cond
+             ;; Level or direction changed - start new run
+             [(or (not (= new-level current-level))
+                  (not (eq? new-direction current-direction)))
+              (loop (+ i 1) new-level new-direction i 
+                    (cons (list run-start i current-level current-direction) runs))]
+             
+             ;; Same level and direction - continue current run
+             [else (loop (+ i 1) current-level current-direction run-start runs)]))]))))
 
 (define (compute-run-visual-info str runs tabsize cjk?)
   "Compute visual information for each run: (start end level visual-start width).
-   Uses stack-based algorithm to handle nested runs."
-  (let ([visual-cursor 0]
-        [run-stack '()]
-        [run-infos '()])
-    
-    ;; Process runs in embedding level order (deepest first for RTL)
-    (let ([level-sorted-runs (sort runs (lambda (a b) 
-                                         (let ([level-a (caddr a)]
-                                               [level-b (caddr b)])
-                                           (> level-a level-b))))])
-      
-      ;; Group runs by level and process each level
-      (let ([level-groups (group-runs-by-level level-sorted-runs)])
-        (for-each (lambda (level-group)
-                    (let ([level (caar level-group)])
-                      (if (odd? level)
-                          ;; RTL level - process runs right to left
-                          (process-rtl-level-runs str level-group run-infos tabsize cjk?)
-                          ;; LTR level - process runs left to right  
-                          (process-ltr-level-runs str level-group run-infos tabsize cjk?))))
-                  level-groups))
-      
-      run-infos)))
-
-(define (group-runs-by-level runs)
-  "Group runs by their embedding level."
-  (let ([groups '()])
+   Assigns sequential visual positions to runs in logical order."
+  
+  ;; Step 1: Collect all run info with widths but no visual positions yet
+  (let ([all-run-infos '()])
+    ;; Process all runs in logical order (not sorted by level)
     (for-each (lambda (run)
-                (let ([level (caddr run)])
-                  (let ([existing-group (assoc level groups)])
-                    (if existing-group
-                        (set-cdr! existing-group (cons run (cdr existing-group)))
-                        (set! groups (cons (list level run) groups))))))
+                (let* ([start (car run)]
+                       [end (cadr run)]
+                       [level (caddr run)]
+                       [run-width (compute-run-width str start end tabsize cjk?)])
+                  (set! all-run-infos (append all-run-infos 
+                                              (list (list start end level 0 run-width))))))
               runs)
-    ;; Sort groups by level (highest first) and reverse run order within each group
-    (map (lambda (group) 
-           (cons (car group) (reverse (cdr group))))
-         (sort groups (lambda (a b) (> (car a) (car b)))))))
+    
+    ;; Step 2: Assign sequential visual positions
+    (let ([visual-cursor 0])
+      (map (lambda (run-info)
+             (let* ([start (car run-info)]
+                    [end (cadr run-info)]
+                    [level (caddr run-info)]
+                    [width (car (cddddr run-info))]
+                    [current-visual-start visual-cursor])
+               ;; Update visual cursor for next run
+               (set! visual-cursor (+ visual-cursor width))
+               ;; Return run info with correct visual position
+               (list start end level current-visual-start width)))
+           all-run-infos))))
 
-(define (process-ltr-level-runs str runs run-infos tabsize cjk?)
-  "Process LTR runs in logical order (left to right)."
-  (let ([visual-cursor 0])
+#;(define (group-runs-by-level runs)
+  "Group runs by their embedding level."
+  (let loop ([remaining-runs runs]
+             [groups '()])
+    (if (null? remaining-runs)
+        ;; Sort groups by level (highest first) and reverse run order within each group
+        (map (lambda (group) 
+               (cons (car group) (reverse (cdr group))))
+             (sort groups (lambda (a b) (> (car a) (car b)))))
+        (let* ([run (car remaining-runs)]
+               [level (caddr run)]
+               [existing-group (assoc level groups)])
+          (if existing-group
+              ;; Add run to existing group
+              (let ([updated-groups 
+                     (map (lambda (group)
+                            (if (= (car group) level)
+                                (cons level (cons run (cdr group)))
+                                group))
+                          groups)])
+                (loop (cdr remaining-runs) updated-groups))
+              ;; Create new group
+              (loop (cdr remaining-runs) 
+                    (cons (list level run) groups)))))))
+
+#;(define (process-ltr-level-runs str runs tabsize cjk?)
+  "Process LTR runs in logical order (left to right).
+   Returns list of run-info tuples."
+  ;; Don't reset visual-cursor for each level - maintain global positioning
+  (let ([run-infos '()])
     (for-each (lambda (run)
                 (let* ([start (car run)]
                        [end (cadr run)]
                        [level (caddr run)]
                        [run-width (compute-run-width str start end tabsize cjk?)])
-                  (set! run-infos (cons (list start end level visual-cursor run-width) run-infos))
-                  (set! visual-cursor (+ visual-cursor run-width))))
-              runs)))
+                  ;; Each run will get its visual position assigned later
+                  ;; For now, just record the run info with width
+                  (set! run-infos (append run-infos (list (list start end level 0 run-width))))))
+              runs)
+    run-infos))
 
-(define (process-rtl-level-runs str runs run-infos tabsize cjk?)
-  "Process RTL runs in reverse logical order (right to left)."
-  (let* ([total-width (apply + (map (lambda (run)
-                                     (compute-run-width str (car run) (cadr run) tabsize cjk?))
-                                   runs))]
-         [visual-cursor total-width])
+#;(define (process-rtl-level-runs str runs tabsize cjk?)
+  "Process RTL runs in reverse logical order (right to left).
+   Returns list of run-info tuples."
+  ;; Don't reset visual-cursor for each level - maintain global positioning
+  (let ([run-infos '()])
     (for-each (lambda (run)
                 (let* ([start (car run)]
                        [end (cadr run)]
                        [level (caddr run)]
                        [run-width (compute-run-width str start end tabsize cjk?)])
-                  (set! visual-cursor (- visual-cursor run-width))
-                  (set! run-infos (cons (list start end level visual-cursor run-width) run-infos))))
-              (reverse runs)))) ; Process in reverse order for RTL
+                  ;; Each run will get its visual position assigned later
+                  ;; For now, just record the run info with width
+                  (set! run-infos (append run-infos (list (list start end level 0 run-width))))))
+              runs)
+    run-infos))
 
 (define (compute-run-width str start end tabsize cjk?)
   "Compute the total width in cells for a run of characters."
@@ -401,13 +354,16 @@
            [(char=? ch #\tab)
             ;; Tab width depends on current position
             (let ([next-tab-stop (* tabsize (+ (quotient width tabsize) 1))])
-              (loop (+ i 1) next-tab-stop))]
+	      (loop (+ i 1) next-tab-stop))]
            [(char-combining-mark? ch)
             ;; Combining marks don't add width
             (loop (+ i 1) width)]
            [else
             ;; Regular character
-            (loop (+ i 1) (+ width (wcwidth ch cjk?)))])))))
+            (loop (+ i 1) (+ width
+			     ;; Need the max because control chars have
+			     ;; wcwidth = -1
+			     (max 0 (wcwidth ch cjk?))))])))))
 
 (define (assign-positions-to-runs str run-infos positions tabsize cjk?)
   "Assign cell positions to characters based on computed run visual positions."
@@ -416,39 +372,219 @@
                     [end (cadr run-info)]
                     [level (caddr run-info)]
                     [visual-start (cadddr run-info)])
+                ;; Direction is determined by embedding level: even=LTR, odd=RTL
                 (if (odd? level)
-                    ;; RTL run - assign positions right to left within the run
+                    ;; RTL run
                     (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
-                    ;; LTR run - assign positions left to right within the run
+                    ;; LTR run  
                     (assign-ltr-run-positions str start end visual-start positions tabsize cjk?))))
             run-infos)
   
   ;; Set final position (after all characters)
-  (let ([final-pos (apply max (map (lambda (run-info)
-                                    (+ (cadddr run-info) (car (cddddr run-info))))
-                                  run-infos))])
+  (let ([final-pos (if (null? run-infos)
+                       0
+                       (apply max (map (lambda (run-info)
+                                         (+ (cadddr run-info) (car (cddddr run-info))))
+                                       run-infos)))])
     (vector-set! positions (string-length str) final-pos)))
 
+#;(define (assign-positions-to-runs str run-infos positions tabsize cjk?)
+  "Assign cell positions to characters based on computed run visual positions."
+  (for-each (lambda (run-info)
+              (let ([start (car run-info)]
+                    [end (cadr run-info)]
+                    [level (caddr run-info)]
+                    [visual-start (cadddr run-info)])
+		(let ([effective-direction (get-effective-direction str level start)])
+		  (pk 'assign-positions 'effective-direction effective-direction)
+		  (if (eq? effective-direction 'rtl)
+                      ;; RTL run - assign positions right to left within the run
+		      (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
+		      ;; else
+                      ;; LTR run - assign positions left to right within the run
+		      (assign-ltr-run-positions str start end visual-start positions tabsize cjk?)))))	
+            run-infos)
+  
+  ;; Set final position (after all characters)
+  (let ([final-pos (if (null? run-infos)
+                       0  ; Default to 0 if no runs
+                       (apply max (map (lambda (run-info)
+                                         (+ (cadddr run-info) (car (cddddr run-info))))
+                                       run-infos)))])
+    (vector-set! positions (string-length str) final-pos)))
+
+
+(define (find-next-grapheme-boundary str start-idx)
+  "Find the end index of the grapheme cluster starting at start-idx.
+   A grapheme is a base character followed by up to 4 combining marks."
+  (if (>= start-idx (string-length str))
+      start-idx
+      (let ([base-char (string-ref str start-idx)])
+        (if (char-combining-mark? base-char)
+            ;; If we start on a combining mark, just return next position
+            (+ start-idx 1)
+            ;; Base character - look for following combining marks
+            (let loop ([i (+ start-idx 1)]
+                       [combining-count 0])
+              (cond
+               ;; End of string
+               [(>= i (string-length str)) i]
+               ;; Hit maximum combining marks (4)
+               [(>= combining-count 4) i]
+               ;; Next character is not combining mark
+               [(not (char-combining-mark? (string-ref str i))) i]
+               ;; Next character is combining mark - continue
+               [else (loop (+ i 1) (+ combining-count 1))]))))))
+
 (define (assign-ltr-run-positions str start end visual-start positions tabsize cjk?)
-  "Assign positions for an LTR run (left to right)."
+  "Assign positions for an LTR run (left to right), handling grapheme clusters."
+  (pk 'assign-ltr 'str str 'start start 'end end)
   (let loop ([i start]
              [current-pos visual-start])
     (when (< i end)
       (let ([ch (string-ref str i)])
-        (vector-set! positions i current-pos)
         (cond
          [(char=? ch #\tab)
+          ;; Tab character
+          (vector-set! positions i current-pos)
           (let ([next-tab-stop (* tabsize (+ (quotient current-pos tabsize) 1))])
             (loop (+ i 1) next-tab-stop))]
+         
          [(char-combining-mark? ch)
-          ;; Combining marks stay at same position as base character
-          (loop (+ i 1) current-pos)]
+          ;; Combining mark - should stay at current position
+          (vector-set! positions i current-pos)
+          (loop (+ i 1) current-pos)]  ; Don't advance cursor
+         
          [else
-          ;; Regular character
-          (loop (+ i 1) (+ current-pos (wcwidth ch cjk?)))])))))
+          ;; Base character - process entire grapheme cluster
+          (let ([grapheme-end (find-next-grapheme-boundary str i)])
+            ;; Set all characters in the grapheme to the same position
+            (let inner-loop ([j i])
+              (when (< j grapheme-end)
+                (vector-set! positions j current-pos)
+                (inner-loop (+ j 1))))
+            ;; Advance cursor by the width of the base character only
+            (let ([char-width (max 0 (wcwidth ch cjk?))])
+              (loop grapheme-end (+ current-pos char-width))))])))))
 
 (define (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
-  "Assign positions for an RTL run (right to left)."
+  "Assign positions for an RTL run (right to left), handling grapheme clusters."
+  ;; Use same logic as LTR but with two key changes:
+  ;; 1. Decrement position instead of increment (moves left)
+  ;; 2. Add run width to all positions at the end (shifts everything right)
+  (pk 'assign-rtl 'str str 'start start 'end end)
+  (let ([run-width (compute-run-width str start end tabsize cjk?)])
+    ;; First pass: assign positions moving leftward (like LTR but backwards)
+    (let loop ([i start]
+               [current-pos 0])  ; Start at 0, we'll adjust later
+      (when (< i end)
+        (let ([ch (string-ref str i)])
+          (cond
+           [(char=? ch #\tab)
+            ;; Tab character
+            (vector-set! positions i current-pos)
+            (let ([next-tab-stop (* tabsize (+ (quotient (abs current-pos) tabsize) 1))])
+              (loop (+ i 1) (- current-pos next-tab-stop)))]
+           
+           [(char-combining-mark? ch)
+            ;; Combining mark - should stay at current position
+            (vector-set! positions i current-pos)
+            (loop (+ i 1) current-pos)]  ; Don't move position
+           
+           [else
+            ;; Base character - process entire grapheme cluster
+            (let ([grapheme-end (find-next-grapheme-boundary str i)])
+              ;; Set all characters in the grapheme to the same position
+              (let inner-loop ([j i])
+                (when (< j grapheme-end)
+                  (vector-set! positions j current-pos)
+                  (inner-loop (+ j 1))))
+              ;; Move LEFT by the width of the base character
+              (let ([char-width (max 0 (wcwidth ch cjk?))])
+                (loop grapheme-end (- current-pos char-width))))]))))
+    
+    ;; Second pass: shift all positions right by (visual-start + run-width)
+    (let adjust-loop ([i start])
+      (when (< i end)
+        (let ([old-pos (vector-ref positions i)])
+	  (pk 'adjust 'i i 'old (vector-ref positions i))
+          (vector-set! positions i (+ visual-start run-width old-pos -1))
+	  (pk 'adjust 'i i 'new (vector-ref positions i))
+          (adjust-loop (+ i 1)))))))
+
+#;(define (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
+  "Assign positions for an RTL run (right to left), handling grapheme clusters."
+  ;; For RTL, we need to assign positions from right to left within the run
+  ;; First compute total width, then assign from right to left
+  (let ([run-width (compute-run-width str start end tabsize cjk?)])
+    ;; Process characters from right to left by going backwards through the run
+    (let loop ([i (- end 1)]  ; Start from last character in run
+               [current-pos visual-start])  ; Start from left edge of visual area
+      (when (>= i start)
+        (let ([ch (string-ref str i)])
+          (cond
+           [(char=? ch #\tab)
+            ;; Tab character - this is complex in RTL, simplified approach
+            (vector-set! positions i current-pos)
+            (let ([char-width tabsize])  ; Simplified - should compute proper tab width
+              (loop (- i 1) (+ current-pos char-width)))]
+           
+           [(char-combining-mark? ch)
+            ;; Combining mark - should stay at current position
+            (vector-set! positions i current-pos)
+            (loop (- i 1) current-pos)]  ; Don't advance cursor for combining marks
+           
+           [else
+            ;; Base character - assign position and advance
+            (let ([char-width (max 0 (wcwidth ch cjk?))])
+              (vector-set! positions i current-pos)
+              (loop (- i 1) (+ current-pos char-width)))]))))))
+
+
+
+#;(define (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
+  "Assign positions for an RTL run (right to left), handling grapheme clusters."
+  ;; For RTL, we need to process grapheme clusters from right to left
+  ;; Start from the end of the run and work backwards by grapheme clusters
+  
+  (let loop ([i (- end 1)]  ; Start from last character in run
+             [current-pos visual-start])  ; Start from left edge of visual area
+    (when (>= i start)
+      (let ([ch (string-ref str i)])
+        (cond
+         [(char=? ch #\tab)
+          ;; Tab character - compute proper tab width
+          (let ([next-tab-stop (* tabsize (+ (quotient current-pos tabsize) 1))])
+            (let ([char-width (- next-tab-stop current-pos)])
+              (vector-set! positions i current-pos)
+              (loop (- i 1) (+ current-pos char-width))))]
+         
+         [(char-combining-mark? ch)
+          ;; Combining mark - assign same position and continue backwards
+          (vector-set! positions i current-pos)
+          (loop (- i 1) current-pos)]  ; Don't advance position for combining marks
+         
+         [else
+          ;; Base character - process entire grapheme cluster
+          (let ([char-width (max 0 (wcwidth ch cjk?))])
+            ;; Find the start of this grapheme cluster by looking backwards
+            (let ([cluster-start 
+                   (let find-cluster-start ([pos i])
+                     (if (and (> pos start)
+                              (char-combining-mark? (string-ref str (- pos 1))))
+                         (find-cluster-start (- pos 1))
+                         pos))])
+              ;; Assign same position to all characters in cluster
+              (let assign-cluster ([j cluster-start])
+                (when (<= j i)
+                  (vector-set! positions j current-pos)
+                  (assign-cluster (+ j 1))))
+              ;; Continue from before the cluster start
+              (loop (- cluster-start 1) (+ current-pos char-width))))])))))
+
+
+#;(define (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
+  "Assign positions for an RTL run (right to left), handling grapheme clusters."
   ;; First compute the total width to know where to start from the right
   (let ([run-width (compute-run-width str start end tabsize cjk?)])
     (let loop ([i start]
@@ -457,154 +593,95 @@
         (let ([ch (string-ref str i)])
           (cond
            [(char=? ch #\tab)
+            ;; Tab character
             (let ([char-width (- (* tabsize (+ (quotient current-pos tabsize) 1))
-                                current-pos)])
+                                 current-pos)])
               (set! current-pos (- current-pos char-width))
               (vector-set! positions i current-pos)
               (loop (+ i 1) current-pos))]
+           
            [(char-combining-mark? ch)
-            ;; Combining marks stay at same position as base character
+            ;; Combining mark - should stay at current position
             (vector-set! positions i current-pos)
             (loop (+ i 1) current-pos)]
+           
            [else
-            ;; Regular character
-            (let ([char-width (wcwidth ch cjk?)])
+            ;; Base character - process entire grapheme cluster
+            (let ([grapheme-end (find-next-grapheme-boundary str i)]
+                  [char-width (max 0 (wcwidth ch cjk?))])
+              ;; Move cursor left by character width first
               (set! current-pos (- current-pos char-width))
-              (vector-set! positions i current-pos)
-              (loop (+ i 1) current-pos))]))))))
-
-;;; =================================================================
-;;; Simplified Bidi-Aware Algorithm (Alternative Implementation)
-;;; =================================================================
-
-(define* (compute-bidi-aware-cell-positions-simple str tabsize cjk?)
-  "Simplified bidi-aware cell position computation.
-   This is a more straightforward implementation that handles basic bidi cases."
-  (if (string-null? str)
-      '(0)
-      (let* ([str-len (string-length str)]
-             [resolved-levels (resolve-paragraph-bidi str)]
-             [positions (make-vector (+ str-len 1) 0)])
-        
-        ;; Process characters in logical order but assign visual positions
-        (let ([segments (find-level-segments resolved-levels)])
-          (assign-segment-positions str segments positions tabsize cjk?))
-        
-        (vector->list positions))))
-
-(define (find-level-segments levels)
-  "Find contiguous segments of same embedding level.
-   Returns list of (start end level) tuples."
-  (if (null? levels)
-      '()
-      (let loop ([i 1]
-                 [current-level (car levels)]
-                 [segment-start 0]
-                 [segments '()])
-        (cond
-         [(>= i (length levels))
-          (reverse (cons (list segment-start i current-level) segments))]
-         [(not (= (list-ref levels i) current-level))
-          (let ([new-level (list-ref levels i)])
-            (loop (+ i 1) new-level i
-                  (cons (list segment-start i current-level) segments)))]
-         [else (loop (+ i 1) current-level segment-start segments)]))))
-
-(define (assign-segment-positions str segments positions tabsize cjk?)
-  "Assign visual positions to segments based on their embedding levels."
-  (let ([visual-cursor 0])
-    ;; Process segments in order, but reverse RTL segments
-    (for-each (lambda (segment)
-                (let ([start (car segment)]
-                      [end (cadr segment)]
-                      [level (caddr segment)])
-                  (if (odd? level)
-                      ;; RTL segment - compute positions right to left
-                      (let ([segment-width (compute-segment-width str start end tabsize cjk?)])
-                        (assign-rtl-segment-positions str start end 
-                                                     (+ visual-cursor segment-width)
-                                                     positions tabsize cjk?)
-                        (set! visual-cursor (+ visual-cursor segment-width)))
-                      ;; LTR segment - compute positions left to right
-                      (begin (assign-ltr-segment-positions str start end visual-cursor 
-                                                          positions tabsize cjk?)
-                             (set! visual-cursor (+ visual-cursor 
-                                                    (compute-segment-width str start end tabsize cjk?)))))))
-              segments)
-    
-    ;; Set final position
-    (vector-set! positions (string-length str) visual-cursor)))
-
-(define (compute-segment-width str start end tabsize cjk?)
-  "Compute total width of a segment."
-  (let loop ([i start] [width 0])
-    (if (>= i end)
-        width
-        (let ([ch (string-ref str i)])
-          (cond
-           [(char=? ch #\tab)
-            (let ([next-tab (* tabsize (+ (quotient width tabsize) 1))])
-              (loop (+ i 1) next-tab))]
-           [(char-combining-mark? ch)
-            (loop (+ i 1) width)]
-           [else
-            (loop (+ i 1) (+ width (wcwidth ch cjk?)))])))))
-
-(define (assign-ltr-segment-positions str start end visual-start positions tabsize cjk?)
-  "Assign positions for LTR segment."
-  (let loop ([i start] [pos visual-start])
-    (when (< i end)
-      (vector-set! positions i pos)
-      (let ([ch (string-ref str i)])
-        (cond
-         [(char=? ch #\tab)
-          (let ([next-tab (* tabsize (+ (quotient pos tabsize) 1))])
-            (loop (+ i 1) next-tab))]
-         [(char-combining-mark? ch)
-          (loop (+ i 1) pos)]
-         [else
-          (loop (+ i 1) (+ pos (wcwidth ch cjk?)))])))))
-
-(define (assign-rtl-segment-positions str start end visual-end positions tabsize cjk?)
-  "Assign positions for RTL segment (right to left)."
-  (let loop ([i (- end 1)] [pos visual-end])
-    (when (>= i start)
-      (let ([ch (string-ref str i)])
-        (cond
-         [(char=? ch #\tab)
-          (let ([char-width (- (* tabsize (+ (quotient pos tabsize) 1)) pos)])
-            (set! pos (- pos char-width))
-            (vector-set! positions i pos)
-            (loop (- i 1) pos))]
-         [(char-combining-mark? ch)
-          (vector-set! positions i pos)
-          (loop (- i 1) pos)]
-         [else
-          (let ([char-width (wcwidth ch cjk?)])
-            (set! pos (- pos char-width))
-            (vector-set! positions i pos)
-            (loop (- i 1) pos))])))))
-
-;;; Use the simplified algorithm by default
-(define compute-bidi-aware-cell-positions compute-bidi-aware-cell-positions-simple)
+              ;; Set all characters in the grapheme to the same position
+              (let inner-loop ([j i])
+                (when (< j grapheme-end)
+                  (vector-set! positions j current-pos)
+                  (inner-loop (+ j 1))))
+              ;; Continue with next grapheme
+              (loop grapheme-end current-pos))]))))))
 
 (define (compute-bidi-state-list str)
   "Compute bidi state for each character position in string.
-   Returns list of <bidi-state> records."
+   Returns list of <bidi-state> records using resolved levels."
   (if (string-null? str)
       '()
-      (let ([str-len (string-length str)])
-        (map (lambda (i)
-               (get-bidi-state-at-position str i))
-             (iota str-len)))))
+      (let* ([str-len (string-length str)]
+             [resolved-levels (resolve-paragraph-bidi str)])
+        ;; Create bidi-state records using the resolved levels
+        (map (lambda (i level)
+               ;; Use the resolved level, with neutral override and no isolate
+               ;; (This is simplified - you might want more sophisticated state tracking)
+               (make-bidi-state level 'neutral 'none))
+             (iota str-len)
+             resolved-levels))))
 
+#;(define (get-effective-direction str levels position)
+  "Get the effective direction at a position, considering embedding contexts.
+   Returns 'ltr or 'rtl based on embedding context, not just level parity."
+  
+  ;; Analyze the embedding context by walking through the string
+  (let ([embedding-stack '()]  ; Stack of embedding contexts
+        [base-direction (paragraph-base-direction str)]  ; Get actual base direction
+        [current-direction (paragraph-base-direction str)])  ; Start with actual base direction
+    
+    (let loop ([i 0])
+      (cond
+       [(>= i position) current-direction]
+       [else
+        (let ([ch (string-ref str i)])
+          (case (char->integer ch)
+            ;; LRE - push LTR context
+            [(#x202A)  ; LRE
+             (set! embedding-stack (cons 'ltr embedding-stack))
+             (set! current-direction 'ltr)
+             (loop (+ i 1))]
+            
+            ;; RLE - push RTL context  
+            [(#x202B)  ; RLE
+             (set! embedding-stack (cons 'rtl embedding-stack))
+             (set! current-direction 'rtl)
+             (loop (+ i 1))]
+            
+            ;; PDF - pop context
+            [(#x202C)  ; PDF
+             (when (not (null? embedding-stack))
+               (set! embedding-stack (cdr embedding-stack)))
+             (set! current-direction 
+                   (if (null? embedding-stack)
+                       base-direction  ; Use actual base direction, not hardcoded
+                       (car embedding-stack)))  ; Restore previous context
+             (loop (+ i 1))]
+            
+            ;; Other characters - continue with current direction
+            [else (loop (+ i 1))]))]))))
+
+#|
 (define (compute-bidi-levels str)
   "Compute resolved bidi levels for each character in string.
    Returns list of embedding levels."
   (if (string-null? str)
       '()
       (resolve-paragraph-bidi str)))
-
+|#
 ;;; =================================================================
 ;;; SGR Access and Manipulation (Immutable)
 ;;; =================================================================
@@ -660,7 +737,7 @@
          [actual-end (min str-len end-index)])
     (if (< actual-start actual-end)
         (let ([new-sgr-list 
-               (list-replace-range sgr-list actual-start actual-end
+	       (list-replace-range sgr-list actual-start actual-end
                                    (make-list (- actual-end actual-start) sgr))])
           (make-text-metrics (text-metrics-string metrics)
                              new-sgr-list
@@ -735,7 +812,7 @@
          [actual-end (min str-len end-index)])
     (if (< actual-start actual-end)
         (let ([new-bidi-state-list 
-               (list-replace-range bidi-state-list actual-start actual-end
+	       (list-replace-range bidi-state-list actual-start actual-end
                                    (make-list (- actual-end actual-start) bidi-state))])
           (make-text-metrics (text-metrics-string metrics)
                              (text-metrics-sgr-list metrics)
@@ -754,9 +831,9 @@
           [actual-end (min str-len end-index)])
       (map (lambda (i) 
              (let ([state (list-ref bidi-state-list i)])
-               (make-bidi-state (bidi-state-embedding-level state)
-                               (bidi-state-override-status state)
-                               (bidi-state-isolate-status state))))
+	       (make-bidi-state (bidi-state-embedding-level state)
+				(bidi-state-override-status state)
+				(bidi-state-isolate-status state))))
            (iota (- actual-end actual-start) actual-start)))))
 
 (define (text-metrics-recompute-bidi-states metrics)
@@ -764,12 +841,12 @@
   (let* ([str (text-metrics-string metrics)]
          [new-bidi-state-list (compute-bidi-state-list str)])
     (make-text-metrics str
-                       (text-metrics-sgr-list metrics)
-                       new-bidi-state-list
-                       (text-metrics-base-indices metrics)
-                       (text-metrics-cell-positions metrics)
-                       (text-metrics-tabsize metrics)
-                       (text-metrics-cjk? metrics))))
+		       (text-metrics-sgr-list metrics)
+		       new-bidi-state-list
+		       (text-metrics-base-indices metrics)
+		       (text-metrics-cell-positions metrics)
+		       (text-metrics-tabsize metrics)
+		       (text-metrics-cjk? metrics))))
 
 ;;; =================================================================
 ;;; SGR and Bidi-Aware Text Modification (Fully Immutable)
@@ -784,8 +861,8 @@
          [new-sgr-list (list-insert sgr-list index sgr)]
          [new-bidi-state-list (list-insert bidi-state-list index bidi-state)])
     (compute-text-metrics-with-sgr-and-bidi new-str new-sgr-list new-bidi-state-list
-                                           (text-metrics-tabsize metrics)
-                                           #:cjk? (text-metrics-cjk? metrics))))
+                                            (text-metrics-tabsize metrics)
+                                            #:cjk? (text-metrics-cjk? metrics))))
 
 (define (text-metrics-insert-string-with-sgr-and-bidi metrics index insert-str insert-sgr-list insert-bidi-state-list)
   "Insert string with SGR and Bidi State lists at specified index, return new text-metrics"
@@ -802,8 +879,8 @@
          [new-sgr-list (list-insert-multiple sgr-list index insert-sgr-list)]
          [new-bidi-state-list (list-insert-multiple bidi-state-list index insert-bidi-state-list)])
     (compute-text-metrics-with-sgr-and-bidi new-str new-sgr-list new-bidi-state-list
-                                           (text-metrics-tabsize metrics)
-                                           #:cjk? (text-metrics-cjk? metrics))))
+                                            (text-metrics-tabsize metrics)
+                                            #:cjk? (text-metrics-cjk? metrics))))
 
 (define (text-metrics-delete-range metrics start-index end-index)
   "Delete characters, SGR, and Bidi States from start-index to end-index, return new text-metrics"
@@ -817,8 +894,8 @@
          [new-sgr-list (list-delete-range sgr-list actual-start actual-end)]
          [new-bidi-state-list (list-delete-range bidi-state-list actual-start actual-end)])
     (compute-text-metrics-with-sgr-and-bidi new-str new-sgr-list new-bidi-state-list
-                                           (text-metrics-tabsize metrics)
-                                           #:cjk? (text-metrics-cjk? metrics))))
+                                            (text-metrics-tabsize metrics)
+                                            #:cjk? (text-metrics-cjk? metrics))))
 
 (define (text-metrics-replace-range metrics start-index end-index replace-str replace-sgr-list replace-bidi-state-list)
   "Replace characters, SGR, and Bidi States in range with new string, SGR, and Bidi States, return new text-metrics"
@@ -838,8 +915,8 @@
          [new-sgr-list (list-replace-range sgr-list actual-start actual-end replace-sgr-list)]
          [new-bidi-state-list (list-replace-range bidi-state-list actual-start actual-end replace-bidi-state-list)])
     (compute-text-metrics-with-sgr-and-bidi new-str new-sgr-list new-bidi-state-list
-                                           (text-metrics-tabsize metrics)
-                                           #:cjk? (text-metrics-cjk? metrics))))
+                                            (text-metrics-tabsize metrics)
+                                            #:cjk? (text-metrics-cjk? metrics))))
 
 ;;; =================================================================
 ;;; SGR and Bidi Inheritance and Propagation (Immutable)
@@ -855,8 +932,8 @@
   (let ([source-state (text-metrics-get-bidi-state-at-index metrics from-index)])
     (text-metrics-set-bidi-state-at-index metrics to-index 
                                           (make-bidi-state (bidi-state-embedding-level source-state)
-                                                          (bidi-state-override-status source-state)
-                                                          (bidi-state-isolate-status source-state)))))
+                                                           (bidi-state-override-status source-state)
+                                                           (bidi-state-isolate-status source-state)))))
 
 (define (text-metrics-inherit-sgr-for-combining metrics base-index combining-index)
   "Return new text-metrics with combining mark inheriting SGR from base character"
@@ -889,22 +966,22 @@
       (let* ([first-len (string-length first-line)]
              [second-len (string-length second-line)]
              [first-sgr (if (> first-len 0) 
-                           (append (take sgr-list position)
-                                  (make-list (- first-len position) (make-default-sgr)))
-                           '())]
-             [second-sgr (if (> second-len 0)
-                            (append (make-list (- second-len (- (string-length str) position)) (make-default-sgr))
-                                   (drop sgr-list position))
+                            (append (take sgr-list position)
+                                    (make-list (- first-len position) (make-default-sgr)))
                             '())]
+             [second-sgr (if (> second-len 0)
+                             (append (make-list (- second-len (- (string-length str) position)) (make-default-sgr))
+                                     (drop sgr-list position))
+                             '())]
              [first-bidi (compute-bidi-state-list first-line)]
              [second-bidi (compute-bidi-state-list second-line)])
         
         (values (compute-text-metrics-with-sgr-and-bidi first-line first-sgr first-bidi
-                                                       (text-metrics-tabsize metrics)
-                                                       #:cjk? (text-metrics-cjk? metrics))
+							(text-metrics-tabsize metrics)
+							#:cjk? (text-metrics-cjk? metrics))
                 (compute-text-metrics-with-sgr-and-bidi second-line second-sgr second-bidi
-                                                       (text-metrics-tabsize metrics)
-                                                       #:cjk? (text-metrics-cjk? metrics)))))))
+							(text-metrics-tabsize metrics)
+							#:cjk? (text-metrics-cjk? metrics)))))))
 
 (define (text-metrics-get-paragraph-direction metrics)
   "Get the base paragraph direction for the text"
@@ -1039,21 +1116,21 @@
          
          ;; Calculate padding and content
          [left-padding (if (< i-start (length cell-positions))
-                          (max 0 (- (list-ref cell-positions i-start) x-cell-start))
-                          0)]
+                           (max 0 (- (list-ref cell-positions i-start) x-cell-start))
+                           0)]
          [content-start (min i-start (string-length str))]
          [content-end (min i-end (string-length str))]
          [content-str (if (< content-start content-end)
-                         (substring str content-start content-end)
-                         "")]
+                          (substring str content-start content-end)
+                          "")]
          
          ;; Extract corresponding SGR and Bidi State records for content
          [content-sgr (if (< content-start content-end)
-                         (take (drop sgr-list content-start) (- content-end content-start))
-                         '())]
+                          (take (drop sgr-list content-start) (- content-end content-start))
+                          '())]
          [content-bidi-state (if (< content-start content-end)
-                                (take (drop bidi-state-list content-start) (- content-end content-start))
-                                '())]
+                                 (take (drop bidi-state-list content-start) (- content-end content-start))
+                                 '())]
          
          ;; Expand tabs in content with proper visual columns
          [expanded-result (expand-tabs-with-sgr-and-bidi content-str content-sgr content-bidi-state tabsize)]
@@ -1063,15 +1140,15 @@
          
          ;; Calculate content width and right padding
          [content-width (if (< content-end (length cell-positions))
-                           (- (list-ref cell-positions content-end)
-                              (list-ref cell-positions content-start))
-                           (- (text-metrics-cell-length metrics)
-                              (if (< content-start (length cell-positions))
-                                  (list-ref cell-positions content-start)
-                                  0)))]
+                            (- (list-ref cell-positions content-end)
+			       (list-ref cell-positions content-start))
+                            (- (text-metrics-cell-length metrics)
+			       (if (< content-start (length cell-positions))
+                                   (list-ref cell-positions content-start)
+                                   0)))]
          [right-padding (if pad?
-                           (max 0 (- x-width left-padding content-width))
-                           0)]
+                            (max 0 (- x-width left-padding content-width))
+                            0)]
          
          ;; Create SGR and Bidi State records for padding (use defaults)
          [default-sgr (make-default-sgr)]
@@ -1083,14 +1160,14 @@
          
          ;; Combine all parts using immutable string operations
          [final-string (string-join-with (list (string-repeat-char #\space left-padding)
-                                               expanded-content
-                                               (string-repeat-char #\space right-padding)) "")]
+					       expanded-content
+					       (string-repeat-char #\space right-padding)) "")]
          [final-sgr-list (append left-padding-sgr
-                                expanded-sgr
-                                right-padding-sgr)]
+                                 expanded-sgr
+                                 right-padding-sgr)]
          [final-bidi-state-list (append left-padding-bidi
-                                       expanded-bidi-state
-                                       right-padding-bidi)])
+					expanded-bidi-state
+					right-padding-bidi)])
     
     (values final-string final-sgr-list final-bidi-state-list)))
 
@@ -1114,7 +1191,7 @@
             (let ([ch (string-ref content-str i)]
                   [ch-sgr (list-ref content-sgr i)]
                   [ch-bidi-state (list-ref content-bidi-state i)])
-              (if (char=? ch #\tab)
+	      (if (char=? ch #\tab)
                   ;; Tab character - expand to proper number of spaces
                   (let* ([next-tab-stop (* tabsize (+ (quotient current-visual-column tabsize) 1))]
                          [spaces-needed (- next-tab-stop current-visual-column)]
@@ -1164,20 +1241,20 @@
            [else
             (let ([char (string-ref rendered-string i)]
                   [char-sgr (list-ref sgr-list i)])
-              (cond
-               ;; SGR changed - emit current span and start new one
-               [(not (sgr-equal? current-sgr char-sgr))
+	      (cond
+	       ;; SGR changed - emit current span and start new one
+	       [(not (sgr-equal? current-sgr char-sgr))
                 (loop (+ i 1)
-                      (if (not (null? current-chars))
+		      (if (not (null? current-chars))
                           (cons (cons (string-from-chars (reverse current-chars)) current-sgr) spans)
                           spans)
-                      char-sgr
-                      (list char))]
-               
-               ;; Same SGR - accumulate character
-               [else
+		      char-sgr
+		      (list char))]
+	       
+	       ;; Same SGR - accumulate character
+	       [else
                 (loop (+ i 1) spans current-sgr
-                      (cons char current-chars))]))])))))
+		      (cons char current-chars))]))])))))
 
 (define (text-metrics-get-rendered-spans metrics)
   "Get all text as list of (string . sgr) spans, optimized by combining adjacent identical SGR"
@@ -1201,31 +1278,24 @@
            [else
             (let ([char (string-ref str i)]
                   [char-sgr (list-ref sgr-list i)])
-              (cond
-               ;; SGR changed - emit current span and start new one
-               [(not (sgr-equal? current-sgr char-sgr))
+	      (cond
+	       ;; SGR changed - emit current span and start new one
+	       [(not (sgr-equal? current-sgr char-sgr))
                 (loop (+ i 1)
-                      (if (not (null? current-chars))
+		      (if (not (null? current-chars))
                           (cons (cons (string-from-chars (reverse current-chars)) current-sgr) spans)
                           spans)
-                      char-sgr
-                      (list char))]
-               
-               ;; Same SGR - accumulate character
-               [else
+		      char-sgr
+		      (list char))]
+	       
+	       ;; Same SGR - accumulate character
+	       [else
                 (loop (+ i 1) spans current-sgr
-                      (cons char current-chars))]))])))))
+		      (cons char current-chars))]))])))))
 
 ;;; =================================================================
 ;;; Helper Utilities
 ;;; =================================================================
-
-(define (string-for-each-index proc str)
-  "Call PROC with each character index in STR"
-  (let loop ([i 0])
-    (when (< i (string-length str))
-      (proc i)
-      (loop (+ i 1)))))
 
 (define (string-join-with str-list separator)
   "Join list of strings with separator"

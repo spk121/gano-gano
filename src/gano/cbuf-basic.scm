@@ -4,6 +4,14 @@
 ;;; This file contains the minimum viable set of text editing operations
 
 (define-module (gano cbuf-basic)
+  #:use-module (ice-9 format)            ; Format function
+  #:use-module (ice-9 textual-ports)     ; get-string-all
+  #:use-module (srfi srfi-1)             ; List utilities
+  #:use-module (srfi srfi-9)             ; Record types
+  #:use-module (srfi srfi-11)            ; let-values
+  #:use-module (srfi srfi-13)            ; String utilities
+  #:use-module (srfi srfi-34)            ; Exception handling
+  #:use-module (srfi srfi-35)            ; Condition types
   #:use-module (gano cbuf-core)          ; Core record definitions
   #:use-module (gano cbuf-utils)         ; Pure utility functions
   #:use-module (gano text-metrics)       ; Immutable text metrics module
@@ -12,14 +20,7 @@
   #:use-module (gano char)               ; Character utilities
   #:use-module (gano string-split)       ; String splitting and joining
   #:use-module (gano string-utils)       ; String manipulation utilities
-  #:use-module (srfi srfi-9)             ; Record types
-  #:use-module (srfi srfi-1)             ; List utilities
-  #:use-module (srfi srfi-11)            ; let-values
-  #:use-module (srfi srfi-13)            ; String utilities
-  #:use-module (srfi srfi-34)            ; Exception handling
-  #:use-module (srfi srfi-35)            ; Condition types
-  #:use-module (ice-9 format)            ; Format function
-  #:use-module (ice-9 textual-ports)     ; get-string-all
+  #:use-module (gano uax9-bidi)
   #:export (
     ;; Helper functions
     cbuf-x-data->x-index
