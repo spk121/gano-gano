@@ -405,7 +405,7 @@
   (test-equal "LRO with mixed LTR/RTL content"
     ;; "ab" + LRO + Hebrew + "cd" + PDF + "ef"
     ;; The Hebrew should render LTR due to override
-    '(0 1 2 2 3 4 5 5 6 7)
+    '(0 1 2 2 3 4 5 6 6 7 8)
     (positions-only (compute-text-metrics 
                      (string-append "ab"
                                    (string left-to-right-override)
@@ -436,7 +436,7 @@
   (test-equal "LRE creates LTR embedded context"
     ;; Hebrew + LRE + Hebrew + PDF + Hebrew
     ;; Middle Hebrew should render LTR due to embedding
-    '(2 1 0 3 3 4 5 5 6)
+    '(1 0 2 2 3 4 4 5)
     (positions-only (compute-text-metrics 
                      (string-append (string hebrew-alef hebrew-bet)
                                    (string left-to-right-embedding)
@@ -448,7 +448,7 @@
   (test-equal "RLE creates RTL embedded context"
     ;; "ab" + RLE + "cd" + PDF + "ef"
     ;; Middle LTR chars should render RTL due to embedding
-    '(0 1 2 4 3 2 5 5 6 7)
+    '(0 1 2 3 2 4 4 5 6)
     (positions-only (compute-text-metrics 
                      (string-append "ab"
                                    (string right-to-left-embedding)
@@ -459,8 +459,11 @@
   ;; Test nested embeddings
   (test-equal "nested LRE within RLE"
     ;; RLE + Hebrew + LRE + Hebrew + PDF + Hebrew + PDF
-    ;; Complex nesting should be handled correctly
-    '(0 5 4 3 3 2 1 0 6 6)
+	      ;; Complex nesting should be handled correctly
+	      ;; RLE A1 B1 LRE G D PDF A2 PDF
+	      ;; 0   4  3  1   1 2 3   0  5
+	      ;; A2 G D B1 A1
+    '(0 4 3 1 1 2 3 0 5)
     (positions-only (compute-text-metrics 
                      (string-append (string right-to-left-embedding)
                                    (string hebrew-alef hebrew-bet)
@@ -479,7 +482,8 @@
   ;; Test LRI (Left-to-Right Isolate)
   (test-equal "LRI isolates content from surrounding context"
     ;; Hebrew + LRI + Hebrew + PDI + Hebrew
-    ;; Isolated Hebrew should render LTR, surrounding RTL
+	      ;; Isolated Hebrew should render LTR, surrounding RTL
+	      ;; B1 A1 D1 G1
     '(2 1 0 3 3 4 5 5 6)
     (positions-only (compute-text-metrics 
                      (string-append (string hebrew-alef hebrew-bet)
@@ -1031,7 +1035,7 @@
   ;; This will fail until the implementation is fixed
   (test-expect-fail "current LRO behavior produces negative positions (BUG)")
   (test-equal "current LRO with Hebrew (documenting current bug)"
-    '(0 0 1 2 3 0)  ; What SHOULD happen
+    '(0 0 1 2 3 3)  ; What SHOULD happen
     (positions-only (compute-text-metrics 
                      (string left-to-right-override
                             hebrew-alef hebrew-bet hebrew-gimel

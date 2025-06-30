@@ -156,7 +156,7 @@
       (error "String length and Bidi state list length must match" str-len (length bidi-state-list))))
   
   (let ([base-indices '()]
-        [cell-positions (compute-bidi-aware-cell-positions str tabsize cjk?)])
+        [cell-positions (compute-bidi-aware-cell-positions-two-pass str tabsize cjk?)])
     
     ;; Find base character indices (non-combining marks)
     (string-for-each-index
@@ -167,42 +167,6 @@
      str)
     
     (make-text-metrics str sgr-list bidi-state-list base-indices cell-positions tabsize cjk?)))
-
-;;; =================================================================
-;;; Bidirectional Cell Position Computation
-;;; =================================================================
-
-(define (compute-cell-positions-for-runs str runs tabsize cjk? base-level)
-  "Compute cell positions for bidi runs using stack-based algorithm.
-   Handles nested RTL/LTR runs correctly."
-  (let* ([str-len (string-length str)]
-         [positions (make-vector (+ str-len 1) 0)])  ; +1 for final position
-    
-    ;; Process runs in logical order, but assign positions based on visual order
-    (let ([run-infos (compute-run-visual-info str runs tabsize cjk?)])
-      ;; Sort runs by visual position for assignment
-      (let ([sorted-runs (sort run-infos (lambda (a b) (< (cadddr a) (cadddr b))))])
-        ;; Assign positions based on visual order
-        (assign-positions-to-runs str sorted-runs positions tabsize cjk?)))
-    
-    ;; Convert vector to list
-    (vector->list positions)))
-
-(define* (compute-bidi-aware-cell-positions str tabsize cjk?)
-  "Compute visual cell positions for each character considering bidirectional text layout.
-   Uses a stack-based algorithm to handle nested bidi runs correctly.
-   Returns list of cell positions, one for each character plus final position."
-  (if (string-null? str)
-      '(0)  ; Empty string has one position at 0
-      (let* ([str-len (string-length str)]
-             [resolved-levels (resolve-paragraph-bidi str)]
-             [base-direction (paragraph-base-direction str)]
-             [base-level (if (eq? base-direction 'rtl) 1 0)])
-        
-        ;; Find bidi runs (contiguous sequences of same embedding level)
-        (let ([runs (find-bidi-runs resolved-levels)])
-          ;; Compute cell positions using stack-based algorithm
-          (compute-cell-positions-for-runs str runs tabsize cjk? base-level)))))
 
 (define (find-bidi-runs levels)
   "Find contiguous runs of characters with the same embedding level.
@@ -227,191 +191,51 @@
          ;; Same level - continue current run
          [else (loop (+ i 1) current-level run-start runs)]))))
 
-#;(define (find-bidi-runs-with-context str levels)
-  "Find BIDI runs considering both levels and embedding context.
-   Returns list of (start-index end-index level direction) tuples."
-  (if (null? levels)
-      '()
-      (let loop ([i 0]
-                 [current-level (car levels)]
-                 [current-direction (get-effective-direction str levels 0)]
-                 [run-start 0]
-                 [runs '()])
-        (cond
-         ;; End of string - add final run
-         [(>= i (length levels))
-          (reverse (cons (list run-start i current-level current-direction) runs))]
-         
-         ;; Check if we need to start a new run
-         [else
-          (let ([new-level (list-ref levels i)]
-                [new-direction (get-effective-direction str levels i)])
-            (cond
-             ;; Level or direction changed - start new run
-             [(or (not (= new-level current-level))
-                  (not (eq? new-direction current-direction)))
-              (loop (+ i 1) new-level new-direction i 
-                    (cons (list run-start i current-level current-direction) runs))]
-             
-             ;; Same level and direction - continue current run
-             [else (loop (+ i 1) current-level current-direction run-start runs)]))]))))
 
-(define (compute-run-visual-info str runs tabsize cjk?)
-  "Compute visual information for each run: (start end level visual-start width).
-   Assigns sequential visual positions to runs in logical order."
+;; Bidi reordering algorithm (simplified L2 rule implementation)
+(define (reorder-runs-by-level runs max-level)
+  "Reorder runs according to UAX#9 L2 rule (simplified).
+   Returns list of original run indices in visual order."
   
-  ;; Step 1: Collect all run info with widths but no visual positions yet
-  (let ([all-run-infos '()])
-    ;; Process all runs in logical order (not sorted by level)
-    (for-each (lambda (run)
-                (let* ([start (car run)]
-                       [end (cadr run)]
-                       [level (caddr run)]
-                       [run-width (compute-run-width str start end tabsize cjk?)])
-                  (set! all-run-infos (append all-run-infos 
-                                              (list (list start end level 0 run-width))))))
-              runs)
+  (let ([run-indices (iota (length runs))])
+    ;; Apply L2 rule: reverse runs at each level from max down to 1
+    (let loop ([level max-level]
+               [indices run-indices])
+      (if (<= level 0)
+          indices
+          (let ([reordered (reverse-runs-at-level runs indices level)])
+            (loop (- level 1) reordered))))))
+
+(define (reverse-runs-at-level runs indices level)
+  "Reverse contiguous runs at specified level."
+  (let loop ([remaining indices]
+             [result '()]
+             [current-sequence '()])
     
-    ;; Step 2: Assign sequential visual positions
-    (let ([visual-cursor 0])
-      (map (lambda (run-info)
-             (let* ([start (car run-info)]
-                    [end (cadr run-info)]
-                    [level (caddr run-info)]
-                    [width (car (cddddr run-info))]
-                    [current-visual-start visual-cursor])
-               ;; Update visual cursor for next run
-               (set! visual-cursor (+ visual-cursor width))
-               ;; Return run info with correct visual position
-               (list start end level current-visual-start width)))
-           all-run-infos))))
-
-#;(define (group-runs-by-level runs)
-  "Group runs by their embedding level."
-  (let loop ([remaining-runs runs]
-             [groups '()])
-    (if (null? remaining-runs)
-        ;; Sort groups by level (highest first) and reverse run order within each group
-        (map (lambda (group) 
-               (cons (car group) (reverse (cdr group))))
-             (sort groups (lambda (a b) (> (car a) (car b)))))
-        (let* ([run (car remaining-runs)]
-               [level (caddr run)]
-               [existing-group (assoc level groups)])
-          (if existing-group
-              ;; Add run to existing group
-              (let ([updated-groups 
-                     (map (lambda (group)
-                            (if (= (car group) level)
-                                (cons level (cons run (cdr group)))
-                                group))
-                          groups)])
-                (loop (cdr remaining-runs) updated-groups))
-              ;; Create new group
-              (loop (cdr remaining-runs) 
-                    (cons (list level run) groups)))))))
-
-#;(define (process-ltr-level-runs str runs tabsize cjk?)
-  "Process LTR runs in logical order (left to right).
-   Returns list of run-info tuples."
-  ;; Don't reset visual-cursor for each level - maintain global positioning
-  (let ([run-infos '()])
-    (for-each (lambda (run)
-                (let* ([start (car run)]
-                       [end (cadr run)]
-                       [level (caddr run)]
-                       [run-width (compute-run-width str start end tabsize cjk?)])
-                  ;; Each run will get its visual position assigned later
-                  ;; For now, just record the run info with width
-                  (set! run-infos (append run-infos (list (list start end level 0 run-width))))))
-              runs)
-    run-infos))
-
-#;(define (process-rtl-level-runs str runs tabsize cjk?)
-  "Process RTL runs in reverse logical order (right to left).
-   Returns list of run-info tuples."
-  ;; Don't reset visual-cursor for each level - maintain global positioning
-  (let ([run-infos '()])
-    (for-each (lambda (run)
-                (let* ([start (car run)]
-                       [end (cadr run)]
-                       [level (caddr run)]
-                       [run-width (compute-run-width str start end tabsize cjk?)])
-                  ;; Each run will get its visual position assigned later
-                  ;; For now, just record the run info with width
-                  (set! run-infos (append run-infos (list (list start end level 0 run-width))))))
-              runs)
-    run-infos))
-
-(define (compute-run-width str start end tabsize cjk?)
-  "Compute the total width in cells for a run of characters."
-  (let loop ([i start]
-             [width 0])
-    (if (>= i end)
-        width
-        (let ([ch (string-ref str i)])
-          (cond
-           [(char=? ch #\tab)
-            ;; Tab width depends on current position
-            (let ([next-tab-stop (* tabsize (+ (quotient width tabsize) 1))])
-	      (loop (+ i 1) next-tab-stop))]
-           [(char-combining-mark? ch)
-            ;; Combining marks don't add width
-            (loop (+ i 1) width)]
-           [else
-            ;; Regular character
-            (loop (+ i 1) (+ width
-			     ;; Need the max because control chars have
-			     ;; wcwidth = -1
-			     (max 0 (wcwidth ch cjk?))))])))))
-
-(define (assign-positions-to-runs str run-infos positions tabsize cjk?)
-  "Assign cell positions to characters based on computed run visual positions."
-  (for-each (lambda (run-info)
-              (let ([start (car run-info)]
-                    [end (cadr run-info)]
-                    [level (caddr run-info)]
-                    [visual-start (cadddr run-info)])
-                ;; Direction is determined by embedding level: even=LTR, odd=RTL
-                (if (odd? level)
-                    ;; RTL run
-                    (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
-                    ;; LTR run  
-                    (assign-ltr-run-positions str start end visual-start positions tabsize cjk?))))
-            run-infos)
-  
-  ;; Set final position (after all characters)
-  (let ([final-pos (if (null? run-infos)
-                       0
-                       (apply max (map (lambda (run-info)
-                                         (+ (cadddr run-info) (car (cddddr run-info))))
-                                       run-infos)))])
-    (vector-set! positions (string-length str) final-pos)))
-
-#;(define (assign-positions-to-runs str run-infos positions tabsize cjk?)
-  "Assign cell positions to characters based on computed run visual positions."
-  (for-each (lambda (run-info)
-              (let ([start (car run-info)]
-                    [end (cadr run-info)]
-                    [level (caddr run-info)]
-                    [visual-start (cadddr run-info)])
-		(let ([effective-direction (get-effective-direction str level start)])
-		  (pk 'assign-positions 'effective-direction effective-direction)
-		  (if (eq? effective-direction 'rtl)
-                      ;; RTL run - assign positions right to left within the run
-		      (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
-		      ;; else
-                      ;; LTR run - assign positions left to right within the run
-		      (assign-ltr-run-positions str start end visual-start positions tabsize cjk?)))))	
-            run-infos)
-  
-  ;; Set final position (after all characters)
-  (let ([final-pos (if (null? run-infos)
-                       0  ; Default to 0 if no runs
-                       (apply max (map (lambda (run-info)
-                                         (+ (cadddr run-info) (car (cddddr run-info))))
-                                       run-infos)))])
-    (vector-set! positions (string-length str) final-pos)))
+    (cond
+     ;; End of list - process final sequence
+     [(null? remaining)
+      (if (null? current-sequence)
+          (reverse result)
+          (append (reverse result) (reverse current-sequence)))]
+     
+     ;; Check if current run is at target level
+     [else
+      (let* ([run-index (car remaining)]
+             [run (list-ref runs run-index)]
+             [run-level (caddr run)])
+        
+        (cond
+         ;; Run is at target level - add to current sequence
+         [(>= run-level level)
+          (loop (cdr remaining) result (cons run-index current-sequence))]
+         
+         ;; Run is below target level - emit sequence and continue
+         [else
+          (let ([new-result (if (null? current-sequence)
+                               result
+                               (append (reverse result) (reverse current-sequence)))])
+            (loop (cdr remaining) (append new-result (list run-index)) '()))]))])))
 
 
 (define (find-next-grapheme-boundary str start-idx)
@@ -436,188 +260,6 @@
                ;; Next character is combining mark - continue
                [else (loop (+ i 1) (+ combining-count 1))]))))))
 
-(define (assign-ltr-run-positions str start end visual-start positions tabsize cjk?)
-  "Assign positions for an LTR run (left to right), handling grapheme clusters."
-  (pk 'assign-ltr 'str str 'start start 'end end)
-  (let loop ([i start]
-             [current-pos visual-start])
-    (when (< i end)
-      (let ([ch (string-ref str i)])
-        (cond
-         [(char=? ch #\tab)
-          ;; Tab character
-          (vector-set! positions i current-pos)
-          (let ([next-tab-stop (* tabsize (+ (quotient current-pos tabsize) 1))])
-            (loop (+ i 1) next-tab-stop))]
-         
-         [(char-combining-mark? ch)
-          ;; Combining mark - should stay at current position
-          (vector-set! positions i current-pos)
-          (loop (+ i 1) current-pos)]  ; Don't advance cursor
-         
-         [else
-          ;; Base character - process entire grapheme cluster
-          (let ([grapheme-end (find-next-grapheme-boundary str i)])
-            ;; Set all characters in the grapheme to the same position
-            (let inner-loop ([j i])
-              (when (< j grapheme-end)
-                (vector-set! positions j current-pos)
-                (inner-loop (+ j 1))))
-            ;; Advance cursor by the width of the base character only
-            (let ([char-width (max 0 (wcwidth ch cjk?))])
-              (loop grapheme-end (+ current-pos char-width))))])))))
-
-(define (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
-  "Assign positions for an RTL run (right to left), handling grapheme clusters."
-  ;; Use same logic as LTR but with two key changes:
-  ;; 1. Decrement position instead of increment (moves left)
-  ;; 2. Add run width to all positions at the end (shifts everything right)
-  (pk 'assign-rtl 'str str 'start start 'end end)
-  (let ([run-width (compute-run-width str start end tabsize cjk?)])
-    ;; First pass: assign positions moving leftward (like LTR but backwards)
-    (let loop ([i start]
-               [current-pos 0])  ; Start at 0, we'll adjust later
-      (when (< i end)
-        (let ([ch (string-ref str i)])
-          (cond
-           [(char=? ch #\tab)
-            ;; Tab character
-            (vector-set! positions i current-pos)
-            (let ([next-tab-stop (* tabsize (+ (quotient (abs current-pos) tabsize) 1))])
-              (loop (+ i 1) (- current-pos next-tab-stop)))]
-           
-           [(char-combining-mark? ch)
-            ;; Combining mark - should stay at current position
-            (vector-set! positions i current-pos)
-            (loop (+ i 1) current-pos)]  ; Don't move position
-           
-           [else
-            ;; Base character - process entire grapheme cluster
-            (let ([grapheme-end (find-next-grapheme-boundary str i)])
-              ;; Set all characters in the grapheme to the same position
-              (let inner-loop ([j i])
-                (when (< j grapheme-end)
-                  (vector-set! positions j current-pos)
-                  (inner-loop (+ j 1))))
-              ;; Move LEFT by the width of the base character
-              (let ([char-width (max 0 (wcwidth ch cjk?))])
-                (loop grapheme-end (- current-pos char-width))))]))))
-    
-    ;; Second pass: shift all positions right by (visual-start + run-width)
-    (let adjust-loop ([i start])
-      (when (< i end)
-        (let ([old-pos (vector-ref positions i)])
-	  (pk 'adjust 'i i 'old (vector-ref positions i))
-          (vector-set! positions i (+ visual-start run-width old-pos -1))
-	  (pk 'adjust 'i i 'new (vector-ref positions i))
-          (adjust-loop (+ i 1)))))))
-
-#;(define (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
-  "Assign positions for an RTL run (right to left), handling grapheme clusters."
-  ;; For RTL, we need to assign positions from right to left within the run
-  ;; First compute total width, then assign from right to left
-  (let ([run-width (compute-run-width str start end tabsize cjk?)])
-    ;; Process characters from right to left by going backwards through the run
-    (let loop ([i (- end 1)]  ; Start from last character in run
-               [current-pos visual-start])  ; Start from left edge of visual area
-      (when (>= i start)
-        (let ([ch (string-ref str i)])
-          (cond
-           [(char=? ch #\tab)
-            ;; Tab character - this is complex in RTL, simplified approach
-            (vector-set! positions i current-pos)
-            (let ([char-width tabsize])  ; Simplified - should compute proper tab width
-              (loop (- i 1) (+ current-pos char-width)))]
-           
-           [(char-combining-mark? ch)
-            ;; Combining mark - should stay at current position
-            (vector-set! positions i current-pos)
-            (loop (- i 1) current-pos)]  ; Don't advance cursor for combining marks
-           
-           [else
-            ;; Base character - assign position and advance
-            (let ([char-width (max 0 (wcwidth ch cjk?))])
-              (vector-set! positions i current-pos)
-              (loop (- i 1) (+ current-pos char-width)))]))))))
-
-
-
-#;(define (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
-  "Assign positions for an RTL run (right to left), handling grapheme clusters."
-  ;; For RTL, we need to process grapheme clusters from right to left
-  ;; Start from the end of the run and work backwards by grapheme clusters
-  
-  (let loop ([i (- end 1)]  ; Start from last character in run
-             [current-pos visual-start])  ; Start from left edge of visual area
-    (when (>= i start)
-      (let ([ch (string-ref str i)])
-        (cond
-         [(char=? ch #\tab)
-          ;; Tab character - compute proper tab width
-          (let ([next-tab-stop (* tabsize (+ (quotient current-pos tabsize) 1))])
-            (let ([char-width (- next-tab-stop current-pos)])
-              (vector-set! positions i current-pos)
-              (loop (- i 1) (+ current-pos char-width))))]
-         
-         [(char-combining-mark? ch)
-          ;; Combining mark - assign same position and continue backwards
-          (vector-set! positions i current-pos)
-          (loop (- i 1) current-pos)]  ; Don't advance position for combining marks
-         
-         [else
-          ;; Base character - process entire grapheme cluster
-          (let ([char-width (max 0 (wcwidth ch cjk?))])
-            ;; Find the start of this grapheme cluster by looking backwards
-            (let ([cluster-start 
-                   (let find-cluster-start ([pos i])
-                     (if (and (> pos start)
-                              (char-combining-mark? (string-ref str (- pos 1))))
-                         (find-cluster-start (- pos 1))
-                         pos))])
-              ;; Assign same position to all characters in cluster
-              (let assign-cluster ([j cluster-start])
-                (when (<= j i)
-                  (vector-set! positions j current-pos)
-                  (assign-cluster (+ j 1))))
-              ;; Continue from before the cluster start
-              (loop (- cluster-start 1) (+ current-pos char-width))))])))))
-
-
-#;(define (assign-rtl-run-positions str start end visual-start positions tabsize cjk?)
-  "Assign positions for an RTL run (right to left), handling grapheme clusters."
-  ;; First compute the total width to know where to start from the right
-  (let ([run-width (compute-run-width str start end tabsize cjk?)])
-    (let loop ([i start]
-               [current-pos (+ visual-start run-width)])
-      (when (< i end)
-        (let ([ch (string-ref str i)])
-          (cond
-           [(char=? ch #\tab)
-            ;; Tab character
-            (let ([char-width (- (* tabsize (+ (quotient current-pos tabsize) 1))
-                                 current-pos)])
-              (set! current-pos (- current-pos char-width))
-              (vector-set! positions i current-pos)
-              (loop (+ i 1) current-pos))]
-           
-           [(char-combining-mark? ch)
-            ;; Combining mark - should stay at current position
-            (vector-set! positions i current-pos)
-            (loop (+ i 1) current-pos)]
-           
-           [else
-            ;; Base character - process entire grapheme cluster
-            (let ([grapheme-end (find-next-grapheme-boundary str i)]
-                  [char-width (max 0 (wcwidth ch cjk?))])
-              ;; Move cursor left by character width first
-              (set! current-pos (- current-pos char-width))
-              ;; Set all characters in the grapheme to the same position
-              (let inner-loop ([j i])
-                (when (< j grapheme-end)
-                  (vector-set! positions j current-pos)
-                  (inner-loop (+ j 1))))
-              ;; Continue with next grapheme
-              (loop grapheme-end current-pos))]))))))
 
 (define (compute-bidi-state-list str)
   "Compute bidi state for each character position in string.
@@ -634,54 +276,6 @@
              (iota str-len)
              resolved-levels))))
 
-#;(define (get-effective-direction str levels position)
-  "Get the effective direction at a position, considering embedding contexts.
-   Returns 'ltr or 'rtl based on embedding context, not just level parity."
-  
-  ;; Analyze the embedding context by walking through the string
-  (let ([embedding-stack '()]  ; Stack of embedding contexts
-        [base-direction (paragraph-base-direction str)]  ; Get actual base direction
-        [current-direction (paragraph-base-direction str)])  ; Start with actual base direction
-    
-    (let loop ([i 0])
-      (cond
-       [(>= i position) current-direction]
-       [else
-        (let ([ch (string-ref str i)])
-          (case (char->integer ch)
-            ;; LRE - push LTR context
-            [(#x202A)  ; LRE
-             (set! embedding-stack (cons 'ltr embedding-stack))
-             (set! current-direction 'ltr)
-             (loop (+ i 1))]
-            
-            ;; RLE - push RTL context  
-            [(#x202B)  ; RLE
-             (set! embedding-stack (cons 'rtl embedding-stack))
-             (set! current-direction 'rtl)
-             (loop (+ i 1))]
-            
-            ;; PDF - pop context
-            [(#x202C)  ; PDF
-             (when (not (null? embedding-stack))
-               (set! embedding-stack (cdr embedding-stack)))
-             (set! current-direction 
-                   (if (null? embedding-stack)
-                       base-direction  ; Use actual base direction, not hardcoded
-                       (car embedding-stack)))  ; Restore previous context
-             (loop (+ i 1))]
-            
-            ;; Other characters - continue with current direction
-            [else (loop (+ i 1))]))]))))
-
-#|
-(define (compute-bidi-levels str)
-  "Compute resolved bidi levels for each character in string.
-   Returns list of embedding levels."
-  (if (string-null? str)
-      '()
-      (resolve-paragraph-bidi str)))
-|#
 ;;; =================================================================
 ;;; SGR Access and Manipulation (Immutable)
 ;;; =================================================================
@@ -1303,3 +897,284 @@
    [(null? str-list) ""]
    [(null? (cdr str-list)) (car str-list)]
    [else (string-append (car str-list) separator (string-join-with (cdr str-list) separator))]))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Fixed bidirectional control character positioning
+
+;;; Enhanced character type detection for positioning
+(define (is-bidi-initiator? char)
+  "Check if character is a bidi run initiator"
+  (let ([class (char-get-bidi-class char)])
+    (member class '(BC-LRE BC-RLE BC-LRO BC-RLO BC-LRI BC-RLI BC-FSI))))
+
+(define (is-bidi-terminator? char)
+  "Check if character is a bidi run terminator"
+  (let ([class (char-get-bidi-class char)])
+    (member class '(BC-PDF BC-PDI))))
+
+(define (is-bidi-control? char)
+  "Check if character is any bidi control character"
+  (or (is-bidi-initiator? char) (is-bidi-terminator? char)))
+
+
+;;; Test the RLO case specifically
+(define (test-rlo-case)
+  "Test the specific RLO case that's failing."
+  (let* ([rlo #\x202E]        ; Right-to-Left Override
+         [pdf #\x202C]        ; Pop Directional Formatting  
+         [test-str (string rlo #\a #\b #\c pdf)])
+    
+    (pk 'rlo-test-string test-str)
+    (pk 'rlo-test-chars (map char->integer (string->list test-str)))
+    
+    ;; Expected: RLO=0, c=2, b=1, a=0, PDF=3
+    ;; The RLO creates an RTL run containing "abc", which gets reversed to "cba"
+    ;; So: RLO at 0, c at 1, b at 2, a at 3, but wait...
+    ;; Actually: RLO=0 (initiator), "abc" in RTL positions 2,1,0, PDF=3 (terminator)
+    
+    (pk 'expected-positions '(0 2 1 0 3))
+    (debug-positioning test-str)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define* (compute-bidi-aware-cell-positions-two-pass str tabsize cjk?)
+  "Two-pass approach: first pass positions controls sequentially, second pass reorders content."
+  (if (string-null? str)
+      '(0)
+      (let* ([str-len (string-length str)]
+             [resolved-levels (resolve-paragraph-bidi str)]
+             [positions (make-vector (+ str-len 1) 0)])
+        
+        ;; Pass 1: Position everything sequentially, handling combining marks properly
+        (let loop ([i 0]
+                   [visual-cursor 0]
+                   [last-base-position 0])  ; Track position of last base character
+          (when (< i str-len)
+            (let ([ch (string-ref str i)])
+              (cond
+               ;; Bidi controls get positioned where they appear
+               [(is-bidi-control? ch)
+                (vector-set! positions i visual-cursor)
+                (pk 'sequential-control ch 'pos i 'visual visual-cursor)
+                (loop (+ i 1) visual-cursor last-base-position)]  ; Controls don't advance cursor
+               
+               ;; Combining marks - position at last base character position
+               [(char-combining-mark? ch)
+                (vector-set! positions i last-base-position)
+                (pk 'sequential-combining ch 'pos i 'visual last-base-position 'base-was-at last-base-position)
+                (loop (+ i 1) visual-cursor last-base-position)]  ; Combining marks don't advance cursor
+               
+               ;; Tab character
+               [(char=? ch #\tab)
+                (vector-set! positions i visual-cursor)
+                (let ([next-tab (* tabsize (+ (quotient visual-cursor tabsize) 1))])
+                  (pk 'sequential-tab ch 'pos i 'visual visual-cursor 'next-cursor next-tab)
+                  (loop (+ i 1) next-tab visual-cursor))]  ; Tab is new base position
+               
+               ;; Regular characters (base characters)
+               [else
+                (let ([char-width (max 0 (wcwidth ch cjk?))])
+                  (vector-set! positions i visual-cursor)
+                  (pk 'sequential-base ch 'pos i 'visual visual-cursor 'width char-width)
+                  (loop (+ i 1) (+ visual-cursor char-width) visual-cursor))]))))
+        
+        ;; Pass 2: Apply bidi reordering to content within runs based on resolved levels
+        (let ([runs (find-bidi-runs resolved-levels)])
+          (for-each (lambda (run)
+                      (let ([start (car run)]
+                            [end (cadr run)]
+                            [level (caddr run)])
+                        (when (odd? level)  ; Only reverse RTL runs (odd levels)
+                          (pk 'applying-rtl-reorder 'start start 'end end 'level level)
+                          (apply-rtl-reordering-to-run str start end positions))))
+                    runs))
+        
+        ;; Set final position - find the rightmost visual position
+        (let ([rightmost-pos (find-rightmost-visual-position str positions str-len)])
+          (vector-set! positions str-len rightmost-pos))
+        
+        (vector->list positions))))
+
+(define (apply-rtl-reordering-to-run str start end positions)
+  "Apply RTL reordering to content characters within a run, preserving grapheme clusters."
+  ;; Collect grapheme clusters and their positions
+  (let ([grapheme-clusters '()])
+    
+    ;; Find grapheme clusters within the run
+    (let loop ([i start])
+      (when (< i end)
+        (let ([ch (string-ref str i)])
+          (cond
+           ;; Skip bidi controls
+           [(is-bidi-control? ch)
+            (loop (+ i 1))]
+           
+           ;; Process grapheme cluster
+           [(not (char-combining-mark? ch))  ; Base character
+            (let* ([cluster-end (find-next-grapheme-boundary str i)]
+                   [cluster-end-in-run (min cluster-end end)]
+                   [cluster-positions (iota (- cluster-end-in-run i) i)]
+                   [cluster-visual-pos (vector-ref positions i)])
+              
+              ;; Add this cluster to our list
+              (set! grapheme-clusters 
+                    (cons (cons cluster-positions cluster-visual-pos) grapheme-clusters))
+              
+              (loop cluster-end-in-run))]
+           
+           ;; Combining mark not preceded by base in this run - treat as single char
+           [else
+            (let ([cluster-visual-pos (vector-ref positions i)])
+              (set! grapheme-clusters 
+                    (cons (cons (list i) cluster-visual-pos) grapheme-clusters))
+              (loop (+ i 1)))]))))
+    
+    ;; Reverse the order of grapheme clusters (not individual characters)
+    (when (not (null? grapheme-clusters))
+      (let* ([cluster-infos (reverse grapheme-clusters)]  ; Reverse cluster order
+             [visual-positions (map cdr cluster-infos)]
+             [reversed-positions (reverse visual-positions)])
+        
+        (pk 'rtl-grapheme-reorder 'clusters (map car cluster-infos))
+        (pk 'rtl-grapheme-reorder 'old-visuals visual-positions)
+        (pk 'rtl-grapheme-reorder 'new-visuals reversed-positions)
+        
+        ;; Apply reversed positions to each cluster
+        (for-each (lambda (cluster-positions new-visual)
+                    ;; All characters in the grapheme cluster get the same position
+                    (for-each (lambda (pos)
+                                (vector-set! positions pos new-visual))
+                              cluster-positions))
+                  (map car cluster-infos) reversed-positions)))))
+
+(define (find-rightmost-visual-position str positions str-len)
+  "Find the rightmost visual position after RTL reordering, ignoring combining marks."
+  (if (= str-len 0)
+      0
+      ;; Find the maximum visual position among non-combining characters
+      (let ([max-visual-pos 0]
+            [char-at-max-pos #f])
+        
+        ;; Find non-combining character with maximum visual position
+        (let loop ([i 0])
+          (when (< i str-len)
+            (let ([ch (string-ref str i)]
+                  [visual-pos (vector-ref positions i)])
+              ;; Only consider non-combining, non-control characters for EOL calculation
+              (when (and (not (char-combining-mark? ch))
+                         (not (is-bidi-control? ch))
+                         (>= visual-pos max-visual-pos))
+                (set! max-visual-pos visual-pos)
+                (set! char-at-max-pos i)))
+            (loop (+ i 1))))
+        
+        ;; Calculate width of the rightmost non-combining character
+        (if char-at-max-pos
+            (let ([rightmost-char (string-ref str char-at-max-pos)])
+              (let ([char-width (cond
+                                 [(char=? rightmost-char #\tab) 8]  ; Use default tabsize
+                                 [else (max 0 (wcwidth rightmost-char #f))])])
+                (+ max-visual-pos char-width)))
+            0))))
+
+;;; Test functions for combining mark positioning
+(define (test-ltr-combining-mark)
+  "Test LTR base with combining mark."
+  (let* ([combining-acute #\x0301]  ; Combining acute accent
+         [test-str (string #\a combining-acute)])
+    
+    (pk 'ltr-combining-test test-str)
+    (pk 'ltr-combining-chars (map char->integer (string->list test-str)))
+    
+    ;; Expected: a=0, combining-acute=0, EOL=1
+    (pk 'expected-ltr-combining '(0 0 1))
+    
+    (let ([result (compute-bidi-aware-cell-positions-two-pass test-str 8 #f)])
+      (pk 'ltr-combining-result result)
+      result)))
+
+(define (test-rtl-combining-mark)
+  "Test RTL base with combining mark."
+  (let* ([hebrew-alef #\x05d0]      ; Hebrew Alef
+         [combining-acute #\x0301]   ; Combining acute accent
+         [test-str (string hebrew-alef combining-acute)])
+    
+    (pk 'rtl-combining-test test-str)
+    (pk 'rtl-combining-chars (map char->integer (string->list test-str)))
+    
+    ;; Expected: alef=0, combining-acute=0, EOL=1
+    (pk 'expected-rtl-combining '(0 0 1))
+    
+    (let ([result (compute-bidi-aware-cell-positions-two-pass test-str 8 #f)])
+      (pk 'rtl-combining-result result)
+      result)))
+
+;;; Updated test for RTL text EOL positioning
+(define (test-rtl-eol-position)
+  "Test that EOL position is correct after RTL text."
+  (let* ([alef #\x05d0]       ; Hebrew Alef
+         [bet #\x05d1]        ; Hebrew Bet  
+         [gimel #\x05d2]      ; Hebrew Gimel
+         [test-str (string alef bet gimel)])
+    
+    (pk 'rtl-eol-test-string test-str)
+    (pk 'rtl-eol-test-chars (map char->integer (string->list test-str)))
+    
+    ;; Expected: gimel=0, bet=1, alef=2, EOL=3
+    (pk 'expected-rtl-eol '(2 1 0 3))
+    
+    (let ([result (compute-bidi-aware-cell-positions-two-pass test-str 8 #t)])
+      (pk 'rtl-eol-result result)
+      result)))
+(define (test-rtl-combining-chars)
+  "Test RTL text with combining characters to ensure proper positioning."
+  (let* ([rlo #\x202E]        ; Right-to-Left Override
+         [pdf #\x202C]        ; Pop Directional Formatting
+         [alef #\x05d0]       ; Hebrew Alef (base)
+         [qamats #\x05b8]     ; Hebrew Qamats (combining mark)
+         [dagesh #\x05bc]     ; Hebrew Dagesh (combining mark)
+         [bet #\x05d1]        ; Hebrew Bet (base)
+         [patah #\x05b7]      ; Hebrew Patah (combining mark)
+         ;; Test: RLO + alef+qamats+dagesh + bet+patah + PDF
+         [test-str (string rlo alef qamats dagesh bet patah pdf)])
+    
+    (pk 'combining-test-string test-str)
+    (pk 'combining-test-chars (map char->integer (string->list test-str)))
+    
+    ;; Expected behavior:
+    ;; - RLO at position 0
+    ;; - RTL content: (alef+qamats+dagesh) and (bet+patah) should be reversed as clusters
+    ;; - So: RLO=0, bet+patah=0, alef+qamats+dagesh=2, PDF=4
+    ;; - All combining marks should be at same position as their base
+    
+    (pk 'expected-combining '(0 2 2 2 0 0 4))
+    
+    (let ([result (compute-bidi-aware-cell-positions-two-pass test-str 8 #t)])
+      (pk 'combining-result result)
+      result)))
+
+;;; Test function for the specific case
+(define (test-complex-bidi-case)
+  "Test the ab+LRO+alef+bet+cd+PDF+ef case."
+  (let* ([lro #\x202E]        ; Right-to-Left Override
+         [pdf #\x202C]        ; Pop Directional Formatting
+         [alef #\x05d0]       ; Hebrew Alef
+         [bet #\x05d1]        ; Hebrew Bet
+         [test-str (string #\a #\b lro alef bet #\c #\d pdf #\e #\f)])
+    
+    (pk 'complex-test-string test-str)
+    (pk 'complex-test-chars (map char->integer (string->list test-str)))
+    
+    ;; Expected: a=0, b=1, LRO=2, alef=3, bet=2, c=4, d=5, PDF=6, e=6, f=7
+    ;; Wait, let me recalculate...
+    ;; Sequential: a=0, b=1, LRO=2, alef=2, bet=3, c=4, d=5, PDF=6, e=6, f=7
+    ;; RTL reorder within LRO...PDF: bet should come before alef visually
+    ;; So: a=0, b=1, LRO=2, bet=2, alef=3, c=4, d=5, PDF=6, e=6, f=7
+    (pk 'expected '(0 1 2 3 2 4 5 6 6 7 8))
+    
+    (let ([result (compute-bidi-aware-cell-positions-two-pass test-str 8 #t)])
+      (pk 'complex-result result)
+      result)))
