@@ -1,7 +1,8 @@
-;;; Gano Character Buffer Module - Complete Basic Operations
-;;; Complete ECMA-48 terminal control implementation
+;;; Gano Character Buffer Module - Complete Basic Operations with Streamlined Undo
+;;; Complete ECMA-48 terminal control implementation with plugin-based undo system
 ;;;
 ;;; This file contains the minimum viable set of text editing operations
+;;; All operations support undo through a plugin-based registry system
 
 (define-module (gano cbuf-basic)
   #:use-module (ice-9 format)            ; Format function
@@ -20,8 +21,20 @@
   #:use-module (gano char)               ; Character utilities
   #:use-module (gano string-split)       ; String splitting and joining
   #:use-module (gano string-utils)       ; String manipulation utilities
-  #:use-module (gano uax9-bidi)
+  #:use-module (gano uax9-core)
   #:export (
+    ;; Undo system API
+    cbuf-register-undo-operation!
+    cbuf-unregister-undo-operation!
+    cbuf-get-undo-operation-handler
+    cbuf-list-registered-operations
+    cbuf-save-undo!
+    cbuf-undo
+    cbuf-can-undo?
+    cbuf-clear-undo-history!
+    cbuf-get-undo-count
+    cbuf-set-max-undo-operations!
+    
     ;; Helper functions
     cbuf-x-data->x-index
     cbuf-x-index->x-data	    
@@ -75,10 +88,6 @@
     ;; Word operations
     cbuf-handle-tab!
 
-    ;; Undo operations
-    cbuf-undo
-    cbuf-can-undo?
-
     ;; Validation helpers
     cbuf-validate-string-insertion
     cbuf-validate-combining-mark-insertion
@@ -95,6 +104,397 @@
     cbuf-on-first-page?
     cbuf-on-last-page?
     ))
+
+;;; =================================================================
+;;; UNDO OPERATION REGISTRY
+;;; =================================================================
+
+;; Global registry for undo operation handlers
+(define *undo-operation-registry* (make-hash-table))
+
+;; Default maximum undo operations
+(define *max-undo-operations* 1000)
+
+;;; =================================================================
+;;; UNDO OPERATION HANDLER API
+;;; =================================================================
+
+(define (cbuf-register-undo-operation! operation-type capturer restorer)
+  "Register an undo operation handler.
+   OPERATION-TYPE: symbol identifying the operation (e.g., 'delete-to-eol)
+   CAPTURER: function that captures state before operation: (lambda (cbuf . args) -> state)
+   RESTORER: function that restores state: (lambda (cbuf state . args) -> void)"
+  (hash-set! *undo-operation-registry* operation-type (cons capturer restorer)))
+
+(define (cbuf-unregister-undo-operation! operation-type)
+  "Unregister an undo operation handler"
+  (hash-remove! *undo-operation-registry* operation-type))
+
+(define (cbuf-get-undo-operation-handler operation-type)
+  "Get the handler (capturer . restorer) for an operation type"
+  (hash-ref *undo-operation-registry* operation-type #f))
+
+(define (cbuf-list-registered-operations)
+  "List all registered undo operation types"
+  (hash-map->list (lambda (k v) k) *undo-operation-registry*))
+
+;;; =================================================================
+;;; UNDO STATE CAPTURE AND RESTORATION
+;;; =================================================================
+
+(define (cbuf-capture-base-state cbuf)
+  "Capture the base state that all operations need to restore"
+  `((position ,(cbuf-line-cur cbuf)
+              ,(cbuf-x-data cbuf)
+              ,(cbuf-x-cell cbuf)
+              ,(cbuf-x-goal cbuf))
+    (mark ,(cbuf-mark-set? cbuf)
+          ,(cbuf-mark-line cbuf)
+          ,(cbuf-mark-x-data cbuf))
+    (sgr-state ,(sgr-copy (cbuf-current-sgr cbuf))
+               ,(cbuf-default-grcm cbuf)
+               ,(map sgr-copy (cbuf-sgr-stack cbuf)))
+    (buffer-state ,(cbuf-modified? cbuf)
+                  ,(cbuf-final-newline? cbuf)
+                  ,(cbuf-final-newline-policy cbuf))))
+
+(define (cbuf-restore-base-state! cbuf base-state)
+  "Restore the base state for all operations"
+  (let ([position (assq 'position base-state)]
+        [mark (assq 'mark base-state)]
+        [sgr-state (assq 'sgr-state base-state)]
+        [buffer-state (assq 'buffer-state base-state)])
+    
+    ;; Restore cursor position
+    (when position
+      (let ([line (cadr position)]
+            [x-data (caddr position)]
+            [x-cell (cadddr position)]
+            [x-goal (cadddr (cdr position))])
+        (set-cbuf-line-cur! cbuf (cbuf-bracket-line cbuf line))
+        (set-cbuf-x-data! cbuf (cbuf-bracket-x-data cbuf x-data))
+        (set-cbuf-x-cell! cbuf x-cell)
+        (set-cbuf-x-goal! cbuf x-goal)))
+    
+    ;; Restore mark state
+    (when mark
+      (let ([mark-set? (cadr mark)]
+            [mark-line (caddr mark)]
+            [mark-x-data (cadddr mark)])
+        (set-cbuf-mark-set?! cbuf mark-set?)
+        (set-cbuf-mark-line! cbuf (cbuf-bracket-line cbuf mark-line))
+        (set-cbuf-mark-x-data! cbuf mark-x-data)))
+    
+    ;; Restore SGR state
+    (when sgr-state
+      (let ([saved-current-sgr (cadr sgr-state)]
+            [saved-grcm (caddr sgr-state)]
+            [saved-stack (cadddr sgr-state)])
+        (set-cbuf-current-sgr! cbuf (sgr-copy saved-current-sgr))
+        (set-cbuf-default-grcm! cbuf saved-grcm)
+        (set-cbuf-sgr-stack! cbuf (map sgr-copy saved-stack))))
+    
+    ;; Restore buffer state
+    (when buffer-state
+      (let ([modified? (cadr buffer-state)]
+            [final-newline? (caddr buffer-state)]
+            [final-newline-policy (cadddr buffer-state)])
+        (set-cbuf-modified?! cbuf modified?)
+        (set-cbuf-final-newline?! cbuf final-newline?)
+        (set-cbuf-final-newline-policy! cbuf final-newline-policy)))))
+
+;;; =================================================================
+;;; UNDO RECORDING AND EXECUTION
+;;; =================================================================
+
+(define (cbuf-save-undo! cbuf operation-type . args)
+  "Save undo using the plugin system.
+   Automatically calls the registered capturer for the operation type."
+  (let ([handler (cbuf-get-undo-operation-handler operation-type)])
+    (if handler
+        (let* ([capturer (car handler)]
+               [base-state (cbuf-capture-base-state cbuf)]
+               [operation-state (apply capturer cbuf args)]
+               [undo-record `((base-state ,base-state)
+                             (operation-type ,operation-type)
+                             (operation-state ,operation-state)
+                             (operation-args ,args))])
+          
+          ;; Add to undo list with size management
+          (let ([new-undo-list (cons undo-record (cbuf-undo-list cbuf))])
+            (set-cbuf-undo-list! cbuf 
+              (if (> (length new-undo-list) *max-undo-operations*)
+                  (take new-undo-list *max-undo-operations*)
+                  new-undo-list))))
+        
+        (error "Unregistered undo operation type" operation-type))))
+
+(define (cbuf-undo cbuf)
+  "Perform undo using the plugin system"
+  (when (cbuf-can-undo? cbuf)
+    (let* ([undo-record (car (cbuf-undo-list cbuf))]
+           [base-state (cadr (assq 'base-state undo-record))]
+           [operation-type (cadr (assq 'operation-type undo-record))]
+           [operation-state (cadr (assq 'operation-state undo-record))]
+           [operation-args (cadr (assq 'operation-args undo-record))])
+      
+      ;; Get the restorer function
+      (let ([handler (cbuf-get-undo-operation-handler operation-type)])
+        (if handler
+            (let ([restorer (cdr handler)])
+              ;; Call the specific operation restorer
+              (apply restorer cbuf operation-state operation-args)
+              
+              ;; Restore base state
+              (cbuf-restore-base-state! cbuf base-state)
+              
+              ;; Remove this undo record
+              (set-cbuf-undo-list! cbuf (cdr (cbuf-undo-list cbuf))))
+            
+            (error "Cannot undo unregistered operation type" operation-type))))))
+
+(define (cbuf-can-undo? cbuf)
+  "Return #t if there are operations that can be undone"
+  (not (null? (cbuf-undo-list cbuf))))
+
+(define (cbuf-clear-undo-history! cbuf)
+  "Clear all undo history"
+  (set-cbuf-undo-list! cbuf '()))
+
+(define (cbuf-get-undo-count cbuf)
+  "Get the number of operations that can be undone"
+  (length (cbuf-undo-list cbuf)))
+
+(define (cbuf-set-max-undo-operations! max-ops)
+  "Set the maximum number of undo operations to keep"
+  (set! *max-undo-operations* max-ops))
+
+;;; =================================================================
+;;; BUILT-IN OPERATION HANDLERS
+;;; =================================================================
+
+;; Character insertion handler
+(define (capture-char-insertion-state cbuf char position)
+  "Capture state for character insertion"
+  `((line-num ,(cbuf-line-cur cbuf))
+    (old-metrics ,(cbuf-metrics-cur cbuf))))
+
+(define (restore-char-insertion-state cbuf state char position)
+  "Restore state after character insertion"
+  (let ([line-num (cadr (assq 'line-num state))]
+        [old-metrics (cadr (assq 'old-metrics state))])
+    (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
+
+;; Character deletion handler
+(define (capture-char-deletion-state cbuf position)
+  "Capture state for character deletion"
+  `((line-num ,(cbuf-line-cur cbuf))
+    (old-metrics ,(cbuf-metrics-cur cbuf))))
+
+(define (restore-char-deletion-state cbuf state position)
+  "Restore state after character deletion"
+  (let ([line-num (cadr (assq 'line-num state))]
+        [old-metrics (cadr (assq 'old-metrics state))])
+    (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
+
+;; Newline insertion handler
+(define (capture-newline-insertion-state cbuf position)
+  "Capture state for newline insertion"
+  `((line-num ,(cbuf-line-cur cbuf))
+    (old-metrics ,(cbuf-metrics-cur cbuf))
+    (line-count-before ,(cbuf-line-count cbuf))))
+
+(define (restore-newline-insertion-state cbuf state position)
+  "Restore state after newline insertion"
+  (let ([line-num (cadr (assq 'line-num state))]
+        [old-metrics (cadr (assq 'old-metrics state))])
+    
+    ;; Remove the inserted line and restore original line
+    (let* ([current-metrics-list (cbuf-text-metrics cbuf)]
+           [after-removal (list-delete-range current-metrics-list (+ line-num 1) (+ line-num 2))]
+           [final-metrics-list (list-update after-removal line-num old-metrics)])
+      (set-cbuf-text-metrics! cbuf final-metrics-list))))
+
+;; String insertion handler
+(define (capture-string-insertion-state cbuf string position)
+  "Capture state for string insertion"
+  (if (string-contains string "\n")
+      ;; Multi-line string insertion
+      `((type multiline)
+        (line-num ,(cbuf-line-cur cbuf))
+        (old-metrics ,(cbuf-metrics-cur cbuf))
+        (line-count-before ,(cbuf-line-count cbuf)))
+      ;; Single-line string insertion
+      `((type single-line)
+        (line-num ,(cbuf-line-cur cbuf))
+        (old-metrics ,(cbuf-metrics-cur cbuf)))))
+
+(define (restore-string-insertion-state cbuf state string position)
+  "Restore state after string insertion"
+  (let ([type (cadr (assq 'type state))]
+        [line-num (cadr (assq 'line-num state))]
+        [old-metrics (cadr (assq 'old-metrics state))])
+    
+    (case type
+      [(single-line)
+       ;; Simple single-line restoration
+       (cbuf-restore-line-metrics! cbuf line-num old-metrics)]
+      
+      [(multiline)
+       ;; Complex multi-line restoration
+       (let ([line-count-before (cadr (assq 'line-count-before state))]
+             [current-line-count (cbuf-line-count cbuf)])
+         ;; Remove all inserted lines except the first
+         (when (> current-line-count line-count-before)
+           (let* ([metrics-list (cbuf-text-metrics cbuf)]
+                  [lines-to-remove (- current-line-count line-count-before)]
+                  [after-removal (list-delete-range metrics-list 
+                                                   (+ line-num 1) 
+                                                   (+ line-num 1 lines-to-remove))])
+             (set-cbuf-text-metrics! cbuf after-removal)))
+         ;; Restore the original line
+         (cbuf-restore-line-metrics! cbuf line-num old-metrics))])))
+
+;; Region deletion handler
+(define (capture-region-deletion-state cbuf start-line start-x-data end-line end-x-data)
+  "Capture state for region deletion"
+  (if (= start-line end-line)
+      ;; Single line deletion
+      `((type single-line)
+        (line-num ,start-line)
+        (old-metrics ,(list-ref (cbuf-text-metrics cbuf) start-line)))
+      ;; Multi-line deletion
+      `((type multiline)
+        (start-line ,start-line)
+        (end-line ,end-line)
+        (start-line-metrics ,(list-ref (cbuf-text-metrics cbuf) start-line))
+        (end-line-metrics ,(list-ref (cbuf-text-metrics cbuf) end-line))
+        (deleted-lines ,(take (drop (cbuf-text-metrics cbuf) (+ start-line 1)) 
+                             (- end-line start-line))))))
+
+(define (restore-region-deletion-state cbuf state start-line start-x-data end-line end-x-data)
+  "Restore state after region deletion"
+  (let ([type (cadr (assq 'type state))])
+    (case type
+      [(single-line)
+       (let ([line-num (cadr (assq 'line-num state))]
+             [old-metrics (cadr (assq 'old-metrics state))])
+         (cbuf-restore-line-metrics! cbuf line-num old-metrics))]
+      
+      [(multiline)
+       (let ([start-line-orig (cadr (assq 'start-line state))]
+             [end-line-orig (cadr (assq 'end-line state))]
+             [start-line-metrics (cadr (assq 'start-line-metrics state))]
+             [end-line-metrics (cadr (assq 'end-line-metrics state))]
+             [deleted-lines (cadr (assq 'deleted-lines state))])
+         
+         ;; Restore start line
+         (cbuf-restore-line-metrics! cbuf start-line-orig start-line-metrics)
+         
+         ;; Insert deleted middle lines
+         (when (not (null? deleted-lines))
+           (let* ([metrics-list (cbuf-text-metrics cbuf)]
+                  [before (take metrics-list (+ start-line-orig 1))]
+                  [after (drop metrics-list (+ start-line-orig 1))]
+                  [new-metrics-list (append before deleted-lines after)])
+             (set-cbuf-text-metrics! cbuf new-metrics-list)))
+         
+         ;; Insert end line
+         (let* ([metrics-list (cbuf-text-metrics cbuf)]
+                [new-metrics-list (list-insert metrics-list end-line-orig end-line-metrics)])
+           (set-cbuf-text-metrics! cbuf new-metrics-list)))])))
+
+;; Line deletion handler
+(define (capture-line-deletion-state cbuf)
+  "Capture state for line deletion"
+  `((line-num ,(cbuf-line-cur cbuf))
+    (deleted-metrics ,(cbuf-metrics-cur cbuf))
+    (line-count-before ,(cbuf-line-count cbuf))))
+
+(define (restore-line-deletion-state cbuf state)
+  "Restore state after line deletion"
+  (let ([line-num (cadr (assq 'line-num state))]
+        [deleted-metrics (cadr (assq 'deleted-metrics state))])
+    ;; Insert the deleted line back
+    (let* ([metrics-list (cbuf-text-metrics cbuf)]
+           [new-metrics-list (list-insert metrics-list line-num deleted-metrics)])
+      (set-cbuf-text-metrics! cbuf new-metrics-list))))
+
+;; Line joining handler
+(define (capture-line-joining-state cbuf)
+  "Capture state for line joining"
+  (let ([current-line (cbuf-line-cur cbuf)])
+    `((current-line ,current-line)
+      (current-metrics ,(cbuf-metrics-cur cbuf))
+      (next-line ,(+ current-line 1))
+      (next-metrics ,(list-ref (cbuf-text-metrics cbuf) (+ current-line 1))))))
+
+(define (restore-line-joining-state cbuf state)
+  "Restore state after line joining"
+  (let ([current-line (cadr (assq 'current-line state))]
+        [current-metrics (cadr (assq 'current-metrics state))]
+        [next-line (cadr (assq 'next-line state))]
+        [next-metrics (cadr (assq 'next-metrics state))])
+    
+    ;; Restore both lines
+    (cbuf-restore-line-metrics! cbuf current-line current-metrics)
+    (let* ([metrics-list (cbuf-text-metrics cbuf)]
+           [new-metrics-list (list-insert metrics-list next-line next-metrics)])
+      (set-cbuf-text-metrics! cbuf new-metrics-list))))
+
+;; Buffer clear handler
+(define (capture-buffer-clear-state cbuf)
+  "Capture state for buffer clear"
+  `((all-metrics ,(cbuf-text-metrics cbuf))
+    (cursor-line ,(cbuf-line-cur cbuf))
+    (cursor-x-data ,(cbuf-x-data cbuf))))
+
+(define (restore-buffer-clear-state cbuf state)
+  "Restore state after buffer clear"
+  (let ([all-metrics (cadr (assq 'all-metrics state))])
+    (set-cbuf-text-metrics! cbuf all-metrics)))
+
+;;; =================================================================
+;;; REGISTRATION OF BUILT-IN OPERATIONS
+;;; =================================================================
+
+(define (cbuf-register-built-in-undo-operations!)
+  "Register all built-in undo operations"
+  (cbuf-register-undo-operation! 'insert-char
+                                  capture-char-insertion-state
+                                  restore-char-insertion-state)
+  
+  (cbuf-register-undo-operation! 'delete-char
+                                  capture-char-deletion-state
+                                  restore-char-deletion-state)
+  
+  (cbuf-register-undo-operation! 'backspace
+                                  capture-char-deletion-state
+                                  restore-char-deletion-state)
+  
+  (cbuf-register-undo-operation! 'insert-newline
+                                  capture-newline-insertion-state
+                                  restore-newline-insertion-state)
+  
+  (cbuf-register-undo-operation! 'insert-string
+                                  capture-string-insertion-state
+                                  restore-string-insertion-state)
+  
+  (cbuf-register-undo-operation! 'delete-region
+                                  capture-region-deletion-state
+                                  restore-region-deletion-state)
+  
+  (cbuf-register-undo-operation! 'delete-line
+                                  capture-line-deletion-state
+                                  restore-line-deletion-state)
+  
+  (cbuf-register-undo-operation! 'join-lines
+                                  capture-line-joining-state
+                                  restore-line-joining-state)
+  
+  (cbuf-register-undo-operation! 'clear-buffer
+                                  capture-buffer-clear-state
+                                  restore-buffer-clear-state))
 
 ;;; =================================================================
 ;;; HELPER FUNCTIONS (using utilities from cbuf-utils)
@@ -117,22 +517,6 @@
                                    (max 0 (min line max-line))))
                         0)])
     (validate-absolute-position-pure line column max-line max-column operation)))
-
-(define (cbuf-raise-boundary-error-with-info cbuf operation target actual boundary-type)
-  "Raise boundary error using proper cbuf-utils error info constructor"
-  (let* ([error-info (make-boundary-error-info operation target actual boundary-type)]
-         [condition-constructor
-          (case boundary-type
-            [(beginning-of-buffer) &cbuf-beginning-of-buffer]
-            [(end-of-buffer) &cbuf-end-of-buffer]
-            [(beginning-of-line) &cbuf-beginning-of-line]
-            [(end-of-line) &cbuf-end-of-line]
-            [else &cbuf-range-error])])
-    (raise (condition (condition-constructor
-                       (operation operation)
-                       (requested target)
-                       (actual actual)
-                       (reason error-info))))))
 
 (define (cbuf-validate-combining-mark-insertion cbuf char-new position)
   "Validate combining mark insertion using cbuf-utils validation"
@@ -183,255 +567,17 @@
                             (string-length text))])
          (list start-index end-index))])))
 
-;;; =================================================================
-;;; UNDO SYSTEM
-;;; =================================================================
-
-(define (cbuf-save-undo-state! cbuf operation . args)
-  "Save current state for undo using delta-based approach"
-  (let ([undo-record `((position ,(cbuf-line-cur cbuf)
-                                 ,(cbuf-x-data cbuf)
-                                 ,(cbuf-x-cell cbuf)
-                                 ,(cbuf-x-goal cbuf))
-                       (mark ,(cbuf-mark-set? cbuf)
-                             ,(cbuf-mark-line cbuf)
-                             ,(cbuf-mark-x-data cbuf))
-                       (sgr-state ,(sgr-copy (cbuf-current-sgr cbuf))
-                                  ,(cbuf-default-grcm cbuf)
-                                  ,(map sgr-copy (cbuf-sgr-stack cbuf)))
-                       (operation ,operation ,@args))])
-    (set-cbuf-undo-list! cbuf (cons undo-record (cbuf-undo-list cbuf)))))
-
-(define (cbuf-save-line-modification-undo! cbuf line-num old-metrics operation . args)
-  "Save undo state for line modification - stores the old metrics of the modified line"
-  (let ([undo-record `((position ,(cbuf-line-cur cbuf)
-                                 ,(cbuf-x-data cbuf)
-                                 ,(cbuf-x-cell cbuf)
-                                 ,(cbuf-x-goal cbuf))
-                       (mark ,(cbuf-mark-set? cbuf)
-                             ,(cbuf-mark-line cbuf)
-                             ,(cbuf-mark-x-data cbuf))
-                       (sgr-state ,(sgr-copy (cbuf-current-sgr cbuf))
-                                  ,(cbuf-default-grcm cbuf)
-                                  ,(map sgr-copy (cbuf-sgr-stack cbuf)))
-                       (operation ,operation ,@args)
-                       (modified-line ,line-num ,old-metrics))])
-    (set-cbuf-undo-list! cbuf (cons undo-record (cbuf-undo-list cbuf)))))
-
-(define (cbuf-save-line-insertion-undo! cbuf start-line num-lines operation . args)
-  "Save undo state for line insertion"
-  (let ([undo-record `((position ,(cbuf-line-cur cbuf)
-                                 ,(cbuf-x-data cbuf)
-                                 ,(cbuf-x-cell cbuf)
-                                 ,(cbuf-x-goal cbuf))
-                       (mark ,(cbuf-mark-set? cbuf)
-                             ,(cbuf-mark-line cbuf)
-                             ,(cbuf-mark-x-data cbuf))
-                       (sgr-state ,(sgr-copy (cbuf-current-sgr cbuf))
-                                  ,(cbuf-default-grcm cbuf)
-                                  ,(map sgr-copy (cbuf-sgr-stack cbuf)))
-                       (operation ,operation ,@args)
-                       (inserted-lines ,start-line ,num-lines))])
-    (set-cbuf-undo-list! cbuf (cons undo-record (cbuf-undo-list cbuf)))))
-
-(define (cbuf-save-line-deletion-undo! cbuf start-line deleted-metrics operation . args)
-  "Save undo state for line deletion"
-  (let ([undo-record `((position ,(cbuf-line-cur cbuf)
-                                 ,(cbuf-x-data cbuf)
-                                 ,(cbuf-x-cell cbuf)
-                                 ,(cbuf-x-goal cbuf))
-                       (mark ,(cbuf-mark-set? cbuf)
-                             ,(cbuf-mark-line cbuf)
-                             ,(cbuf-mark-x-data cbuf))
-                       (sgr-state ,(sgr-copy (cbuf-current-sgr cbuf))
-                                  ,(cbuf-default-grcm cbuf)
-                                  ,(map sgr-copy (cbuf-sgr-stack cbuf)))
-                       (operation ,operation ,@args)
-                       (deleted-lines ,start-line ,deleted-metrics))])
-    (set-cbuf-undo-list! cbuf (cons undo-record (cbuf-undo-list cbuf)))))
-
-(define (cbuf-save-newline-insertion-undo! cbuf original-line original-text original-sgr-list split-x-index operation . args)
-  "Save undo state for newline insertion - captures the complete operation atomically"
-  (let ([undo-record `((position ,(cbuf-line-cur cbuf) 
-                                 ,(cbuf-x-data cbuf) 
-                                 ,(cbuf-x-cell cbuf) 
-                                 ,(cbuf-x-goal cbuf))
-                       (mark ,(cbuf-mark-set? cbuf)
-                             ,(cbuf-mark-line cbuf)
-                             ,(cbuf-mark-x-data cbuf))
-                       (sgr-state ,(sgr-copy (cbuf-current-sgr cbuf))
-                                  ,(cbuf-default-grcm cbuf)
-                                  ,(map sgr-copy (cbuf-sgr-stack cbuf)))
-                       (operation ,operation ,@args)
-                       (newline-insertion ,(cbuf-line-cur cbuf)    ; line where newline was inserted
-                                         ,original-text           ; original complete line text
-                                         ,original-sgr-list      ; original complete SGR list
-                                         ,split-x-index))])      ; where the split occurred
-    (set-cbuf-undo-list! cbuf (cons undo-record (cbuf-undo-list cbuf)))))
-
-(define (cbuf-save-multiline-deletion-undo! cbuf start-line end-line start-line-metrics end-line-metrics deleted-lines operation . args)
-  "Save undo state for multi-line deletion - captures all affected lines"
-  (let ([undo-record `((position ,(cbuf-line-cur cbuf) 
-                                 ,(cbuf-x-data cbuf) 
-                                 ,(cbuf-x-cell cbuf) 
-                                 ,(cbuf-x-goal cbuf))
-                       (mark ,(cbuf-mark-set? cbuf)
-                             ,(cbuf-mark-line cbuf)
-                             ,(cbuf-mark-x-data cbuf))
-                       (sgr-state ,(sgr-copy (cbuf-current-sgr cbuf))
-                                  ,(cbuf-default-grcm cbuf)
-                                  ,(map sgr-copy (cbuf-sgr-stack cbuf)))
-                       (operation ,operation ,@args)
-                       (multiline-deletion ,start-line ,end-line 
-                                          ,start-line-metrics 
-                                          ,end-line-metrics 
-                                          ,deleted-lines))])
-    (set-cbuf-undo-list! cbuf (cons undo-record (cbuf-undo-list cbuf)))))
-
-(define (cbuf-can-undo? cbuf)
-  "Return #t if there are operations that can be undone"
-  (not (null? (cbuf-undo-list cbuf))))
-
-(define (cbuf-undo cbuf)
-  "Undo the last operation using delta-based restoration.
-   Now includes support for dedicated newline insertion undo."
-  (when (cbuf-can-undo? cbuf)
-    (let* ([undo-record (car (cbuf-undo-list cbuf))]
-           [position (assq 'position undo-record)]
-           [mark (assq 'mark undo-record)]
-           [sgr-state (assq 'sgr-state undo-record)]
-           [modified-line (assq 'modified-line undo-record)]
-           [inserted-lines (assq 'inserted-lines undo-record)]
-           [deleted-lines (assq 'deleted-lines undo-record)]
-           [newline-insertion (assq 'newline-insertion undo-record)]
-           [multiline-deletion (assq 'newline-insertion undo-record)]
-	   )
-      
-      ;; Undo text changes based on operation type
-      (cond
-       [newline-insertion
-        ;; Handle newline insertion undo - restore original single line
-        (let ([line-num (cadr newline-insertion)]
-              [original-text (caddr newline-insertion)]
-              [original-sgr-list (cadddr newline-insertion)]
-              [split-index (cadddr (cdr newline-insertion))])
-          
-          ;; Recreate the original line metrics
-          (let ([original-metrics (compute-text-metrics-with-sgr original-text original-sgr-list
-                                                                 (cbuf-tab-size cbuf)
-                                                                 #:cjk? (cbuf-cjk? cbuf))])
-            ;; Replace the split lines with the original single line
-            (let* ([metrics-list (cbuf-text-metrics cbuf)]
-                   ;; Remove the inserted line first, then replace the modified line
-                   [after-line-removal (list-delete-range metrics-list (+ line-num 1) (+ line-num 2))]
-                   [restored-metrics-list (list-update after-line-removal line-num original-metrics)])
-              (set-cbuf-text-metrics! cbuf restored-metrics-list))))]
-       
-       [multiline-deletion
-	;; Handle multi-line deletion undo - restore all original lines
-	(let ([start-line (cadr multiline-deletion)]
-	      [end-line (caddr multiline-deletion)]
-	      [original-start-metrics (cadddr multiline-deletion)]
-	      [original-end-metrics (cadddr (cdr multiline-deletion))]
-	      [deleted-middle-lines (cadddr (cddr multiline-deletion))])
-	  
-	  ;; Restore the original lines
-	  (let* ([metrics-list (cbuf-text-metrics cbuf)]
-		 ;; Replace the joined line with original start line
-		 [after-start-restore (list-update metrics-list start-line original-start-metrics)]
-		 ;; Insert the deleted middle lines
-		 [after-middle-restore (append (take after-start-restore (+ start-line 1))
-					       deleted-middle-lines
-					       (drop after-start-restore (+ start-line 1)))]
-		 ;; Insert the original end line
-		 [final-restored (list-insert after-middle-restore end-line original-end-metrics)])
-	    (set-cbuf-text-metrics! cbuf final-restored)))]
-       
-       [modified-line
-        (let ([line-num (cadr modified-line)]
-              [old-metrics (caddr modified-line)])
-          (let ([new-metrics-list (list-update (cbuf-text-metrics cbuf) line-num old-metrics)])
-            (set-cbuf-text-metrics! cbuf new-metrics-list)))]
-       
-       [inserted-lines
-        (let ([start-line (cadr inserted-lines)]
-              [num-lines (caddr inserted-lines)])
-          (let* ([metrics-list (cbuf-text-metrics cbuf)]
-                 [new-metrics-list (append (take metrics-list start-line)
-                                           (drop metrics-list (+ start-line num-lines)))])
-            (set-cbuf-text-metrics! cbuf new-metrics-list)))]
-       
-       [deleted-lines
-        (let ([start-line (cadr deleted-lines)]
-              [deleted-metrics (caddr deleted-lines)])
-          (let* ([metrics-list (cbuf-text-metrics cbuf)]
-                 [new-metrics-list (append (take metrics-list start-line)
-                                           deleted-metrics
-                                           (drop metrics-list start-line))])
-            (set-cbuf-text-metrics! cbuf new-metrics-list)))])
-      
-      ;; Restore SGR state
-      (when sgr-state
-        (let ([saved-current-sgr (cadr sgr-state)]
-              [saved-grcm (caddr sgr-state)]
-              [saved-stack (cadddr sgr-state)])
-          (set-cbuf-current-sgr! cbuf (sgr-copy saved-current-sgr))
-          (set-cbuf-default-grcm! cbuf saved-grcm)
-          (set-cbuf-sgr-stack! cbuf (map sgr-copy saved-stack))))
-      
-      ;; Restore cursor position
-      (when position
-        (let ([line (cadr position)]
-              [x-data (caddr position)]
-              [x-cell (cadddr position)]
-              [x-goal (cadddr (cdr position))])
-          (set-cbuf-line-cur! cbuf (cbuf-bracket-line cbuf line))
-          (set-cbuf-x-data! cbuf (cbuf-bracket-x-data cbuf x-data))
-          (set-cbuf-x-cell! cbuf x-cell)
-          (set-cbuf-x-goal! cbuf x-goal)))
-      
-      ;; Restore mark state
-      (when mark
-        (let ([mark-set? (cadr mark)]
-              [mark-line (caddr mark)]
-              [mark-x-data (cadddr mark)])
-          (set-cbuf-mark-set?! cbuf mark-set?)
-          (set-cbuf-mark-line! cbuf (cbuf-bracket-line cbuf mark-line))
-          (set-cbuf-mark-x-data! cbuf mark-x-data)))
-      
-      ;; Remove this undo record and mark as modified
-      (set-cbuf-undo-list! cbuf (cdr (cbuf-undo-list cbuf)))
-      (set-cbuf-modified?! cbuf #t))))
-
+(define (cbuf-restore-line-metrics! cbuf line-num old-metrics)
+  "Restore a single line's metrics (helper for undo)"
+  (let ([new-metrics-list (list-update (cbuf-text-metrics cbuf) line-num old-metrics)])
+    (set-cbuf-text-metrics! cbuf new-metrics-list)))
 
 ;;; =================================================================
-;;; HELPER FUNCTIONS FOR POSITION MANAGEMENT
+;;; POSITION MANAGEMENT FUNCTIONS
 ;;; =================================================================
-
-(define (cbuf-update-line! cbuf line-num new-text new-sgr-list)
-  "Update the text and SGR list for a specific line"
-  (unless (= (string-length new-text) (length new-sgr-list))
-    (error "Text length and SGR list length must match"))
-
-  ;; Save undo state
-  (let ([old-metrics (list-ref (cbuf-text-metrics cbuf) line-num)])
-    (cbuf-save-line-modification-undo! cbuf line-num old-metrics 'update-line line-num new-text))
-
-  ;; Compute new metrics with cbuf's settings
-  (let* ([new-metrics (compute-text-metrics-with-sgr new-text
-                                                     new-sgr-list
-                                                     (cbuf-tab-size cbuf)
-                                                     #:cjk? (cbuf-cjk? cbuf))]
-         [new-metrics-list (list-update (cbuf-text-metrics cbuf) line-num new-metrics)])
-    (set-cbuf-text-metrics! cbuf new-metrics-list)
-    (set-cbuf-modified?! cbuf #t)))
-
-(define (cbuf-set-text-cur! cbuf text sgr-list)
-  "Set the text of the current line and update its metrics"
-  (cbuf-update-line! cbuf (cbuf-line-cur cbuf) text sgr-list))
 
 (define (cbuf-update-metrics-cur! cbuf new-metrics)
-  "Update the metrics for the current line"
+  "Update the metrics for the current line. No undo save."
   (let* ([line-num (cbuf-line-cur cbuf)]
          [metrics-list (cbuf-text-metrics cbuf)]
          [new-metrics-list (list-update metrics-list line-num new-metrics)])
@@ -538,87 +684,69 @@
 ;;; =================================================================
 ;;; CHARACTER OPERATIONS
 ;;; =================================================================
-  ;; DON'T save undo here - cbuf-update-line! will do it
+
+(define bidi-state (make-bidi-state 0 'neutral 'none))
 
 (define (cbuf-insert-char! cbuf char-new)
-  "Insert a character at the current position with proper validation"
+  "Insert a character at the current position with undo support"
   (let* ([x-data (cbuf-x-data cbuf)]
-         [text (cbuf-text-cur cbuf)]
-         [sgr-list (cbuf-sgr-list-cur cbuf)]
          [x-index (cbuf-x-data->x-index cbuf x-data)])
 
-    ;; Use cbuf-utils validation for combining marks
+    ;; Validate combining mark insertion
     (cbuf-validate-combining-mark-insertion cbuf char-new x-data)
 
-    ;; DON'T save undo here - cbuf-update-line! will do it
+    ;; Save undo state
+    (cbuf-save-undo! cbuf 'insert-char char-new x-data)
 
-    ;; Insert character and SGR
-    (let* ([new-text (string-insert-char text x-index char-new)]
-           [current-sgr (cbuf-current-sgr cbuf)]
-           [new-sgr-list (list-insert sgr-list x-index current-sgr)])
-
-      ;; Update the line
-      (cbuf-set-text-cur! cbuf new-text new-sgr-list)
-
-      ;; Move cursor forward
+    ;; Perform the operation
+    (let ([new-metrics (text-metrics-insert-char-with-sgr-and-bidi
+                        (cbuf-metrics-cur cbuf)
+                        x-index
+                        char-new
+                        (cbuf-current-sgr cbuf)
+                        bidi-state)])
+      
+      (cbuf-update-metrics-cur! cbuf new-metrics)
       (cbuf-set-x! cbuf (+ x-data 1) 'data)
-
-      ;; Mark as modified
       (set-cbuf-modified?! cbuf #t))))
 
 (define (cbuf-delete-char! cbuf)
-  "Delete the complete grapheme cluster at current position (Delete key behavior)"
+  "Delete the complete grapheme cluster at current position with undo support"
   (unless (cbuf-end-of-line? cbuf)
     (let* ([x-data (cbuf-x-data cbuf)]
-           [text (cbuf-text-cur cbuf)]
-           [sgr-list (cbuf-sgr-list-cur cbuf)]
            [cluster-bounds (cbuf-find-grapheme-cluster-bounds cbuf x-data)]
            [start-index (car cluster-bounds)]
            [end-index (cadr cluster-bounds)])
 
-      ;; Only proceed if we have a valid cluster to delete
       (when (< start-index end-index)
-        ;; DON'T save undo here - cbuf-update-line! will do it
+        ;; Save undo state
+        (cbuf-save-undo! cbuf 'delete-char x-data)
 
-        ;; Delete the entire grapheme cluster
-        (let* ([new-text (string-delete-range text start-index end-index)]
-               [new-sgr-list (list-delete-range sgr-list start-index end-index)])
-
-          ;; Update the line
-          (cbuf-set-text-cur! cbuf new-text new-sgr-list)
-
-          ;; Cursor stays at same data position (now points to next character)
+        ;; Use bidi-aware deletion from text-metrics
+        (let ([new-metrics (text-metrics-delete-range (cbuf-metrics-cur cbuf) 
+                                                     start-index end-index)])
+          (cbuf-update-metrics-cur! cbuf new-metrics)
           (cbuf-set-x! cbuf x-data 'data)
-
-          ;; Mark as modified
           (set-cbuf-modified?! cbuf #t))))))
 
 (define (cbuf-backspace! cbuf)
-  "Delete the complete grapheme cluster before current position (Backspace key behavior)"
+  "Delete the complete grapheme cluster before current position with undo support"
   (unless (cbuf-beginning-of-line? cbuf)
     (let* ([x-data (cbuf-x-data cbuf)]
            [prev-x-data (- x-data 1)]
-           [text (cbuf-text-cur cbuf)]
-           [sgr-list (cbuf-sgr-list-cur cbuf)]
            [cluster-bounds (cbuf-find-grapheme-cluster-bounds cbuf prev-x-data)]
            [start-index (car cluster-bounds)]
            [end-index (cadr cluster-bounds)])
 
-      ;; Only proceed if we have a valid cluster to delete
       (when (< start-index end-index)
-        ;; DON'T save undo here - cbuf-update-line! will do it
+        ;; Save undo state
+        (cbuf-save-undo! cbuf 'backspace prev-x-data)
 
         ;; Delete the entire grapheme cluster
-        (let* ([new-text (string-delete-range text start-index end-index)]
-               [new-sgr-list (list-delete-range sgr-list start-index end-index)])
-
-          ;; Update the line
-          (cbuf-set-text-cur! cbuf new-text new-sgr-list)
-
-          ;; Move cursor to where the deleted cluster was
+        (let ([new-metrics (text-metrics-delete-range (cbuf-metrics-cur cbuf)
+                                                      start-index end-index)])
+          (cbuf-update-metrics-cur! cbuf new-metrics)
           (cbuf-set-x! cbuf prev-x-data 'data)
-
-          ;; Mark as modified
           (set-cbuf-modified?! cbuf #t))))))
 
 ;;; =================================================================
@@ -626,8 +754,7 @@
 ;;; =================================================================
 
 (define (cbuf-insert-newline! cbuf)
-  "Insert a newline at current position, updating final newline status.
-   Uses dedicated undo system for atomic operation."
+  "Insert a newline at current position with undo support"
   (let* ([x-data (cbuf-x-data cbuf)]
          [x-index (cbuf-x-data->x-index cbuf x-data)]
          [current-line (cbuf-line-cur cbuf)]
@@ -636,8 +763,8 @@
          [at-end-of-buffer? (and (= current-line (- (cbuf-line-count cbuf) 1))
                                 (= x-data (cbuf-text-cur-base-length cbuf)))])
     
-    ;; Save undo state BEFORE any modifications - capture the original complete line
-    (cbuf-save-newline-insertion-undo! cbuf current-line text sgr-list x-index 'insert-newline)
+    ;; Save undo state
+    (cbuf-save-undo! cbuf 'insert-newline x-data)
     
     ;; Split current line at cursor position
     (let* ([left-text (substring text 0 x-index)]
@@ -651,29 +778,17 @@
                                                          (cbuf-tab-size cbuf) 
                                                          #:cjk? (cbuf-cjk? cbuf))])
       
-      ;; Perform the modifications without additional undo saves
-      ;; Update current line with left part (direct metrics list manipulation)
-      (let* ([metrics-list (cbuf-text-metrics cbuf)]
-             [new-metrics-list (list-update metrics-list current-line left-metrics)])
-        (set-cbuf-text-metrics! cbuf new-metrics-list))
+      ;; Update current line with left part
+      (cbuf-update-metrics-cur! cbuf left-metrics)
       
-      ;; Insert new line with right part (direct metrics list manipulation)
+      ;; Insert new line with right part
       (let* ([metrics-list (cbuf-text-metrics cbuf)]
              [new-metrics-list (list-insert metrics-list (+ current-line 1) right-metrics)])
         (set-cbuf-text-metrics! cbuf new-metrics-list))
       
       ;; Update final newline status
-      (cond
-        ;; If we were at end of buffer, we now have content after final newline
-        [at-end-of-buffer?
-         (set-cbuf-final-newline?! cbuf #t)]
-        
-        ;; If we're inserting in middle, final newline status depends on whether
-        ;; we're creating a new final line or not
-        [(= (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 2))  ; Near end
-         ;; Check if the new line we just created is now the last line
-         (when (string-null? right-text)
-           (set-cbuf-final-newline?! cbuf #t))])
+      (when at-end-of-buffer?
+        (set-cbuf-final-newline?! cbuf #t))
       
       ;; Move cursor to beginning of new line
       (cbuf-set-y! cbuf (+ current-line 1))
@@ -683,16 +798,15 @@
       (set-cbuf-modified?! cbuf #t))))
 
 (define (cbuf-delete-line! cbuf)
-  "Delete the current line, updating final newline status appropriately"
+  "Delete the current line with undo support"
   (when (> (cbuf-line-count cbuf) 1)  ; Don't delete if it's the only line
     (let ([current-line (cbuf-line-cur cbuf)]
-          [deleted-metrics (cbuf-metrics-cur cbuf)]
           [is-last-line? (= (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 1))]
           [is-empty-last-line? (and (= (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 1))
                                    (string-null? (cbuf-text-cur cbuf)))])
 
       ;; Save undo state
-      (cbuf-save-line-deletion-undo! cbuf current-line (list deleted-metrics) 'delete-line)
+      (cbuf-save-undo! cbuf 'delete-line)
 
       ;; Update final newline status
       (when (and is-last-line? is-empty-last-line? (cbuf-final-newline? cbuf))
@@ -715,23 +829,24 @@
       (set-cbuf-modified?! cbuf #t))))
 
 (define (cbuf-join-lines! cbuf)
-  "Join current line with next line"
+  "Join current line with next line with undo support"
   (let ([current-line (cbuf-line-cur cbuf)])
     (when (< current-line (- (cbuf-line-count cbuf) 1))  ; Not on last line
+      ;; Save undo state
+      (cbuf-save-undo! cbuf 'join-lines)
+      
       (let* ([current-text (cbuf-text-cur cbuf)]
              [current-sgr (cbuf-sgr-list-cur cbuf)]
              [next-text (cbuf-get-line-text cbuf (+ current-line 1))]
              [next-sgr (text-metrics-sgr-list (list-ref (cbuf-text-metrics cbuf) (+ current-line 1)))]
              [joined-text (string-append current-text next-text)]
-             [joined-sgr (append current-sgr next-sgr)])
-
-        ;; Save undo state for both line modification and deletion
-        (cbuf-save-line-deletion-undo! cbuf (+ current-line 1)
-                                       (list (list-ref (cbuf-text-metrics cbuf) (+ current-line 1)))
-                                       'join-lines)
+             [joined-sgr (append current-sgr next-sgr)]
+             [joined-metrics (compute-text-metrics-with-sgr joined-text joined-sgr
+                                                           (cbuf-tab-size cbuf)
+                                                           #:cjk? (cbuf-cjk? cbuf))])
 
         ;; Update current line with joined content
-        (cbuf-set-text-cur! cbuf joined-text joined-sgr)
+        (cbuf-update-metrics-cur! cbuf joined-metrics)
 
         ;; Remove the next line
         (let* ([metrics-list (cbuf-text-metrics cbuf)]
@@ -792,9 +907,12 @@
 ;;; =================================================================
 
 (define (cbuf-insert-string! cbuf str)
-  "Insert a string at the current position with proper validation"
+  "Insert a string at the current position with undo support"
   ;; Validate the string first
   (cbuf-validate-string-insertion cbuf str (cbuf-x-data cbuf))
+
+  ;; Save undo state
+  (cbuf-save-undo! cbuf 'insert-string str (cbuf-x-data cbuf))
 
   (let* ([lines (string-split-lines str)]
          [current-line (cbuf-line-cur cbuf)]
@@ -810,49 +928,107 @@
              [current-sgr (cbuf-current-sgr cbuf)]
              [insert-sgr-list (make-list (string-length insert-text) current-sgr)])
 
-        ;; Save undo state
-        (let ([old-metrics (cbuf-metrics-cur cbuf)])
-          ;; DON'T save undo here - cbuf-update-line! will do it
+        ;; Insert the string
+        (let* ([new-text (string-insert-string text x-index insert-text)]
+               [new-sgr-list (append (take sgr-list x-index)
+                                     insert-sgr-list
+                                     (drop sgr-list x-index))]
+               [new-metrics (compute-text-metrics-with-sgr new-text new-sgr-list
+                                                          (cbuf-tab-size cbuf)
+                                                          #:cjk? (cbuf-cjk? cbuf))])
 
-          ;; Insert the string
-          (let* ([new-text (string-insert-string text x-index insert-text)]
-                 [new-sgr-list (append (take sgr-list x-index)
-                                       insert-sgr-list
-                                       (drop sgr-list x-index))])
+          ;; Update the line
+          (cbuf-update-metrics-cur! cbuf new-metrics)
 
-            ;; Update the line
-            (cbuf-set-text-cur! cbuf new-text new-sgr-list)
+          ;; Move cursor to end of inserted text using cbuf-utils
+          (cbuf-set-x! cbuf (+ x-data (count-base-characters insert-text)) 'data)
 
-            ;; Move cursor to end of inserted text using cbuf-utils
-            (cbuf-set-x! cbuf (+ x-data (count-base-characters insert-text)) 'data)
-
-            ;; Mark as modified
-            (set-cbuf-modified?! cbuf #t))))]
+          ;; Mark as modified
+          (set-cbuf-modified?! cbuf #t)))]
 
      ;; Multi-line insertion
      [else
-      (let ([first-line (car lines)]
-            [middle-lines (if (> (length lines) 2)
-                              (drop (drop-right lines 1) 1)
-                              '())]
-            [last-line (if (> (length lines) 1) (last lines) "")])
+      (cbuf-insert-multiline-string-internal! cbuf lines)])))
 
-        ;; Insert first line
-        (cbuf-insert-string! cbuf first-line)
+(define (cbuf-insert-multiline-string-internal! cbuf lines)
+  "Internal helper for multi-line string insertion (no additional undo save)"
+  (let ([first-line (car lines)]
+        [middle-lines (if (> (length lines) 2)
+                          (drop (drop-right lines 1) 1)
+                          '())]
+        [last-line (if (> (length lines) 1) (last lines) "")])
 
-        ;; Insert newline and each middle line
-        (for-each (lambda (line)
-                    (cbuf-insert-newline! cbuf)
-                    (cbuf-insert-string! cbuf line))
-                  middle-lines)
+    ;; Insert first line
+    (cbuf-insert-single-line-internal! cbuf first-line)
 
-        ;; Insert final newline and last line (if multi-line)
-        (when (> (length lines) 1)
-          (cbuf-insert-newline! cbuf)
-          (cbuf-insert-string! cbuf last-line)))])))
+    ;; Insert newline and each middle line
+    (for-each (lambda (line)
+                (cbuf-insert-newline-internal! cbuf)
+                (cbuf-insert-single-line-internal! cbuf line))
+              middle-lines)
+
+    ;; Insert final newline and last line (if multi-line)
+    (when (> (length lines) 1)
+      (cbuf-insert-newline-internal! cbuf)
+      (cbuf-insert-single-line-internal! cbuf last-line))))
+
+(define (cbuf-insert-single-line-internal! cbuf str)
+  "Internal helper for single line insertion (no undo save)"
+  (let* ([text (cbuf-text-cur cbuf)]
+         [sgr-list (cbuf-sgr-list-cur cbuf)]
+         [x-data (cbuf-x-data cbuf)]
+         [x-index (cbuf-x-data->x-index cbuf x-data)]
+         [current-sgr (cbuf-current-sgr cbuf)]
+         [insert-sgr-list (make-list (string-length str) current-sgr)])
+
+    (let* ([new-text (string-insert-string text x-index str)]
+           [new-sgr-list (append (take sgr-list x-index)
+                                 insert-sgr-list
+                                 (drop sgr-list x-index))]
+           [new-metrics (compute-text-metrics-with-sgr new-text new-sgr-list
+                                                      (cbuf-tab-size cbuf)
+                                                      #:cjk? (cbuf-cjk? cbuf))])
+      (cbuf-update-metrics-cur! cbuf new-metrics)
+      (cbuf-set-x! cbuf (+ x-data (count-base-characters str)) 'data)
+      (set-cbuf-modified?! cbuf #t))))
+
+(define (cbuf-insert-newline-internal! cbuf)
+  "Internal helper for newline insertion (no undo save)"
+  (let* ([x-data (cbuf-x-data cbuf)]
+         [x-index (cbuf-x-data->x-index cbuf x-data)]
+         [current-line (cbuf-line-cur cbuf)]
+         [text (cbuf-text-cur cbuf)]
+         [sgr-list (cbuf-sgr-list-cur cbuf)])
+    
+    ;; Split current line at cursor position
+    (let* ([left-text (substring text 0 x-index)]
+           [right-text (substring text x-index)]
+           [left-sgr (take sgr-list x-index)]
+           [right-sgr (drop sgr-list x-index)]
+           [left-metrics (compute-text-metrics-with-sgr left-text left-sgr 
+                                                        (cbuf-tab-size cbuf) 
+                                                        #:cjk? (cbuf-cjk? cbuf))]
+           [right-metrics (compute-text-metrics-with-sgr right-text right-sgr 
+                                                         (cbuf-tab-size cbuf) 
+                                                         #:cjk? (cbuf-cjk? cbuf))])
+      
+      ;; Update current line with left part
+      (cbuf-update-metrics-cur! cbuf left-metrics)
+      
+      ;; Insert new line with right part
+      (let* ([metrics-list (cbuf-text-metrics cbuf)]
+             [new-metrics-list (list-insert metrics-list (+ current-line 1) right-metrics)])
+        (set-cbuf-text-metrics! cbuf new-metrics-list))
+      
+      ;; Move cursor to beginning of new line
+      (cbuf-set-y! cbuf (+ current-line 1))
+      (cbuf-set-x! cbuf 0 'data)
+      
+      ;; Mark as modified
+      (set-cbuf-modified?! cbuf #t))))
 
 (define (cbuf-delete-region! cbuf start-line start-x-data end-line end-x-data)
-  "Delete text from start position to end position (handles both single and multi-line)."
+  "Delete text from start position to end position with undo support"
   ;; Normalize positions (ensure start <= end)
   (when (or (> start-line end-line)
             (and (= start-line end-line) (> start-x-data end-x-data)))
@@ -868,6 +1044,10 @@
             (< end-line 0) (>= end-line (cbuf-line-count cbuf)))
     (error "cbuf-delete-region!: line numbers out of range" start-line end-line))
   
+  ;; Save undo state
+  (cbuf-save-undo! cbuf 'delete-region start-line start-x-data end-line end-x-data)
+  
+  ;; Perform the deletion
   (cond
     ;; Single line deletion
     [(= start-line end-line)
@@ -886,16 +1066,15 @@
          
          ;; Only proceed if we have a valid range
          (when (< start-index end-index)
-           ;; Save undo state
-           (let ([old-metrics line-metrics])
-             (cbuf-save-line-modification-undo! cbuf start-line old-metrics 'delete-region))
-           
            ;; Delete the range
            (let* ([new-text (string-delete-range line-text start-index end-index)]
-                  [new-sgr-list (list-delete-range line-sgr start-index end-index)])
+                  [new-sgr-list (list-delete-range line-sgr start-index end-index)]
+                  [new-metrics (compute-text-metrics-with-sgr new-text new-sgr-list
+                                                             (cbuf-tab-size cbuf)
+                                                             #:cjk? (cbuf-cjk? cbuf))])
              
              ;; Update the line
-             (cbuf-update-line! cbuf start-line new-text new-sgr-list)
+             (cbuf-update-metrics-cur! cbuf new-metrics)
              
              ;; Position cursor at start of deletion
              (cbuf-set-y! cbuf start-line)
@@ -903,56 +1082,54 @@
     
     ;; Multi-line deletion
     [else
-     (let* ([start-line-metrics (list-ref (cbuf-text-metrics cbuf) start-line)]
-            [end-line-metrics (list-ref (cbuf-text-metrics cbuf) end-line)]
-            [start-line-text (text-metrics-string start-line-metrics)]
-            [end-line-text (text-metrics-string end-line-metrics)]
-            [start-line-sgr (text-metrics-sgr-list start-line-metrics)]
-            [end-line-sgr (text-metrics-sgr-list end-line-metrics)]
-            [start-base-indices (text-metrics-string-base-indices start-line-metrics)]
-            [end-base-indices (text-metrics-string-base-indices end-line-metrics)])
-       
-       ;; Convert data positions to string indices
-       (let* ([start-index (if (< start-x-data (length start-base-indices))
-                              (list-ref start-base-indices start-x-data)
-                              (string-length start-line-text))]
-              [end-index (if (< end-x-data (length end-base-indices))
-                            (list-ref end-base-indices end-x-data)
-                            (string-length end-line-text))]
-              
-              ;; Extract the parts to keep
-              [start-part-text (substring start-line-text 0 start-index)]
-              [end-part-text (substring end-line-text end-index)]
-              [start-part-sgr (take start-line-sgr start-index)]
-              [end-part-sgr (drop end-line-sgr end-index)]
-              
-              ;; Create the joined line
-              [joined-text (string-append start-part-text end-part-text)]
-              [joined-sgr (append start-part-sgr end-part-sgr)]
-              
-              ;; Calculate how many lines will be deleted
-              [lines-to-delete (- end-line start-line)]
-              [deleted-lines (take (drop (cbuf-text-metrics cbuf) (+ start-line 1)) 
-                                  (- end-line start-line))])
-         
-         ;; Save undo state for multi-line deletion
-         (cbuf-save-multiline-deletion-undo! cbuf start-line end-line 
-                                            start-line-metrics end-line-metrics 
-                                            deleted-lines 'delete-region)
-         
-         ;; Update the start line with joined content
-         (cbuf-update-line! cbuf start-line joined-text joined-sgr)
-         
-         ;; Remove the intermediate and end lines
-         (when (> lines-to-delete 0)
-           (let* ([metrics-list (cbuf-text-metrics cbuf)]
-                  [new-metrics-list (append (take metrics-list (+ start-line 1))
-                                           (drop metrics-list (+ end-line 1)))])
-             (set-cbuf-text-metrics! cbuf new-metrics-list)))
-         
-         ;; Position cursor at start of deletion
-         (cbuf-set-y! cbuf start-line)
-         (cbuf-set-x! cbuf start-x-data 'data)))]))
+     (cbuf-delete-multiline-region-internal! cbuf start-line start-x-data end-line end-x-data)]))
+
+(define (cbuf-delete-multiline-region-internal! cbuf start-line start-x-data end-line end-x-data)
+  "Internal helper for multi-line region deletion (no additional undo save)"
+  (let* ([start-line-metrics (list-ref (cbuf-text-metrics cbuf) start-line)]
+         [end-line-metrics (list-ref (cbuf-text-metrics cbuf) end-line)]
+         [start-line-text (text-metrics-string start-line-metrics)]
+         [end-line-text (text-metrics-string end-line-metrics)]
+         [start-line-sgr (text-metrics-sgr-list start-line-metrics)]
+         [end-line-sgr (text-metrics-sgr-list end-line-metrics)]
+         [start-base-indices (text-metrics-string-base-indices start-line-metrics)]
+         [end-base-indices (text-metrics-string-base-indices end-line-metrics)])
+    
+    ;; Convert data positions to string indices
+    (let* ([start-index (if (< start-x-data (length start-base-indices))
+                           (list-ref start-base-indices start-x-data)
+                           (string-length start-line-text))]
+           [end-index (if (< end-x-data (length end-base-indices))
+                         (list-ref end-base-indices end-x-data)
+                         (string-length end-line-text))]
+           
+           ;; Extract the parts to keep
+           [start-part-text (substring start-line-text 0 start-index)]
+           [end-part-text (substring end-line-text end-index)]
+           [start-part-sgr (take start-line-sgr start-index)]
+           [end-part-sgr (drop end-line-sgr end-index)]
+           
+           ;; Create the joined line
+           [joined-text (string-append start-part-text end-part-text)]
+           [joined-sgr (append start-part-sgr end-part-sgr)]
+           [joined-metrics (compute-text-metrics-with-sgr joined-text joined-sgr
+                                                         (cbuf-tab-size cbuf)
+                                                         #:cjk? (cbuf-cjk? cbuf))])
+      
+      ;; Update the start line with joined content
+      (cbuf-set-y! cbuf start-line)
+      (cbuf-update-metrics-cur! cbuf joined-metrics)
+      
+      ;; Remove the intermediate and end lines
+      (when (> end-line start-line)
+        (let* ([metrics-list (cbuf-text-metrics cbuf)]
+               [new-metrics-list (append (take metrics-list (+ start-line 1))
+                                        (drop metrics-list (+ end-line 1)))])
+          (set-cbuf-text-metrics! cbuf new-metrics-list)))
+      
+      ;; Position cursor at start of deletion
+      (cbuf-set-y! cbuf start-line)
+      (cbuf-set-x! cbuf start-x-data 'data))))
 
 ;;; =================================================================
 ;;; MARK/SELECTION OPERATIONS
@@ -987,9 +1164,7 @@
       (set-cbuf-mark-x-data! cbuf current-x-data))))
 
 (define (cbuf-cut-region! cbuf)
-  "Cut the selected region to the kill buffer.
-   Deletes the region and stores it for pasting.
-   If no region is selected, does nothing."
+  "Cut the selected region to the kill buffer with undo support"
   (when (and (cbuf-mark-set? cbuf)
              (or (not (= (cbuf-mark-line cbuf) (cbuf-line-cur cbuf)))
                  (not (= (cbuf-mark-x-data cbuf) (cbuf-x-data cbuf)))))
@@ -1019,16 +1194,14 @@
           (cbuf-set-y! cbuf start-line)
           (cbuf-set-x! cbuf start-x-data 'data)
 
-          ;; Delete the region
+          ;; Delete the region (this will save its own undo)
           (cbuf-delete-region! cbuf start-line start-x-data end-line end-x-data)))
 
       ;; Clear the mark
       (cbuf-clear-mark! cbuf))))
 
 (define (cbuf-copy-region! cbuf)
-  "Copy the selected region to the kill buffer.
-   Does not delete the region.
-   If no region is selected, does nothing."
+  "Copy the selected region to the kill buffer (no undo needed)"
   (when (and (cbuf-mark-set? cbuf)
              (or (not (= (cbuf-mark-line cbuf) (cbuf-line-cur cbuf)))
                  (not (= (cbuf-mark-x-data cbuf) (cbuf-x-data cbuf)))))
@@ -1041,8 +1214,7 @@
     ))
 
 (define (cbuf-paste! cbuf)
-  "Insert text from the kill buffer at the current cursor position.
-   If kill buffer is empty, does nothing."
+  "Insert text from the kill buffer at the current cursor position with undo support"
   (let ([cut-buffer (cbuf-cut-buffer cbuf)])
     (when (and cut-buffer (not (null? cut-buffer)))
       (let ([text-to-paste (car cut-buffer)])
@@ -1051,12 +1223,11 @@
           (when (cbuf-mark-set? cbuf)
             (cbuf-clear-mark! cbuf))
 
-          ;; Insert the text
+          ;; Insert the text (this will save its own undo)
           (cbuf-insert-string! cbuf text-to-paste))))))
 
 (define (cbuf-get-region-text cbuf)
-  "Get text between mark and cursor as a string.
-   Handles both single-line and multi-line selections properly."
+  "Get text between mark and cursor as a string"
   (if (cbuf-mark-set? cbuf)
       (let ([mark-line (cbuf-mark-line cbuf)]
             [mark-x-data (cbuf-mark-x-data cbuf)]
@@ -1159,45 +1330,14 @@
   (unless (eq? policy 'preserve)
     (cbuf-normalize-final-newline! cbuf)))
 
-(define (cbuf-get-final-newline-info cbuf)
-  "Return comprehensive information about final newline status"
-  (let* ([lines (cbuf-text cbuf)]
-         [last-line (if (null? lines) "" (last lines))]
-         [line-count (cbuf-line-count cbuf)])
-    `((current-state . ,(cbuf-final-newline? cbuf))
-      (policy . ,(cbuf-final-newline-policy cbuf))
-      (should-have-per-policy . ,(cbuf-apply-final-newline-policy cbuf))
-      (line-ending . ,(cbuf-line-ending cbuf))
-      (line-count . ,line-count)
-      (last-line-empty? . ,(string-null? last-line))
-      (needs-normalization? . ,(not (eq? (cbuf-final-newline? cbuf)
-                                         (cbuf-apply-final-newline-policy cbuf)))))))
-
-(define (cbuf-toggle-final-newline! cbuf)
-  "Toggle final newline state (sets policy to 'preserve)"
-  (set-cbuf-final-newline-policy! cbuf 'preserve)
-  (if (cbuf-final-newline? cbuf)
-      (begin
-        ;; Remove final newline by deleting empty last line if exists
-        (let ([last-line-index (- (cbuf-line-count cbuf) 1)])
-          (when (and (> (cbuf-line-count cbuf) 1)
-                    (string-null? (cbuf-get-line-text cbuf last-line-index)))
-            (cbuf-set-y! cbuf last-line-index)
-            (cbuf-delete-line! cbuf)))
-        (set-cbuf-final-newline?! cbuf #f))
-      (begin
-        ;; Add final newline
-        (cbuf-end-of-buffer! cbuf)
-        (cbuf-insert-newline! cbuf))))
-
 ;;; =================================================================
 ;;; BUFFER OPERATIONS
 ;;; =================================================================
 
 (define (cbuf-clear! cbuf)
-  "Clear all content from buffer"
+  "Clear all content from buffer with undo support"
   ;; Save undo state
-  (cbuf-save-undo-state! cbuf 'clear)
+  (cbuf-save-undo! cbuf 'clear-buffer)
 
   ;; Reset to single empty line
   (let ([empty-metrics (compute-text-metrics "" (cbuf-tab-size cbuf) #:cjk? (cbuf-cjk? cbuf))])
@@ -1213,11 +1353,10 @@
   ;; Mark as modified
   (set-cbuf-modified?! cbuf #t))
 
-
 (define (cbuf-load-from-string! cbuf str)
   "Load content from string, detecting final newline and applying policy"
   ;; Save undo state
-  (cbuf-save-undo-state! cbuf 'load-from-string)
+  (cbuf-save-undo! cbuf 'clear-buffer)  ; Loading is like clearing + inserting
 
   ;; Detect line ending and final newline status
   (let* ([detected-ending (string-detect-line-ending str)]
@@ -1267,7 +1406,7 @@
 ;;; =================================================================
 
 (define (cbuf-handle-tab! cbuf)
-  "Handle tab key press using cbuf-utils tab computation (future implementation)"
+  "Handle tab key press using cbuf-utils tab computation"
   (let* ([current-cell (cbuf-x-cell cbuf)]
          [tab-size (cbuf-tab-size cbuf)]
          [next-tab-cell (compute-tab-column current-cell tab-size 1)])
@@ -1324,3 +1463,11 @@
          [y-on-page (remainder y ps)]
          [y-start-of-next-page (* ps (+ (quotient y ps) 1))])
     (>= (+ y-start-of-next-page y-on-page) (cbuf-line-count cbuf))))
+
+;;; =================================================================
+;;; MODULE INITIALIZATION
+;;; =================================================================
+
+;; Register built-in operations when module loads
+(cbuf-register-built-in-undo-operations!)
+

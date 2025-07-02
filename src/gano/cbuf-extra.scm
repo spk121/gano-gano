@@ -67,11 +67,121 @@
     
     ;; Indentation alignment
     cbuf-align-indents-in-region!
+    ;; Undo registration
+    cbuf-register-extra-undo-operations!
     ))
 
 ;;; =================================================================
+;;; UNDO OPERATION HANDLERS FOR EXTRA OPERATIONS
+;;; =================================================================
+;; Line formatting handlers
+(define (capture-line-formatting-state cbuf operation-type)
+  "Capture state for line formatting operations"
+  `((line-num ,(cbuf-line-cur cbuf))
+    (old-metrics ,(cbuf-metrics-cur cbuf))
+    (operation-type ,operation-type)))
+(define (restore-line-formatting-state cbuf state operation-type)
+  "Restore state after line formatting"
+  (let ([line-num (cadr (assq 'line-num state))]
+        [old-metrics (cadr (assq 'old-metrics state))])
+    (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
+;; Buffer-wide transformation handlers
+(define (capture-buffer-transformation-state cbuf operation-type)
+  "Capture state for operations that transform the entire buffer"
+  `((all-metrics ,(cbuf-text-metrics cbuf))
+    (operation-type ,operation-type)))
+(define (restore-buffer-transformation-state cbuf state operation-type)
+  "Restore state after buffer transformation"
+  (let ([all-metrics (cadr (assq 'all-metrics state))])
+    (set-cbuf-text-metrics! cbuf all-metrics)))
+;; Region transformation handlers
+(define (capture-region-transformation-state cbuf start-line end-line operation-type)
+  "Capture state for operations that transform a region"
+  (let ([affected-lines (let loop ([line start-line] [result '()])
+                          (if (> line end-line)
+                              (reverse result)
+                              (loop (+ line 1)
+                                    (cons (cons line (list-ref (cbuf-text-metrics cbuf) line))
+                                          result))))])
+    `((affected-lines ,affected-lines)
+      (start-line ,start-line)
+      (end-line ,end-line)
+      (operation-type ,operation-type))))
+(define (restore-region-transformation-state cbuf state start-line end-line operation-type)
+  "Restore state after region transformation"
+  (let ([affected-lines (cadr (assq 'affected-lines state))])
+    (for-each (lambda (line-data)
+                (let ([line-num (car line-data)]
+                      [old-metrics (cdr line-data)])
+                  (when (< line-num (cbuf-line-count cbuf))
+                    (cbuf-restore-line-metrics! cbuf line-num old-metrics))))
+              affected-lines)))
+;; Line swapping handlers
+(define (capture-line-swapping-state cbuf line1 line2 operation-type)
+  "Capture state for line swapping operations"
+  `((line1 ,line1)
+    (line1-metrics ,(list-ref (cbuf-text-metrics cbuf) line1))
+    (line2 ,line2)
+    (line2-metrics ,(list-ref (cbuf-text-metrics cbuf) line2))
+    (operation-type ,operation-type)))
+(define (restore-line-swapping-state cbuf state line1 line2 operation-type)
+  "Restore state after line swapping"
+  (let ([original-line1 (cadr (assq 'line1 state))]
+        [line1-metrics (cadr (assq 'line1-metrics state))]
+        [original-line2 (cadr (assq 'line2 state))]
+        [line2-metrics (cadr (assq 'line2-metrics state))])
+    ;; Restore both lines to their original state
+    (cbuf-restore-line-metrics! cbuf original-line1 line1-metrics)
+    (cbuf-restore-line-metrics! cbuf original-line2 line2-metrics)))
+;; Grapheme swapping handlers
+(define (capture-grapheme-swapping-state cbuf operation-type)
+  "Capture state for grapheme swapping operations"
+  `((line-num ,(cbuf-line-cur cbuf))
+    (old-metrics ,(cbuf-metrics-cur cbuf))
+    (operation-type ,operation-type)))
+(define (restore-grapheme-swapping-state cbuf state operation-type)
+  "Restore state after grapheme swapping"
+  (let ([line-num (cadr (assq 'line-num state))]
+        [old-metrics (cadr (assq 'old-metrics state))])
+    (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
+;; Sorting handlers
+(define (capture-sorting-state cbuf start-line end-line operation-type)
+  "Capture state for sorting operations"
+  (let ([lines-to-sort (let loop ([line start-line] [result '()])
+                         (if (> line end-line)
+                             (reverse result)
+                             (loop (+ line 1)
+                                   (cons (list-ref (cbuf-text-metrics cbuf) line) result))))])
+    `((start-line ,start-line)
+      (end-line ,end-line)
+      (original-lines ,lines-to-sort)
+      (operation-type ,operation-type))))
+(define (restore-sorting-state cbuf state start-line end-line operation-type)
+  "Restore state after sorting"
+  (let ([original-start (cadr (assq 'start-line state))]
+        [original-end (cadr (assq 'end-line state))]
+        [original-lines (cadr (assq 'original-lines state))])
+    ;; Replace the sorted region with the original lines
+    (cbuf-replace-line-range! cbuf original-start original-end original-lines)))
+;;; =================================================================
 ;;; HELPER FUNCTIONS
 ;;; =================================================================
+(define (cbuf-set-text-cur! cbuf new-text new-sgr-list)
+  "Replace current line text and SGR, computing new metrics"
+  (let* ([new-metrics (compute-text-metrics-with-sgr new-text new-sgr-list
+                                                     (cbuf-tab-size cbuf)
+                                                     #:cjk? (cbuf-cjk? cbuf))])
+    (cbuf-restore-line-metrics! cbuf (cbuf-line-cur cbuf) new-metrics)
+    (set-cbuf-modified?! cbuf #t)))
+(define (cbuf-save-line-modification-undo! cbuf line-num old-metrics operation-type)
+  "Save undo state for single line modification (helper function)"
+  (cbuf-save-undo! cbuf operation-type line-num old-metrics))
+(define (cbuf-save-line-deletion-undo! cbuf start-line deleted-lines operation-type)
+  "Save undo state for line deletion operations (helper function)"
+  (cbuf-save-undo! cbuf operation-type start-line deleted-lines))
+(define (string-from-chars char-list)
+  "Convert list of characters to string"
+  (list->string char-list))
 
 (define (cbuf-find-word-boundary-backward cbuf)
   "Find the beginning of the current word, handling grapheme clusters properly.
@@ -178,11 +288,11 @@
           [else #f]))])))
 
 ;;; =================================================================
-;;; INDENTATION ALIGNMENT
+;;; INDENTATION ALIGNMENT (Needs undo support)
 ;;; =================================================================
 
 (define (cbuf-align-indents-in-region! cbuf)
-  "Align indentation of all lines in selected region to match the first line.
+  "Align indentation of all lines in selected region to match the first line with undo support.
    All lines will have the same initial indentation whitespace as the first line.
    Operates on complete lines regardless of selection boundaries."
   (when (cbuf-mark-set? cbuf)
@@ -195,6 +305,8 @@
       
       ;; Only proceed if we have multiple lines to align
       (when (< start-line end-line)
+        ;; Save undo state for the entire alignment operation
+        (cbuf-save-undo! cbuf 'align-indents start-line end-line)
         
         ;; Get the reference indentation from the first line
         (let* ([reference-line-text (cbuf-get-line-text cbuf start-line)]
@@ -361,11 +473,11 @@
       (loop (+ i 1) (+ column 1))])))
 
 ;;; =================================================================
-;;; SORTING OPERATIONS
+;;; SORTING OPERATIONS (Needs undo support)
 ;;; =================================================================
 
 (define (cbuf-sort-lines-in-region! cbuf)
-  "Sort lines in selected region alphabetically.
+  "Sort lines in selected region alphabetically with undo support.
    Operates on complete lines regardless of selection boundaries.
    Ignores leading whitespace when comparing lines for sort order."
   (when (cbuf-mark-set? cbuf)
@@ -379,12 +491,12 @@
       ;; Only proceed if we have multiple lines to sort
       (when (< start-line end-line)
         
+        ;; Save undo state for the entire sort operation
+        (cbuf-save-undo! cbuf 'sort-lines start-line end-line)
         ;; Extract line metrics for the region
         (let* ([lines-to-sort (cbuf-extract-lines-for-sorting cbuf start-line end-line)]
                [sorted-lines (cbuf-sort-line-metrics-list lines-to-sort)])
           
-          ;; Save undo state for the entire region
-          (cbuf-save-line-deletion-undo! cbuf start-line lines-to-sort 'sort-lines)
           
           ;; Replace the region with sorted lines
           (cbuf-replace-line-range! cbuf start-line end-line sorted-lines)
@@ -478,7 +590,7 @@
                [sorted-lines (cbuf-sort-line-metrics-with-predicate lines-to-sort predicate ignore-leading-whitespace?)])
           
           ;; Save undo state for the entire region
-          (cbuf-save-line-deletion-undo! cbuf start-line lines-to-sort 'sort-lines-custom)
+          (cbuf-save-undo! cbuf 'sort-lines-custom start-line end-line)
           
           ;; Replace the region with sorted lines
           (cbuf-replace-line-range! cbuf start-line end-line sorted-lines)
@@ -520,24 +632,23 @@
     (lambda (str1 str2) (< (string-length str1) (string-length str2)))))
 
 ;;; =================================================================
-;;; SWAPPING OPERATIONS
+;;; SWAPPING OPERATIONS (All need undo support)
 ;;; =================================================================
 
 (define (cbuf-swap-current-and-previous-line! cbuf)
-  "Swap current line with previous line.
+  "Swap current line with previous line with undo support.
    Cursor moves up with the swapped line (follows the line content)."
   (let ([current-line (cbuf-line-cur cbuf)]
         [current-x (cbuf-x-data cbuf)])
     
     (when (> current-line 0)  ; Can't swap if we're on the first line
-      (let* ([prev-line (- current-line 1)]
-             [current-metrics (list-ref (cbuf-text-metrics cbuf) current-line)]
-             [prev-metrics (list-ref (cbuf-text-metrics cbuf) prev-line)])
+      (let* ([prev-line (- current-line 1)])
         
         ;; Save undo state for the swap operation
-        (cbuf-save-line-modification-undo! cbuf prev-line prev-metrics 'swap-lines)
-        (cbuf-save-line-modification-undo! cbuf current-line current-metrics 'swap-lines)
+        (cbuf-save-undo! cbuf 'swap-lines prev-line current-line)
         
+        (let ([current-metrics (list-ref (cbuf-text-metrics cbuf) current-line)]
+              [prev-metrics (list-ref (cbuf-text-metrics cbuf) prev-line)])
         ;; Perform the swap
         (let* ([metrics-list (cbuf-text-metrics cbuf)]
                [new-metrics-list (list-update 
@@ -550,23 +661,22 @@
         (cbuf-set-x! cbuf (min current-x (cbuf-text-cur-base-length cbuf)) 'data)
         
         ;; Mark as modified
-        (set-cbuf-modified?! cbuf #t)))))
+          (set-cbuf-modified?! cbuf #t))))))
 
 (define (cbuf-swap-current-and-following-line! cbuf)
-  "Swap current line with following line.
+  "Swap current line with following line with undo support.
    Cursor moves down with the swapped line (follows the line content)."
   (let ([current-line (cbuf-line-cur cbuf)]
         [current-x (cbuf-x-data cbuf)])
     
     (when (< current-line (- (cbuf-line-count cbuf) 1))  ; Can't swap if we're on the last line
-      (let* ([next-line (+ current-line 1)]
-             [current-metrics (list-ref (cbuf-text-metrics cbuf) current-line)]
-             [next-metrics (list-ref (cbuf-text-metrics cbuf) next-line)])
+      (let* ([next-line (+ current-line 1)])
         
         ;; Save undo state for the swap operation  
-        (cbuf-save-line-modification-undo! cbuf current-line current-metrics 'swap-lines)
-        (cbuf-save-line-modification-undo! cbuf next-line next-metrics 'swap-lines)
+        (cbuf-save-undo! cbuf 'swap-lines current-line next-line)
         
+        (let ([current-metrics (list-ref (cbuf-text-metrics cbuf) current-line)]
+              [next-metrics (list-ref (cbuf-text-metrics cbuf) next-line)])
         ;; Perform the swap
         (let* ([metrics-list (cbuf-text-metrics cbuf)]
                [new-metrics-list (list-update 
@@ -579,10 +689,10 @@
         (cbuf-set-x! cbuf (min current-x (cbuf-text-cur-base-length cbuf)) 'data)
         
         ;; Mark as modified
-        (set-cbuf-modified?! cbuf #t)))))
+          (set-cbuf-modified?! cbuf #t))))))
 
 (define (cbuf-swap-current-and-previous-grapheme! cbuf)
-  "Swap current grapheme cluster with previous grapheme cluster.
+  "Swap current grapheme cluster with previous grapheme cluster with undo support.
    Cursor moves left with the swapped grapheme (follows the content)."
   (let* ([current-line (cbuf-line-cur cbuf)]
          [current-x (cbuf-x-data cbuf)]
@@ -590,6 +700,8 @@
          [sgr-list (cbuf-sgr-list-cur cbuf)])
     
     (when (and (> current-x 0) (not (string-null? text)))
+      ;; Save undo state
+      (cbuf-save-undo! cbuf 'swap-graphemes 'previous)
       (let* ([prev-x-data (- current-x 1)]
              ;; Find grapheme cluster boundaries
              [current-bounds (cbuf-find-grapheme-cluster-bounds cbuf current-x)]
@@ -636,7 +748,7 @@
             (set-cbuf-modified?! cbuf #t)))))))
 
 (define (cbuf-swap-current-and-following-grapheme! cbuf)
-  "Swap current grapheme cluster with following grapheme cluster.
+  "Swap current grapheme cluster with following grapheme cluster with undo support.
    Cursor moves right with the swapped grapheme (follows the content)."
   (let* ([current-line (cbuf-line-cur cbuf)]
          [current-x (cbuf-x-data cbuf)]
@@ -645,6 +757,8 @@
          [text-base-length (cbuf-text-cur-base-length cbuf)])
     
     (when (and (< current-x text-base-length) (not (string-null? text)))
+      ;; Save undo state
+      (cbuf-save-undo! cbuf 'swap-graphemes 'following)
       (let* ([next-x-data (min (+ current-x 1) text-base-length)]
              ;; Find grapheme cluster boundaries
              [current-bounds (cbuf-find-grapheme-cluster-bounds cbuf current-x)]
@@ -694,12 +808,14 @@
             (set-cbuf-modified?! cbuf #t)))))))
 
 ;;; =================================================================
-;;; TAB CONVERSION
+;;; TAB CONVERSION (Needs undo support)
 ;;; =================================================================
 
 (define (cbuf-tabify-buffer! cbuf)
-  "Convert sequences of spaces to tabs throughout the entire buffer.
+  "Convert sequences of spaces to tabs throughout the entire buffer with undo support.
    Operates on graphical columns - tabs align to columns 0, 8, 16, etc."
+  ;; Save undo state for entire buffer
+  (cbuf-save-undo! cbuf 'tabify-buffer)
   (let* ([original-line (cbuf-line-cur cbuf)]
          [original-x (cbuf-x-data cbuf)]
          [line-count (cbuf-line-count cbuf)])
@@ -716,8 +832,10 @@
     (cbuf-set-x! cbuf (min original-x (cbuf-text-cur-base-length cbuf)) 'data)))
 
 (define (cbuf-untabify-buffer! cbuf)
-  "Convert all tabs to spaces throughout the entire buffer.
+  "Convert all tabs to spaces throughout the entire buffer with undo support.
    Expands tabs to proper graphical column positions."
+  ;; Save undo state for entire buffer
+  (cbuf-save-undo! cbuf 'untabify-buffer)
   (let* ([original-line (cbuf-line-cur cbuf)]
          [original-x (cbuf-x-data cbuf)]
          [line-count (cbuf-line-count cbuf)])
@@ -734,14 +852,16 @@
     (cbuf-set-x! cbuf (min original-x (cbuf-text-cur-base-length cbuf)) 'data)))
 
 (define (cbuf-tabify-lines-in-selected-region! cbuf)
-  "Convert spaces to tabs in all lines touched by the selected region.
+  "Convert spaces to tabs in all lines touched by the selected region with undo support.
    Operates on complete lines for simplicity."
   (when (cbuf-mark-set? cbuf)
     (let* ([mark-line (cbuf-mark-line cbuf)]
            [cursor-line (cbuf-line-cur cbuf)]
            [start-line (min mark-line cursor-line)]
-           [end-line (max mark-line cursor-line)]
-           [original-line (cbuf-line-cur cbuf)]
+           [end-line (max mark-line cursor-line)])
+      ;; Save undo state for affected region
+      (cbuf-save-undo! cbuf 'tabify-region start-line end-line)
+      (let ([original-line (cbuf-line-cur cbuf)]
            [original-x (cbuf-x-data cbuf)])
       
       ;; Process each line in the region
@@ -756,17 +876,19 @@
       (cbuf-set-x! cbuf (min original-x (cbuf-text-cur-base-length cbuf)) 'data)
       
       ;; Clear selection
-      (cbuf-clear-mark! cbuf))))
+        (cbuf-clear-mark! cbuf)))))
 
 (define (cbuf-untabify-lines-in-selected-region! cbuf)
-  "Convert tabs to spaces in all lines touched by the selected region.
+  "Convert tabs to spaces in all lines touched by the selected region with undo support.
    Operates on complete lines for simplicity."
   (when (cbuf-mark-set? cbuf)
     (let* ([mark-line (cbuf-mark-line cbuf)]
            [cursor-line (cbuf-line-cur cbuf)]
            [start-line (min mark-line cursor-line)]
-           [end-line (max mark-line cursor-line)]
-           [original-line (cbuf-line-cur cbuf)]
+           [end-line (max mark-line cursor-line)])
+      ;; Save undo state for affected region
+      (cbuf-save-undo! cbuf 'untabify-region start-line end-line)
+      (let ([original-line (cbuf-line-cur cbuf)]
            [original-x (cbuf-x-data cbuf)])
       
       ;; Process each line in the region
@@ -781,7 +903,7 @@
       (cbuf-set-x! cbuf (min original-x (cbuf-text-cur-base-length cbuf)) 'data)
       
       ;; Clear selection
-      (cbuf-clear-mark! cbuf))))
+        (cbuf-clear-mark! cbuf)))))
 
 (define (cbuf-tabify-current-line! cbuf)
   "Convert sequences of spaces to tabs on the current line.
@@ -932,13 +1054,15 @@
                 (loop (+ i 1))]))])))))
 
 ;;; =================================================================
-;;; CASE CONVERSION
+;;; CASE CONVERSION (Needs undo support)
 ;;; =================================================================
 
 (define (cbuf-upcase-region! cbuf)
-  "Convert selected region to uppercase.
+  "Convert selected region to uppercase with undo support.
    Preserves SGR formatting and handles Unicode case conversion properly."
   (when (cbuf-mark-set? cbuf)
+    ;; Save undo state
+    (cbuf-save-undo! cbuf 'upcase-region)
     (let* ([region-text (cbuf-get-region-text cbuf)]
            [uppercased-text (string-upcase region-text)])
       
@@ -947,9 +1071,11 @@
         (cbuf-replace-region-with-case-conversion! cbuf uppercased-text)))))
 
 (define (cbuf-downcase-region! cbuf)
-  "Convert selected region to lowercase.
+  "Convert selected region to lowercase with undo support.
    Preserves SGR formatting and handles Unicode case conversion properly."
   (when (cbuf-mark-set? cbuf)
+    ;; Save undo state
+    (cbuf-save-undo! cbuf 'downcase-region)
     (let* ([region-text (cbuf-get-region-text cbuf)]
            [lowercased-text (string-downcase region-text)])
       
@@ -958,9 +1084,11 @@
         (cbuf-replace-region-with-case-conversion! cbuf lowercased-text)))))
 
 (define (cbuf-titlecase-region! cbuf)
-  "Convert selected region to title case (first letter of each word capitalized).
+  "Convert selected region to title case with undo support.
    Preserves SGR formatting and handles Unicode case conversion properly."
   (when (cbuf-mark-set? cbuf)
+    ;; Save undo state
+    (cbuf-save-undo! cbuf 'titlecase-region)
     (let* ([region-text (cbuf-get-region-text cbuf)]
            [titlecased-text (cbuf-string-titlecase region-text)])
       
@@ -1119,7 +1247,7 @@
           (cbuf-set-x! cbuf (+ current-x (count-base-characters text)) 'data)))))
 
 ;;; =================================================================
-;;; SMART SELECTION
+;;; SMART SELECTION FUNCTIONS
 ;;; =================================================================
 
 (define (cbuf-select-paragraph! cbuf)
@@ -1273,17 +1401,19 @@
           (cbuf-end-of-buffer! cbuf)))))
 
 ;;; =================================================================
-;;; LINE FORMATTING
+;;; LINE FORMATTING (Needs undo support)
 ;;; =================================================================
 
 (define (cbuf-center-line! cbuf)
-  "Center the current line between home and limit positions.
+  "Center the current line between home and limit positions with undo support.
    Only works if home and limit are presentation positions (not data).
    Strips leading and trailing whitespace, then centers the content."
   
   ;; First verify that we can center (presentation mode required)
   (unless (eq? (cbuf-limit-type cbuf) 'presentation)
     (error "cbuf-center-line!: requires presentation-mode positioning (home/limit must be presentation positions)"))
+  ;; Save undo state
+  (cbuf-save-undo! cbuf 'center-line)
   
   (let* ([home-pos (cbuf-home-pos cbuf)]
          [limit-pos (cbuf-limit-pos cbuf)]
@@ -1345,7 +1475,7 @@
                       (cbuf-move-to-column! cbuf (+ home-pos left-padding)))))))))))
 
 (define (cbuf-strip-line-whitespace! cbuf)
-  "Strip leading and trailing whitespace from current line"
+  "Strip leading and trailing whitespace from current line (no additional undo save)"
   (let* ([current-text (cbuf-text-cur cbuf)]
          [current-sgr-list (cbuf-sgr-list-cur cbuf)]
          [trimmed-text (string-trim current-text)])
@@ -1366,7 +1496,7 @@
         (cbuf-beginning-of-line! cbuf)))))
 
 ;;; =================================================================
-;;; SENTENCE NAVIGATION
+;;; SENTENCE NAVIGATION FUNCTIONS
 ;;; =================================================================
 
 (define (char-sentence-terminator? ch)
@@ -1981,3 +2111,57 @@
       (let ([target-x-data (cbuf-find-word-boundary-forward cbuf)])
         (cbuf-set-x! cbuf target-x-data 'data))])))
     
+;;; =================================================================
+;;; UNDO REGISTRATION
+;;; =================================================================
+(define (cbuf-register-extra-undo-operations!)
+  "Register all extra undo operations with the plugin system"
+  
+  ;; Line formatting operations
+  (cbuf-register-undo-operation! 'center-line
+                                  capture-line-formatting-state
+                                  restore-line-formatting-state)
+  ;; Case conversion operations
+  (cbuf-register-undo-operation! 'upcase-region
+                                  capture-region-transformation-state
+                                  restore-region-transformation-state)
+  (cbuf-register-undo-operation! 'downcase-region
+                                  capture-region-transformation-state
+                                  restore-region-transformation-state)
+  (cbuf-register-undo-operation! 'titlecase-region
+                                  capture-region-transformation-state
+                                  restore-region-transformation-state)
+  ;; Tab conversion operations
+  (cbuf-register-undo-operation! 'tabify-buffer
+                                  capture-buffer-transformation-state
+                                  restore-buffer-transformation-state)
+  (cbuf-register-undo-operation! 'untabify-buffer
+                                  capture-buffer-transformation-state
+                                  restore-buffer-transformation-state)
+  (cbuf-register-undo-operation! 'tabify-region
+                                  capture-region-transformation-state
+                                  restore-region-transformation-state)
+  (cbuf-register-undo-operation! 'untabify-region
+                                  capture-region-transformation-state
+                                  restore-region-transformation-state)
+  ;; Line swapping operations
+  (cbuf-register-undo-operation! 'swap-lines
+                                  capture-line-swapping-state
+                                  restore-line-swapping-state)
+  ;; Grapheme swapping operations
+  (cbuf-register-undo-operation! 'swap-graphemes
+                                  capture-grapheme-swapping-state
+                                  restore-grapheme-swapping-state)
+  ;; Sorting operations
+  (cbuf-register-undo-operation! 'sort-lines
+                                  capture-sorting-state
+                                  restore-sorting-state)
+  ;; Indentation alignment operations
+  (cbuf-register-undo-operation! 'align-indents
+                                  capture-region-transformation-state
+                                  restore-region-transformation-state))
+;;; =================================================================
+;;; MODULE INITIALIZATION
+;;; =================================================================
+;; Register extra operations when module loads
+(cbuf-register-extra-undo-operations!)

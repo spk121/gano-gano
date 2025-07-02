@@ -1,7 +1,8 @@
-;;; Gano Character Buffer Module - Standard Operations
+;;; Gano Character Buffer Module - Standard Operations with Undo Support
 ;;; Complete ECMA-48 terminal control implementation
 ;;;
 ;;; This file contains standard text editing operations beyond the basic MVP
+;;; All buffer-modifying operations now support undo through the plugin system
 
 (define-module (gano cbuf-standard)
   #:use-module (gano cbuf-core)          ; Core record definitions
@@ -88,6 +89,9 @@
     cbuf-get-indentation-level
     cbuf-set-comment-string!
     cbuf-get-comment-string
+
+    ;; Undo registration
+    cbuf-register-standard-undo-operations!
     ))
 
 ;;; =================================================================
@@ -98,6 +102,111 @@
 (define *comment-string* ";;")
 (define *search-history* '())
 (define *replace-history* '())
+
+;;; =================================================================
+;;; UNDO OPERATION HANDLERS FOR STANDARD OPERATIONS
+;;; =================================================================
+
+;; Word deletion handlers
+(define (capture-word-deletion-state cbuf direction position)
+  "Capture state for word deletion (forward or backward)"
+  `((line-num ,(cbuf-line-cur cbuf))
+    (old-metrics ,(cbuf-metrics-cur cbuf))
+    (direction ,direction)))
+
+(define (restore-word-deletion-state cbuf state direction position)
+  "Restore state after word deletion"
+  (let ([line-num (cadr (assq 'line-num state))]
+        [old-metrics (cadr (assq 'old-metrics state))])
+    (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
+
+;; Line/region modification handlers
+(define (capture-line-modification-state cbuf operation-data)
+  "Capture state for operations that modify entire lines"
+  `((line-num ,(cbuf-line-cur cbuf))
+    (old-metrics ,(cbuf-metrics-cur cbuf))
+    (operation-data ,operation-data)))
+
+(define (restore-line-modification-state cbuf state operation-data)
+  "Restore state after line modification"
+  (let ([line-num (cadr (assq 'line-num state))]
+        [old-metrics (cadr (assq 'old-metrics state))])
+    (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
+
+;; Multi-line operation handlers
+(define (capture-multiline-operation-state cbuf start-line end-line operation-type)
+  "Capture state for operations affecting multiple lines"
+  (let ([affected-lines (let loop ([line start-line] [result '()])
+                          (if (> line end-line)
+                              (reverse result)
+                              (loop (+ line 1)
+                                    (cons (cons line (list-ref (cbuf-text-metrics cbuf) line))
+                                          result))))])
+    `((affected-lines ,affected-lines)
+      (start-line ,start-line)
+      (end-line ,end-line)
+      (operation-type ,operation-type))))
+
+(define (restore-multiline-operation-state cbuf state start-line end-line operation-type)
+  "Restore state after multi-line operation"
+  (let ([affected-lines (cadr (assq 'affected-lines state))])
+    (for-each (lambda (line-data)
+                (let ([line-num (car line-data)]
+                      [old-metrics (cdr line-data)])
+                  (when (< line-num (cbuf-line-count cbuf))
+                    (cbuf-restore-line-metrics! cbuf line-num old-metrics))))
+              affected-lines)))
+
+;; Line movement handlers  
+(define (capture-line-movement-state cbuf direction)
+  "Capture state for line movement operations"
+  (let ([current-line (cbuf-line-cur cbuf)])
+    (case direction
+      [(up)
+       (when (> current-line 0)
+         `((current-line ,current-line)
+           (current-metrics ,(cbuf-metrics-cur cbuf))
+           (prev-line ,(- current-line 1))
+           (prev-metrics ,(list-ref (cbuf-text-metrics cbuf) (- current-line 1)))
+           (direction ,direction)))]
+      [(down)
+       (when (< current-line (- (cbuf-line-count cbuf) 1))
+         `((current-line ,current-line)
+           (current-metrics ,(cbuf-metrics-cur cbuf))
+           (next-line ,(+ current-line 1))
+           (next-metrics ,(list-ref (cbuf-text-metrics cbuf) (+ current-line 1)))
+           (direction ,direction)))])))
+
+(define (restore-line-movement-state cbuf state direction)
+  "Restore state after line movement"
+  (let ([current-line (cadr (assq 'current-line state))]
+        [current-metrics (cadr (assq 'current-metrics state))]
+        [direction (cadr (assq 'direction state))])
+    
+    (case direction
+      [(up)
+       (let ([prev-line (cadr (assq 'prev-line state))]
+             [prev-metrics (cadr (assq 'prev-metrics state))])
+         ;; Restore both lines to their original positions
+         (cbuf-restore-line-metrics! cbuf prev-line prev-metrics)
+         (cbuf-restore-line-metrics! cbuf current-line current-metrics))]
+      [(down)
+       (let ([next-line (cadr (assq 'next-line state))]
+             [next-metrics (cadr (assq 'next-metrics state))])
+         ;; Restore both lines to their original positions
+         (cbuf-restore-line-metrics! cbuf current-line current-metrics)
+         (cbuf-restore-line-metrics! cbuf next-line next-metrics))])))
+
+;; Global buffer modification handlers
+(define (capture-global-modification-state cbuf operation-type)
+  "Capture state for operations that modify the entire buffer"
+  `((all-metrics ,(cbuf-text-metrics cbuf))
+    (operation-type ,operation-type)))
+
+(define (restore-global-modification-state cbuf state operation-type)
+  "Restore state after global buffer modification"
+  (let ([all-metrics (cadr (assq 'all-metrics state))])
+    (set-cbuf-text-metrics! cbuf all-metrics)))
 
 ;;; =================================================================
 ;;; HELPER FUNCTIONS
@@ -136,7 +245,7 @@
     (make-string (* level tab-size) #\space)))
 
 ;;; =================================================================
-;;; NAVIGATION
+;;; NAVIGATION (No undo needed - these don't modify buffer content)
 ;;; =================================================================
 
 (define (cbuf-goto-line! cbuf line)
@@ -198,7 +307,7 @@
           (cbuf-end-of-line! cbuf)))))
 
 ;;; =================================================================
-;;; SELECTION
+;;; SELECTION (No undo needed - these don't modify buffer content)
 ;;; =================================================================
 
 (define (cbuf-select-all! cbuf)
@@ -243,17 +352,17 @@
   (cbuf-backward-word! cbuf))
 
 ;;; =================================================================
-;;; CUT/COPY/PASTE
+;;; CUT/COPY/PASTE (paste operations need undo, cut/copy delegate to basic operations)
 ;;; =================================================================
 
 (define (cbuf-paste-previous! cbuf)
-  "Paste from previous entry in cut buffer (if available)"
+  "Paste from previous entry in cut buffer (if available) with undo support"
   (let ([cut-buffer (cbuf-cut-buffer cbuf)])
     (when (and cut-buffer (> (length cut-buffer) 1))
       ;; Rotate the cut buffer
       (let ([rotated-buffer (append (cdr cut-buffer) (list (car cut-buffer)))])
         (set-cbuf-cut-buffer! cbuf rotated-buffer)
-        (cbuf-paste! cbuf)))))
+        (cbuf-paste! cbuf)))))  ; cbuf-paste! already has undo support
 
 (define (cbuf-select-line-including-newline! cbuf)
   "Select the entire current line including its newline character.
@@ -274,41 +383,44 @@
 (define (cbuf-cut-line! cbuf)
   "Cut the entire current line, removing it completely"
   (cbuf-select-line-including-newline! cbuf)
-  (cbuf-cut-region! cbuf))
+  (cbuf-cut-region! cbuf))  ; cbuf-cut-region! already has undo support
 
 (define (cbuf-copy-line! cbuf)
-  "Copy the entire current line"
+  "Copy the entire current line (no undo needed)"
   (cbuf-select-line-including-newline! cbuf)
   (cbuf-copy-region! cbuf))
 
 (define (cbuf-cut-word! cbuf)
   "Cut the word at current position"
   (cbuf-select-word! cbuf)
-  (cbuf-cut-region! cbuf))
+  (cbuf-cut-region! cbuf))  ; cbuf-cut-region! already has undo support
 
 (define (cbuf-copy-word! cbuf)
-  "Copy the word at current position"
+  "Copy the word at current position (no undo needed)"
   (cbuf-select-word! cbuf)
   (cbuf-copy-region! cbuf))
 
 ;;; =================================================================
-;;; DELETION
+;;; DELETION (All need undo support)
 ;;; =================================================================
 
 (define (cbuf-delete-word-forward! cbuf)
-  "Delete from cursor to end of current word"
+  "Delete from cursor to end of current word with undo support"
   (let* ([text (cbuf-text-cur cbuf)]
          [current-x (cbuf-x-data cbuf)]
          [current-index (cbuf-x-data->x-index cbuf current-x)]
          [end-index (find-word-end-forward text current-index char-word-delimiter?)])
     
     (when (> end-index current-index)
+      ;; Save undo state
+      (cbuf-save-undo! cbuf 'delete-word 'forward current-x)
+      
       (let ([end-x-data (cbuf-x-index->x-data cbuf end-index)])
         (cbuf-delete-region! cbuf (cbuf-line-cur cbuf) current-x 
                              (cbuf-line-cur cbuf) end-x-data)))))
 
 (define (cbuf-delete-word-backward! cbuf)
-  "Delete from cursor to beginning of current word"
+  "Delete from cursor to beginning of current word with undo support"
   (let* ([text (cbuf-text-cur cbuf)]
          [current-x (cbuf-x-data cbuf)]
          [current-index (cbuf-x-data->x-index cbuf current-x)]
@@ -317,27 +429,36 @@
                          0)])
     
     (when (< start-index current-index)
+      ;; Save undo state
+      (cbuf-save-undo! cbuf 'delete-word 'backward current-x)
+      
       (let ([start-x-data (cbuf-x-index->x-data cbuf start-index)])
         (cbuf-delete-region! cbuf (cbuf-line-cur cbuf) start-x-data 
                              (cbuf-line-cur cbuf) current-x)))))
 
 (define (cbuf-delete-to-end-of-line! cbuf)
-  "Delete from cursor to end of line"
+  "Delete from cursor to end of line with undo support"
   (let ([current-x (cbuf-x-data cbuf)]
         [line-length (cbuf-text-cur-base-length cbuf)])
     (when (< current-x line-length)
+      ;; Save undo state  
+      (cbuf-save-undo! cbuf 'delete-to-eol current-x)
+      
       (cbuf-delete-region! cbuf (cbuf-line-cur cbuf) current-x 
                            (cbuf-line-cur cbuf) line-length))))
 
 (define (cbuf-delete-to-beginning-of-line! cbuf)
-  "Delete from cursor to beginning of line"
+  "Delete from cursor to beginning of line with undo support"
   (let ([current-x (cbuf-x-data cbuf)])
     (when (> current-x 0)
+      ;; Save undo state
+      (cbuf-save-undo! cbuf 'delete-to-bol current-x)
+      
       (cbuf-delete-region! cbuf (cbuf-line-cur cbuf) 0 
                            (cbuf-line-cur cbuf) current-x))))
 
 ;;; =================================================================
-;;; SEARCH AND REPLACE
+;;; SEARCH AND REPLACE (Replace operations need undo)
 ;;; =================================================================
 
 (define (char-word-character? ch)
@@ -480,6 +601,7 @@
 (define* (cbuf-search-replace! cbuf search-pattern replace-pattern 
                               #:key (case-insensitive? #f) (whole-word? #f) (preserve-case? #f))
   "Replace current selection if it matches search pattern with options.
+   Has undo support through underlying cbuf-insert-string!
    #:case-insensitive? - ignore case when matching
    #:whole-word? - only match complete words
    #:preserve-case? - preserve original case pattern in replacement"
@@ -498,6 +620,7 @@
         (let ([final-replacement (if preserve-case?
                                     (preserve-case selected-text replace-pattern)
                                     replace-pattern)])
+          ;; cbuf-insert-string! has its own undo support
           (cbuf-insert-string! cbuf final-replacement)
           (set! *replace-history* (cons (cons search-pattern replace-pattern) *replace-history*))
           #t)))))
@@ -505,9 +628,13 @@
 (define* (cbuf-search-replace-all! cbuf search-pattern replace-pattern
                                   #:key (case-insensitive? #f) (whole-word? #f) (preserve-case? #f))
   "Replace all occurrences of search pattern with replace pattern with options.
+   Has undo support through underlying operations
    #:case-insensitive? - ignore case when matching
    #:whole-word? - only match complete words  
    #:preserve-case? - preserve original case pattern in replacements"
+  ;; Save single undo state for the entire replace-all operation
+  (cbuf-save-undo! cbuf 'replace-all search-pattern replace-pattern)
+  
   (let ([count 0])
     (cbuf-beginning-of-buffer! cbuf)
     (while (cbuf-search-forward! cbuf search-pattern 
@@ -522,7 +649,7 @@
     count))
 
 ;;; =================================================================
-;;; CODE-SPECIFIC OPERATIONS
+;;; CODE-SPECIFIC OPERATIONS (Most need undo support)
 ;;; =================================================================
 
 (define (cbuf-set-comment-string! comment-str)
@@ -534,28 +661,38 @@
   *comment-string*)
 
 (define (cbuf-comment-line! cbuf)
-  "Comment out the current line"
+  "Comment out the current line with undo support"
+  ;; Save undo state
+  (cbuf-save-undo! cbuf 'comment-line)
+  
   (cbuf-beginning-of-line! cbuf)
   (cbuf-insert-string! cbuf (string-append *comment-string* " ")))
 
 (define (cbuf-comment-region! cbuf)
-  "Comment out the selected region line by line"
+  "Comment out the selected region line by line with undo support"
   (when (cbuf-mark-set? cbuf)
     (let* ([start-line (min (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))]
            [end-line (max (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))])
       
+      ;; Save undo state for the entire region
+      (cbuf-save-undo! cbuf 'comment-region start-line end-line)
+      
       (let loop ([line start-line])
         (when (<= line end-line)
           (cbuf-set-y! cbuf line)
-          (cbuf-comment-line! cbuf)
+          (cbuf-beginning-of-line! cbuf)
+          (cbuf-insert-string! cbuf (string-append *comment-string* " "))
           (loop (+ line 1)))))))
 
 (define (cbuf-uncomment-region! cbuf)
-  "Uncomment the selected region line by line"
+  "Uncomment the selected region line by line with undo support"
   (when (cbuf-mark-set? cbuf)
     (let* ([start-line (min (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))]
            [end-line (max (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))]
            [comment-len (string-length *comment-string*)])
+      
+      ;; Save undo state for the entire region
+      (cbuf-save-undo! cbuf 'uncomment-region start-line end-line)
       
       (let loop ([line start-line])
         (when (<= line end-line)
@@ -571,63 +708,74 @@
           (loop (+ line 1)))))))
 
 (define (cbuf-duplicate-line! cbuf)
-  "Duplicate the current line"
+  "Duplicate the current line with undo support"
+  ;; Save undo state
+  (cbuf-save-undo! cbuf 'duplicate-line)
+  
   (let ([text (cbuf-text-cur cbuf)])
     (cbuf-end-of-line! cbuf)
     (cbuf-insert-newline! cbuf)
     (cbuf-insert-string! cbuf text)))
 
 (define (cbuf-move-line-up! cbuf)
-  "Move current line up one position"
+  "Move current line up one position with undo support"
   (when (> (cbuf-line-cur cbuf) 0)
     (let* ([current-line (cbuf-line-cur cbuf)]
-           [current-text (cbuf-text-cur cbuf)]
-           [current-x (cbuf-x-data cbuf)]
-           [prev-text (cbuf-get-line-text cbuf (- current-line 1))])
+           [current-x (cbuf-x-data cbuf)])
       
-      ;; Delete current line
-      (cbuf-delete-line! cbuf)
+      ;; Save undo state
+      (cbuf-save-undo! cbuf 'move-line 'up)
       
-      ;; Move to previous line and delete it
-      (cbuf-set-y! cbuf (- current-line 1))
-      (cbuf-delete-line! cbuf)
-      
-      ;; Insert current line, then previous line
-      (cbuf-insert-string! cbuf current-text)
-      (cbuf-insert-newline! cbuf)
-      (cbuf-insert-string! cbuf prev-text)
-      
-      ;; Restore position
-      (cbuf-set-y! cbuf (- current-line 1))
-      (cbuf-set-x! cbuf current-x 'data))))
+      (let ([current-text (cbuf-text-cur cbuf)]
+            [prev-text (cbuf-get-line-text cbuf (- current-line 1))])
+        
+        ;; Delete current line
+        (cbuf-delete-line! cbuf)
+        
+        ;; Move to previous line and delete it
+        (cbuf-set-y! cbuf (- current-line 1))
+        (cbuf-delete-line! cbuf)
+        
+        ;; Insert current line, then previous line
+        (cbuf-insert-string! cbuf current-text)
+        (cbuf-insert-newline! cbuf)
+        (cbuf-insert-string! cbuf prev-text)
+        
+        ;; Restore position
+        (cbuf-set-y! cbuf (- current-line 1))
+        (cbuf-set-x! cbuf current-x 'data)))))
 
 (define (cbuf-move-line-down! cbuf)
-  "Move current line down one position"
+  "Move current line down one position with undo support"
   (when (< (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 1))
     (let* ([current-line (cbuf-line-cur cbuf)]
-           [current-text (cbuf-text-cur cbuf)]
-           [current-x (cbuf-x-data cbuf)]
-           [next-text (cbuf-get-line-text cbuf (+ current-line 1))])
+           [current-x (cbuf-x-data cbuf)])
       
-      ;; Delete next line
-      (cbuf-set-y! cbuf (+ current-line 1))
-      (cbuf-delete-line! cbuf)
+      ;; Save undo state
+      (cbuf-save-undo! cbuf 'move-line 'down)
       
-      ;; Move to current line and delete it
-      (cbuf-set-y! cbuf current-line)
-      (cbuf-delete-line! cbuf)
-      
-      ;; Insert next line, then current line
-      (cbuf-insert-string! cbuf next-text)
-      (cbuf-insert-newline! cbuf)
-      (cbuf-insert-string! cbuf current-text)
-      
-      ;; Restore position
-      (cbuf-set-y! cbuf (+ current-line 1))
-      (cbuf-set-x! cbuf current-x 'data))))
+      (let ([current-text (cbuf-text-cur cbuf)]
+            [next-text (cbuf-get-line-text cbuf (+ current-line 1))])
+        
+        ;; Delete next line
+        (cbuf-set-y! cbuf (+ current-line 1))
+        (cbuf-delete-line! cbuf)
+        
+        ;; Move to current line and delete it
+        (cbuf-set-y! cbuf current-line)
+        (cbuf-delete-line! cbuf)
+        
+        ;; Insert next line, then current line
+        (cbuf-insert-string! cbuf next-text)
+        (cbuf-insert-newline! cbuf)
+        (cbuf-insert-string! cbuf current-text)
+        
+        ;; Restore position
+        (cbuf-set-y! cbuf (+ current-line 1))
+        (cbuf-set-x! cbuf current-x 'data)))))
 
 ;;; =================================================================
-;;; INDENTATION
+;;; INDENTATION (All need undo support)
 ;;; =================================================================
 
 (define (cbuf-get-current-line-indentation cbuf)
@@ -647,17 +795,23 @@
   (quotient (cbuf-get-current-line-indentation cbuf) (cbuf-tab-size cbuf)))
 
 (define (cbuf-indent-line! cbuf)
-  "Indent current line by one level"
+  "Indent current line by one level with undo support"
+  ;; Save undo state
+  (cbuf-save-undo! cbuf 'indent-line)
+  
   (let* ([tab-size (cbuf-tab-size cbuf)]
          [indent-str (make-string tab-size #\space)])
     (cbuf-beginning-of-line! cbuf)
     (cbuf-insert-string! cbuf indent-str)))
 
 (define (cbuf-indent-region! cbuf)
-  "Indent all lines in selected region"
+  "Indent all lines in selected region with undo support"
   (when (cbuf-mark-set? cbuf)
     (let* ([start-line (min (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))]
            [end-line (max (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))])
+      
+      ;; Save undo state for the entire region
+      (cbuf-save-undo! cbuf 'indent-region start-line end-line)
       
       (let loop ([line start-line])
         (when (<= line end-line)
@@ -666,22 +820,28 @@
           (loop (+ line 1)))))))
 
 (define (cbuf-outdent-line! cbuf)
-  "Outdent current line by one level"
+  "Outdent current line by one level with undo support"
   (let* ([tab-size (cbuf-tab-size cbuf)]
          [text (cbuf-text-cur cbuf)]
          [current-indent (cbuf-get-current-line-indentation cbuf)])
     
     (when (> current-indent 0)
+      ;; Save undo state
+      (cbuf-save-undo! cbuf 'outdent-line)
+      
       (let ([remove-count (min tab-size current-indent)])
         (cbuf-beginning-of-line! cbuf)
         (cbuf-delete-region! cbuf (cbuf-line-cur cbuf) 0 
                              (cbuf-line-cur cbuf) remove-count)))))
 
 (define (cbuf-outdent-region! cbuf)
-  "Outdent all lines in selected region"
+  "Outdent all lines in selected region with undo support"
   (when (cbuf-mark-set? cbuf)
     (let* ([start-line (min (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))]
            [end-line (max (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))])
+      
+      ;; Save undo state for the entire region
+      (cbuf-save-undo! cbuf 'outdent-region start-line end-line)
       
       (let loop ([line start-line])
         (when (<= line end-line)
@@ -690,38 +850,53 @@
           (loop (+ line 1)))))))
 
 (define (cbuf-newline-and-indent! cbuf)
-  "Insert newline and indent to match previous line"
+  "Insert newline and indent to match previous line with undo support"
+  ;; Save undo state
+  (cbuf-save-undo! cbuf 'newline-and-indent)
+  
   (let ([indent-level (cbuf-get-indentation-level cbuf)])
     (cbuf-insert-newline! cbuf)
     (cbuf-insert-string! cbuf (cbuf-get-indentation-string cbuf indent-level))))
 
 ;;; =================================================================
-;;; TEXT TRANSFORMATION
+;;; TEXT TRANSFORMATION (All need undo support)
 ;;; =================================================================
 
 (define (cbuf-upcase-region! cbuf)
-  "Convert selected region to uppercase"
+  "Convert selected region to uppercase with undo support"
   (when (cbuf-mark-set? cbuf)
+    ;; Save undo state
+    (cbuf-save-undo! cbuf 'upcase-region)
+    
     (let ([text (cbuf-get-region-text cbuf)])
       (cbuf-cut-region! cbuf)
       (cbuf-insert-string! cbuf (string-upcase text)))))
 
 (define (cbuf-downcase-region! cbuf)
-  "Convert selected region to lowercase"
+  "Convert selected region to lowercase with undo support"
   (when (cbuf-mark-set? cbuf)
+    ;; Save undo state
+    (cbuf-save-undo! cbuf 'downcase-region)
+    
     (let ([text (cbuf-get-region-text cbuf)])
       (cbuf-cut-region! cbuf)
       (cbuf-insert-string! cbuf (string-downcase text)))))
 
 (define (cbuf-capitalize-region! cbuf)
-  "Capitalize selected region"
+  "Capitalize selected region with undo support"
   (when (cbuf-mark-set? cbuf)
+    ;; Save undo state
+    (cbuf-save-undo! cbuf 'capitalize-region)
+    
     (let ([text (cbuf-get-region-text cbuf)])
       (cbuf-cut-region! cbuf)
       (cbuf-insert-string! cbuf (string-capitalize text)))))
 
 (define (cbuf-delete-trailing-whitespace! cbuf)
-  "Delete trailing whitespace from all lines"
+  "Delete trailing whitespace from all lines with undo support"
+  ;; Save undo state for the entire buffer
+  (cbuf-save-undo! cbuf 'delete-trailing-whitespace)
+  
   (let ([original-line (cbuf-line-cur cbuf)]
         [original-x (cbuf-x-data cbuf)])
     
@@ -740,8 +915,11 @@
     (cbuf-set-x! cbuf original-x 'data)))
 
 (define (cbuf-trim-whitespace! cbuf)
-  "Trim leading and trailing whitespace from selected region"
+  "Trim leading and trailing whitespace from selected region with undo support"
   (when (cbuf-mark-set? cbuf)
+    ;; Save undo state
+    (cbuf-save-undo! cbuf 'trim-whitespace)
+    
     (let ([text (cbuf-get-region-text cbuf)])
       (cbuf-cut-region! cbuf)
       (cbuf-insert-string! cbuf (string-trim text)))))
@@ -755,3 +933,100 @@
   ;; This would require implementing a separate redo stack
   ;; For now, just a placeholder
   (error "Redo not yet implemented - requires separate redo stack"))
+
+;;; =================================================================
+;;; UNDO REGISTRATION
+;;; =================================================================
+
+(define (cbuf-register-standard-undo-operations!)
+  "Register all standard undo operations with the plugin system"
+  
+  ;; Word deletion operations
+  (cbuf-register-undo-operation! 'delete-word
+                                  capture-word-deletion-state
+                                  restore-word-deletion-state)
+  
+  ;; Line deletion operations
+  (cbuf-register-undo-operation! 'delete-to-eol
+                                  capture-line-modification-state
+                                  restore-line-modification-state)
+  
+  (cbuf-register-undo-operation! 'delete-to-bol
+                                  capture-line-modification-state
+                                  restore-line-modification-state)
+  
+  ;; Code operations
+  (cbuf-register-undo-operation! 'comment-line
+                                  capture-line-modification-state
+                                  restore-line-modification-state)
+  
+  (cbuf-register-undo-operation! 'comment-region
+                                  capture-multiline-operation-state
+                                  restore-multiline-operation-state)
+  
+  (cbuf-register-undo-operation! 'uncomment-region
+                                  capture-multiline-operation-state
+                                  restore-multiline-operation-state)
+  
+  (cbuf-register-undo-operation! 'duplicate-line
+                                  capture-line-modification-state
+                                  restore-line-modification-state)
+  
+  ;; Line movement operations
+  (cbuf-register-undo-operation! 'move-line
+                                  capture-line-movement-state
+                                  restore-line-movement-state)
+  
+  ;; Indentation operations
+  (cbuf-register-undo-operation! 'indent-line
+                                  capture-line-modification-state
+                                  restore-line-modification-state)
+  
+  (cbuf-register-undo-operation! 'indent-region
+                                  capture-multiline-operation-state
+                                  restore-multiline-operation-state)
+  
+  (cbuf-register-undo-operation! 'outdent-line
+                                  capture-line-modification-state
+                                  restore-line-modification-state)
+  
+  (cbuf-register-undo-operation! 'outdent-region
+                                  capture-multiline-operation-state
+                                  restore-multiline-operation-state)
+  
+  (cbuf-register-undo-operation! 'newline-and-indent
+                                  capture-line-modification-state
+                                  restore-line-modification-state)
+  
+  ;; Text transformation operations
+  (cbuf-register-undo-operation! 'upcase-region
+                                  capture-global-modification-state
+                                  restore-global-modification-state)
+  
+  (cbuf-register-undo-operation! 'downcase-region
+                                  capture-global-modification-state
+                                  restore-global-modification-state)
+  
+  (cbuf-register-undo-operation! 'capitalize-region
+                                  capture-global-modification-state
+                                  restore-global-modification-state)
+  
+  (cbuf-register-undo-operation! 'delete-trailing-whitespace
+                                  capture-global-modification-state
+                                  restore-global-modification-state)
+  
+  (cbuf-register-undo-operation! 'trim-whitespace
+                                  capture-global-modification-state
+                                  restore-global-modification-state)
+  
+  ;; Replace operations
+  (cbuf-register-undo-operation! 'replace-all
+                                  capture-global-modification-state
+                                  restore-global-modification-state))
+
+;;; =================================================================
+;;; MODULE INITIALIZATION
+;;; =================================================================
+
+;; Register standard operations when module loads
+(cbuf-register-standard-undo-operations!)

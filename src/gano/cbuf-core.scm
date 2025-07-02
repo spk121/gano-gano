@@ -8,7 +8,7 @@
   #:use-module (gano rendering)     ; SGR support
   #:use-module (gano cbuf-utils)    ; Utility functions
   #:use-module (gano string-split)  ; Enhanced string splitting
-  #:use-module (gano uax9-bidi)     ; Bidirectional text support
+  #:use-module (gano uax9-core)     ; Bidirectional text support
   #:use-module (srfi srfi-9)        ; Record types
   #:use-module (srfi srfi-35)       ; Condition types
   #:export (
