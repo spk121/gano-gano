@@ -10,7 +10,8 @@
 # Guile (default guile-3.0), or set GUILE / GUILD directly.
 
 PACKAGE    = gano
-VERSION    = 0.0.1
+# The version is defined once, in src/gano/editor.scm (gano --version)
+VERSION   := $(shell sed -n 's/^(define gano-version "\(.*\)")$$/\1/p' src/gano/editor.scm)
 
 PKG_CONFIG ?= pkg-config
 GUILE_PC   ?= guile-3.0
@@ -37,9 +38,7 @@ TESTS      := $(sort $(wildcard test/test-*.scm))
 DISTFILES  = Makefile README NEWS AUTHORS COPYING LICENSE \
              bin/gano $(MODULES) \
              test/run-all.sh $(TESTS) \
-             tools/guile-cache.sh tools/generate-wcwidth.py \
-             tools/generate_bidi_class.py tools/generate_bracket_pairs.py \
-             $(wildcard doc/*)
+             tools/guile-cache.sh tools/generate-wcwidth.py
 DISTDIR    = $(PACKAGE)-$(VERSION)
 
 .PHONY: all check dist distcheck clean

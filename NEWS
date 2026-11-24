@@ -13,4 +13,25 @@ First working version of the editor.
   and spacing marks, and control characters measured per Markus Kuhn's
   wcwidth (tables generated from Unicode 15.1).  Bidirectional reordering
   is left to the terminal.
+- A file that is not valid UTF-8 opens with its bad bytes shown as
+  U+FFFD, and saving over it asks first.  A file that cannot be read
+  (a directory, say) is reported plainly.
+- ^K cuts the selection if there is one, else the line, and A-6 copies
+  the same way, as in nano; ^U pastes either.
+- gano --help, gano --version; "--" ends the options.
 - Plain Makefile: make, make check, make dist.
+- Command registry (src/gano/commands.scm): each command has a short
+  name, a help line, the modes it works in with their shortcuts, and the
+  inputs it asks for.  The standard table covers the buffer and frame
+  operations.  The editor takes its keys from it in every mode, the
+  prompts included (so ^Y/^V jump to the first/last line while typing a
+  search), prompting for any inputs a command needs.
+- A-x runs any command by name, with Tab completion.
+- Help comes from the command table: the help rows show the current
+  mode's shortcuts, and ^G (or F1) opens a help screen listing every
+  command with its keys and help line.
+- Interactive replace (^\ or A-r): Y/N at each match, A for all the
+  rest, ^C to stop; it wraps round to where it began.  The match being
+  asked about, and any selection, are shown in reverse video.
+- Commands report what happened ("Not found", "Replaced 3
+  occurrences").  Scrolling the view takes the cursor along, as in nano.

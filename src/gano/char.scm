@@ -5,45 +5,13 @@
 
 (define-module (gano char)
   #:use-module (gano wcwidth)
-  #:use-module (gano bracket-pairs)
-  #:use-module (gano bidi-class)
   #:export (char-latin1?
 	    char-C0-control?
 	    char-control?
 	    char-blank?
 	    char-combining-mark?
 	    char-graphic?
-	    char-base?
-	    char-opening-bracket?
-	    char-closing-bracket?
-	    char-bracket?
-	    char-get-bracket-partner
-	    char-get-bidi-class
-	    char-is-bidi-control?
-	    char-is-strong-directional?)
-  #:re-export (BC-AL
-               BC-AN
-               BC-B
-               BC-BN
-               BC-CS
-               BC-EN
-               BC-ES
-               BC-ET
-               BC-FSI
-               BC-L
-               BC-LRE
-               BC-LRI
-               BC-LRO
-               BC-NSM
-               BC-ON
-               BC-PDF
-               BC-PDI
-               BC-R
-               BC-RLE
-               BC-RLI
-               BC-RLO
-               BC-S
-               BC-WS))
+	    char-base?))
 
 (define (char-latin1? c)
   "Return #t if C is one of the first 256 codepoints"
@@ -79,36 +47,3 @@ combining mark, like an accent."
                Nd Nl No			; Numbers
                Pc Pd Ps Pe Pi Pf Po	; Punctuation
                Sm Sc Sk So)))		; Symbols
-
-;; Remix of (gano bracket-pairs)
-
-(define char-opening-bracket?
-  opening-bracket?)
-
-(define char-closing-bracket?
-  closing-bracket?)
-
-(define (char-bracket? c)
-  (or (opening-bracket? c)
-      (closing-bracket? c)))
-
-(define char-get-bracket-partner
-  bracket-partner)
-
-;;; =================================================================
-;;; Remix of (gano bidi-class)
-;;; =================================================================
-
-(define (char-get-bidi-class c)
-  (get-bidi-class c))
-
-(define (char-is-bidi-control? char)
-  "Check if character is a bidirectional control character"
-  (let ([class (get-bidi-class char)])
-    (member class '(BC-LRE BC-RLE BC-PDF BC-LRO BC-RLO BC-LRI BC-RLI BC-FSI BC-PDI))))
-
-(define (char-is-strong-directional? char)
-  "Check if character has strong directional properties"
-  (let ([class (get-bidi-class char)])
-    (member class '(BC-L BC-R BC-AL))))
-

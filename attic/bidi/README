@@ -1,0 +1,15 @@
+Bidirectional text support, set aside for now.
+
+gano lays text out left to right and leaves bidirectional reordering to
+the terminal, which does its own.  Doing bidi properly is a large job
+for later.  These are the pieces that were written for it:
+
+  bidi-class.scm                     Unicode Bidi_Class table, (gano bidi-class)
+  bracket-pairs.scm                  Unicode Bidi_Paired_Bracket table, (gano bracket-pairs)
+  generate_bidi_class.py             generators for those two tables
+  generate_bracket_pairs.py
+  test-char-bidi-and-brackets.scm    the tests of the char-*-bracket* and
+                                     char-*-bidi-* helpers that (gano char)
+                                     used to export on top of them
+
+The bracket table may come back for bracket matching.
