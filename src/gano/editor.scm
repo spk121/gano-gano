@@ -15,10 +15,11 @@
 ;;;   row  H-2        status line, or the prompt while one is open
 ;;;   rows H-1, H     key help
 ;;;
-;;; Undo and redo are done here rather than with the cbuf's own undo
-;;; records: the buffer's line list is made of immutable text-metrics
-;;; records, so a snapshot of the list (plus the cursor) is cheap and
-;;; restores exactly.
+;;; Undo and redo use the buffer's own undo history (cbuf-undo,
+;;; cbuf-redo!).  Typing is undone a word at a time: the first character
+;;; of a run of typing records an undo step, and the characters typed
+;;; straight after it are inserted with #:undo? #f, so that step covers
+;;; the whole run.
 
 (define-module (gano editor)
   #:use-module (gano buffer)        ; Character buffer (all layers)
@@ -60,9 +61,6 @@
 ;; Rows used below the text area: status line + two help lines.
 (define reserved-rows 3)
 
-;; Most undo steps kept.
-(define max-undo-steps 1000)
-
 ;; An open prompt in the status line.
 ;;   kind      'text (type a line, Enter accepts) or 'yes-no
 ;;   label     shown before the input, e.g. "Search: "
@@ -77,18 +75,9 @@
   (input prompt-input set-prompt-input!)
   (on-done prompt-on-done))
 
-;; Undo snapshot of the buffer.
-(define-record-type <snapshot>
-  (make-snapshot metrics line x-data modified?)
-  snapshot?
-  (metrics snapshot-metrics)
-  (line snapshot-line)
-  (x-data snapshot-x-data)
-  (modified? snapshot-modified?))
-
 (define-record-type <editor-state>
   (%make-editor-state cbuf frame filename width height quit? status-message
-                      prompt undo-stack redo-stack last-edit last-command
+                      prompt typing-run saved-undo-top last-command
                       clipboard last-search)
   editor-state?
   (cbuf editor-cbuf set-editor-cbuf!)
@@ -99,11 +88,13 @@
   (quit? editor-quit? set-editor-quit?!)
   (status-message editor-status-message set-editor-status-message!)
   (prompt editor-prompt set-editor-prompt!)
-  (undo-stack editor-undo-stack set-editor-undo-stack!)
-  (redo-stack editor-redo-stack set-editor-redo-stack!)
-  ;; Kind of the edit made by the previous key ('typing, 'cut, ...), or
-  ;; #f if that key didn't edit.  Used to group undo steps.
-  (last-edit editor-last-edit set-editor-last-edit!)
+  ;; While a run of typing is going on, the (line . x-data) where the
+  ;; next typed character continues it; otherwise #f.
+  (typing-run editor-typing-run set-editor-typing-run!)
+  ;; The buffer's newest undo record when the file was last loaded or
+  ;; saved (#f if there was none): after an undo or redo, the buffer
+  ;; matches the file exactly when that record is on top again.
+  (saved-undo-top editor-saved-undo-top set-editor-saved-undo-top!)
   ;; Name of the previous command; consecutive ^K cuts accumulate.
   (last-command editor-last-command set-editor-last-command!)
   (clipboard editor-clipboard set-editor-clipboard!)
@@ -118,9 +109,13 @@
   (let ([state (%make-editor-state cbuf
                                    (make-frame width (text-area-height height))
                                    filename width height #f ""
-                                   #f '() '() #f #f "" "")])
+                                   #f #f (undo-top cbuf) #f "" "")])
     (set-cbuf-form-size! cbuf (text-area-height height))   ; page size
     state))
+
+(define (undo-top cbuf)
+  (let ([records (cbuf-undo-list cbuf)])
+    (and (pair? records) (car records))))
 
 (define (editor-modified? state)
   "Has the buffer changed since it was loaded or last saved?"
@@ -172,6 +167,7 @@
       (lambda (port) (put-string port (cbuf->text cbuf)))
       #:encoding "UTF-8")
     (set-cbuf-modified?! cbuf #f)
+    (set-editor-saved-undo-top! state (undo-top cbuf))
     (let ([n (cbuf-line-count cbuf)])
       (message! state "Wrote ~d line~a to ~a" n (if (= n 1) "" "s") filename))))
 
@@ -243,56 +239,28 @@
 ;;; UNDO
 ;;; =================================================================
 
-(define (take-snapshot cbuf)
-  (make-snapshot (cbuf-text-metrics cbuf) (cbuf-line-cur cbuf)
-                 (cbuf-x-data cbuf) (cbuf-modified? cbuf)))
-
-(define (restore-snapshot! cbuf snap)
-  (set-cbuf-text-metrics! cbuf (snapshot-metrics snap))
-  (set-cbuf-mark-set?! cbuf #f)
-  (cbuf-set-y! cbuf (snapshot-line snap))
-  (cbuf-set-x! cbuf (min (snapshot-x-data snap) (cbuf-text-cur-base-length cbuf)) 'data)
-  (set-cbuf-modified?! cbuf (snapshot-modified? snap)))
-
-(define (push-limited item stack)
-  (let ([stack (cons item stack)])
-    (if (> (length stack) max-undo-steps) (take stack max-undo-steps) stack)))
-
-(define (edit! state kind thunk)
-  "Run THUNK, which may change the buffer, as an undoable edit of KIND.
-   Consecutive 'typing edits are undone together, up to a space."
-  (let* ([cbuf (editor-cbuf state)]
-         [before (take-snapshot cbuf)])
-    (thunk)
-    (if (eq? (cbuf-text-metrics cbuf) (snapshot-metrics before))
-        (set-editor-last-edit! state #f)          ; nothing changed
-        (begin
-          (unless (and (eq? kind 'typing) (eq? (editor-last-edit state) 'typing))
-            (set-editor-undo-stack! state (push-limited before (editor-undo-stack state))))
-          (set-editor-redo-stack! state '())
-          (set-editor-last-edit! state kind)))))
+(define (sync-modified! state)
+  "After an undo or redo: modified unless back at the saved state"
+  (let ([cbuf (editor-cbuf state)])
+    (set-cbuf-modified?! cbuf (not (eq? (undo-top cbuf) (editor-saved-undo-top state))))))
 
 (define (cmd-undo state)
-  (let ([stack (editor-undo-stack state)]
-        [cbuf (editor-cbuf state)])
-    (if (null? stack)
-        (message! state "Nothing to undo")
+  (let ([cbuf (editor-cbuf state)])
+    (if (cbuf-can-undo? cbuf)
         (begin
-          (set-editor-redo-stack! state (cons (take-snapshot cbuf) (editor-redo-stack state)))
-          (restore-snapshot! cbuf (car stack))
-          (set-editor-undo-stack! state (cdr stack))
-          (message! state "Undid edit")))))
+          (cbuf-undo cbuf)
+          (sync-modified! state)
+          (message! state "Undid edit"))
+        (message! state "Nothing to undo"))))
 
 (define (cmd-redo state)
-  (let ([stack (editor-redo-stack state)]
-        [cbuf (editor-cbuf state)])
-    (if (null? stack)
-        (message! state "Nothing to redo")
+  (let ([cbuf (editor-cbuf state)])
+    (if (cbuf-can-redo? cbuf)
         (begin
-          (set-editor-undo-stack! state (cons (take-snapshot cbuf) (editor-undo-stack state)))
-          (restore-snapshot! cbuf (car stack))
-          (set-editor-redo-stack! state (cdr stack))
-          (message! state "Redid edit")))))
+          (cbuf-redo! cbuf)
+          (sync-modified! state)
+          (message! state "Redid edit"))
+        (message! state "Nothing to redo"))))
 
 ;;; =================================================================
 ;;; COMMANDS
@@ -455,9 +423,12 @@
      [(not (cbuf-beginning-of-line? cbuf))
       (cbuf-backspace! cbuf)]
      [(> (cbuf-line-cur cbuf) 0)
-      (cbuf-previous-line! cbuf)
-      (cbuf-end-of-line! cbuf)
-      (cbuf-join-lines! cbuf)])))
+      ;; record undo before moving, so undo puts the cursor back here
+      (let ([line (cbuf-line-cur cbuf)])
+        (cbuf-save-line-range-undo! cbuf (- line 1) line)
+        (cbuf-previous-line! cbuf)
+        (cbuf-end-of-line! cbuf)
+        (cbuf-join-lines! cbuf #:undo? #f))])))
 
 (define (cmd-delete state)
   "Delete the character under the cursor, joining with the next line
@@ -471,7 +442,16 @@
   (cbuf-insert-newline! (editor-cbuf state)))
 
 (define (cmd-insert-char state char)
-  (cbuf-insert-char! (editor-cbuf state) char))
+  "Insert CHAR.  Continuing a run of typing (no other key since, cursor
+   where the run left it) adds to the run's undo step; whitespace ends
+   the run."
+  (let* ([cbuf (editor-cbuf state)]
+         [continue? (equal? (editor-typing-run state)
+                            (cons (cbuf-line-cur cbuf) (cbuf-x-data cbuf)))])
+    (cbuf-insert-char! cbuf char #:undo? (not continue?))
+    (set-editor-typing-run! state
+                            (and (not (char-whitespace? char))
+                                 (cons (cbuf-line-cur cbuf) (cbuf-x-data cbuf))))))
 
 (define (cmd-cut-line state)
   "Cut the current line.  Consecutive cuts are collected together, so
@@ -482,8 +462,9 @@
     (unless (and last-line? (string-null? text))
       (if last-line?
           ;; The last line has no newline to take: just empty it.
-          (begin (cbuf-beginning-of-line! cbuf)
-                 (cbuf-delete-to-end-of-line! cbuf))
+          (begin (cbuf-save-line-range-undo! cbuf (cbuf-line-cur cbuf) (cbuf-line-cur cbuf))
+                 (cbuf-beginning-of-line! cbuf)
+                 (cbuf-delete-to-end-of-line! cbuf #:undo? #f))
           (cbuf-cut-line! cbuf))
       (set-editor-clipboard! state
                              (if (eq? (editor-last-command state) 'cmd-cut-line)
@@ -517,35 +498,34 @@
 ;; is #f for commands that don't change the buffer, otherwise the undo
 ;; kind passed to edit!.
 (define bindings
-  `(((ctrl . #\s) ,cmd-save #f)
-    ((ctrl . #\o) ,cmd-write-out #f)
-    ((ctrl . #\x) ,cmd-exit #f)
-    ((ctrl . #\q) ,cmd-force-quit #f)
-    ((ctrl . #\c) ,cmd-show-position #f)
-    ((ctrl . #\w) ,cmd-search #f)
-    ((ctrl . #\_) ,cmd-goto-line #f)
-    ((alt . #\g) ,cmd-goto-line #f)
-    ((ctrl . #\k) ,cmd-cut-line cut-line)
-    ((ctrl . #\u) ,cmd-paste paste)
-    ((alt . #\u) ,cmd-undo #f)
-    ((alt . #\e) ,cmd-redo #f)
-    ((ctrl . #\a) ,cmd-home #f)
-    ((ctrl . #\e) ,cmd-end #f)
-    ((ctrl . #\y) ,cmd-page-up #f)
-    ((ctrl . #\v) ,cmd-page-down #f)
-    (up ,cmd-cursor-up #f)
-    (down ,cmd-cursor-down #f)
-    (left ,cmd-cursor-left #f)
-    (right ,cmd-cursor-right #f)
-    (home ,cmd-home #f)
-    (end ,cmd-end #f)
-    (page-up ,cmd-page-up #f)
-    (page-down ,cmd-page-down #f)
-    (backspace ,cmd-backspace delete)
-    (delete ,cmd-delete delete)
-    (enter ,cmd-enter newline)
-    (tab ,(lambda (state) (cmd-insert-char state #\tab)) typing)
-    (eof ,cmd-force-quit #f)))          ; input closed: nothing more to do
+  `(((ctrl . #\s) . ,cmd-save)
+    ((ctrl . #\o) . ,cmd-write-out)
+    ((ctrl . #\x) . ,cmd-exit)
+    ((ctrl . #\q) . ,cmd-force-quit)
+    ((ctrl . #\c) . ,cmd-show-position)
+    ((ctrl . #\w) . ,cmd-search)
+    ((ctrl . #\_) . ,cmd-goto-line)
+    ((alt . #\g) . ,cmd-goto-line)
+    ((ctrl . #\k) . ,cmd-cut-line)
+    ((ctrl . #\u) . ,cmd-paste)
+    ((alt . #\u) . ,cmd-undo)
+    ((alt . #\e) . ,cmd-redo)
+    ((ctrl . #\a) . ,cmd-home)
+    ((ctrl . #\e) . ,cmd-end)
+    ((ctrl . #\y) . ,cmd-page-up)
+    ((ctrl . #\v) . ,cmd-page-down)
+    (up . ,cmd-cursor-up)
+    (down . ,cmd-cursor-down)
+    (left . ,cmd-cursor-left)
+    (right . ,cmd-cursor-right)
+    (home . ,cmd-home)
+    (end . ,cmd-end)
+    (page-up . ,cmd-page-up)
+    (page-down . ,cmd-page-down)
+    (backspace . ,cmd-backspace)
+    (delete . ,cmd-delete)
+    (enter . ,cmd-enter)
+    (eof . ,cmd-force-quit)))          ; input closed: nothing more to do
 
 (define (key-spec key)
   (let ([ch (key-char key)])
@@ -560,22 +540,15 @@
       (handle-prompt-key state key)
       (let ([binding (assoc (key-spec key) bindings)])
         (cond
-         [binding
-          (let ([command (second binding)]
-                [kind (third binding)])
-            (if kind
-                (edit! state kind (lambda () (command state)))
-                (begin
-                  (command state)
-                  (set-editor-last-edit! state #f)))
-            (set-editor-last-command! state (procedure-name command)))]
-         [(insertable-char? key)
-          (let ([ch (key-char key)])
-            (edit! state 'typing (lambda () (cmd-insert-char state ch)))
-            ;; a space ends the current group of typing
-            (when (char-whitespace? ch) (set-editor-last-edit! state #f)))
+         [(or (insertable-char? key) (eq? (key-symbol key) 'tab))
+          (cmd-insert-char state (or (key-char key) #\tab))
           (set-editor-last-command! state 'insert)]
+         [binding
+          (set-editor-typing-run! state #f)
+          ((cdr binding) state)
+          (set-editor-last-command! state (procedure-name (cdr binding)))]
          [else
+          (set-editor-typing-run! state #f)
           (unknown-key state key)
           (set-editor-last-command! state #f)])))
   state)
