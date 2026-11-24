@@ -6,6 +6,7 @@
   #:use-module (gano editor)
   #:use-module (gano buffer)
   #:use-module (gano keys)
+  #:use-module (gano commands)
   #:use-module (ice-9 textual-ports))
 
 (setlocale LC_ALL "C.UTF-8")
@@ -452,8 +453,8 @@
     (handle-key st (make-key #:symbol 'f5))
     (test-equal "unknown keys are named with key->string" "Unknown key: F5"
                 (editor-status-message st))
-    (handle-key st (make-key #:symbol 'up #:ctrl? #t))
-    (test-equal "modified keys too" "Unknown key: C-up" (editor-status-message st))
+    (handle-key st (make-key #:symbol 'up #:ctrl? #t #:shift? #t))
+    (test-equal "modified keys too" "Unknown key: C-S-up" (editor-status-message st))
     (delete-file (editor-filename st)))
   (let* ([st (open-editor "" #:width 20 #:height 6)]
          [cbuf (editor-cbuf st)])
@@ -461,6 +462,68 @@
     (type! st "hi")
     (test-assert "text attributes reach the screen"
                  (string-contains (render-screen st) "\x1b[1;1H\x1b[1mhi\x1b[22m"))
+    (delete-file (editor-filename st))))
+
+(test-group "the command table drives main mode"
+  (test-eq "the editor starts in main mode" MMAIN (editor-mode (open-editor #f)))
+  (test-equal "editor commands are in the table" "Save the file"
+              (command-help (command-table-ref editor-commands "save")))
+  (test-equal "they replace standard commands of the same name" "Search forward for text, wrapping"
+              (command-help (command-table-ref editor-commands "search")))
+  (test-equal "standard commands are there too" "sort-lines"
+              (command-name (command-table-ref editor-commands "sort-lines")))
+  (test-equal "^S runs the editor's save" "save"
+              (command-name (command-table-key-ref editor-commands MMAIN "^S")))
+  (let ([st (open-editor "one two\nthree\n")])
+    (handle-key st (make-key #:symbol 'right #:ctrl? #t))
+    (test-equal "C-right: next word, a standard shortcut" '(0 4) (cursor st))
+    (type! st '(alt . #\}))
+    (test-equal "A-}: indent (tab size 8)" "        one two\nthree\n" (buffer-text st))
+    (type! st '(alt . #\{))
+    (test-equal "A-{: unindent" "one two\nthree\n" (buffer-text st))
+    (type! st '(alt . #\d))
+    (test-equal "A-d: duplicate the line" "one two\none two\nthree\n" (buffer-text st))
+    (type! st '(alt . #\u))
+    (test-equal "A-u still undoes a standard command" "one two\nthree\n" (buffer-text st))
+    (type! st '(alt . #\u) '(alt . #\u))
+    (test-assert "undoing the indent too leaves the buffer clean" (not (editor-modified? st)))
+    (delete-file (editor-filename st)))
+  (let ([st (open-editor "cat dog cat\n")])
+    (cbuf-end-of-line! (editor-cbuf st))
+    (type! st '(alt . #\q))
+    (test-equal "a command needing a string asks for it" "Search backward: "
+                (editor-prompt-label st))
+    (type! st "cat" 'enter)
+    (test-equal "then runs with the answer" '(0 8) (cursor st))
+    (test-assert "and the prompt is closed" (not (editor-prompt-label st)))
+    (cbuf-beginning-of-line! (editor-cbuf st))
+    (type! st '(ctrl . #\\))
+    (test-equal "replace asks first for the search text" "Search (to replace): "
+                (editor-prompt-label st))
+    (type! st "dog" 'enter)
+    (test-equal "then for the replacement" "Replace with: " (editor-prompt-label st))
+    (type! st "cow" 'enter)
+    (test-equal "and replaces" "cat cow cat\n" (buffer-text st))
+    (type! st '(ctrl . #\\) "cat" 'enter '(ctrl . #\c))
+    (test-equal "^C at any prompt cancels the command" "cat cow cat\n" (buffer-text st))
+    (test-equal "and says so" "Cancelled" (editor-status-message st))
+    (type! st '(ctrl . #\\) 'enter)
+    (test-equal "an empty answer cancels too" "Cancelled" (editor-status-message st))
+    (type! st '(alt . #\v))
+    (test-equal "a character input" "Verbatim input: " (editor-prompt-label st))
+    (type! st "xy" 'enter)
+    (test-equal "must be one character" "Type one character" (editor-status-message st))
+    (test-equal "and nothing is inserted" "cat cow cat\n" (buffer-text st))
+    (type! st '(alt . #\v) "!" 'enter)
+    (test-equal "verbatim insert (after the replacement)" "cat cow! cat\n" (buffer-text st))
+    (delete-file (editor-filename st)))
+  (let ([st (open-editor (string-join (map number->string (iota 30)) "\n" 'suffix)
+                         #:width 20 #:height 8)])
+    (type! st '(alt . #\x))
+    (test-equal "an unbound Alt key is unknown" "Unknown key: A-x" (editor-status-message st))
+    (handle-key st (make-key #:symbol 'down #:alt? #t))
+    (test-equal "A-down scrolls the view" 1
+                ((@ (gano frame) frame-y-start) (editor-frame st)))
     (delete-file (editor-filename st))))
 
 (test-group "prompt rendering"

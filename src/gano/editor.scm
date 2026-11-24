@@ -15,6 +15,15 @@
 ;;;   row  H-2        status line, or the prompt while one is open
 ;;;   rows H-1, H     key help
 ;;;
+;;; Keys are looked up in a command table (see (gano commands)) under
+;;; the editor's current mode, which for now is always MMAIN.  The table
+;;; is the standard one with the editor's own commands (saving, exiting,
+;;; and versions of search, go to line, cut, paste, undo and redo that
+;;; know about the editor's state) put in place of the standard
+;;; commands of the same names.  A command that needs input from the
+;;; user gets it through prompts in the status line before it runs.
+;;; Printable characters and Tab are typed into the text directly.
+;;;
 ;;; Undo and redo use the buffer's own undo history (cbuf-undo,
 ;;; cbuf-redo!).  Typing is undone a word at a time: the first character
 ;;; of a run of typing records an undo step, and the characters typed
@@ -27,10 +36,12 @@
   #:use-module (gano keys)          ; Key objects and key names
   #:use-module (gano terminal)      ; Raw mode, ANSI output, key input
   #:use-module (gano rendering)     ; SGR attributes -> ANSI
+  #:use-module (gano commands)      ; Command table: names, modes, shortcuts
   #:use-module (srfi srfi-1)        ; List utilities
   #:use-module (srfi srfi-9)        ; Record types
   #:use-module (srfi srfi-13)       ; String utilities
   #:use-module (ice-9 format)
+  #:use-module (ice-9 match)
   #:use-module (ice-9 textual-ports)
   #:export (make-editor-state
             editor-state?
@@ -46,6 +57,8 @@
             editor-prompt-label
             editor-prompt-input
             editor-clipboard
+            editor-mode
+            editor-commands
 
             load-buffer
             save-buffer
@@ -78,7 +91,7 @@
 (define-record-type <editor-state>
   (%make-editor-state cbuf frame filename width height quit? status-message
                       prompt typing-run saved-undo-top last-command
-                      clipboard last-search)
+                      clipboard last-search mode)
   editor-state?
   (cbuf editor-cbuf set-editor-cbuf!)
   (frame editor-frame set-editor-frame!)
@@ -98,7 +111,9 @@
   ;; Name of the previous command; consecutive ^K cuts accumulate.
   (last-command editor-last-command set-editor-last-command!)
   (clipboard editor-clipboard set-editor-clipboard!)
-  (last-search editor-last-search set-editor-last-search!))
+  (last-search editor-last-search set-editor-last-search!)
+  ;; The mode keys are looked up in (MMAIN, MSEARCH, ...)
+  (mode editor-mode set-editor-mode!))
 
 (define (text-area-height height)
   (max 1 (- height reserved-rows)))
@@ -109,7 +124,7 @@
   (let ([state (%make-editor-state cbuf
                                    (make-frame width (text-area-height height))
                                    filename width height #f ""
-                                   #f #f (undo-top cbuf) #f "" "")])
+                                   #f #f (undo-top cbuf) #f "" "" MMAIN)])
     (set-cbuf-form-size! cbuf (text-area-height height))   ; page size
     state))
 
@@ -318,30 +333,6 @@
 
 ;; --- Movement ---
 
-(define (cmd-cursor-up state)    (cbuf-previous-line! (editor-cbuf state)))
-(define (cmd-cursor-down state)  (cbuf-next-line! (editor-cbuf state)))
-(define (cmd-home state)         (cbuf-beginning-of-line! (editor-cbuf state)))
-(define (cmd-end state)          (cbuf-end-of-line! (editor-cbuf state)))
-(define (cmd-page-up state)      (cbuf-page-up! (editor-cbuf state)))
-(define (cmd-page-down state)    (cbuf-page-down! (editor-cbuf state)))
-
-(define (cmd-cursor-left state)
-  "Move left; at the start of a line, go to the end of the previous one."
-  (let ([cbuf (editor-cbuf state)])
-    (if (and (cbuf-beginning-of-line? cbuf) (> (cbuf-line-cur cbuf) 0))
-        (begin (cbuf-previous-line! cbuf)
-               (cbuf-end-of-line! cbuf))
-        (cbuf-backward-char! cbuf))))
-
-(define (cmd-cursor-right state)
-  "Move right; at the end of a line, go to the start of the next one."
-  (let ([cbuf (editor-cbuf state)])
-    (if (and (cbuf-end-of-line? cbuf)
-             (< (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 1)))
-        (begin (cbuf-next-line! cbuf)
-               (cbuf-beginning-of-line! cbuf))
-        (cbuf-forward-char! cbuf))))
-
 (define (goto-position! cbuf line index)
   "Put the cursor on LINE (0-based) at string INDEX of that line."
   (cbuf-set-y! cbuf line)
@@ -415,32 +406,6 @@
 
 ;; --- Editing ---
 
-(define (cmd-backspace state)
-  "Delete the character before the cursor, joining with the previous
-   line when at the start of a line."
-  (let ([cbuf (editor-cbuf state)])
-    (cond
-     [(not (cbuf-beginning-of-line? cbuf))
-      (cbuf-backspace! cbuf)]
-     [(> (cbuf-line-cur cbuf) 0)
-      ;; record undo before moving, so undo puts the cursor back here
-      (let ([line (cbuf-line-cur cbuf)])
-        (cbuf-save-line-range-undo! cbuf (- line 1) line)
-        (cbuf-previous-line! cbuf)
-        (cbuf-end-of-line! cbuf)
-        (cbuf-join-lines! cbuf #:undo? #f))])))
-
-(define (cmd-delete state)
-  "Delete the character under the cursor, joining with the next line
-   when at the end of a line."
-  (let ([cbuf (editor-cbuf state)])
-    (if (cbuf-end-of-line? cbuf)
-        (cbuf-join-lines! cbuf)          ; no-op on the last line
-        (cbuf-delete-char! cbuf))))
-
-(define (cmd-enter state)
-  (cbuf-insert-newline! (editor-cbuf state)))
-
 (define (cmd-insert-char state char)
   "Insert CHAR.  Continuing a run of typing (no other key since, cursor
    where the run left it) adds to the run's undo step; whitespace ends
@@ -467,7 +432,7 @@
                  (cbuf-delete-to-end-of-line! cbuf #:undo? #f))
           (cbuf-cut-line! cbuf))
       (set-editor-clipboard! state
-                             (if (eq? (editor-last-command state) 'cmd-cut-line)
+                             (if (equal? (editor-last-command state) "cut-line")
                                  (string-append (editor-clipboard state) text)
                                  text)))))
 
@@ -491,75 +456,108 @@
       (let ([ch (key-char key)])
         (and ch (not (key-modifier? key)) (> (char->integer ch) 127)))))
 
-;; Key bindings, by key name in (gano keys) notation.  Alt+letter is
-;; case-insensitive, as in nano ("A-u" also covers Alt+U).
-(define bindings
-  `(("^S" . ,cmd-save)
-    ("^O" . ,cmd-write-out)
-    ("^X" . ,cmd-exit)
-    ("^Q" . ,cmd-force-quit)
-    ("^C" . ,cmd-show-position)
-    ("^W" . ,cmd-search)
-    ("^_" . ,cmd-goto-line)
-    ("A-g" . ,cmd-goto-line)
-    ("^K" . ,cmd-cut-line)
-    ("^U" . ,cmd-paste)
-    ("A-u" . ,cmd-undo)
-    ("A-e" . ,cmd-redo)
-    ("^A" . ,cmd-home)
-    ("^E" . ,cmd-end)
-    ("^Y" . ,cmd-page-up)
-    ("^V" . ,cmd-page-down)
-    ("up" . ,cmd-cursor-up)
-    ("down" . ,cmd-cursor-down)
-    ("left" . ,cmd-cursor-left)
-    ("right" . ,cmd-cursor-right)
-    ("home" . ,cmd-home)
-    ("end" . ,cmd-end)
-    ("pageup" . ,cmd-page-up)
-    ("pagedown" . ,cmd-page-down)
-    ("backspace" . ,cmd-backspace)
-    ("delete" . ,cmd-delete)
-    ("enter" . ,cmd-enter)
-    ("eof" . ,cmd-force-quit)))         ; input closed: nothing more to do
+;; The editor's own commands.  They take their state from the command
+;; context and ask any questions themselves.
+(define (editor-command name help proc . keys)
+  (make-command name help (lambda (ctx) (proc (command-context-editor ctx)))
+                #:modes `((,MMAIN ,@keys))))
 
-(define (binding-name key)
-  "The canonical name KEY is bound under"
-  (key->string
-   (if (and (key-alt? key) (key-char key) (not (key-ctrl? key)))
-       (make-key #:char (char-downcase (key-char key)) #:alt? #t #:shift? (key-shift? key))
-       key)))
+(define editor-commands
+  (command-table-override
+   standard-commands
+   (list
+    (editor-command "save"      "Save the file" cmd-save "^S")
+    (editor-command "write-out" "Save the file under a name" cmd-write-out "^O")
+    (editor-command "exit"      "Close the file, asking to save it" cmd-exit "^X")
+    (editor-command "discard"   "Quit without saving" cmd-force-quit "^Q")
+    (editor-command "location"  "Show the cursor position" cmd-show-position "^C")
+    ;; In place of the standard commands of these names:
+    (editor-command "search"    "Search forward for text, wrapping" cmd-search "^W" "F6")
+    (editor-command "goto-line" "Go to a line and column" cmd-goto-line "^_" "A-g")
+    (editor-command "cut-line"  "Cut the current line" cmd-cut-line "^K")
+    (editor-command "paste"     "Paste the cut text" cmd-paste "^U")
+    (editor-command "undo"      "Undo the last change" cmd-undo "A-u")
+    (editor-command "redo"      "Redo the last undone change" cmd-redo "A-e"))))
 
-(define binding-table
-  (let ([table (make-hash-table)])
-    (for-each (lambda (b)
-                (hash-set! table
-                           (if (string=? (car b) "eof") "eof" (binding-name (string->key (car b))))
-                           (cdr b)))
-              bindings)
-    table))
+(define (command-context state)
+  (make-command-context (editor-cbuf state) (editor-frame state) #:editor state))
 
-(define (key-command key)
-  "The command bound to KEY, or #f"
-  (hash-ref binding-table (binding-name key) #f))
+(define (error-text key args)
+  "A short description of an error raised as (throw KEY . ARGS)"
+  (match (cons key args)
+    [((or 'misc-error 'wrong-type-arg 'out-of-range) _ (? string? msg) (? list? margs) . _)
+     (apply format #f msg margs)]
+    [_ (format #f "~a" key)]))
+
+(define (run-in-editor! state command values)
+  "Run COMMAND with the input VALUES, reporting an error in the status
+   line rather than letting it end the editor"
+  (catch #t
+    (lambda () (apply run-command command (command-context state) values))
+    (lambda (key . args)
+      (message! state "~a: ~a" (command-name command) (error-text key args)))))
+
+(define (input-label input)
+  (let ([prompt (command-input-prompt input)])
+    (case (command-input-kind input)
+      [(yes-no) (string-append prompt " (Y/N) ")]
+      [(choice) (format #f "~a (~a): " prompt
+                        (string-join (command-input-choices input) "/"))]
+      [else (string-append prompt ": ")])))
+
+(define (parse-input input answer)
+  "Convert the prompt ANSWER for INPUT; returns (VALUE) or an error
+   message string."
+  (case (command-input-kind input)
+    [(string) (list answer)]
+    [(integer) (let ([n (string->number (string-trim-both answer))])
+                 (if (exact-integer? n) (list n) (format #f "Not a whole number: ~a" answer)))]
+    [(char) (if (= (string-length answer) 1)
+                (list (string-ref answer 0))
+                "Type one character")]
+    [(choice) (if (member answer (command-input-choices input))
+                  (list answer)
+                  (format #f "Not one of the choices: ~a" answer))]
+    [else (format #f "Cannot ask for ~a" (command-input-kind input))]))
+
+(define (execute-command! state command)
+  "Ask for COMMAND's inputs one by one, then run it.  An empty answer
+   or ^C cancels it."
+  (let ask ([inputs (command-inputs command)] [values '()])
+    (if (null? inputs)
+        (run-in-editor! state command (reverse values))
+        (let ([input (car inputs)])
+          (if (eq? (command-input-kind input) 'yes-no)
+              (ask-yes-no! state (input-label input)
+                           (lambda (state yes?) (ask (cdr inputs) (cons yes? values))))
+              (ask-text! state (input-label input) ""
+                         (lambda (state answer)
+                           (if (string-null? answer)
+                               (message! state "Cancelled")
+                               (let ([parsed (parse-input input answer)])
+                                 (if (string? parsed)
+                                     (message! state "~a" parsed)
+                                     (ask (cdr inputs) (cons (car parsed) values))))))))))))
 
 (define (handle-key state key)
   "Update STATE in response to KEY.  Returns STATE."
-  (if (editor-prompt state)
-      (handle-prompt-key state key)
-      (let ([command (key-command key)])
-        (cond
-         [(or (insertable-char? key) (key-is? key "tab"))
-          (cmd-insert-char state (or (key-char key) #\tab))
-          (set-editor-last-command! state 'insert)]
-         [command
-          (set-editor-typing-run! state #f)
-          (command state)
-          (set-editor-last-command! state (procedure-name command))]
-         [else
-          (set-editor-typing-run! state #f)
-          (unknown-key state key)
-          (set-editor-last-command! state #f)])))
+  (cond
+   [(editor-prompt state)
+    (handle-prompt-key state key)]
+   [(eq? (key-symbol key) 'eof)           ; input closed: nothing more to do
+    (cmd-force-quit state)]
+   [(or (insertable-char? key) (key-is? key "tab"))
+    (cmd-insert-char state (or (key-char key) #\tab))
+    (set-editor-last-command! state 'insert)]
+   [(command-table-key-ref editor-commands (editor-mode state) key)
+    => (lambda (command)
+         (set-editor-typing-run! state #f)
+         (execute-command! state command)
+         (set-editor-last-command! state (command-name command)))]
+   [else
+    (set-editor-typing-run! state #f)
+    (unknown-key state key)
+    (set-editor-last-command! state #f)])
   state)
 
 ;;; =================================================================

@@ -183,6 +183,34 @@
     (test-equal "the same key in another mode is fine" "f"
                 (command-name (command-table-key-ref t MHELP "^Y")))))
 
+(test-group "command-table-override"
+  (let* ([base (make-command-table)]
+         [a (make-command "a" "A" noop #:modes `((,MMAIN "^A")))]
+         [b (make-command "b" "B" noop #:modes `((,MMAIN "^B")))]
+         [b2 (make-command "b" "New B" noop #:modes `((,MMAIN "^N")))]
+         [c (make-command "c" "C" noop)])
+    (command-table-add! base a)
+    (command-table-add! base b)
+    (let ([t (command-table-override base (list b2 c))])
+      (test-equal "base order, then the new commands" '("a" "b" "c")
+                  (map command-name (command-table-commands t)))
+      (test-eq "the new command replaces the old" b2 (command-table-ref t "b"))
+      (test-eq "with its own keys" b2 (command-table-key-ref t MMAIN "^N"))
+      (test-eq "the replaced command's keys are gone" #f (command-table-key-ref t MMAIN "^B"))
+      (test-eq "others keep theirs" a (command-table-key-ref t MMAIN "^A"))
+      (test-eq "base unchanged" b (command-table-ref base "b"))
+      (test-equal "base count unchanged" 2 (command-table-count base)))
+    (test-error "a key clash with a kept command" #t
+                (command-table-override base (list (make-command "z" "Z" noop
+                                                                 #:modes `((,MMAIN "^A"))))))))
+
+(test-group "context"
+  (let* ([b (buf "")]
+         [c (make-command-context b #f #:editor 'my-editor)])
+    (test-eq "editor" 'my-editor (command-context-editor c))
+    (test-eq "cbuf" b (command-context-cbuf c))
+    (test-eq "editor defaults to #f" #f (command-context-editor (make-command-context b)))))
+
 ;;; ---------------------------------------------------------------
 (test-group "standard table: well formed"
   (let ([all (command-table-commands standard-commands)])
@@ -266,6 +294,29 @@
     (run "set-line" b 2)         (test-equal "set-line keeps the column" '(1 . 4) (pos b))
     (run "set-index" b 2)        (test-equal "set-index counts from 0" '(1 . 2) (pos b))
     (run "home" b)               (test-equal "home" '(1 . 0) (pos b))))
+
+(test-group "standard commands: moving and deleting across lines"
+  (let ([b (buf "ab\ncd")])
+    (run "line-end" b)
+    (run "forward" b)            (test-equal "forward wraps to the next line" '(1 . 0) (pos b))
+    (run "back" b)               (test-equal "back wraps to the previous line" '(0 . 2) (pos b))
+    (run "first-line" b)
+    (run "back" b)               (test-equal "back at the buffer start stays" '(0 . 0) (pos b))
+    (run "last-line" b) (run "line-end" b)
+    (run "forward" b)            (test-equal "forward at the buffer end stays" '(1 . 2) (pos b))
+    (run "line-start" b)
+    (run "backspace" b)          (test-equal "backspace at a line start joins" "abcd" (text-of b))
+    (test-equal "leaving the cursor at the join" '(0 . 2) (pos b))
+    (run "undo" b)
+    (test-equal "one undo step" "ab\ncd" (text-of b))
+    (test-equal "and undo puts the cursor back" '(1 . 0) (pos b))
+    (run "first-line" b) (run "line-end" b)
+    (run "delete" b)             (test-equal "delete at a line end joins" "abcd" (text-of b))
+    (run "line-end" b)
+    (run "delete" b)             (test-equal "delete at the buffer end does nothing" "abcd" (text-of b))
+    (run "line-start" b)
+    (run "backspace" b)          (test-equal "backspace at the buffer start does nothing" "abcd"
+                                             (text-of b))))
 
 (test-group "standard commands: sentences and paragraphs"
   (let ([b (buf "One. Two.\n\nThree.")])

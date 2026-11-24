@@ -17,7 +17,7 @@
 ;;;
 ;;; A command procedure is called as (PROC CONTEXT INPUT ...), where
 ;;; CONTEXT is a <command-context> holding the buffer and frame the
-;;; command acts on, and the INPUTs are the user's answers, in the order
+;;; command acts on (and, for commands an editor adds, the editor), and the INPUTs are the user's answers, in the order
 ;;; the command's inputs are listed.  Whatever PROC returns is returned
 ;;; by run-command (search commands return whether they found a match,
 ;;; for instance).
@@ -77,6 +77,7 @@
     command-context?
     command-context-cbuf
     command-context-frame
+    command-context-editor
 
     ;; Running commands
     run-command
@@ -91,6 +92,7 @@
     command-table-names
     command-table-shortcuts
     command-table-count
+    command-table-override
 
     ;; Shortcut keys
     key-binding-name
@@ -275,15 +277,18 @@
 ;;; =================================================================
 
 (define-record-type <command-context>
-  (%make-command-context cbuf frame)
+  (%make-command-context cbuf frame editor)
   command-context?
   (cbuf command-context-cbuf)
-  (frame command-context-frame))
+  (frame command-context-frame)
+  (editor command-context-editor))
 
-(define* (make-command-context cbuf #:optional (frame #f))
+(define* (make-command-context cbuf #:optional (frame #f) #:key (editor #f))
   "What a command acts on: the buffer CBUF and the FRAME showing it (#f
-   if there is none; frame commands then fail)"
-  (%make-command-context cbuf frame))
+   if there is none; frame commands then fail).  EDITOR is whatever an
+   editor wants its own commands to see (its state, say); the standard
+   commands ignore it."
+  (%make-command-context cbuf frame editor))
 
 (define (run-command command context . values)
   "Run COMMAND on CONTEXT with VALUES, one for each of its inputs.
@@ -370,6 +375,20 @@
 (define (command-table-count table)
   (length (table-order table)))
 
+(define (command-table-override base commands)
+  "A new table holding COMMANDS and those of BASE's commands whose names
+   none of COMMANDS has, in BASE's order with COMMANDS after them.  BASE
+   is not changed.  A shortcut of COMMANDS that one of BASE's remaining
+   commands also has is an error, as in command-table-add!."
+  (let ([table (make-command-table)]
+        [names (map command-name commands)])
+    (for-each (lambda (c)
+                (unless (member (command-name c) names)
+                  (command-table-add! table c)))
+              (command-table-commands base))
+    (for-each (lambda (c) (command-table-add! table c)) commands)
+    table))
+
 ;;; =================================================================
 ;;; THE STANDARD COMMANDS
 ;;; =================================================================
@@ -389,6 +408,44 @@
            [end (if (before? mark point) point mark)])
       (cbuf-delete-region! cbuf (car start) (cdr start) (car end) (cdr end))
       (cbuf-clear-mark! cbuf))))
+
+(define (forward-wrapping! cbuf)
+  "Go forward a character; from the end of a line, to the start of the
+   next"
+  (if (and (cbuf-end-of-line? cbuf)
+           (< (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 1)))
+      (begin (cbuf-next-line! cbuf)
+             (cbuf-beginning-of-line! cbuf))
+      (cbuf-forward-char! cbuf)))
+
+(define (back-wrapping! cbuf)
+  "Go back a character; from the start of a line, to the end of the
+   previous"
+  (if (and (cbuf-beginning-of-line? cbuf) (> (cbuf-line-cur cbuf) 0))
+      (begin (cbuf-previous-line! cbuf)
+             (cbuf-end-of-line! cbuf))
+      (cbuf-backward-char! cbuf)))
+
+(define (backspace-joining! cbuf)
+  "Delete the character before the cursor; at the start of a line, join
+   it to the previous line"
+  (cond
+   [(not (cbuf-beginning-of-line? cbuf))
+    (cbuf-backspace! cbuf)]
+   [(> (cbuf-line-cur cbuf) 0)
+    ;; record undo before moving, so undo puts the cursor back here
+    (let ([line (cbuf-line-cur cbuf)])
+      (cbuf-save-line-range-undo! cbuf (- line 1) line)
+      (cbuf-previous-line! cbuf)
+      (cbuf-end-of-line! cbuf)
+      (cbuf-join-lines! cbuf #:undo? #f))]))
+
+(define (delete-joining! cbuf)
+  "Delete the character under the cursor; at the end of a line, join the
+   next line to it"
+  (if (cbuf-end-of-line? cbuf)
+      (cbuf-join-lines! cbuf)              ; does nothing on the last line
+      (cbuf-delete-char! cbuf)))
 
 (define (replace-next! cbuf search replace)
   "Select the next match of SEARCH and replace it with REPLACE.  Returns
@@ -436,9 +493,9 @@
 
 ;;; ---- Moving by character, line and page -------------------------
 
-(buffer-command "forward"     "Go forward one character" cbuf-forward-char!
+(buffer-command "forward"     "Go forward one character" forward-wrapping!
                 `(,MMAIN "right" "^F"))
-(buffer-command "back"        "Go back one character" cbuf-backward-char!
+(buffer-command "back"        "Go back one character" back-wrapping!
                 `(,MMAIN "left" "^B"))
 (buffer-command "next-line"   "Go to the next line" cbuf-next-line!
                 `(,MMAIN "down" "^N"))
@@ -546,9 +603,9 @@
 (buffer-command "newl-indent" "Insert a line break and indent" cbuf-newline-and-indent!)
 (buffer-command "tab"         "Insert spaces to the next tab stop" cbuf-handle-tab!
                 `(,MMAIN "tab"))
-(buffer-command "delete"      "Delete the character under the cursor" cbuf-delete-char!
+(buffer-command "delete"      "Delete the character under the cursor" delete-joining!
                 `(,MMAIN "delete" "^D"))
-(buffer-command "backspace"   "Delete the character before the cursor" cbuf-backspace!
+(buffer-command "backspace"   "Delete the character before the cursor" backspace-joining!
                 `(,MMAIN "backspace"))
 (buffer-command "del-line"    "Delete the current line" cbuf-delete-line!)
 (buffer-command "join-lines"  "Join this line and the next" cbuf-join-lines!)
