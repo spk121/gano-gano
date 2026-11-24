@@ -21,3 +21,8 @@ First working version of the editor.
   prompts included (so ^Y/^V jump to the first/last line while typing a
   search), prompting for any inputs a command needs.
 - A-x runs any command by name, with Tab completion.
+- Help comes from the command table: the help rows show the current
+  mode's shortcuts, and ^G (or F1) opens a help screen listing every
+  command with its keys and help line.
+- Commands report what happened ("Not found", "Replaced 3
+  occurrences").  Scrolling the view takes the cursor along, as in nano.

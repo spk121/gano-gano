@@ -96,7 +96,7 @@
 (define-record-type <editor-state>
   (%make-editor-state cbuf frame filename width height quit? status-message
                       prompt typing-run saved-undo-top last-command
-                      clipboard last-search base-mode)
+                      clipboard last-search base-mode help)
   editor-state?
   (cbuf editor-cbuf set-editor-cbuf!)
   (frame editor-frame set-editor-frame!)
@@ -118,7 +118,10 @@
   (clipboard editor-clipboard set-editor-clipboard!)
   (last-search editor-last-search set-editor-last-search!)
   ;; The mode when no prompt is open
-  (base-mode editor-base-mode set-editor-base-mode!))
+  (base-mode editor-base-mode set-editor-base-mode!)
+  ;; While the help screen is shown, (CBUF . FRAME) holding the help
+  ;; text; otherwise #f
+  (help editor-help set-editor-help!))
 
 (define (text-area-height height)
   (max 1 (- height reserved-rows)))
@@ -129,7 +132,7 @@
   (let ([state (%make-editor-state cbuf
                                    (make-frame width (text-area-height height))
                                    filename width height #f ""
-                                   #f #f (undo-top cbuf) #f "" "" MMAIN)])
+                                   #f #f (undo-top cbuf) #f "" "" MMAIN #f)])
     (set-cbuf-form-size! cbuf (text-area-height height))   ; page size
     state))
 
@@ -158,9 +161,12 @@
   "Adapt the editor to a WIDTH x HEIGHT terminal."
   (set-editor-width! state width)
   (set-editor-height! state height)
-  (set-frame-width! (editor-frame state) width)
-  (set-frame-height! (editor-frame state) (text-area-height height))
-  (set-cbuf-form-size! (editor-cbuf state) (text-area-height height)))
+  (for-each (lambda (cbuf+frame)
+              (set-frame-width! (cdr cbuf+frame) width)
+              (set-frame-height! (cdr cbuf+frame) (text-area-height height))
+              (set-cbuf-form-size! (car cbuf+frame) (text-area-height height)))
+            (cons (cons (editor-cbuf state) (editor-frame state))
+                  (if (editor-help state) (list (editor-help state)) '()))))
 
 (define (message! state fmt . args)
   (set-editor-status-message! state (apply format #f fmt args)))
@@ -467,6 +473,50 @@
   (make-command name help (lambda (ctx) (proc (command-context-editor ctx)))
                 #:modes (map (lambda (mode) (cons mode keys)) modes)))
 
+;; --- The help screen (^G) ---
+
+(define (pad str width)
+  (if (>= (string-length str) width)
+      (string-append str " ")
+      (string-append str (make-string (- width (string-length str)) #\space))))
+
+(define (help-entry command mode)
+  (string-append (pad (command-name command) 12)
+                 (pad (string-join (command-shortcuts command mode) " ") 16)
+                 (command-help command)))
+
+(define (help-text)
+  "The help screen's text, made from the command table"
+  (let ([prompt-commands
+         (filter (lambda (c) (and (not (command-in-mode? c MMAIN))
+                                  (or (command-in-mode? c MPROMPT) (command-in-mode? c MYESNO))))
+                 (command-table-commands editor-commands))])
+    (string-join
+     (append
+      (list "gano help"
+            ""
+            "^ means Ctrl and A- means Alt.  A-x runs any command by name, and"
+            "Tab completes the name.  Close this help with ^G, ^X or q."
+            ""
+            "Editing"
+            "")
+      (map (lambda (c) (help-entry c MMAIN)) (command-table-commands editor-commands MMAIN))
+      (list "" "At a prompt" "")
+      (map (lambda (c) (help-entry c (if (command-in-mode? c MPROMPT) MPROMPT MYESNO)))
+           prompt-commands))
+     "\n")))
+
+(define (cmd-help state)
+  "Show the help screen"
+  (let* ([rows (text-area-height (editor-height state))]
+         [cbuf (make-cbuf #:initial-text (help-text) #:form-size rows)])
+    (set-editor-help! state (cons cbuf (make-frame (editor-width state) rows)))
+    (set-editor-base-mode! state MHELP)))
+
+(define (cmd-help-exit state)
+  (set-editor-help! state #f)
+  (set-editor-base-mode! state MMAIN))
+
 ;; --- Extended commands (A-x) ---
 
 (define (main-command-names)
@@ -515,6 +565,9 @@
     (editor-command "discard"   "Quit without saving" cmd-force-quit "^Q")
     (editor-command "location"  "Show the cursor position" cmd-show-position "^C")
     (editor-command "command"   "Run a command by name" cmd-extended "A-x")
+    (editor-command "help"      "Show the list of commands and keys" cmd-help "^G" "F1")
+    (prompt-command "help-exit" "Close the help screen" cmd-help-exit
+                    (list MHELP) "^G" "^X" "q" "escape")
     ;; At prompts:
     (prompt-command "accept"    "Accept the answer" prompt-accept!
                     text-prompt-modes "enter")
@@ -539,7 +592,9 @@
     (editor-command "redo"      "Redo the last undone change" cmd-redo "A-e"))))
 
 (define (command-context state)
-  (make-command-context (editor-cbuf state) (editor-frame state) #:editor state))
+  "What commands act on: the help text while it is shown, else the buffer"
+  (let ([view (or (editor-help state) (cons (editor-cbuf state) (editor-frame state)))])
+    (make-command-context (car view) (cdr view) #:editor state)))
 
 (define (error-text key args)
   "A short description of an error raised as (throw KEY . ARGS)"
@@ -552,7 +607,10 @@
   "Run COMMAND with the input VALUES, reporting an error in the status
    line rather than letting it end the editor"
   (catch #t
-    (lambda () (apply run-command command (command-context state) values))
+    (lambda ()
+      (let ([message (command-result-message
+                      command (apply run-command command (command-context state) values))])
+        (when message (message! state "~a" message))))
     (lambda (key . args)
       (message! state "~a: ~a" (command-name command) (error-text key args)))))
 
@@ -621,7 +679,8 @@
     (cmd-force-quit state)]
    [(editor-prompt state)
     (handle-prompt-key state key)]
-   [(or (insertable-char? key) (key-is? key "tab"))
+   [(and (eq? (editor-mode state) MMAIN)
+         (or (insertable-char? key) (key-is? key "tab")))
     (cmd-insert-char state (or (key-char key) #\tab))
     (set-editor-last-command! state 'insert)]
    [(command-table-key-ref editor-commands (editor-mode state) key)
@@ -662,9 +721,9 @@
 (define (status-line state)
   (let* ([cbuf (editor-cbuf state)]
          [width (editor-width state)]
-         [name (if (editor-filename state)
-                   (basename (editor-filename state))
-                   "New Buffer")]
+         [name (cond [(editor-help state) "Help"]
+                     [(editor-filename state) (basename (editor-filename state))]
+                     [else "New Buffer"])]
          [left (string-append " " name (if (editor-modified? state) " (modified)" ""))]
          [right (format #f "Ln ~d, Col ~d "
                         (+ (cbuf-line-cur cbuf) 1) (+ (cbuf-x-data cbuf) 1))]
@@ -676,18 +735,30 @@
         (string-append left+middle (make-string gap #\space) right)
         (fit left+middle width))))
 
-(define editing-help
-  '(("^S Save" "^O Write Out" "^W Where Is" "^K Cut" "^U Paste" "M-U Undo")
-    ("^X Exit" "^Q Discard" "^_ Go To Line" "^C Location" "^A/^E Home/End" "M-E Redo")))
+;; The commands shown in the help rows while editing; in other modes
+;; every command with a shortcut there is shown.
+(define main-help-commands
+  '(("help" "save" "search" "cut-line" "paste" "undo")
+    ("exit" "write-out" "goto-line" "command" "location" "redo")))
 
-(define text-prompt-help
-  '(("Enter Accept") ("^C Cancel")))
+(define (help-label command mode)
+  "\"KEY name\" for COMMAND's first shortcut in MODE"
+  (string-append (car (command-shortcuts command mode)) " " (command-name command)))
 
-(define extended-help
-  '(("Enter Run" "Tab Complete") ("^C Cancel")))
-
-(define yes-no-help
-  '(("Y Yes") ("N No" "^C Cancel")))
+(define (help-rows mode)
+  "The two help rows for MODE, as lists of labels"
+  (if (eq? mode MMAIN)
+      (map (lambda (names)
+             (filter-map (lambda (name)
+                           (let ([c (command-table-ref editor-commands name)])
+                             (and c (pair? (command-shortcuts c mode)) (help-label c mode))))
+                         names))
+           main-help-commands)
+      (let* ([labels (filter-map (lambda (c) (and (pair? (command-shortcuts c mode))
+                                                  (help-label c mode)))
+                                 (command-table-commands editor-commands mode))]
+             [half (quotient (+ (length labels) 1) 2)])
+        (list (take labels half) (drop labels half)))))
 
 (define (help-line entries width)
   (let ([cell (max 1 (quotient width (max 1 (length entries))))])
@@ -696,8 +767,9 @@
 (define (render-screen state)
   "Return the ANSI output that redraws the whole screen for STATE.
    Also scrolls the frame so the cursor is visible."
-  (let* ([cbuf (editor-cbuf state)]
-         [frame (editor-frame state)]
+  (let* ([help-view (editor-help state)]
+         [cbuf (if help-view (car help-view) (editor-cbuf state))]
+         [frame (if help-view (cdr help-view) (editor-frame state))]
          [width (editor-width state)]
          [height (editor-height state)]
          [text-rows (frame-height frame)]
@@ -714,10 +786,7 @@
             (terminal-clear-to-eol)
             (loop (cdr lines) (+ row 1))))
         (when (> height reserved-rows)
-          (let ([help (cond [(not prompt) editing-help]
-                            [(eq? (prompt-kind prompt) 'yes-no) yes-no-help]
-                            [(eq? (prompt-mode prompt) MEXTCMD) extended-help]
-                            [else text-prompt-help])]
+          (let ([help (help-rows (editor-mode state))]
                 [msg (editor-status-message state)])
             ;; Status line or prompt, in reverse video
             (terminal-cursor-position (- height 2) 1)
@@ -742,7 +811,7 @@
                                         (min width (+ 1 (string-length (prompt-label prompt))
                                                       (string-length (prompt-input prompt)))))
               (terminal-show-cursor))
-            (let ([pos (frame-get-cursor-position cbuf frame)])
+            (let ([pos (and (not help-view) (frame-get-cursor-position cbuf frame))])
               (when pos
                 (terminal-cursor-position (+ (cdr pos) 1) (+ (car pos) 1))
                 (terminal-show-cursor))))))))

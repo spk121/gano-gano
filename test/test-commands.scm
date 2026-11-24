@@ -113,6 +113,26 @@
               (make-command "a" "h" noop #:modes `((,MMAIN "A-u" "A-U"))))
   (test-error "inputs not command-inputs" #t (make-command "a" "h" noop #:inputs '(string))))
 
+(test-group "reports"
+  (let ([c (make-command "r" "R" noop #:report (lambda (x) (and (not x) "No")))])
+    (test-equal "a report message" "No" (command-result-message c #f))
+    (test-eq "no message" #f (command-result-message c #t)))
+  (test-eq "no report" #f (command-result-message (make-command "r" "R" noop) #f))
+  (test-eq "a report returning a non-string" #f
+           (command-result-message (make-command "r" "R" noop #:report (lambda (x) 'oops)) #f))
+  (test-error "report not a procedure" #t (make-command "r" "R" noop #:report "No"))
+  (let ([msg (lambda (name result) (command-result-message (std name) result))])
+    (test-equal "search not found" "Not found" (msg "search" #f))
+    (test-eq "search found" #f (msg "search" #t))
+    (test-equal "search-back" "Not found" (msg "search-back" #f))
+    (test-equal "replace" "Not found" (msg "replace" #f))
+    (test-equal "replace-sel" "The selection does not match" (msg "replace-sel" #f))
+    (test-equal "replace-all none" "Not found" (msg "replace-all" 0))
+    (test-equal "replace-all one" "Replaced 1 occurrence" (msg "replace-all" 1))
+    (test-equal "replace-all many" "Replaced 3 occurrences" (msg "replace-all" 3))
+    (test-eq "replace-all answered no" #f (msg "replace-all" #f))
+    (test-eq "motion reports nothing" #f (msg "forward" #f))))
+
 (test-group "key-binding-name"
   (test-equal "control" "^K" (key-binding-name "^k"))
   (test-equal "Alt upper case" "A-u" (key-binding-name "A-U"))
@@ -453,7 +473,7 @@
     (test-equal "replaced the first" "a dog, a cat" (text-of b))
     (test-eq "replace with no match" #f (run "replace" b "cow" "dog"))
     (run "first-line" b)
-    (test-equal "replace-all, answered no" 0 (run "replace-all" b "a" "the" #f))
+    (test-eq "replace-all, answered no" #f (run "replace-all" b "a" "the" #f))
     (test-equal "nothing replaced" "a dog, a cat" (text-of b))
     (test-equal "replace-all counts" 3 (run "replace-all" b "a" "A" #t))
     (test-equal "replaced all" "A dog, A cAt" (text-of b))
@@ -554,7 +574,25 @@
     (cbuf-goto-line! b 0)
     (run/frame "view-cursor" b f)
     (test-equal "view-cursor brings the cursor into view" 0 (frame-y-start f))
-    (test-error "a view command without a frame" #t (run "scroll-up" b))))
+    (test-error "a view command without a frame" #t (run "scroll-up" b)))
+  (let* ([b (buf (string-join (map number->string (iota 20)) "\n"))]
+         [f (make-frame 4 5)])
+    (run/frame "scroll-up" b f)
+    (test-equal "scrolling past the cursor takes it along" 1 (cbuf-line-cur b))
+    (run/frame "view-next" b f)
+    (test-equal "paging too (pages are 3 lines)" 3 (cbuf-line-cur b))
+    (cbuf-goto-line! b 8)
+    (run/frame "scroll-down" b f)
+    (test-equal "upward: the cursor stays on the bottom line" '(2 . 6)
+                (cons (frame-y-start f) (cbuf-line-cur b)))
+    (run/frame "scroll-up" b f)
+    (test-equal "a cursor still in view stays put" 6 (cbuf-line-cur b))
+    (cbuf-set-x! b 1 'data)
+    (run/frame "scroll-left" b f) (run/frame "scroll-left" b f)
+    (test-equal "sideways: the cursor moves to the left edge (end of the short line)" 1
+                (cbuf-x-cell b))
+    (run/frame "view-page" b f 1)
+    (test-equal "view-page" '(0 . 4) (cons (frame-y-start f) (cbuf-line-cur b)))))
 
 (test-group "standard commands: every command runs"
   ;; Run every command that asks nothing on a small buffer with a

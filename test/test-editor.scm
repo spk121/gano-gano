@@ -181,7 +181,7 @@
     (test-assert "text is drawn" (string-contains screen "first line"))
     (test-assert "file name in status line"
                  (string-contains screen (basename (editor-filename st))))
-    (test-assert "help is drawn" (string-contains screen "^S Sa"))
+    (test-assert "help is drawn (cut to fit)" (string-contains screen "^G he"))
     (test-assert "cursor placed at top left" (string-suffix? "\x1b[1;1H\x1b[?25h" screen))
     (type! st 'down 'right 'right)
     (render-screen st)
@@ -524,6 +524,10 @@
     (handle-key st (make-key #:symbol 'down #:alt? #t))
     (test-equal "A-down scrolls the view" 1
                 ((@ (gano frame) frame-y-start) (editor-frame st)))
+    (test-equal "taking the cursor along when it would leave" '(1 0) (cursor st))
+    (render-screen st)
+    (test-equal "so drawing does not scroll back" 1
+                ((@ (gano frame) frame-y-start) (editor-frame st)))
     (delete-file (editor-filename st))))
 
 (test-group "prompt modes"
@@ -608,12 +612,66 @@
     (test-equal "cut-line run by name still collects lines" "a\nb" (editor-clipboard st))
     (delete-file (editor-filename st))))
 
+(test-group "help from the command table"
+  (let* ([st (open-editor "abc\n" #:width 80 #:height 10)]
+         [screen (render-screen st)])
+    (test-assert "main help row 1" (string-contains screen "^G help"))
+    (test-assert "main help row 2" (string-contains screen "A-x command"))
+    (type! st '(alt . #\q))
+    (test-assert "prompt rows list the mode's keys"
+                 (string-contains (render-screen st) "enter accept"))
+    (type! st '(ctrl . #\c) "x" '(ctrl . #\x))
+    (test-assert "yes/no rows" (string-contains (render-screen st) "n no"))
+    (type! st '(ctrl . #\c))
+    (type! st '(ctrl . #\g))
+    (test-eq "^G opens the help screen" MHELP (editor-mode st))
+    (let ([screen (render-screen st)])
+      (test-assert "help text is drawn" (string-contains screen "gano help"))
+      (test-assert "the status line says so" (string-contains screen " Help"))
+      (test-assert "help rows show the help mode's keys" (string-contains screen "^G help-exit"))
+      (test-assert "the cursor is not shown" (not (string-contains screen "\x1b[?25h"))))
+    (type! st "z" 'tab)
+    (test-equal "typing does not reach the buffer" "xabc\n" (buffer-text st))
+    (handle-key st (make-key #:symbol 'pagedown))
+    (test-assert "and shows later commands"
+                 (not (string-contains (render-screen st) "gano help")))
+    (handle-key st (make-key #:symbol 'pageup))
+    (test-assert "PgUp goes back" (string-contains (render-screen st) "gano help"))
+    (type! st "q")
+    (test-eq "q closes it" MMAIN (editor-mode st))
+    (test-assert "and the text is back" (string-contains (render-screen st) "xabc"))
+    (type! st '(ctrl . #\g) '(ctrl . #\x))
+    (test-eq "^X closes it too" MMAIN (editor-mode st))
+    (test-assert "without quitting" (not (editor-quit? st)))
+    (type! st '(alt . #\x) "help" 'enter)
+    (test-eq "help by name" MHELP (editor-mode st))
+    (editor-resize! st 60 12)
+    (type! st 'escape)
+    (test-eq "Escape closes it" MMAIN (editor-mode st))
+    (delete-file (editor-filename st)))
+  (let ([st (open-editor "x\n" #:width 80 #:height 200)])
+    (type! st '(ctrl . #\g))
+    (let ([screen (render-screen st)])
+      (test-assert "every main command is listed with its keys"
+                   (string-contains screen "save        ^S"))
+      (test-assert "with its help" (string-contains screen "Save the file")))
+    (delete-file (editor-filename st))))
+
+(test-group "result messages"
+  (let ([st (open-editor "cat\n")])
+    (type! st '(alt . #\q) "dog" 'enter)
+    (test-equal "a failed search says so" "Not found" (editor-status-message st))
+    (type! st '(alt . #\x) "replace-all" 'enter "a" 'enter "o" 'enter "y")
+    (test-equal "replace-all counts" "Replaced 1 occurrence" (editor-status-message st))
+    (test-equal "and replaced" "cot\n" (buffer-text st))
+    (delete-file (editor-filename st))))
+
 (test-group "prompt rendering"
   (let ([st (open-editor "x\n" #:width 40 #:height 10)])
     (type! st '(ctrl . #\w) "ab")
     (let ([screen (render-screen st)])
       (test-assert "prompt drawn on the status row" (string-contains screen "\x1b[8;1H\x1b[7mSearch: ab"))
-      (test-assert "prompt help" (string-contains screen "^C Cancel"))
+      (test-assert "prompt help, from the search mode's shortcuts" (string-contains screen "^C cancel"))
       (test-assert "cursor in the prompt" (string-suffix? "\x1b[8;11H\x1b[?25h" screen)))
     (delete-file (editor-filename st))))
 

@@ -20,7 +20,9 @@
 ;;; command acts on (and, for commands an editor adds, the editor), and the INPUTs are the user's answers, in the order
 ;;; the command's inputs are listed.  Whatever PROC returns is returned
 ;;; by run-command (search commands return whether they found a match,
-;;; for instance).
+;;; for instance).  A command may also have a report procedure that
+;;; turns that result into a message for the user ("Not found"), or #f
+;;; for no message.
 ;;;
 ;;; Shortcuts are written in (gano keys) notation ("^K", "A-u",
 ;;; "pagedown") and stored under key-binding-name, which makes an Alt
@@ -73,6 +75,8 @@
     command-in-mode?
     command-shortcuts
     command-extended-only?
+    command-report
+    command-result-message
 
     ;; What a command acts on
     make-command-context
@@ -206,14 +210,16 @@
 ;;; =================================================================
 
 (define-record-type <command>
-  (%make-command name help procedure inputs modes)
+  (%make-command name help procedure inputs modes report)
   command?
   (name command-name)
   (help command-help)
   (procedure command-procedure)
   (inputs command-inputs)
   ;; An alist of (MODE KEY-NAME ...) in the order given
-  (modes command-mode-alist))
+  (modes command-mode-alist)
+  ;; (lambda (result)) -> message string or #f; or #f for no reports
+  (report command-report set-command-report!))
 
 (define (check-name name)
   (unless (and (string? name)
@@ -255,19 +261,30 @@
       (error "command lists a mode twice" name))
     alist))
 
-(define* (make-command name help procedure #:key (modes (list MMAIN)) (inputs '()))
+(define* (make-command name help procedure #:key (modes (list MMAIN)) (inputs '())
+                       (report #f))
   "A command called NAME (at most 11 characters) with HELP (at most 40)
    that runs PROCEDURE.  MODES lists the modes it is available in, each
    either MODE (runnable there only by name) or (MODE KEY ...) giving
    its shortcuts there.  INPUTS lists the command-inputs it asks for;
-   PROCEDURE is called with the context and one value per input."
+   PROCEDURE is called with the context and one value per input.
+   REPORT, if given, maps PROCEDURE's result to a message or #f."
   (check-name name)
   (check-help name help)
   (unless (procedure? procedure)
     (error "command procedure must be a procedure" name procedure))
   (unless (and (list? inputs) (every command-input? inputs))
     (error "command inputs must be a list of command-inputs" name inputs))
-  (%make-command name help procedure inputs (normalize-modes name modes)))
+  (unless (or (not report) (procedure? report))
+    (error "command report must be a procedure or #f" name report))
+  (%make-command name help procedure inputs (normalize-modes name modes) report))
+
+(define (command-result-message command result)
+  "The message to show after COMMAND returned RESULT, or #f"
+  (let ([report (command-report command)])
+    (and report
+         (let ([message (report result)])
+           (and (string? message) message)))))
 
 (define (command-needs-input? command)
   "Must the user be asked for something before COMMAND runs?"
@@ -482,13 +499,37 @@
    (make-command name help (lambda (ctx) (proc (command-context-cbuf ctx)))
                  #:modes (if (null? modes) (list MMAIN) modes))))
 
+;; After the view moves, keep the cursor on screen (as nano does), so
+;; that bringing the cursor into view does not move the view back.
+(define (keep-cursor-in-view! cbuf frame)
+  (let* ([top (frame-y-start frame)]
+         [bottom (min (- (cbuf-line-count cbuf) 1)
+                      (+ top (frame-height frame) -1))]
+         [left (frame-x-start frame)]
+         [right (+ left (frame-width frame) -1)])
+    (cond
+     [(< (cbuf-line-cur cbuf) top) (cbuf-set-y! cbuf (min top bottom))]
+     [(> (cbuf-line-cur cbuf) bottom) (cbuf-set-y! cbuf (max 0 bottom))])
+    (cond
+     [(< (cbuf-x-cell cbuf) left) (cbuf-set-x! cbuf left 'cell)]
+     [(> (cbuf-x-cell cbuf) right) (cbuf-set-x! cbuf right 'cell)])))
+
+(define (view-procedure proc)
+  "A command procedure running (PROC CBUF FRAME . VALUES), then keeping
+   the cursor in view"
+  (lambda (ctx . values)
+    (let ([cbuf (command-context-cbuf ctx)]
+          [frame (ctx-frame ctx)])
+      (apply proc cbuf frame values)
+      (keep-cursor-in-view! cbuf frame))))
+
 ;; (frame-command NAME HELP PROC MODE-SPEC ...) adds a command whose
-;; procedure takes the buffer and the frame.
+;; procedure takes the buffer and the frame.  The cursor is kept in
+;; view.
 (define (frame-command name help proc . modes)
   (command-table-add!
    standard-commands
-   (make-command name help
-                 (lambda (ctx) (proc (command-context-cbuf ctx) (ctx-frame ctx)))
+   (make-command name help (view-procedure proc)
                  #:modes (if (null? modes) (list MMAIN) modes))))
 
 ;; (asking-command NAME HELP INPUTS PROC MODE-SPEC ...) adds a command
@@ -586,21 +627,21 @@
 (command-table-add!
  standard-commands
  (make-command "view-page" "Show a page by number"
-               (lambda (ctx page)
-                 (frame-page-position-absolute (command-context-cbuf ctx) (ctx-frame ctx)
-                                               (- page 1)))
+               (view-procedure
+                (lambda (cbuf frame page)
+                  (frame-page-position-absolute cbuf frame (- page 1))))
                #:inputs (list (ask 'integer "Enter page number" #:mode MGOTOLINE))))
 (command-table-add!
  standard-commands
  (make-command "view-fwd"    "Show a page N pages on"
-               (lambda (ctx n)
-                 (frame-page-position-forward (command-context-cbuf ctx) (ctx-frame ctx) n))
+               (view-procedure
+                (lambda (cbuf frame n) (frame-page-position-forward cbuf frame n)))
                #:inputs (list (ask 'integer "Number of pages forward" #:mode MGOTOLINE))))
 (command-table-add!
  standard-commands
  (make-command "view-back"   "Show a page N pages back"
-               (lambda (ctx n)
-                 (frame-page-position-backward (command-context-cbuf ctx) (ctx-frame ctx) n))
+               (view-procedure
+                (lambda (cbuf frame n) (frame-page-position-backward cbuf frame n)))
                #:inputs (list (ask 'integer "Number of pages back" #:mode MGOTOLINE))))
 
 ;;; ---- Inserting and deleting -------------------------------------
@@ -709,7 +750,7 @@
                       (ask 'string "Replace with" #:mode MREPLACEWITH)
                       (ask 'yes-no "Replace every match?"))
                 (lambda (cbuf search replace yes?)
-                  (if yes? (cbuf-search-replace-all! cbuf search replace) 0)))
+                  (and yes? (cbuf-search-replace-all! cbuf search replace))))
 
 ;;; ---- Lines ------------------------------------------------------
 
@@ -780,3 +821,19 @@
                   (cbuf-set-final-newline-policy! cbuf (string->symbol policy))))
 (buffer-command "apply-fnl"   "Apply the final newline policy"
                 cbuf-normalize-final-newline!)
+
+;;; ---- Messages for results ---------------------------------------
+
+(define (report! name report)
+  (set-command-report! (command-table-ref standard-commands name) report))
+
+(define (not-found found?) (and (not found?) "Not found"))
+
+(for-each (lambda (name) (report! name not-found))
+          '("search" "search-back" "search-ci" "search-word" "replace"))
+(report! "replace-sel" (lambda (replaced?) (and (not replaced?) "The selection does not match")))
+(report! "replace-all" (lambda (n)
+                         (cond [(not n) #f]          ; answered no
+                               [(zero? n) "Not found"]
+                               [else (format #f "Replaced ~a occurrence~a" n
+                                             (if (= n 1) "" "s"))])))
