@@ -13,8 +13,10 @@
 ;;; - Special and function keys
 ;;;
 ;;; Key String Format:
-;;; - Single characters: "a", "1", "!"
-;;; - Control keys: "^A", "^C" (Control + letter)
+;;; - Single characters: "a", "1", "!", and "space" for the space bar
+;;; - Control keys: "^A", "^C", "C-a" (Control + key).  A terminal sends
+;;;   the same byte for Ctrl+a and Ctrl+A, so control letters are always
+;;;   lower case: "^A", "^a" and "C-a" are the same key.
 ;;; - Alt keys: "A-a", "A-1" (Alt + key)
 ;;; - Function keys: "F1", "F2", ..., "F12"
 ;;; - Named special keys: "kup", "kdown", "kleft", "kright", etc.
@@ -107,8 +109,12 @@
   (shift? key-shift? set-key-shift!))   ; Shift modifier
 
 (define* (make-key #:key char symbol (ctrl? #f) (alt? #f) (shift? #f))
-  "Create a new key representation"
-  (%make-key char symbol ctrl? alt? shift?))
+  "Create a new key: either CHAR (a character) or SYMBOL (a special key
+   name such as 'up or 'f1), plus modifier flags."
+  (unless (if char (and (char? char) (not symbol)) (symbol? symbol))
+    (error "make-key: give exactly one of #:char (a character) or #:symbol (a symbol)"
+           char symbol))
+  (%make-key char symbol (and ctrl? #t) (and alt? #t) (and shift? #t)))
 
 ;;; =================================================================
 ;;; SPECIAL KEY MAPPINGS
@@ -134,7 +140,6 @@
     ("tab" . tab)
     ("enter" . enter)
     ("escape" . escape)
-    ("space" . space)
     
     ;; Keypad (keep kp prefix as it makes sense)
     ("kp0" . keypad-0) ("kp1" . keypad-1) ("kp2" . keypad-2)
@@ -162,39 +167,20 @@
 ;;; =================================================================
 
 (define (parse-modifiers key-string)
-  "Parse modifier prefixes from key string. Returns (modifiers . base-key)"
+  "Parse modifier prefixes (^, C-, A-, S-, in any order) from a key
+   string.  Returns ((ctrl? alt? shift?) . base-key).  A prefix is only a
+   modifier if something follows it, so \"^\" and \"C-\" ... are plain keys."
   (let loop ([str key-string]
              [ctrl? #f]
              [alt? #f]
              [shift? #f])
+    (define (prefix? p) (and (string-prefix? p str) (> (string-length str) (string-length p))))
     (cond
-     ;; Control modifier: ^X or C-X
-     [(string-prefix? "^" str)
-      (loop (substring str 1) #t alt? shift?)]
-     [(string-prefix? "C-" str)
-      (loop (substring str 2) #t alt? shift?)]
-     
-     ;; Alt modifier: A-X
-     [(string-prefix? "A-" str)
-      (loop (substring str 2) ctrl? #t shift?)]
-     
-     ;; Shift modifier: S-X
-     [(string-prefix? "S-" str)
-      (loop (substring str 2) ctrl? alt? #t)]
-     
-     ;; Combined modifiers: C-A-X, C-S-X, etc.
-     [(string-prefix? "C-A-" str)
-      (loop (substring str 4) #t #t shift?)]
-     [(string-prefix? "C-S-" str)
-      (loop (substring str 4) #t alt? #t)]
-     [(string-prefix? "A-S-" str)
-      (loop (substring str 4) ctrl? #t #t)]
-     [(string-prefix? "C-A-S-" str)
-      (loop (substring str 6) #t #t #t)]
-     
-     ;; No more modifiers
-     [else
-      (cons (list ctrl? alt? shift?) str)])))
+     [(prefix? "^") (loop (substring str 1) #t alt? shift?)]
+     [(prefix? "C-") (loop (substring str 2) #t alt? shift?)]
+     [(prefix? "A-") (loop (substring str 2) ctrl? #t shift?)]
+     [(prefix? "S-") (loop (substring str 2) ctrl? alt? #t)]
+     [else (cons (list ctrl? alt? shift?) str)])))
 
 (define (string->key key-string)
   "Convert key string to key record"
@@ -218,12 +204,16 @@
       => (lambda (entry)
            (make-key #:symbol (cdr entry) #:ctrl? ctrl? #:alt? alt?
                     #:shift? shift?))]
+
+     ;; The space bar is the character #\space
+     [(string=? base-key "space")
+      (make-key #:char #\space #:ctrl? ctrl? #:alt? alt? #:shift? shift?)]
      
-     ;; Single character
+     ;; Single character (control letters are lower case)
      [(= (string-length base-key) 1)
       (let ([ch (string-ref base-key 0)])
-        (make-key #:char ch #:ctrl? ctrl? #:alt? alt? 
-                 #:shift? shift?))]
+        (make-key #:char (if ctrl? (char-downcase ch) ch)
+                  #:ctrl? ctrl? #:alt? alt? #:shift? shift?))]
      
      ;; Invalid key string
      [else
@@ -236,6 +226,7 @@
                     (if (key-alt? key) "A-" "")
                     (if (key-shift? key) "S-" ""))]
          [base (cond
+                [(eqv? (key-char key) #\space) "space"]
                 [(key-char key)
                  (string (key-char key))]
                 [(key-symbol key)
@@ -246,12 +237,13 @@
                        (symbol->string (key-symbol key))))]
                 [else "?"])])
     
-    ;; Special case: single control character uses ^X notation
+    ;; Plain control keys use nano's ^X notation: ^A .. ^Z, ^@ ^[ ^\ ^] ^^ ^_
     (if (and (key-ctrl? key) 
              (not (key-alt? key)) 
              (not (key-shift? key))
              (key-char key)
-             (char-alphabetic? (key-char key)))
+             (or (char-alphabetic? (key-char key))
+                 (memv (key-char key) '(#\@ #\[ #\\ #\] #\^ #\_))))
         (string-append "^" (string (char-upcase (key-char key))))
         (string-append modifiers base))))
 
@@ -273,8 +265,8 @@
 ;;; =================================================================
 
 (define (parse-key-sequence seq-string)
-  "Parse space-separated key sequence string into list of keys"
-  (map string->key (string-split seq-string #\space)))
+  "Parse whitespace-separated key sequence string into list of keys"
+  (map string->key (string-tokenize seq-string)))
 
 (define (key-sequence->string key-list)
   "Convert list of keys to space-separated string"
@@ -302,22 +294,27 @@
   (let ([ch (key-char key)])
     (and ch
          (not (key-ctrl? key))
-         (or (char-graphic? ch) (char-blank? ch)))))
+         (not (key-alt? key))
+         (or (char-graphic? ch) (char=? ch #\space))
+         #t)))
 
 (define (key-special? key)
   "Check if key is a special named key"
   (and (key-symbol key)
-       (memq (key-symbol key) (map cdr *special-keys*))))
+       (memq (key-symbol key) (map cdr *special-keys*))
+       #t))
 
 (define (key-function? key)
   "Check if key is a function key"
   (and (key-symbol key)
-       (memq (key-symbol key) (map cdr *function-keys*))))
+       (memq (key-symbol key) (map cdr *function-keys*))
+       #t))
 
 (define (key-arrow? key)
   "Check if key is an arrow key"
   (and (key-symbol key)
-       (memq (key-symbol key) '(up down left right))))
+       (memq (key-symbol key) '(up down left right))
+       #t))
 
 (define (key-modifier? key)
   "Check if key has any modifiers"
@@ -342,6 +339,7 @@
                                 (and (key-alt? key) "Alt") 
                                 (and (key-shift? key) "Shift")))]
          [base-desc (cond
+                     [(eqv? (key-char key) #\space) "Space"]
                      [(key-char key)
                       (format #f "'~a'" (key-char key))]
                      [(key-symbol key)
@@ -413,8 +411,8 @@
 ;;; =================================================================
 
 (define (ctrl-key char)
-  "Create a control key combination"
-  (make-key #:char char #:ctrl? #t))
+  "Create a control key combination (letters are made lower case)"
+  (make-key #:char (char-downcase char) #:ctrl? #t))
 
 (define (alt-key char)
   "Create an alt key combination"
@@ -422,7 +420,7 @@
 
 (define (function-key n)
   "Create a function key (F1-F12)"
-  (if (and (>= n 1) (<= n 12))
+  (if (and (exact-integer? n) (>= n 1) (<= n 12))
       (make-key #:symbol (string->symbol (format #f "f~a" n)))
       (error "Invalid function key number" n)))
 

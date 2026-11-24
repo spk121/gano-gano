@@ -58,15 +58,15 @@
     (key-char (string->key "!")))
   
   ;; Control keys - traditional ^X notation
-  (test-assert "parse control key ^C"
+  (test-assert "parse control key ^C (control letters are lower case)"
     (let ([key (string->key "^C")])
       (and (key-ctrl? key)
-           (char=? (key-char key) #\C))))
+           (char=? (key-char key) #\c))))
   
   (test-assert "parse control key ^X"
     (let ([key (string->key "^X")])
       (and (key-ctrl? key)
-           (char=? (key-char key) #\X))))
+           (char=? (key-char key) #\x))))
   
   ;; Control keys - C- notation
   (test-assert "parse control key C-a"
@@ -549,8 +549,9 @@
 
 (test-group "edge-cases"
   ;; Case sensitivity
-  (test-assert "control keys are case-sensitive in parsing"
-    (not (key-equivalent? (string->key "^c") (string->key "^C"))))
+  ;; A terminal sends the same byte for Ctrl+c and Ctrl+C
+  (test-assert "control letters are not case-sensitive"
+    (key-equivalent? (string->key "^c") (string->key "^C")))
   
   ;; Function key bounds
   (test-assert "F1 through F12 are valid"
@@ -605,4 +606,96 @@
            (get-function-key-names))))
 
 ;;; Test suite cleanup
+;;; =================================================================
+;;; STRICT TESTS
+;;; =================================================================
+
+(define (k str) (string->key str))
+(define (same? a b) (key-equivalent? a b))
+
+(test-group "strict: construction"
+  (test-error "neither char nor symbol" #t (make-key))
+  (test-error "both char and symbol" #t (make-key #:char #\a #:symbol 'up))
+  (test-error "char must be a character" #t (make-key #:char "a"))
+  (test-error "symbol must be a symbol" #t (make-key #:symbol "up"))
+  (test-equal "modifier flags are booleans" '(#t #f #f)
+              (let ([key (make-key #:char #\a #:ctrl? 'yes)])
+                (list (key-ctrl? key) (key-alt? key) (key-shift? key)))))
+
+(test-group "strict: control keys"
+  (test-assert "^A, ^a and C-a are the same key"
+               (and (same? (k "^A") (k "^a")) (same? (k "^A") (k "C-a"))))
+  (test-assert "matches what the terminal reports for byte 1"
+               (same? (k "^A") (make-key #:char #\a #:ctrl? #t)))
+  (test-assert "ctrl-key lower-cases" (same? (ctrl-key #\X) (k "^x")))
+  (test-equal "^_ notation" "^_" (key->string (make-key #:char #\_ #:ctrl? #t)))
+  (test-equal "^] notation" "^]" (key->string (make-key #:char #\] #:ctrl? #t)))
+  (test-equal "^\\ notation" "^\\" (key->string (make-key #:char #\\ #:ctrl? #t)))
+  (test-assert "^_ parses back" (same? (k "^_") (make-key #:char #\_ #:ctrl? #t)))
+  (test-equal "ctrl of a digit uses C-" "C-1" (key->string (make-key #:char #\1 #:ctrl? #t)))
+  (test-equal "ctrl+alt" "C-A-x" (key->string (k "C-A-x")))
+  (test-equal "alt is case-sensitive" '(#\X #\x)
+              (list (key-char (k "A-X")) (key-char (k "A-x")))))
+
+(test-group "strict: prefixes need something after them"
+  (test-equal "caret key" #\^ (key-char (k "^")))
+  (test-assert "caret key has no modifier" (not (key-modifier? (k "^"))))
+  (test-equal "ctrl+caret" #\^ (key-char (k "^^")))
+  (test-assert "ctrl+caret is ctrl" (key-ctrl? (k "^^")))
+  (test-error "C- alone is not a key" #t (k "C-"))
+  (test-equal "minus key" #\- (key-char (k "-")))
+  (test-equal "alt+minus" #\- (key-char (k "A--")))
+  (test-equal "capital A is a key" #\A (key-char (k "A")))
+  (test-assert "modifiers in any order" (same? (k "A-C-x") (k "C-A-x"))))
+
+(test-group "strict: space"
+  (test-equal "\"space\" is the space character" #\space (key-char (k "space")))
+  (test-equal "and prints as space" "space" (key->string (make-key #:char #\space)))
+  (test-assert "alt+space" (same? (k "A-space") (make-key #:char #\space #:alt? #t)))
+  (test-equal "description" "Space" (describe-key (make-key #:char #\space))))
+
+(test-group "strict: round trips"
+  (let ([samples (list (make-key #:char #\a) (make-key #:char #\Z) (make-key #:char #\!)
+                       (make-key #:char #\space) (make-key #:char #\^)
+                       (make-key #:char #\x00e9) (make-key #:char #\x65e5)
+                       (make-key #:char #\a #:ctrl? #t) (make-key #:char #\_ #:ctrl? #t)
+                       (make-key #:char #\a #:alt? #t) (make-key #:char #\a #:ctrl? #t #:alt? #t)
+                       (make-key #:symbol 'up) (make-key #:symbol 'page-down)
+                       (make-key #:symbol 'f12) (make-key #:symbol 'f1 #:shift? #t)
+                       (make-key #:symbol 'up #:ctrl? #t #:shift? #t)
+                       (make-key #:symbol 'backspace) (make-key #:symbol 'enter)
+                       (make-key #:symbol 'escape) (make-key #:symbol 'tab)
+                       (make-key #:symbol 'delete) (make-key #:symbol 'insert))])
+    (test-assert "key -> string -> key gives the same key"
+                 (every (lambda (key) (same? key (k (key->string key)))) samples))
+    (test-equal "key sequence round trip" (length samples)
+                (length (parse-key-sequence (key-sequence->string samples))))))
+
+(test-group "strict: predicates return booleans"
+  (test-eq "printable" #t (key-printable? (k "a")))
+  (test-eq "space is printable" #t (key-printable? (k "space")))
+  (test-eq "alt+a is not printable" #f (key-printable? (k "A-a")))
+  (test-eq "ctrl+a is not printable" #f (key-printable? (k "^a")))
+  (test-eq "special" #t (key-special? (k "up")))
+  (test-eq "not special" #f (key-special? (k "a")))
+  (test-eq "function" #t (key-function? (k "F5")))
+  (test-eq "not function" #f (key-function? (k "up")))
+  (test-eq "arrow" #t (key-arrow? (k "left")))
+  (test-eq "not arrow" #f (key-arrow? (k "home")))
+  (test-eq "modifier" #t (key-modifier? (k "S-up")))
+  (test-eq "no modifier" #f (key-modifier? (k "up"))))
+
+(test-group "strict: sequences"
+  (test-equal "extra whitespace between keys" 3 (length (parse-key-sequence "  ^X   ^C\tq ")))
+  (test-equal "empty sequence" '() (parse-key-sequence ""))
+  (test-assert "prefix" (key-sequence-prefix? (parse-key-sequence "^X") (parse-key-sequence "^x ^c")))
+  (test-assert "starts-with" (key-sequence-starts-with? (parse-key-sequence "^X ^C") (parse-key-sequence "^X"))))
+
+(test-group "strict: function keys"
+  (test-error "F0" #t (function-key 0))
+  (test-error "F13" #t (function-key 13))
+  (test-error "non-integer" #t (function-key 1.5))
+  (test-assert "F7" (same? (function-key 7) (k "F7")))
+  (test-error "unknown special key" #t (special-key "hyper")))
+
 (test-end "gano-keys")
