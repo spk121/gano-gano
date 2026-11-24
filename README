@@ -1,1 +1,64 @@
+gano - a simple console text editor written in GNU Guile
+========================================================
 
+Running
+-------
+
+Requires Guile 3.0.  From the source tree:
+
+    bin/gano [FILE]
+
+Without a `make`, the first run byte-compiles the modules into
+.cache/guile, which takes about 20 seconds; later starts are quick.
+
+Keys (M- means Alt, or Esc then the key):
+
+    arrows, Home/End, PgUp/PgDn   move (also ^A/^E, ^Y/^V)
+    Backspace, Delete             delete (joining lines at line ends)
+    Enter, Tab                    split the line, insert a tab
+    ^K / ^U                       cut line / paste (consecutive cuts
+                                  are pasted together)
+    M-U / M-E                     undo / redo
+    ^W                            search (ignores case, wraps around;
+                                  Enter at the prompt repeats the last)
+    ^_ or M-G                     go to line[,column]
+    ^S                            save (asks for a name if there is none)
+    ^O                            write out under a new name
+    ^X                            exit (offers to save unsaved changes)
+    ^Q                            exit, discarding unsaved changes
+    ^C                            show the cursor position; at a prompt,
+                                  cancel
+
+Building and testing
+--------------------
+
+A plain Makefile; Guile and guild are found with pkg-config (guile-3.0,
+from the Guile development package; set GUILE_PC for another).
+
+    make                         # byte-compile into build/, with warnings
+    make check                   # run all the test suites
+    make dist                    # gano-VERSION.tar.gz
+    make distcheck               # build and check the tarball unpacked
+    make clean
+
+The suites can also be run directly:
+
+    test/run-all.sh              # every suite, one summary line each
+    test/run-all.sh editor       # just test/test-editor.scm
+
+Layout
+------
+
+    Makefile                build, check, dist
+    bin/gano                launcher script
+    src/gano/editor.scm     the editor: state, key handling, screen
+    src/gano/buffer.scm     one import for the character buffer layers
+    src/gano/cbuf-*.scm     the character buffer (core, basic, standard,
+                            extra, serialization, utils)
+    src/gano/frame.scm      viewport onto a buffer
+    src/gano/terminal.scm   raw mode, ANSI output, key input
+    src/gano/keys.scm       key objects
+    src/gano/text-metrics.scm, char.scm, wcwidth.scm, ...
+                            Unicode text measurement (left to right)
+    tools/                  generators for the Unicode tables
+    attic/                  earlier experiments, kept for reference

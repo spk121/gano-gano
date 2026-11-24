@@ -40,11 +40,14 @@
 ;;; changing the active cursor position or buffer content.
 
 (define-module (gano frame)
-  #:use-module (gano cbuf)          ; Character buffer module
+  #:use-module (gano cbuf-core)     ; Character buffer records
+  #:use-module (gano cbuf-basic)    ; Character buffer rendering, positioning
   #:use-module (gano rendering)     ; For make-default-sgr
+  #:use-module (gano text-metrics)  ; text-metrics-render-line
   #:use-module (srfi srfi-1)        ; List utilities (for iota)
   #:use-module (srfi srfi-9)        ; Record types
   #:use-module (srfi srfi-11)       ; let-values
+  #:use-module (srfi srfi-34)       ; raise (Guile's core raise sends a signal)
   #:use-module (srfi srfi-35)       ; Condition types
   #:export (
     ;; Record type and constructor
@@ -384,61 +387,51 @@
 
 ;;;; Rendering
 
+;; The rendering functions read each visible line's text metrics
+;; directly rather than moving the buffer's cursor onto each line (which
+;; would also reset the cursor column to the goal column).
+
+(define (frame-visible-line-metrics buf frame)
+  "Return a list of FRAME-HEIGHT entries, one per screen row: the text
+   metrics of the buffer line shown there, or #f below the end of the
+   buffer."
+  (let* ([height (frame-height frame)]
+         [all (cbuf-text-metrics buf)]
+         [y-frame (frame-y-start frame)]
+         [visible (if (< y-frame (length all)) (drop all y-frame) '())])
+    (let loop ([i 0] [rest visible] [acc '()])
+      (if (= i height)
+          (reverse acc)
+          (if (null? rest)
+              (loop (+ i 1) rest (cons #f acc))
+              (loop (+ i 1) (cdr rest) (cons (car rest) acc)))))))
+
 (define* (frame-render-frame buf frame #:key (pad? #t))
   "Render the frame view of the buffer as a list of strings.
    Returns list of strings, one per visible line."
   (let ([x-frame (frame-x-start frame)]
-        [y-frame (frame-y-start frame)]
-        [height (frame-height frame)]
-        [width (frame-width frame)]
-        [line-count (cbuf-line-count buf)])
-    
-    ;; Save current cursor position
-    (let ([old-line (cbuf-line-cur buf)])
-      (let ([result
-             (map (lambda (i)
-                    (let ([y (+ i y-frame)])
-                      (if (< y line-count)
-                          ;; Line exists - render it
-                          (begin
-                            (cbuf-set-y! buf y)
-                            (cbuf-render-line-string-only buf x-frame width #:pad? pad?))
-                          ;; Line doesn't exist - return spaces
-                          (make-string width #\space))))
-                  (iota height))])
-        ;; Restore cursor position
-        (cbuf-set-y! buf old-line)
-        result))))
+        [width (frame-width frame)])
+    (map (lambda (metrics)
+           (if metrics
+               (let-values ([(str sgr-list)
+                             (text-metrics-render-line metrics x-frame width #:pad? pad?)])
+                 str)
+               (if pad? (make-string width #\space) "")))
+         (frame-visible-line-metrics buf frame))))
 
 (define* (frame-render-frame-with-sgr buf frame #:key (pad? #t))
   "Render frame with SGR formatting information.
    Returns list of (string . sgr-list) pairs."
   (let ([x-frame (frame-x-start frame)]
-        [y-frame (frame-y-start frame)]
-        [height (frame-height frame)]
-        [width (frame-width frame)]
-        [line-count (cbuf-line-count buf)])
-    
-    ;; Save current cursor position
-    (let ([old-line (cbuf-line-cur buf)])
-      (let ([result
-             (map (lambda (i)
-                    (let ([y (+ i y-frame)])
-                      (if (< y line-count)
-                          ;; Line exists - render with SGR
-                          (begin
-                            (cbuf-set-y! buf y)
-                            (let-values ([(rendered-string sgr-list) 
-                                          (cbuf-render-line buf x-frame width #:pad? pad?)])
-                              (cons rendered-string sgr-list)))
-                          ;; Line doesn't exist - return spaces with default SGR
-                          (let ([spaces (make-string width #\space)]
-                                [default-sgrs (make-list width (make-default-sgr))])
-                            (cons spaces default-sgrs)))))
-                  (iota height))])
-        ;; Restore cursor position
-        (cbuf-set-y! buf old-line)
-        result))))
+        [width (frame-width frame)])
+    (map (lambda (metrics)
+           (if metrics
+               (let-values ([(str sgr-list)
+                             (text-metrics-render-line metrics x-frame width #:pad? pad?)])
+                 (cons str sgr-list))
+               (cons (make-string width #\space)
+                     (make-list width (make-default-sgr)))))
+         (frame-visible-line-metrics buf frame))))
 
 ;;;; Query Functions
 

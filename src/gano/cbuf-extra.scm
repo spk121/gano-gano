@@ -6,11 +6,16 @@
 (define-module (gano cbuf-extra)
   #:use-module (gano cbuf-core)          ; Core record definitions
   #:use-module (gano cbuf-basic)         ; Basic operations
+  ;; Standard operations; this module supplies its own (SGR-preserving,
+  ;; smarter) versions of the three hidden procedures.
+  #:use-module ((gano cbuf-standard)
+                #:hide (cbuf-upcase-region! cbuf-downcase-region! cbuf-select-word!))
   #:use-module (gano cbuf-utils)         ; Pure utility functions
   #:use-module (gano text-metrics)       ; Immutable text metrics module
   #:use-module (gano rendering)          ; SGR support
   #:use-module (gano list-utils)         ; Immutable list operations
   #:use-module (gano char)               ; Character utilities
+  #:use-module (gano wcwidth)            ; Character cell widths
   #:use-module (gano string-split)       ; String splitting and joining
   #:use-module (gano string-utils)       ; String manipulation utilities
   #:use-module (srfi srfi-9)             ; Record types
@@ -71,98 +76,9 @@
     cbuf-register-extra-undo-operations!
     ))
 
-;;; =================================================================
-;;; UNDO OPERATION HANDLERS FOR EXTRA OPERATIONS
-;;; =================================================================
-;; Line formatting handlers
-(define (capture-line-formatting-state cbuf operation-type)
-  "Capture state for line formatting operations"
-  `((line-num ,(cbuf-line-cur cbuf))
-    (old-metrics ,(cbuf-metrics-cur cbuf))
-    (operation-type ,operation-type)))
-(define (restore-line-formatting-state cbuf state operation-type)
-  "Restore state after line formatting"
-  (let ([line-num (cadr (assq 'line-num state))]
-        [old-metrics (cadr (assq 'old-metrics state))])
-    (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
-;; Buffer-wide transformation handlers
-(define (capture-buffer-transformation-state cbuf operation-type)
-  "Capture state for operations that transform the entire buffer"
-  `((all-metrics ,(cbuf-text-metrics cbuf))
-    (operation-type ,operation-type)))
-(define (restore-buffer-transformation-state cbuf state operation-type)
-  "Restore state after buffer transformation"
-  (let ([all-metrics (cadr (assq 'all-metrics state))])
-    (set-cbuf-text-metrics! cbuf all-metrics)))
-;; Region transformation handlers
-(define (capture-region-transformation-state cbuf start-line end-line operation-type)
-  "Capture state for operations that transform a region"
-  (let ([affected-lines (let loop ([line start-line] [result '()])
-                          (if (> line end-line)
-                              (reverse result)
-                              (loop (+ line 1)
-                                    (cons (cons line (list-ref (cbuf-text-metrics cbuf) line))
-                                          result))))])
-    `((affected-lines ,affected-lines)
-      (start-line ,start-line)
-      (end-line ,end-line)
-      (operation-type ,operation-type))))
-(define (restore-region-transformation-state cbuf state start-line end-line operation-type)
-  "Restore state after region transformation"
-  (let ([affected-lines (cadr (assq 'affected-lines state))])
-    (for-each (lambda (line-data)
-                (let ([line-num (car line-data)]
-                      [old-metrics (cdr line-data)])
-                  (when (< line-num (cbuf-line-count cbuf))
-                    (cbuf-restore-line-metrics! cbuf line-num old-metrics))))
-              affected-lines)))
-;; Line swapping handlers
-(define (capture-line-swapping-state cbuf line1 line2 operation-type)
-  "Capture state for line swapping operations"
-  `((line1 ,line1)
-    (line1-metrics ,(list-ref (cbuf-text-metrics cbuf) line1))
-    (line2 ,line2)
-    (line2-metrics ,(list-ref (cbuf-text-metrics cbuf) line2))
-    (operation-type ,operation-type)))
-(define (restore-line-swapping-state cbuf state line1 line2 operation-type)
-  "Restore state after line swapping"
-  (let ([original-line1 (cadr (assq 'line1 state))]
-        [line1-metrics (cadr (assq 'line1-metrics state))]
-        [original-line2 (cadr (assq 'line2 state))]
-        [line2-metrics (cadr (assq 'line2-metrics state))])
-    ;; Restore both lines to their original state
-    (cbuf-restore-line-metrics! cbuf original-line1 line1-metrics)
-    (cbuf-restore-line-metrics! cbuf original-line2 line2-metrics)))
-;; Grapheme swapping handlers
-(define (capture-grapheme-swapping-state cbuf operation-type)
-  "Capture state for grapheme swapping operations"
-  `((line-num ,(cbuf-line-cur cbuf))
-    (old-metrics ,(cbuf-metrics-cur cbuf))
-    (operation-type ,operation-type)))
-(define (restore-grapheme-swapping-state cbuf state operation-type)
-  "Restore state after grapheme swapping"
-  (let ([line-num (cadr (assq 'line-num state))]
-        [old-metrics (cadr (assq 'old-metrics state))])
-    (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
-;; Sorting handlers
-(define (capture-sorting-state cbuf start-line end-line operation-type)
-  "Capture state for sorting operations"
-  (let ([lines-to-sort (let loop ([line start-line] [result '()])
-                         (if (> line end-line)
-                             (reverse result)
-                             (loop (+ line 1)
-                                   (cons (list-ref (cbuf-text-metrics cbuf) line) result))))])
-    `((start-line ,start-line)
-      (end-line ,end-line)
-      (original-lines ,lines-to-sort)
-      (operation-type ,operation-type))))
-(define (restore-sorting-state cbuf state start-line end-line operation-type)
-  "Restore state after sorting"
-  (let ([original-start (cadr (assq 'start-line state))]
-        [original-end (cadr (assq 'end-line state))]
-        [original-lines (cadr (assq 'original-lines state))])
-    ;; Replace the sorted region with the original lines
-    (cbuf-replace-line-range! cbuf original-start original-end original-lines)))
+;; Undo: every modifying command records a single 'line-range step (see
+;; cbuf-standard) for the lines it changes, and takes #:undo?.
+
 ;;; =================================================================
 ;;; HELPER FUNCTIONS
 ;;; =================================================================
@@ -173,12 +89,15 @@
                                                      #:cjk? (cbuf-cjk? cbuf))])
     (cbuf-restore-line-metrics! cbuf (cbuf-line-cur cbuf) new-metrics)
     (set-cbuf-modified?! cbuf #t)))
-(define (cbuf-save-line-modification-undo! cbuf line-num old-metrics operation-type)
-  "Save undo state for single line modification (helper function)"
-  (cbuf-save-undo! cbuf operation-type line-num old-metrics))
-(define (cbuf-save-line-deletion-undo! cbuf start-line deleted-lines operation-type)
-  "Save undo state for line deletion operations (helper function)"
-  (cbuf-save-undo! cbuf operation-type start-line deleted-lines))
+(define (line-metrics cbuf line) (list-ref (cbuf-text-metrics cbuf) line))
+(define (line-index->data cbuf line index)
+  "Data position of string INDEX on LINE (any line, not just the current one)"
+  (text-metrics-x-index->x-data (line-metrics cbuf line) index))
+(define (line-data->index cbuf line x-data)
+  "String index of data position X-DATA on LINE"
+  (text-metrics-x-data->x-index (line-metrics cbuf line) x-data))
+(define (line-base-length cbuf line)
+  (text-metrics-string-base-length (line-metrics cbuf line)))
 (define (string-from-chars char-list)
   "Convert list of characters to string"
   (list->string char-list))
@@ -197,8 +116,7 @@
      
      ;; Find word boundary
      [else
-      (let* ([start-search-index (max 0 (- current-index 1))]
-             [word-start-index (find-word-begin-backward text start-search-index char-word-delimiter?)]
+      (let* ([word-start-index (find-word-begin-backward text current-index char-word-delimiter?)]
              ;; Ensure we're at a base character, not a combining mark
              [adjusted-index (cbuf-ensure-base-character-index text word-start-index)])
         (cbuf-x-index->x-data cbuf adjusted-index))])))
@@ -291,7 +209,7 @@
 ;;; INDENTATION ALIGNMENT (Needs undo support)
 ;;; =================================================================
 
-(define (cbuf-align-indents-in-region! cbuf)
+(define* (cbuf-align-indents-in-region! cbuf #:key (undo? #t))
   "Align indentation of all lines in selected region to match the first line with undo support.
    All lines will have the same initial indentation whitespace as the first line.
    Operates on complete lines regardless of selection boundaries."
@@ -305,8 +223,7 @@
       
       ;; Only proceed if we have multiple lines to align
       (when (< start-line end-line)
-        ;; Save undo state for the entire alignment operation
-        (cbuf-save-undo! cbuf 'align-indents start-line end-line)
+        (cbuf-save-line-range-undo! cbuf start-line end-line undo?)
         
         ;; Get the reference indentation from the first line
         (let* ([reference-line-text (cbuf-get-line-text cbuf start-line)]
@@ -349,7 +266,8 @@
     (if (string-null? current-text)
         ;; Empty line - just set it to the target indentation
         (when (not (string-null? target-indentation))
-          (cbuf-insert-string! cbuf target-indentation))
+          (cbuf-beginning-of-line! cbuf)
+          (cbuf-insert-string! cbuf target-indentation #:undo? #f))
         
         ;; Non-empty line - replace indentation
         (let* ([current-indentation (cbuf-extract-line-indentation current-text)]
@@ -359,10 +277,6 @@
           
           ;; Only proceed if there's a change needed
           (unless (string=? current-indentation target-indentation)
-            ;; Save undo state
-            (let ([old-metrics (cbuf-metrics-cur cbuf)])
-              (cbuf-save-line-modification-undo! cbuf (cbuf-line-cur cbuf) old-metrics 'align-indentation))
-            
             ;; Build new line with target indentation
             (let* ([default-sgr (make-default-sgr)]
                    [target-indentation-sgr (make-list (string-length target-indentation) default-sgr)]
@@ -374,7 +288,7 @@
 
 ;;; Advanced indentation alignment functions
 
-(define* (cbuf-align-indents-in-region-to-column! cbuf target-column #:key (use-tabs? #f))
+(define* (cbuf-align-indents-in-region-to-column! cbuf target-column #:key (use-tabs? #f) (undo? #t))
   "Align all lines in region to a specific column position.
    TARGET-COLUMN: The column position to align to (0-based)
    #:use-tabs? - Use tabs for indentation when possible (default #f)"
@@ -387,6 +301,7 @@
            [original-cursor-x (cbuf-x-data cbuf)]
            [tab-size (cbuf-tab-size cbuf)])
       
+      (cbuf-save-line-range-undo! cbuf start-line end-line undo?)
       ;; Create target indentation string
       (let ([target-indentation (cbuf-create-indentation-string target-column tab-size use-tabs?)])
         
@@ -423,7 +338,7 @@
            [space-string (make-string num-spaces #\space)])
       (string-append tab-string space-string))]))
 
-(define (cbuf-align-indents-in-region-relative! cbuf offset)
+(define* (cbuf-align-indents-in-region-relative! cbuf offset #:key (undo? #t))
   "Adjust indentation of all lines in region by a relative offset.
    OFFSET: Number of columns to add (positive) or remove (negative)"
   (when (cbuf-mark-set? cbuf)
@@ -433,6 +348,7 @@
            [end-line (max mark-line cursor-line)]
            [original-cursor-line (cbuf-line-cur cbuf)]
            [original-cursor-x (cbuf-x-data cbuf)])
+      (cbuf-save-line-range-undo! cbuf start-line end-line undo?)
       
       ;; Process each line in the region
       (let loop ([line start-line])
@@ -476,7 +392,7 @@
 ;;; SORTING OPERATIONS (Needs undo support)
 ;;; =================================================================
 
-(define (cbuf-sort-lines-in-region! cbuf)
+(define* (cbuf-sort-lines-in-region! cbuf #:key (undo? #t))
   "Sort lines in selected region alphabetically with undo support.
    Operates on complete lines regardless of selection boundaries.
    Ignores leading whitespace when comparing lines for sort order."
@@ -491,8 +407,7 @@
       ;; Only proceed if we have multiple lines to sort
       (when (< start-line end-line)
         
-        ;; Save undo state for the entire sort operation
-        (cbuf-save-undo! cbuf 'sort-lines start-line end-line)
+        (cbuf-save-line-range-undo! cbuf start-line end-line undo?)
         ;; Extract line metrics for the region
         (let* ([lines-to-sort (cbuf-extract-lines-for-sorting cbuf start-line end-line)]
                [sorted-lines (cbuf-sort-line-metrics-list lines-to-sort)])
@@ -530,8 +445,8 @@
 (define (cbuf-line-less-than? line1 line2)
   "Compare two lines for sorting, ignoring leading whitespace.
    Returns #t if line1 should come before line2 in sorted order."
-  (let ([trimmed1 (string-trim-left line1)]
-        [trimmed2 (string-trim-left line2)])
+  (let ([trimmed1 (string-trim line1)]
+        [trimmed2 (string-trim line2)])
     (string-ci<? trimmed1 trimmed2)))
 
 (define (cbuf-replace-line-range! cbuf start-line end-line new-metrics-list)
@@ -545,20 +460,10 @@
 (define (cbuf-find-line-new-position original-line original-metrics sorted-metrics start-line)
   "Find where the original cursor line ended up after sorting.
    Returns the new line number where the original line content is now located."
+  ;; Sorting moves the same (immutable) metrics records, so find the
+  ;; cursor's line by identity; equal-looking lines can't be confused.
   (let ([original-line-metrics (list-ref original-metrics (- original-line start-line))])
-    
-    ;; Find this metrics object in the sorted list
-    (let loop ([sorted-list sorted-metrics] [index 0])
-      (cond
-       [(null? sorted-list) 
-        ;; Shouldn't happen, but fallback to start-line
-        start-line]
-       
-       [(cbuf-metrics-equal? original-line-metrics (car sorted-list))
-        (+ start-line index)]
-       
-       [else
-        (loop (cdr sorted-list) (+ index 1))]))))
+    (+ start-line (list-index (lambda (m) (eq? m original-line-metrics)) sorted-metrics))))
 
 (define (cbuf-metrics-equal? metrics1 metrics2)
   "Check if two text-metrics objects represent the same content.
@@ -570,7 +475,8 @@
 
 ;;; Advanced sorting with custom comparison (for future extension)
 
-(define* (cbuf-sort-lines-in-region-with-predicate! cbuf predicate #:key (ignore-leading-whitespace? #t))
+(define* (cbuf-sort-lines-in-region-with-predicate! cbuf predicate
+                                                    #:key (ignore-leading-whitespace? #t) (undo? #t))
   "Sort lines in selected region using custom predicate.
    PREDICATE: function taking two strings, returning #t if first should come before second.
    #:ignore-leading-whitespace? - whether to trim whitespace before comparison (default #t)"
@@ -589,8 +495,7 @@
         (let* ([lines-to-sort (cbuf-extract-lines-for-sorting cbuf start-line end-line)]
                [sorted-lines (cbuf-sort-line-metrics-with-predicate lines-to-sort predicate ignore-leading-whitespace?)])
           
-          ;; Save undo state for the entire region
-          (cbuf-save-undo! cbuf 'sort-lines-custom start-line end-line)
+          (cbuf-save-line-range-undo! cbuf start-line end-line undo?)
           
           ;; Replace the region with sorted lines
           (cbuf-replace-line-range! cbuf start-line end-line sorted-lines)
@@ -612,8 +517,8 @@
         (lambda (metrics1 metrics2)
           (let* ([text1 (text-metrics-string metrics1)]
                  [text2 (text-metrics-string metrics2)]
-                 [compare-text1 (if ignore-leading-whitespace? (string-trim-left text1) text1)]
-                 [compare-text2 (if ignore-leading-whitespace? (string-trim-left text2) text2)])
+                 [compare-text1 (if ignore-leading-whitespace? (string-trim text1) text1)]
+                 [compare-text2 (if ignore-leading-whitespace? (string-trim text2) text2)])
             (predicate compare-text1 compare-text2)))))
 
 ;;; Convenience functions for common sorting patterns
@@ -635,7 +540,7 @@
 ;;; SWAPPING OPERATIONS (All need undo support)
 ;;; =================================================================
 
-(define (cbuf-swap-current-and-previous-line! cbuf)
+(define* (cbuf-swap-current-and-previous-line! cbuf #:key (undo? #t))
   "Swap current line with previous line with undo support.
    Cursor moves up with the swapped line (follows the line content)."
   (let ([current-line (cbuf-line-cur cbuf)]
@@ -645,7 +550,7 @@
       (let* ([prev-line (- current-line 1)])
         
         ;; Save undo state for the swap operation
-        (cbuf-save-undo! cbuf 'swap-lines prev-line current-line)
+        (cbuf-save-line-range-undo! cbuf prev-line current-line undo?)
         
         (let ([current-metrics (list-ref (cbuf-text-metrics cbuf) current-line)]
               [prev-metrics (list-ref (cbuf-text-metrics cbuf) prev-line)])
@@ -663,7 +568,7 @@
         ;; Mark as modified
           (set-cbuf-modified?! cbuf #t))))))
 
-(define (cbuf-swap-current-and-following-line! cbuf)
+(define* (cbuf-swap-current-and-following-line! cbuf #:key (undo? #t))
   "Swap current line with following line with undo support.
    Cursor moves down with the swapped line (follows the line content)."
   (let ([current-line (cbuf-line-cur cbuf)]
@@ -673,7 +578,7 @@
       (let* ([next-line (+ current-line 1)])
         
         ;; Save undo state for the swap operation  
-        (cbuf-save-undo! cbuf 'swap-lines current-line next-line)
+        (cbuf-save-line-range-undo! cbuf current-line next-line undo?)
         
         (let ([current-metrics (list-ref (cbuf-text-metrics cbuf) current-line)]
               [next-metrics (list-ref (cbuf-text-metrics cbuf) next-line)])
@@ -691,7 +596,7 @@
         ;; Mark as modified
           (set-cbuf-modified?! cbuf #t))))))
 
-(define (cbuf-swap-current-and-previous-grapheme! cbuf)
+(define* (cbuf-swap-current-and-previous-grapheme! cbuf #:key (undo? #t))
   "Swap current grapheme cluster with previous grapheme cluster with undo support.
    Cursor moves left with the swapped grapheme (follows the content)."
   (let* ([current-line (cbuf-line-cur cbuf)]
@@ -699,9 +604,10 @@
          [text (cbuf-text-cur cbuf)]
          [sgr-list (cbuf-sgr-list-cur cbuf)])
     
-    (when (and (> current-x 0) (not (string-null? text)))
-      ;; Save undo state
-      (cbuf-save-undo! cbuf 'swap-graphemes 'previous)
+    ;; Swaps the clusters before and at the cursor, so needs one at the
+    ;; cursor (not at the end of the line)
+    (when (and (> current-x 0) (< current-x (cbuf-text-cur-base-length cbuf)))
+      (cbuf-save-line-range-undo! cbuf current-line current-line undo?)
       (let* ([prev-x-data (- current-x 1)]
              ;; Find grapheme cluster boundaries
              [current-bounds (cbuf-find-grapheme-cluster-bounds cbuf current-x)]
@@ -747,7 +653,7 @@
             ;; Mark as modified
             (set-cbuf-modified?! cbuf #t)))))))
 
-(define (cbuf-swap-current-and-following-grapheme! cbuf)
+(define* (cbuf-swap-current-and-following-grapheme! cbuf #:key (undo? #t))
   "Swap current grapheme cluster with following grapheme cluster with undo support.
    Cursor moves right with the swapped grapheme (follows the content)."
   (let* ([current-line (cbuf-line-cur cbuf)]
@@ -756,9 +662,8 @@
          [sgr-list (cbuf-sgr-list-cur cbuf)]
          [text-base-length (cbuf-text-cur-base-length cbuf)])
     
-    (when (and (< current-x text-base-length) (not (string-null? text)))
-      ;; Save undo state
-      (cbuf-save-undo! cbuf 'swap-graphemes 'following)
+    (when (< (+ current-x 1) text-base-length)
+      (cbuf-save-line-range-undo! cbuf current-line current-line undo?)
       (let* ([next-x-data (min (+ current-x 1) text-base-length)]
              ;; Find grapheme cluster boundaries
              [current-bounds (cbuf-find-grapheme-cluster-bounds cbuf current-x)]
@@ -811,290 +716,142 @@
 ;;; TAB CONVERSION (Needs undo support)
 ;;; =================================================================
 
-(define (cbuf-tabify-buffer! cbuf)
-  "Convert sequences of spaces to tabs throughout the entire buffer with undo support.
-   Operates on graphical columns - tabs align to columns 0, 8, 16, etc."
-  ;; Save undo state for entire buffer
-  (cbuf-save-undo! cbuf 'tabify-buffer)
-  (let* ([original-line (cbuf-line-cur cbuf)]
-         [original-x (cbuf-x-data cbuf)]
-         [line-count (cbuf-line-count cbuf)])
-    
-    ;; Process each line in the buffer
-    (let loop ([line 0])
-      (when (< line line-count)
-        (cbuf-set-y! cbuf line)
-        (cbuf-tabify-current-line! cbuf)
-        (loop (+ line 1))))
-    
-    ;; Restore original cursor position (may need adjustment)
-    (cbuf-set-y! cbuf (min original-line (- (cbuf-line-count cbuf) 1)))
-    (cbuf-set-x! cbuf (min original-x (cbuf-text-cur-base-length cbuf)) 'data)))
-
-(define (cbuf-untabify-buffer! cbuf)
-  "Convert all tabs to spaces throughout the entire buffer with undo support.
-   Expands tabs to proper graphical column positions."
-  ;; Save undo state for entire buffer
-  (cbuf-save-undo! cbuf 'untabify-buffer)
-  (let* ([original-line (cbuf-line-cur cbuf)]
-         [original-x (cbuf-x-data cbuf)]
-         [line-count (cbuf-line-count cbuf)])
-    
-    ;; Process each line in the buffer
-    (let loop ([line 0])
-      (when (< line line-count)
-        (cbuf-set-y! cbuf line)
-        (cbuf-untabify-current-line! cbuf)
-        (loop (+ line 1))))
-    
-    ;; Restore original cursor position (may need adjustment)
-    (cbuf-set-y! cbuf (min original-line (- (cbuf-line-count cbuf) 1)))
-    (cbuf-set-x! cbuf (min original-x (cbuf-text-cur-base-length cbuf)) 'data)))
-
-(define (cbuf-tabify-lines-in-selected-region! cbuf)
-  "Convert spaces to tabs in all lines touched by the selected region with undo support.
-   Operates on complete lines for simplicity."
-  (when (cbuf-mark-set? cbuf)
-    (let* ([mark-line (cbuf-mark-line cbuf)]
-           [cursor-line (cbuf-line-cur cbuf)]
-           [start-line (min mark-line cursor-line)]
-           [end-line (max mark-line cursor-line)])
-      ;; Save undo state for affected region
-      (cbuf-save-undo! cbuf 'tabify-region start-line end-line)
+(define (convert-lines! cbuf start-line end-line convert undo?)
+  "Replace each line from START-LINE to END-LINE with (CONVERT text sgr-list),
+   which returns (new-text . new-sgr-list).  Undo covers only the span of
+   lines that actually change.  The cursor keeps its line and column."
+  (let* ([new-lines
+          (map (lambda (line)
+                 (let* ([m (line-metrics cbuf line)]
+                        [result (convert (text-metrics-string m) (text-metrics-sgr-list m))])
+                   (if (string=? (car result) (text-metrics-string m))
+                       m
+                       (compute-text-metrics-with-sgr (car result) (cdr result)
+                                                      (cbuf-tab-size cbuf)
+                                                      #:cjk? (cbuf-cjk? cbuf)))))
+               (iota (+ 1 (- end-line start-line)) start-line))]
+         [changed (filter-map (lambda (line m) (and (not (eq? m (line-metrics cbuf line))) line))
+                              (iota (length new-lines) start-line) new-lines)])
+    (unless (null? changed)
       (let ([original-line (cbuf-line-cur cbuf)]
-           [original-x (cbuf-x-data cbuf)])
-      
-      ;; Process each line in the region
-      (let loop ([line start-line])
-        (when (<= line end-line)
-          (cbuf-set-y! cbuf line)
-          (cbuf-tabify-current-line! cbuf)
-          (loop (+ line 1))))
-      
-      ;; Restore original cursor position
-      (cbuf-set-y! cbuf original-line)
-      (cbuf-set-x! cbuf (min original-x (cbuf-text-cur-base-length cbuf)) 'data)
-      
-      ;; Clear selection
-        (cbuf-clear-mark! cbuf)))))
+            [original-x (cbuf-x-data cbuf)])
+        (cbuf-save-line-range-undo! cbuf (first changed) (last changed) undo?)
+        (for-each (lambda (line m) (cbuf-restore-line-metrics! cbuf line m))
+                  (iota (length new-lines) start-line) new-lines)
+        (set-cbuf-modified?! cbuf #t)
+        (cbuf-set-y! cbuf original-line)
+        (cbuf-set-x! cbuf original-x 'data)))))
 
-(define (cbuf-untabify-lines-in-selected-region! cbuf)
-  "Convert tabs to spaces in all lines touched by the selected region with undo support.
-   Operates on complete lines for simplicity."
+(define (tabify-converter cbuf)
+  (lambda (text sgr-list) (cbuf-tabify-string-with-sgr text sgr-list (cbuf-tab-size cbuf) (cbuf-cjk? cbuf))))
+(define (untabify-converter cbuf)
+  (lambda (text sgr-list) (cbuf-untabify-string-with-sgr text sgr-list (cbuf-tab-size cbuf) (cbuf-cjk? cbuf))))
+
+(define* (cbuf-tabify-buffer! cbuf #:key (undo? #t))
+  "Convert runs of two or more spaces that reach a tab stop into tabs,
+   throughout the buffer"
+  (convert-lines! cbuf 0 (- (cbuf-line-count cbuf) 1) (tabify-converter cbuf) undo?))
+
+(define* (cbuf-untabify-buffer! cbuf #:key (undo? #t))
+  "Expand every tab into spaces, throughout the buffer"
+  (convert-lines! cbuf 0 (- (cbuf-line-count cbuf) 1) (untabify-converter cbuf) undo?))
+
+(define* (cbuf-tabify-lines-in-selected-region! cbuf #:key (undo? #t))
+  "Tabify the lines touched by the selection, then clear the selection"
   (when (cbuf-mark-set? cbuf)
-    (let* ([mark-line (cbuf-mark-line cbuf)]
-           [cursor-line (cbuf-line-cur cbuf)]
-           [start-line (min mark-line cursor-line)]
-           [end-line (max mark-line cursor-line)])
-      ;; Save undo state for affected region
-      (cbuf-save-undo! cbuf 'untabify-region start-line end-line)
-      (let ([original-line (cbuf-line-cur cbuf)]
-           [original-x (cbuf-x-data cbuf)])
-      
-      ;; Process each line in the region
-      (let loop ([line start-line])
-        (when (<= line end-line)
-          (cbuf-set-y! cbuf line)
-          (cbuf-untabify-current-line! cbuf)
-          (loop (+ line 1))))
-      
-      ;; Restore original cursor position
-      (cbuf-set-y! cbuf original-line)
-      (cbuf-set-x! cbuf (min original-x (cbuf-text-cur-base-length cbuf)) 'data)
-      
-      ;; Clear selection
-        (cbuf-clear-mark! cbuf)))))
+    (let ([start-line (min (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))]
+          [end-line (max (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))])
+      (convert-lines! cbuf start-line end-line (tabify-converter cbuf) undo?)
+      (cbuf-clear-mark! cbuf))))
 
-(define (cbuf-tabify-current-line! cbuf)
-  "Convert sequences of spaces to tabs on the current line.
-   Uses graphical column positions for proper tab alignment."
-  (let* ([text (cbuf-text-cur cbuf)]
-         [sgr-list (cbuf-sgr-list-cur cbuf)]
-         [tab-size (cbuf-tab-size cbuf)])
-    
-    (unless (string-null? text)
-      (let ([result (cbuf-tabify-string-with-sgr text sgr-list tab-size)])
-        (let ([new-text (car result)]
-              [new-sgr-list (cdr result)])
-          (unless (string=? text new-text)
-            (cbuf-set-text-cur! cbuf new-text new-sgr-list)))))))
+(define* (cbuf-untabify-lines-in-selected-region! cbuf #:key (undo? #t))
+  "Untabify the lines touched by the selection, then clear the selection"
+  (when (cbuf-mark-set? cbuf)
+    (let ([start-line (min (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))]
+          [end-line (max (cbuf-mark-line cbuf) (cbuf-line-cur cbuf))])
+      (convert-lines! cbuf start-line end-line (untabify-converter cbuf) undo?)
+      (cbuf-clear-mark! cbuf))))
 
-(define (cbuf-untabify-current-line! cbuf)
-  "Convert all tabs to spaces on the current line.
-   Expands tabs to proper graphical column positions."
-  (let* ([text (cbuf-text-cur cbuf)]
-         [sgr-list (cbuf-sgr-list-cur cbuf)]
-         [tab-size (cbuf-tab-size cbuf)])
-    
-    (unless (string-null? text)
-      (let ([result (cbuf-untabify-string-with-sgr text sgr-list tab-size)])
-        (let ([new-text (car result)]
-              [new-sgr-list (cdr result)])
-          (unless (string=? text new-text)
-            (cbuf-set-text-cur! cbuf new-text new-sgr-list)))))))
+(define (cbuf-tabify-string-with-sgr text sgr-list tab-size cjk?)
+  "Replace each run of two or more spaces that reaches a tab stop with
+   tabs (plus any spaces needed after the last stop).  Columns are
+   measured as text-metrics does.  Returns (new-text . new-sgr-list); a
+   tab takes the SGR of the first space it replaces."
+  (let* ([positions (list->vector (text-metrics-cell-positions
+                                   (compute-text-metrics text tab-size #:cjk? cjk?)))]
+         [sgrs (list->vector sgr-list)]
+         [len (string-length text)])
+    (let loop ([i 0] [chars '()] [out '()])
+      (cond
+       [(= i len) (cons (list->string (reverse chars)) (reverse out))]
+       [(char=? (string-ref text i) #\space)
+        (let* ([j (or (string-index text (lambda (c) (not (char=? c #\space))) i) len)]
+               [start-col (vector-ref positions i)]
+               [end-col (vector-ref positions j)]
+               [tabs (- (quotient end-col tab-size) (quotient start-col tab-size))])
+          (if (or (< (- j i) 2) (zero? tabs))
+              (loop j
+                    (append (make-list (- j i) #\space) chars)
+                    (append (reverse (map (lambda (k) (vector-ref sgrs k)) (iota (- j i) i))) out))
+              (let* ([last-stop (* tab-size (quotient end-col tab-size))]
+                     [spaces (- end-col last-stop)])
+                (loop j
+                      (append (make-list spaces #\space) (make-list tabs #\tab) chars)
+                      (append (reverse (map (lambda (k) (vector-ref sgrs k)) (iota spaces (- j spaces))))
+                              (make-list tabs (vector-ref sgrs i))
+                              out)))))]
+       [else (loop (+ i 1) (cons (string-ref text i) chars) (cons (vector-ref sgrs i) out))]))))
 
-(define (cbuf-tabify-string-with-sgr text sgr-list tab-size)
-  "Convert spaces to tabs in string while preserving SGR formatting.
-   Returns (new-text . new-sgr-list)."
-  (if (string-null? text)
-      (cons text sgr-list)
-      (let ([result-chars '()]
-            [result-sgr '()]
-            [current-column 0])
-        
-        (let loop ([i 0])
-          (cond
-           [(>= i (string-length text))
-            ;; End of string
-            (cons (string-from-chars (reverse result-chars))
-                  (reverse result-sgr))]
-           
-           [else
-            (let ([ch (string-ref text i)]
-                  [ch-sgr (list-ref sgr-list i)])
-              (cond
-               ;; Tab character - just copy it
-               [(char=? ch #\tab)
-                (set! result-chars (cons ch result-chars))
-                (set! result-sgr (cons ch-sgr result-sgr))
-                (set! current-column (* tab-size (+ (quotient current-column tab-size) 1)))
-                (loop (+ i 1))]
-               
-               ;; Space character - check for tabification opportunity
-               [(char=? ch #\space)
-                (let ([space-result (cbuf-process-space-sequence text sgr-list i current-column tab-size)])
-                  (let ([new-chars (car space-result)]
-                        [new-sgrs (cadr space-result)]
-                        [new-column (caddr space-result)]
-                        [chars-consumed (cadddr space-result)])
-                    (set! result-chars (append (reverse new-chars) result-chars))
-                    (set! result-sgr (append (reverse new-sgrs) result-sgr))
-                    (set! current-column new-column)
-                    (loop (+ i chars-consumed))))]
-               
-               ;; Regular character
-               [else
-                (set! result-chars (cons ch result-chars))
-                (set! result-sgr (cons ch-sgr result-sgr))
-                (set! current-column (+ current-column (wcwidth (char->integer ch) (cbuf-cjk? cbuf))))
-                (loop (+ i 1))]))])))))
-
-(define (cbuf-process-space-sequence text sgr-list start-index current-column tab-size)
-  "Process a sequence of spaces, converting to tabs where beneficial.
-   Returns (chars sgrs new-column chars-consumed)."
-  (let ([text-len (string-length text)])
-    
-    ;; Count consecutive spaces
-    (let count-spaces ([i start-index] [space-count 0])
-      (if (and (< i text-len) (char=? (string-ref text i) #\space))
-          (count-spaces (+ i 1) (+ space-count 1))
-          
-          ;; Now we know how many spaces we have
-          (let* ([end-column (+ current-column space-count)]
-                 [next-tab-column (* tab-size (+ (quotient current-column tab-size) 1))])
-            
-            (cond
-             ;; No spaces to process
-             [(= space-count 0)
-              (list '() '() current-column 0)]
-             
-             ;; Spaces don't reach next tab stop - keep as spaces
-             [(< end-column next-tab-column)
-              (let ([space-chars (make-list space-count #\space)]
-                    [space-sgrs (take (drop sgr-list start-index) space-count)])
-                (list space-chars space-sgrs end-column space-count))]
-             
-             ;; Spaces cross or reach tab boundary - convert to tab + remaining spaces
-             [else
-              (let* ([spaces-to-tab (- next-tab-column current-column)]
-                     [remaining-spaces (- space-count spaces-to-tab)]
-                     [tab-sgr (list-ref sgr-list start-index)]  ; Use first space's SGR
-                     [result-chars (cons #\tab (make-list remaining-spaces #\space))]
-                     [result-sgrs (cons tab-sgr (if (> remaining-spaces 0)
-                                                    (take (drop sgr-list (+ start-index spaces-to-tab)) remaining-spaces)
-                                                    '()))])
-                (list result-chars result-sgrs end-column space-count))]))))))
-
-(define (cbuf-untabify-string-with-sgr text sgr-list tab-size)
-  "Convert tabs to spaces in string while preserving SGR formatting.
-   Returns (new-text . new-sgr-list)."
-  (if (string-null? text)
-      (cons text sgr-list)
-      (let ([result-chars '()]
-            [result-sgr '()]
-            [current-column 0])
-        
-        (let loop ([i 0])
-          (cond
-           [(>= i (string-length text))
-            ;; End of string
-            (cons (string-from-chars (reverse result-chars))
-                  (reverse result-sgr))]
-           
-           [else
-            (let ([ch (string-ref text i)]
-                  [ch-sgr (list-ref sgr-list i)])
-              (cond
-               ;; Tab character - expand to spaces
-               [(char=? ch #\tab)
-                (let* ([next-tab-column (* tab-size (+ (quotient current-column tab-size) 1))]
-                       [spaces-needed (- next-tab-column current-column)]
-                       [space-chars (make-list spaces-needed #\space)]
-                       [space-sgrs (make-list spaces-needed ch-sgr)])
-                  (set! result-chars (append (reverse space-chars) result-chars))
-                  (set! result-sgr (append (reverse space-sgrs) result-sgr))
-                  (set! current-column next-tab-column)
-                  (loop (+ i 1)))]
-               
-               ;; Regular character
-               [else
-                (set! result-chars (cons ch result-chars))
-                (set! result-sgr (cons ch-sgr result-sgr))
-                (set! current-column (+ current-column (wcwidth (char->integer ch) #f)))
-                (loop (+ i 1))]))])))))
+(define (cbuf-untabify-string-with-sgr text sgr-list tab-size cjk?)
+  "Replace each tab with the spaces it spans.  Returns
+   (new-text . new-sgr-list); the spaces take the tab's SGR."
+  (let ([positions (list->vector (text-metrics-cell-positions
+                                  (compute-text-metrics text tab-size #:cjk? cjk?)))]
+        [sgrs (list->vector sgr-list)]
+        [len (string-length text)])
+    (let loop ([i 0] [chars '()] [out '()])
+      (cond
+       [(= i len) (cons (list->string (reverse chars)) (reverse out))]
+       [(char=? (string-ref text i) #\tab)
+        (let ([width (- (vector-ref positions (+ i 1)) (vector-ref positions i))])
+          (loop (+ i 1)
+                (append (make-list width #\space) chars)
+                (append (make-list width (vector-ref sgrs i)) out)))]
+       [else (loop (+ i 1) (cons (string-ref text i) chars) (cons (vector-ref sgrs i) out))]))))
 
 ;;; =================================================================
 ;;; CASE CONVERSION (Needs undo support)
 ;;; =================================================================
 
-(define (cbuf-upcase-region! cbuf)
+(define* (cbuf-upcase-region! cbuf #:key (undo? #t))
   "Convert selected region to uppercase with undo support.
    Preserves SGR formatting and handles Unicode case conversion properly."
   (when (cbuf-mark-set? cbuf)
-    ;; Save undo state
-    (cbuf-save-undo! cbuf 'upcase-region)
     (let* ([region-text (cbuf-get-region-text cbuf)]
            [uppercased-text (string-upcase region-text)])
-      
       ;; Only proceed if there's actually a change
       (unless (string=? region-text uppercased-text)
-        (cbuf-replace-region-with-case-conversion! cbuf uppercased-text)))))
+        (cbuf-replace-region-with-case-conversion! cbuf uppercased-text undo?)))))
 
-(define (cbuf-downcase-region! cbuf)
+(define* (cbuf-downcase-region! cbuf #:key (undo? #t))
   "Convert selected region to lowercase with undo support.
    Preserves SGR formatting and handles Unicode case conversion properly."
   (when (cbuf-mark-set? cbuf)
-    ;; Save undo state
-    (cbuf-save-undo! cbuf 'downcase-region)
     (let* ([region-text (cbuf-get-region-text cbuf)]
            [lowercased-text (string-downcase region-text)])
-      
       ;; Only proceed if there's actually a change
       (unless (string=? region-text lowercased-text)
-        (cbuf-replace-region-with-case-conversion! cbuf lowercased-text)))))
+        (cbuf-replace-region-with-case-conversion! cbuf lowercased-text undo?)))))
 
-(define (cbuf-titlecase-region! cbuf)
+(define* (cbuf-titlecase-region! cbuf #:key (undo? #t))
   "Convert selected region to title case with undo support.
    Preserves SGR formatting and handles Unicode case conversion properly."
   (when (cbuf-mark-set? cbuf)
-    ;; Save undo state
-    (cbuf-save-undo! cbuf 'titlecase-region)
     (let* ([region-text (cbuf-get-region-text cbuf)]
            [titlecased-text (cbuf-string-titlecase region-text)])
-      
       ;; Only proceed if there's actually a change
       (unless (string=? region-text titlecased-text)
-        (cbuf-replace-region-with-case-conversion! cbuf titlecased-text)))))
+        (cbuf-replace-region-with-case-conversion! cbuf titlecased-text undo?)))))
 
 (define (cbuf-string-titlecase text)
   "Convert string to title case - capitalize first letter of each word.
@@ -1125,7 +882,7 @@
                   (set! at-word-start? #t)  ; Next letter will be word start
                   (loop (+ i 1))])))))))
 
-(define (cbuf-replace-region-with-case-conversion! cbuf new-text)
+(define (cbuf-replace-region-with-case-conversion! cbuf new-text undo?)
   "Replace selected region with case-converted text, preserving SGR formatting.
    Handles both single-line and multi-line selections."
   (let* ([mark-line (cbuf-mark-line cbuf)]
@@ -1150,8 +907,9 @@
          [original-text (cbuf-get-region-text cbuf)]
          [new-sgr-list (cbuf-adjust-sgr-for-case-conversion region-sgr-list original-text new-text)])
     
-    ;; Replace the region with new text and adjusted SGR
-    (cbuf-delete-region! cbuf start-line start-x-data end-line end-x-data)
+    ;; Replace the region with new text and adjusted SGR, as one undo step
+    (cbuf-save-line-range-undo! cbuf start-line end-line undo?)
+    (cbuf-delete-region! cbuf start-line start-x-data end-line end-x-data #:undo? #f)
     (cbuf-insert-string-with-sgr! cbuf new-text new-sgr-list)
     
     ;; Clear selection and position cursor at end of inserted text
@@ -1236,7 +994,8 @@
     ;; Handle single-line vs multi-line insertion
     (if (string-contains text (cbuf-line-ending cbuf))
         ;; Multi-line insertion - use existing cbuf-insert-string!
-        (cbuf-insert-string! cbuf text)
+        ;; (callers record undo)
+        (cbuf-insert-string! cbuf text #:undo? #f)
         ;; Single-line insertion with SGR preservation
         (let* ([new-text (string-insert-string line-text current-index text)]
                [new-sgr-list (append (take line-sgr current-index)
@@ -1266,12 +1025,9 @@
         (cbuf-set-y! cbuf para-start)
         (cbuf-beginning-of-line! cbuf)
         (cbuf-set-mark! cbuf)
-        ;; Move to end of paragraph (beginning of next paragraph or end of buffer)
-        (if (>= para-end (cbuf-line-count cbuf))
-            (cbuf-end-of-buffer! cbuf)
-            (begin
-              (cbuf-set-y! cbuf para-end)
-              (cbuf-beginning-of-line! cbuf))))]
+        ;; Move to the end of the paragraph's last line
+        (cbuf-set-y! cbuf (- para-end 1))
+        (cbuf-end-of-line! cbuf))]
      
      ;; Cursor is on blank line - select following paragraph
      [else
@@ -1284,12 +1040,9 @@
               (cbuf-set-y! cbuf next-para-start)
               (cbuf-beginning-of-line! cbuf)
               (cbuf-set-mark! cbuf)
-              ;; Move to end of paragraph
-              (if (>= next-para-end (cbuf-line-count cbuf))
-                  (cbuf-end-of-buffer! cbuf)
-                  (begin
-                    (cbuf-set-y! cbuf next-para-end)
-                    (cbuf-beginning-of-line! cbuf))))))])))
+              ;; Move to the end of the paragraph's last line
+              (cbuf-set-y! cbuf (- next-para-end 1))
+              (cbuf-end-of-line! cbuf))))])))
 
 (define (cbuf-select-word! cbuf)
   "Smart word selection.
@@ -1309,7 +1062,7 @@
      
      ;; Cursor is on word character - select current word
      [(not (char-word-delimiter? (string-ref text current-index)))
-      (let* ([word-start-index (find-word-begin-backward text current-index char-word-delimiter?)]
+      (let* ([word-start-index (skip-word-chars-backward text current-index char-word-delimiter?)]
              [word-end-index (find-word-end-forward text current-index char-word-delimiter?)]
              [word-start-x-data (cbuf-x-index->x-data cbuf word-start-index)]
              [word-end-x-data (cbuf-x-index->x-data cbuf word-end-index)])
@@ -1349,8 +1102,8 @@
               (loop (+ line 1))
               ;; Select first word on this line
               (let* ([first-word-end (find-word-end-forward text first-word-start char-word-delimiter?)]
-                     [start-x-data (cbuf-x-index->x-data cbuf first-word-start)]
-                     [end-x-data (cbuf-x-index->x-data cbuf first-word-end)])
+                     [start-x-data (line-index->data cbuf line first-word-start)]
+                     [end-x-data (line-index->data cbuf line first-word-end)])
                 (cbuf-set-y! cbuf line)
                 (cbuf-set-x! cbuf start-x-data 'data)
                 (cbuf-set-mark! cbuf)
@@ -1404,7 +1157,7 @@
 ;;; LINE FORMATTING (Needs undo support)
 ;;; =================================================================
 
-(define (cbuf-center-line! cbuf)
+(define* (cbuf-center-line! cbuf #:key (undo? #t))
   "Center the current line between home and limit positions with undo support.
    Only works if home and limit are presentation positions (not data).
    Strips leading and trailing whitespace, then centers the content."
@@ -1412,13 +1165,13 @@
   ;; First verify that we can center (presentation mode required)
   (unless (eq? (cbuf-limit-type cbuf) 'presentation)
     (error "cbuf-center-line!: requires presentation-mode positioning (home/limit must be presentation positions)"))
-  ;; Save undo state
-  (cbuf-save-undo! cbuf 'center-line)
+  (cbuf-save-line-range-undo! cbuf (cbuf-line-cur cbuf) (cbuf-line-cur cbuf) undo?)
   
+  ;; LIMIT-POS is the last usable column, so the line has
+  ;; LIMIT-POS - HOME-POS + 1 columns.
   (let* ([home-pos (cbuf-home-pos cbuf)]
          [limit-pos (cbuf-limit-pos cbuf)]
-         [center-point (quotient (+ home-pos limit-pos) 2)]
-         [available-width (- limit-pos home-pos)]
+         [available-width (+ 1 (- limit-pos home-pos))]
          [current-text (cbuf-text-cur cbuf)]
          [current-sgr-list (cbuf-sgr-list-cur cbuf)])
     
@@ -1426,13 +1179,15 @@
     (when (and (> available-width 0) (not (string-null? current-text)))
       
       ;; Strip whitespace and compute content metrics
-      (let* ([trimmed-text (string-trim current-text)]
+      (let* ([trimmed-text (string-trim-both current-text)]
              [trim-left-count (- (string-length current-text)
-                                (string-length (string-trim-left current-text)))]
+                                (string-length (string-trim current-text)))]
              [trim-right-count (- (string-length current-text)
                                  (string-length (string-trim-right current-text)))]
              [content-start-index trim-left-count]
-             [content-end-index (- (string-length current-text) trim-right-count)]
+             ;; (on an all-blank line both trims cover the whole line)
+             [content-end-index (max content-start-index
+                                     (- (string-length current-text) trim-right-count))]
              [content-sgr-list (take (drop current-sgr-list content-start-index)
                                     (- content-end-index content-start-index))])
         
@@ -1440,7 +1195,7 @@
             ;; Line is all whitespace - just clear it
             (begin
               (cbuf-beginning-of-line! cbuf)
-              (cbuf-delete-to-end-of-line! cbuf))
+              (cbuf-delete-to-end-of-line! cbuf #:undo? #f))
             
             ;; Center the non-whitespace content
             (let* ([content-metrics (compute-text-metrics-with-sgr trimmed-text 
@@ -1448,7 +1203,7 @@
                                                                    (cbuf-tab-size cbuf)
                                                                    #:cjk? (cbuf-cjk? cbuf))]
                    [content-width (text-metrics-cell-length content-metrics)]
-                   [left-padding (max 0 (- center-point (quotient content-width 2) home-pos))]
+                   [left-padding (max 0 (quotient (- available-width content-width) 2))]
                    [padding-spaces (make-string left-padding #\space)]
                    [default-sgr (make-default-sgr)]
                    [padding-sgr-list (make-list left-padding default-sgr)]
@@ -1462,14 +1217,15 @@
                                                                  #:cjk? (cbuf-cjk? cbuf))]
                      [new-width (text-metrics-cell-length new-metrics)])
                 
-                (if (> (+ home-pos new-width) limit-pos)
+                (if (> new-width available-width)
                     ;; Content too wide to center properly - just strip whitespace
                     (cbuf-strip-line-whitespace! cbuf)
                     ;; Apply the centered version
                     (begin
                       (cbuf-beginning-of-line! cbuf)
-                      (cbuf-delete-to-end-of-line! cbuf)
-                      (cbuf-insert-string! cbuf new-text)
+                      (cbuf-delete-to-end-of-line! cbuf #:undo? #f)
+                      (cbuf-insert-string! cbuf (make-string (+ home-pos left-padding) #\space) #:undo? #f)
+                      (cbuf-insert-string-with-sgr! cbuf trimmed-text content-sgr-list)
                       ;; Position cursor at beginning of content (after padding)
                       (cbuf-beginning-of-line! cbuf)
                       (cbuf-move-to-column! cbuf (+ home-pos left-padding)))))))))))
@@ -1478,21 +1234,23 @@
   "Strip leading and trailing whitespace from current line (no additional undo save)"
   (let* ([current-text (cbuf-text-cur cbuf)]
          [current-sgr-list (cbuf-sgr-list-cur cbuf)]
-         [trimmed-text (string-trim current-text)])
+         [trimmed-text (string-trim-both current-text)])
     
     (unless (string=? current-text trimmed-text)
       (let* ([trim-left-count (- (string-length current-text)
-                                (string-length (string-trim-left current-text)))]
+                                (string-length (string-trim current-text)))]
              [trim-right-count (- (string-length current-text)
                                  (string-length (string-trim-right current-text)))]
              [content-start-index trim-left-count]
-             [content-end-index (- (string-length current-text) trim-right-count)]
+             ;; (on an all-blank line both trims cover the whole line)
+             [content-end-index (max content-start-index
+                                     (- (string-length current-text) trim-right-count))]
              [content-sgr-list (take (drop current-sgr-list content-start-index)
                                     (- content-end-index content-start-index))])
         
         (cbuf-beginning-of-line! cbuf)
-        (cbuf-delete-to-end-of-line! cbuf)
-        (cbuf-insert-string! cbuf trimmed-text)
+        (cbuf-delete-to-end-of-line! cbuf #:undo? #f)
+        (cbuf-insert-string-with-sgr! cbuf trimmed-text content-sgr-list)
         (cbuf-beginning-of-line! cbuf)))))
 
 ;;; =================================================================
@@ -1525,7 +1283,7 @@
       (let* ([text (cbuf-get-line-text cbuf line-num)]
              [first-non-ws-idx (string-skip text char-whitespace?)])
         (if first-non-ws-idx
-            (cbuf-x-index->x-data cbuf first-non-ws-idx)
+            (line-index->data cbuf line-num first-non-ws-idx)
             #f))))
 
 (define (cbuf-line-ends-with-sentence-terminator? cbuf line-num)
@@ -1542,7 +1300,7 @@
               (if (and (> trimmed-len 0)
                        (char-sentence-terminator? (string-ref trimmed (- trimmed-len 1))))
                   ;; Return x-data position of the terminator
-                  (cbuf-x-index->x-data cbuf (- trimmed-len 1))
+                  (line-index->data cbuf line-num (- trimmed-len 1))
                   #f))))))
 
 (define (cbuf-at-paragraph-beginning? cbuf line-num)
@@ -1579,7 +1337,7 @@
   "Check if position is at sentence beginning within a line (Rule 3).
    Pattern: {.?!}{whitespace}{non-whitespace} where cursor is at non-whitespace."
   (let* ([text (cbuf-get-line-text cbuf line-num)]
-         [current-index (cbuf-x-data->x-index cbuf x-data)])
+         [current-index (line-data->index cbuf line-num x-data)])
     
     (if (or (string-null? text) (= current-index 0))
         #f
@@ -1619,7 +1377,7 @@
       #f
       (let* ([text (cbuf-get-line-text cbuf line-num)]
              [text-len (string-length text)]
-             [start-index (cbuf-x-data->x-index cbuf start-x-data)])
+             [start-index (or (line-data->index cbuf line-num start-x-data) text-len)])
         
         (if (>= start-index text-len)
             #f
@@ -1633,7 +1391,7 @@
                 ;; Look for whitespace + non-whitespace after terminator
                 (let ([sentence-start (cbuf-find-sentence-start-after-terminator text (+ i 1))])
                   (if sentence-start
-                      (cons line-num (cbuf-x-index->x-data cbuf sentence-start))
+                      (cons line-num (line-index->data cbuf line-num sentence-start))
                       (loop (+ i 1))))]
                
                [else (loop (+ i 1))]))))))
@@ -1695,32 +1453,38 @@
          [current-x (cbuf-x-data cbuf)])
     
     ;; Try current line before current position
-    (or (cbuf-find-sentence-start-backward-on-line cbuf current-line 0 (- current-x 1))
+    (or (and (> current-x 0)
+             (or (cbuf-find-sentence-start-backward-on-line cbuf current-line 0 current-x)
+                 (line-start-sentence cbuf current-line (- current-x 1))))
         ;; Try previous lines
         (cbuf-find-sentence-start-on-previous-lines cbuf (- current-line 1)))))
 
 (define (cbuf-find-current-sentence-start cbuf)
-  "Find the beginning of the current sentence."
+  "Find the beginning of the current sentence: the last sentence start
+   at or before the cursor."
   (let* ([current-line (cbuf-line-cur cbuf)]
          [current-x (cbuf-x-data cbuf)])
-    
-    ;; Check if we're at paragraph beginning
-    (if (cbuf-at-paragraph-beginning? cbuf current-line)
-        (let ([first-non-ws (cbuf-find-first-non-whitespace-pos cbuf current-line)])
-          (if first-non-ws
-              (cons current-line first-non-ws)
-              #f))
-        
-        ;; Search backward for sentence beginning
-        (or (cbuf-find-sentence-start-backward-on-line cbuf current-line 0 current-x)
-            (cbuf-find-sentence-start-on-previous-lines cbuf (- current-line 1))))))
+    (or (cbuf-find-sentence-start-backward-on-line cbuf current-line 0 (+ current-x 1))
+        (line-start-sentence cbuf current-line current-x)
+        (cbuf-find-sentence-start-on-previous-lines cbuf (- current-line 1)))))
+
+(define (line-start-sentence cbuf line limit-x)
+  "If a sentence starts at LINE's first non-blank character (because LINE
+   starts a paragraph or follows a line ending a sentence) and that is at
+   or before LIMIT-X, return it as (line . x-data), else #f."
+  (let ([first-non-ws (cbuf-find-first-non-whitespace-pos cbuf line)])
+    (and first-non-ws
+         (<= first-non-ws limit-x)
+         (or (cbuf-at-paragraph-beginning? cbuf line)
+             (and (> line 0) (cbuf-line-ends-with-sentence-terminator? cbuf (- line 1))))
+         (cons line first-non-ws))))
 
 (define (cbuf-find-sentence-start-backward-on-line cbuf line-num start-x end-x)
   "Find sentence start on line between start-x and end-x, searching backward.
    Returns (line . x-data) or #f if not found."
   (let* ([text (cbuf-get-line-text cbuf line-num)]
-         [start-index (cbuf-x-data->x-index cbuf start-x)]
-         [end-index (cbuf-x-data->x-index cbuf end-x)])
+         [start-index (line-data->index cbuf line-num (max 0 start-x))]
+         [end-index (line-data->index cbuf line-num (max 0 (min end-x (line-base-length cbuf line-num))))])
     
     ;; Scan backward for sentence boundaries
     (let loop ([i (- end-index 1)])
@@ -1728,39 +1492,19 @@
        [(< i start-index) #f]
        
        ;; Check if this position is a sentence start
-       [(cbuf-at-intraline-sentence-beginning? cbuf line-num (cbuf-x-index->x-data cbuf i))
-        (cons line-num (cbuf-x-index->x-data cbuf i))]
+       [(cbuf-at-intraline-sentence-beginning? cbuf line-num (line-index->data cbuf line-num i))
+        (cons line-num (line-index->data cbuf line-num i))]
        
        [else (loop (- i 1))]))))
 
 (define (cbuf-find-sentence-start-on-previous-lines cbuf start-line)
-  "Find sentence start on lines before start-line, searching backward.
+  "Find the last sentence start on START-LINE or the lines before it.
    Returns (line . x-data) or #f if not found."
   (let loop ([line start-line])
-    (cond
-     [(< line 0) #f]
-     
-     ;; Check if this line is paragraph beginning
-     [(cbuf-at-paragraph-beginning? cbuf line)
-      (let ([first-non-ws (cbuf-find-first-non-whitespace-pos cbuf line)])
-        (if first-non-ws
-            (cons line first-non-ws)
-            (loop (- line 1))))]
-     
-     ;; Check for cross-line sentence boundary
-     [(and (> line 0)
-           (cbuf-line-ends-with-sentence-terminator? cbuf (- line 1)))
-      (let ([first-non-ws (cbuf-find-first-non-whitespace-pos cbuf line)])
-        (if first-non-ws
-            (cons line first-non-ws)
-            (loop (- line 1))))]
-     
-     ;; Check for intraline sentence starts on this line
-     [else
-      (let* ([text (cbuf-get-line-text cbuf line)]
-             [line-len (cbuf-text-cur-base-length cbuf)])
-        (or (cbuf-find-sentence-start-backward-on-line cbuf line 0 line-len)
-            (loop (- line 1))))])))
+    (and (>= line 0)
+         (or (cbuf-find-sentence-start-backward-on-line cbuf line 0 (line-base-length cbuf line))
+             (line-start-sentence cbuf line (line-base-length cbuf line))
+             (loop (- line 1))))))
 
 (define (cbuf-forward-sentence! cbuf)
   "Move cursor to the beginning of the next sentence."
@@ -1967,83 +1711,11 @@
 ;;; COLUMN POSITIONING
 ;;; =================================================================
 
-(define (cbuf-find-base-character-at-cell cbuf target-cell)
-  "Find the base character position that corresponds to the target cell position.
-   Handles wide characters (CJK) and tabs by finding the base character that 
-   'owns' the target cell position."
-  (let* ([metrics (cbuf-metrics-cur cbuf)]
-         [cell-positions (text-metrics-cell-positions metrics)]
-         [base-indices (text-metrics-base-indices metrics)]
-         [text (cbuf-text-cur cbuf)])
-    
-    (cond
-     ;; Empty line or target beyond line
-     [(or (string-null? text) 
-          (>= target-cell (text-metrics-cell-length metrics)))
-      (cbuf-text-cur-base-length cbuf)]
-     
-     ;; Target at or before beginning
-     [(<= target-cell 0) 0]
-     
-     ;; Find the base character that owns this cell position
-     [else
-      (let loop ([base-idx 0])
-        (cond
-         ;; Reached end of base characters
-         [(>= base-idx (length base-indices))
-          (cbuf-text-cur-base-length cbuf)]
-         
-         ;; Get cell position for this base character
-         [else
-          (let* ([string-idx (list-ref base-indices base-idx)]
-                 [char-cell-start (list-ref cell-positions string-idx)]
-                 [next-base-idx (+ base-idx 1)]
-                 [char-cell-end (if (< next-base-idx (length base-indices))
-                                   (list-ref cell-positions (list-ref base-indices next-base-idx))
-                                   (text-metrics-cell-length metrics))])
-            
-            (cond
-             ;; Target cell is before this character
-             [(< target-cell char-cell-start)
-              ;; This shouldn't happen with valid input, but handle gracefully
-              base-idx]
-             
-             ;; Target cell is within this character's range
-             [(< target-cell char-cell-end)
-              ;; This base character owns the target cell
-              base-idx]
-             
-             ;; Target cell is after this character, continue searching
-             [else
-              (loop (+ base-idx 1))]))]))])))
-
 (define (cbuf-move-to-column! cbuf target-column)
-  "Move cursor to the specified column (cell position).
-   If target column is in the middle of a wide character or tab,
-   positions cursor at the base character that owns that cell.
-   
-   TARGET-COLUMN: Zero-based cell position (graphical column)"
-  (let* ([current-line (cbuf-line-cur cbuf)]
-         [text (cbuf-text-cur cbuf)]
-         [line-cell-length (cbuf-text-cur-cell-length cbuf)])
-    
-    (cond
-     ;; Empty line - position at beginning
-     [(string-null? text)
-      (cbuf-set-x! cbuf 0 'data)]
-     
-     ;; Target beyond line end - position at end
-     [(>= target-column line-cell-length)
-      (cbuf-set-x! cbuf (cbuf-text-cur-base-length cbuf) 'data)]
-     
-     ;; Target at or before beginning - position at beginning  
-     [(<= target-column 0)
-      (cbuf-set-x! cbuf 0 'data)]
-     
-     ;; Find appropriate base character position
-     [else
-      (let ([target-x-data (cbuf-find-base-character-at-cell cbuf target-column)])
-        (cbuf-set-x! cbuf target-x-data 'data))])))
+  "Move cursor to the specified column (cell position, 0-based).  A
+   column inside a wide character or tab puts the cursor on that
+   character; a column past the end of the line puts it at the end."
+  (cbuf-set-x! cbuf (max 0 target-column) 'cell))
 
 ;;; =================================================================
 ;;; WORD BOUNDARY NAVIGATION  
@@ -2065,7 +1737,7 @@
      [(cbuf-at-word-boundary? cbuf 'beginning)
       (let* ([current-index (cbuf-x-data->x-index cbuf current-x)]
              ;; Skip current word and any preceding delimiters
-             [before-current-word (skip-delimiters-backward text (- current-index 1))]
+             [before-current-word (skip-delimiters-backward text current-index)]
              ;; Find beginning of previous word
              [prev-word-start (if (>= before-current-word 0)
                                  (find-word-begin-backward text before-current-word char-word-delimiter?)
@@ -2115,51 +1787,9 @@
 ;;; UNDO REGISTRATION
 ;;; =================================================================
 (define (cbuf-register-extra-undo-operations!)
-  "Register all extra undo operations with the plugin system"
-  
-  ;; Line formatting operations
-  (cbuf-register-undo-operation! 'center-line
-                                  capture-line-formatting-state
-                                  restore-line-formatting-state)
-  ;; Case conversion operations
-  (cbuf-register-undo-operation! 'upcase-region
-                                  capture-region-transformation-state
-                                  restore-region-transformation-state)
-  (cbuf-register-undo-operation! 'downcase-region
-                                  capture-region-transformation-state
-                                  restore-region-transformation-state)
-  (cbuf-register-undo-operation! 'titlecase-region
-                                  capture-region-transformation-state
-                                  restore-region-transformation-state)
-  ;; Tab conversion operations
-  (cbuf-register-undo-operation! 'tabify-buffer
-                                  capture-buffer-transformation-state
-                                  restore-buffer-transformation-state)
-  (cbuf-register-undo-operation! 'untabify-buffer
-                                  capture-buffer-transformation-state
-                                  restore-buffer-transformation-state)
-  (cbuf-register-undo-operation! 'tabify-region
-                                  capture-region-transformation-state
-                                  restore-region-transformation-state)
-  (cbuf-register-undo-operation! 'untabify-region
-                                  capture-region-transformation-state
-                                  restore-region-transformation-state)
-  ;; Line swapping operations
-  (cbuf-register-undo-operation! 'swap-lines
-                                  capture-line-swapping-state
-                                  restore-line-swapping-state)
-  ;; Grapheme swapping operations
-  (cbuf-register-undo-operation! 'swap-graphemes
-                                  capture-grapheme-swapping-state
-                                  restore-grapheme-swapping-state)
-  ;; Sorting operations
-  (cbuf-register-undo-operation! 'sort-lines
-                                  capture-sorting-state
-                                  restore-sorting-state)
-  ;; Indentation alignment operations
-  (cbuf-register-undo-operation! 'align-indents
-                                  capture-region-transformation-state
-                                  restore-region-transformation-state))
+  "cbuf-extra's commands record undo with cbuf-standard's 'line-range
+   operation, so there is nothing of its own to register."
+  #t)
 ;;; =================================================================
 ;;; MODULE INITIALIZATION
 ;;; =================================================================

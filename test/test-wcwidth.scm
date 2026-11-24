@@ -3,6 +3,7 @@
 
 (use-modules (srfi srfi-64)     ; Testing framework
              (srfi srfi-1)      ; every
+             (ice-9 regex)      ; string-match
              (gano wcwidth))    ; Module under test
 
 ;;; Test suite setup
@@ -431,4 +432,46 @@
                                                ; Total: 1+2+0+1+2+1+2+2+1 = 12
 
 ;;; Test suite cleanup
+;;; ---------------------------------------------------------------
+;;; Strict: the Kuhn/glibc rules the generator implements
+;;; ---------------------------------------------------------------
+
+(test-group "strict rules"
+  (test-equal "spacing combining mark (Mc) takes a cell" 1 (wcwidth #\x093E))
+  (test-equal "nonspacing mark (Mn)" 0 (wcwidth #\x0301))
+  (test-equal "enclosing mark (Me)" 0 (wcwidth #\x20DD))
+  (test-equal "format character (Cf): LEFT-TO-RIGHT MARK" 0 (wcwidth #\x200E))
+  (test-equal "format character: ZERO WIDTH JOINER" 0 (wcwidth #\x200D))
+  (test-equal "format character: WORD JOINER" 0 (wcwidth #\x2060))
+  (test-equal "soft hyphen is the exception" 1 (wcwidth #\x00AD))
+  (test-equal "Hangul medial vowel" 0 (wcwidth #\x1161))
+  (test-equal "Hangul final consonant (extended-B)" 0 (wcwidth #\xD7CB))
+  (test-equal "Hangul leading consonant is wide" 2 (wcwidth #\x1100))
+  (test-equal "private use, normal" 1 (wcwidth #\xE000))
+  (test-equal "private use, CJK" 2 (wcwidth #\xE000 #t))
+  (test-equal "supplementary private use, CJK" 2 (wcwidth #\xF0000 #t))
+  (test-equal "last private use character, CJK" 2 (wcwidth #x10FFFD #t))
+  (test-equal "surrogate codepoint" -1 (wcwidth #xD800))
+  (test-equal "surrogate codepoint (end)" -1 (wcwidth #xDFFF))
+  (test-equal "codepoint past Unicode" -1 (wcwidth #x110000))
+  (test-equal "negative codepoint" -1 (wcwidth -1))
+  (test-equal "emoji" 2 (wcwidth #\x1F600))
+  (test-equal "CJK extension B" 2 (wcwidth #\x20000))
+  (test-equal "unassigned CJK plane-3 codepoint is wide" 2 (wcwidth #x30000))
+  (test-equal "string with a format character" 2 (wcwidth "a‎b"))
+  (test-equal "string with a control character" -1 (wcwidth "a\x01b"))
+  (test-equal "Unicode version is recorded" #t
+              (and (string-match "^[0-9]+\\.[0-9]+\\.[0-9]+$" wcwidth-unicode-version) #t)))
+
+(test-group "whole ranges"
+  (test-assert "every surrogate is -1"
+               (every (lambda (cp) (= -1 (wcwidth cp))) (iota #x800 #xD800)))
+  (test-assert "the BMP private use area is ambiguous"
+               (every (lambda (cp) (and (= 1 (wcwidth cp)) (= 2 (wcwidth cp #t))))
+                      (iota (- #xF900 #xE000) #xE000)))
+  (test-assert "all CJK unified ideographs are wide"
+               (every (lambda (cp) (= 2 (wcwidth cp))) (iota (- #xA000 #x4E00) #x4E00)))
+  (test-assert "all Hangul syllables are wide"
+               (every (lambda (cp) (= 2 (wcwidth cp))) (iota (- #xD7A4 #xAC00) #xAC00))))
+
 (test-end "gano-wcwidth")

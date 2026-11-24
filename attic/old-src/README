@@ -1,0 +1,23 @@
+Archived code from the earlier ncurses-based nano port of gano.
+
+gano-main.scm was the top-level gano.scm; it `include`s the files that
+lived in src/ (now in this directory), so it will not run from here as-is.
+
+gano/ holds superseded versions of the character buffer:
+  cbuf.scm             - the monolithic (gano cbuf) module, replaced by
+                         cbuf-core / cbuf-basic / cbuf-standard / cbuf-extra
+  cbuf2.scm            - notes/snippets merged into cbuf-basic
+  cbuf-ops.scm,
+  cbuf-operations.scm  - two drafts that both declared (gano cbuf-operations)
+
+The old test suite is in ../old-test.
+
+uax9-*.scm (gano/) and their tests (../old-test/test-uax9-*.scm,
+test-text-metrics-bidi.scm) are a UAX #9 bidirectional algorithm that
+reordered cell positions visually.  That was the wrong model: terminals
+do their own bidi reordering of the logical text they are sent.  Bidi
+support is postponed; gano currently lays all text out left to right.
+
+gano/statusbar.scm formatted a status line and menus for the first
+editor prototype; it refers to that prototype's editor-state accessors,
+which no longer exist.  The editor draws its own status line.

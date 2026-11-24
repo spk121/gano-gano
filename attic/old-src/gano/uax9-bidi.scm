@@ -780,7 +780,7 @@ to maintain state.
                              [(null? second-initiators) second-part]
                              [else (string-append (string-from-chars second-initiators) second-part)])])
           
-          (values first-line second-line)))]))))
+          (values first-line second-line)))])))
 
 ;;; =================================================================
 ;;; Multi-line Bracket State Management

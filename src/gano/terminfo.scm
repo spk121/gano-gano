@@ -12,6 +12,8 @@
   #:use-module (ice-9 regex)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
+  #:use-module (ice-9 format)        ; ~d, ~4,'0X, ... directives
+  #:use-module ((gano char) #:select (char-graphic?))
   #:export (load-terminfo-sjson
             get-string-capability
             get-numeric-capability
@@ -1801,13 +1803,13 @@
 (define (ctrl-symbol->code symbol)
   "Convert control symbol to numeric code."
   (case symbol
-    ('ctrl-a 1) ('ctrl-b 2) ('ctrl-c 3) ('ctrl-d 4) ('ctrl-e 5)
-    ('ctrl-f 6) ('ctrl-g 7) ('ctrl-h 8) ('ctrl-i 9) ('ctrl-j 10)
-    ('ctrl-k 11) ('ctrl-l 12) ('ctrl-m 13) ('ctrl-n 14) ('ctrl-o 15)
-    ('ctrl-p 16) ('ctrl-q 17) ('ctrl-r 18) ('ctrl-s 19) ('ctrl-t 20)
-    ('ctrl-u 21) ('ctrl-v 22) ('ctrl-w 23) ('ctrl-x 24) ('ctrl-y 25)
-    ('ctrl-z 26) ('ctrl-backslash 28) ('ctrl-right-bracket 29) 
-    ('ctrl-caret 30) ('ctrl-underscore 31)
+    ((ctrl-a) 1) ((ctrl-b) 2) ((ctrl-c) 3) ((ctrl-d) 4) ((ctrl-e) 5)
+    ((ctrl-f) 6) ((ctrl-g) 7) ((ctrl-h) 8) ((ctrl-i) 9) ((ctrl-j) 10)
+    ((ctrl-k) 11) ((ctrl-l) 12) ((ctrl-m) 13) ((ctrl-n) 14) ((ctrl-o) 15)
+    ((ctrl-p) 16) ((ctrl-q) 17) ((ctrl-r) 18) ((ctrl-s) 19) ((ctrl-t) 20)
+    ((ctrl-u) 21) ((ctrl-v) 22) ((ctrl-w) 23) ((ctrl-x) 24) ((ctrl-y) 25)
+    ((ctrl-z) 26) ((ctrl-backslash) 28) ((ctrl-right-bracket) 29) 
+    ((ctrl-caret) 30) ((ctrl-underscore) 31)
     (else #f)))
 
 (define (ctrl-code->symbol code)
@@ -1825,36 +1827,36 @@
 (define (get-ctrl-description symbol)
   "Get human-readable description of control character."
   (case symbol
-    ('ctrl-a "Start of Heading (SOH)")
-    ('ctrl-b "Start of Text (STX)")
-    ('ctrl-c "End of Text (ETX) - Interrupt")
-    ('ctrl-d "End of Transmission (EOT) - EOF")
-    ('ctrl-e "Enquiry (ENQ)")
-    ('ctrl-f "Acknowledge (ACK)")
-    ('ctrl-g "Bell (BEL)")
-    ('ctrl-h "Backspace (BS)")
-    ('ctrl-i "Horizontal Tab (HT)")
-    ('ctrl-j "Line Feed (LF)")
-    ('ctrl-k "Vertical Tab (VT)")
-    ('ctrl-l "Form Feed (FF)")
-    ('ctrl-m "Carriage Return (CR)")
-    ('ctrl-n "Shift Out (SO)")
-    ('ctrl-o "Shift In (SI)")
-    ('ctrl-p "Data Link Escape (DLE)")
-    ('ctrl-q "Device Control 1 (XON)")
-    ('ctrl-r "Device Control 2")
-    ('ctrl-s "Device Control 3 (XOFF)")
-    ('ctrl-t "Device Control 4")
-    ('ctrl-u "Negative Acknowledge (NAK)")
-    ('ctrl-v "Synchronous Idle (SYN)")
-    ('ctrl-w "End of Transmission Block (ETB)")
-    ('ctrl-x "Cancel (CAN)")
-    ('ctrl-y "End of Medium (EM)")
-    ('ctrl-z "Substitute (SUB) - Suspend")
-    ('ctrl-backslash "File Separator (FS)")
-    ('ctrl-right-bracket "Group Separator (GS)")
-    ('ctrl-caret "Record Separator (RS)")
-    ('ctrl-underscore "Unit Separator (US)")
+    ((ctrl-a) "Start of Heading (SOH)")
+    ((ctrl-b) "Start of Text (STX)")
+    ((ctrl-c) "End of Text (ETX) - Interrupt")
+    ((ctrl-d) "End of Transmission (EOT) - EOF")
+    ((ctrl-e) "Enquiry (ENQ)")
+    ((ctrl-f) "Acknowledge (ACK)")
+    ((ctrl-g) "Bell (BEL)")
+    ((ctrl-h) "Backspace (BS)")
+    ((ctrl-i) "Horizontal Tab (HT)")
+    ((ctrl-j) "Line Feed (LF)")
+    ((ctrl-k) "Vertical Tab (VT)")
+    ((ctrl-l) "Form Feed (FF)")
+    ((ctrl-m) "Carriage Return (CR)")
+    ((ctrl-n) "Shift Out (SO)")
+    ((ctrl-o) "Shift In (SI)")
+    ((ctrl-p) "Data Link Escape (DLE)")
+    ((ctrl-q) "Device Control 1 (XON)")
+    ((ctrl-r) "Device Control 2")
+    ((ctrl-s) "Device Control 3 (XOFF)")
+    ((ctrl-t) "Device Control 4")
+    ((ctrl-u) "Negative Acknowledge (NAK)")
+    ((ctrl-v) "Synchronous Idle (SYN)")
+    ((ctrl-w) "End of Transmission Block (ETB)")
+    ((ctrl-x) "Cancel (CAN)")
+    ((ctrl-y) "End of Medium (EM)")
+    ((ctrl-z) "Substitute (SUB) - Suspend")
+    ((ctrl-backslash) "File Separator (FS)")
+    ((ctrl-right-bracket) "Group Separator (GS)")
+    ((ctrl-caret) "Record Separator (RS)")
+    ((ctrl-underscore) "Unit Separator (US)")
     (else "Unknown control character")))
 
 ;;; Control character testing and demonstration
@@ -1900,6 +1902,8 @@
                 (or letter "?")
                 result 
                 description)))
+     test-codes)))
+
 ;;; Alt/Meta key utility functions
 (define (is-alt-character? symbol)
   "Check if symbol represents an Alt+key combination."
@@ -2009,8 +2013,8 @@
   
   ;; Simulate Alt+a (byte 225 = 97 + 128)
   (let ((result (handle-meta-input 225)))  ; 'a' + 128
-    (format #t "Byte 225 (Alt+a in 8-bit mode) → ~a\n" result))
-  
+    (format #t "Byte 225 (Alt+a in 8-bit mode) → ~a\n" result)))
+
 ;;; Complex modifier key support (xterm-style)
 ;;; Based on xterm's PC-Style Function Keys specification
 
@@ -2039,7 +2043,7 @@
 
 (define (modifier-symbol->code symbol)
   "Convert modifier symbol to numeric code."
-  (let ((mapping (rassoc symbol *modifier-codes*)))
+  (let ((mapping (find (lambda (entry) (eq? (cdr entry) symbol)) *modifier-codes*)))
     (if mapping (car mapping) 1)))
 
 (define (parse-function-key-with-modifier seq)

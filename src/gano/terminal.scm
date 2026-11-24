@@ -28,6 +28,7 @@
   #:use-module (ice-9 rdelim)       ; Line reading
   #:use-module (ice-9 binary-ports) ; Binary I/O
   #:use-module (ice-9 regex)
+  #:use-module (ice-9 popen)        ; stty
   #:export (
     ;; Terminal setup/cleanup
     terminal-raw-mode-enter
@@ -83,25 +84,39 @@
 (define *terminal-saved-state* #f)
 (define *terminal-raw-mode?* #f)
 
+(define (stty-output . args)
+  "Run stty with ARGS on the controlling terminal (our stdin) and return
+   its first line of output, or #f if it failed."
+  (catch #t
+    (lambda ()
+      ;; ARGS are fixed option strings from this module, never user input.
+      (let* ([port (open-input-pipe
+                    (string-append "stty " (string-join args " ") " 2>/dev/null"))]
+             [line (read-line port)]
+             [status (close-pipe port)])
+        (and (zero? (status:exit-val status))
+             (string? line)
+             line)))
+    (lambda _ #f)))
+
 (define (terminal-save-state)
-  "Save current terminal state"
-  (system "stty -g > /tmp/terminal-state")
-  (set! *terminal-saved-state* #t))
+  "Save current terminal state (in memory, as printed by stty -g)"
+  (set! *terminal-saved-state* (stty-output "-g")))
 
 (define (terminal-restore-state)
   "Restore saved terminal state"
   (when *terminal-saved-state*
-    (system "stty $(cat /tmp/terminal-state)")
-    (system "rm -f /tmp/terminal-state")
-    (set! *terminal-saved-state* #f)
-    (set! *terminal-raw-mode?* #f)))
+    (system* "stty" *terminal-saved-state*)
+    (set! *terminal-saved-state* #f))
+  (set! *terminal-raw-mode?* #f))
 
 (define (terminal-raw-mode-enter)
   "Enter raw mode for character-by-character input"
   (unless *terminal-raw-mode?*
     (terminal-save-state)
-    ;; Disable canonical mode, echo, signals
-    (system "stty raw -echo -isig")
+    ;; Disable canonical mode, echo, signals and flow control (so that
+    ;; ^C, ^Q, ^S, ^Z reach the editor as keys)
+    (system* "stty" "raw" "-echo" "-isig" "-ixon")
     (set! *terminal-raw-mode?* #t)))
 
 (define (terminal-raw-mode-exit)
@@ -147,7 +162,9 @@
   (display (ansi-escape "H")))
 
 (define (terminal-cursor-position row col)
-  "Move cursor to specific position (1-based)"
+  "Move cursor to ROW, COL (1-based)"
+  (unless (and (exact-integer? row) (exact-integer? col) (>= row 1) (>= col 1))
+    (error "terminal-cursor-position: row and column must be integers >= 1" row col))
   (display (ansi-csi "~d;~dH" row col)))
 
 (define (terminal-cursor-up n)
@@ -192,9 +209,19 @@
 ;;; =================================================================
 
 (define (terminal-get-size)
-  "Get terminal size as (width . height)"
-  ;; Query cursor position after moving to bottom-right
-  (cons 80 24))
+  "Get terminal size as (width . height).
+   Asks stty first, then the COLUMNS/LINES environment variables, and
+   falls back to 80x24."
+  (define (env-number name)
+    (let ([v (getenv name)])
+      (and v (let ([n (string->number v)]) (and n (> n 0) n)))))
+  (let* ([size (stty-output "size")]
+         [fields (and size (map string->number (string-tokenize size)))])
+    (if (and fields (= (length fields) 2) (every number? fields)
+             (> (car fields) 0) (> (cadr fields) 0))
+        (cons (cadr fields) (car fields))      ; stty prints "rows cols"
+        (cons (or (env-number "COLUMNS") 80)
+              (or (env-number "LINES") 24)))))
   ;; (let ([old-pos (terminal-get-cursor-position)])
   ;;   (display (ansi-csi "999;999H"))  ; Move to large position
   ;;   (let ([max-pos (terminal-get-cursor-position)])
@@ -206,8 +233,13 @@
   (display (ansi-escape "6n"))  ; Device Status Report
   (flush-all-ports)
   
-  ;; Read response: ESC[{row};{col}R
-  (let* ([response (terminal-read-input-sequence)]
+  ;; Read the reply, ESC [ row ; col R, and nothing after it
+  (let* ([response (let loop ([chars '()])
+                     (let ([ch (read-char-within 200)])
+                       (cond
+                        [(not ch) (list->string (reverse chars))]
+                        [(char=? ch #\R) (list->string (reverse (cons ch chars)))]
+                        [else (loop (cons ch chars))])))]
          [match (string-match "\\[([0-9]+);([0-9]+)R" response)])
     (if match
         (cons (string->number (match:substring match 1))
@@ -278,124 +310,157 @@
   (char-ready?))
 
 (define (terminal-read-input-sequence)
-  "Read a sequence of characters (for escape sequences)"
-  (let loop ([chars '()]
-             [timeout 10])  ; Simple timeout mechanism
+  "Read the characters that are arriving now: stop at end of input or
+   after 10ms with nothing new."
+  (let loop ([chars '()])
+    (let ([ch (read-char-within 10)])
+      (if ch
+          (loop (cons ch chars))
+          (list->string (reverse chars))))))
+
+(define* (read-char-within ms)
+  "Read a character if one arrives within MS milliseconds, else #f."
+  (let loop ([ms ms])
     (cond
-     [(= timeout 0) 
-      (list->string (reverse chars))]
-     [(char-ready?)
-      (let ([ch (read-char)])
-        (loop (cons ch chars) 10))]  ; Reset timeout on input
-     [else
-      (usleep 1000)  ; Sleep 1ms
-      (loop chars (- timeout 1))])))
+     [(char-ready?) (let ([ch (read-char)]) (if (eof-object? ch) #f ch))]
+     [(<= ms 0) #f]
+     [else (usleep 1000) (loop (- ms 1))])))
+
+;;; Key decoding, for the sequences xterm and its relatives (VTE,
+;;; rxvt, the Linux console, tmux, screen) send:
+;;;
+;;;   ESC [ A..D / H / F           arrows, Home, End    (normal cursor mode)
+;;;   ESC O A..D / H / F           the same             (application mode)
+;;;   ESC [ 1;m A                  ...with modifiers m (see below)
+;;;   ESC [ n ~  / ESC [ n;m ~     Home 1 7, Insert 2, Delete 3, End 4 8,
+;;;                                PgUp 5, PgDn 6, F1-F5 11-15, F6-F10
+;;;                                17-21, F11 23, F12 24
+;;;   ESC O P..S / ESC [ 1;m P..S  F1-F4
+;;;   ESC [ [ A..E                 F1-F5 (Linux console)
+;;;   ESC [ Z                      Shift+Tab
+;;;   ESC O M                      keypad Enter
+;;;   ESC x                        Alt+x (also Alt+Ctrl+x, Alt+Backspace)
+;;;
+;;; A modifier parameter m encodes m-1 as bits: 1 Shift, 2 Alt, 4 Ctrl,
+;;; 8 Meta (reported as Alt).  A lone ESC is the Escape key.  Anything
+;;; else is read up to its final byte and reported as the symbol 'unknown,
+;;; so the following key is not garbled.
+
+;; Milliseconds to wait for the rest of an escape sequence
+(define escape-timeout-ms 50)
 
 (define (terminal-read-key)
-  "Read a single key and convert to key object"
+  "Read one key from the current input port and return a key object.
+   Returns a key with symbol 'eof if the input is closed."
   (let ([ch (read-char)])
     (cond
-     ;; Escape sequence
-     [(char=? ch #\escape)
-      (if (char-ready?)
-          (parse-escape-sequence)
-          (make-key #:symbol 'escape))]
-     
-     ;; Control characters
-     [(< (char->integer ch) 32)
+     [(eof-object? ch) (make-key #:symbol 'eof)]
+     [(char=? ch #\escape) (parse-escape-sequence)]
+     [(or (< (char->integer ch) 32) (= (char->integer ch) 127))
       (parse-control-character ch)]
-     
-     ;; Printable characters
-     [else
-      (make-key #:char ch)])))
+     [else (make-key #:char ch)])))
+
+(define (with-alt key)
+  "KEY with the Alt modifier added"
+  (make-key #:char (key-char key) #:symbol (and (not (key-char key)) (key-symbol key))
+            #:ctrl? (key-ctrl? key) #:alt? #t #:shift? (key-shift? key)))
 
 (define (parse-escape-sequence)
-  "Parse escape sequence starting after ESC"
-  (let ([next-char (read-char)])
+  "Parse what follows an ESC"
+  (let ([next (read-char-within escape-timeout-ms)])
     (cond
-     ;; CSI sequence: ESC [
-     [(char=? next-char #\[)
-      (parse-csi-sequence)]
-     
-     ;; Alt + character: ESC + char
-     [(char-graphic? next-char)
-      (make-key #:char next-char #:alt? #t)]
-     
-     ;; Function key sequence: ESC O
-     [(char=? next-char #\O)
-      (parse-function-sequence)]
-     
-     ;; Unknown escape sequence
-     [else
-      (make-key #:symbol 'escape)])))
+     [(not next) (make-key #:symbol 'escape)]
+     [(char=? next #\[) (parse-csi-sequence)]
+     [(char=? next #\O) (parse-ss3-sequence)]
+     [(char=? next #\escape) (make-key #:symbol 'escape #:alt? #t)]
+     [(or (< (char->integer next) 32) (= (char->integer next) 127))
+      (with-alt (parse-control-character next))]
+     [else (make-key #:char next #:alt? #t)])))
+
+(define (modified-key symbol modifier)
+  "Key for SYMBOL with an xterm MODIFIER parameter (#f or 1 = none)"
+  (let ([bits (if (and modifier (>= modifier 1)) (- modifier 1) 0)])
+    (make-key #:symbol symbol
+              #:shift? (logbit? 0 bits)
+              #:alt? (or (logbit? 1 bits) (logbit? 3 bits))
+              #:ctrl? (logbit? 2 bits))))
+
+(define (tilde-key code)
+  "The key a ESC [ CODE ~ sequence stands for, or #f"
+  (case code
+    [(1 7) 'home] [(2) 'insert] [(3) 'delete] [(4 8) 'end]
+    [(5) 'page-up] [(6) 'page-down]
+    [(11) 'f1] [(12) 'f2] [(13) 'f3] [(14) 'f4] [(15) 'f5]
+    [(17) 'f6] [(18) 'f7] [(19) 'f8] [(20) 'f9] [(21) 'f10]
+    [(23) 'f11] [(24) 'f12]
+    [else #f]))
+
+(define (letter-key ch)
+  "The key a final letter of a cursor or SS3 sequence stands for, or #f"
+  (case ch
+    [(#\A) 'up] [(#\B) 'down] [(#\C) 'right] [(#\D) 'left]
+    [(#\H) 'home] [(#\F) 'end]
+    [(#\P) 'f1] [(#\Q) 'f2] [(#\R) 'f3] [(#\S) 'f4]
+    [else #f]))
 
 (define (parse-csi-sequence)
-  "Parse CSI (Control Sequence Introducer) sequence"
-  (let* ([sequence (terminal-read-input-sequence)]
-         [last-char (string-ref sequence (- (string-length sequence) 1))])
-    
-    (case last-char
-      ;; Arrow keys
-      [(#\A) (make-key #:symbol 'up)]
-      [(#\B) (make-key #:symbol 'down)]
-      [(#\C) (make-key #:symbol 'right)]
-      [(#\D) (make-key #:symbol 'left)]
-      
-      ;; Other special keys
-      [(#\H) (make-key #:symbol 'home)]
-      [(#\F) (make-key #:symbol 'end)]
-      
-      ;; Function keys and other sequences
-      [(#\~)
-       (let ([code (string->number (substring sequence 0 (- (string-length sequence) 1)))])
-         (case code
-           [(1) (make-key #:symbol 'home)]
-           [(2) (make-key #:symbol 'insert)]
-           [(3) (make-key #:symbol 'delete)]
-           [(4) (make-key #:symbol 'end)]
-           [(5) (make-key #:symbol 'page-up)]
-           [(6) (make-key #:symbol 'page-down)]
-           [(15) (make-key #:symbol 'f5)]
-           [(17) (make-key #:symbol 'f6)]
-           [(18) (make-key #:symbol 'f7)]
-           [(19) (make-key #:symbol 'f8)]
-           [(20) (make-key #:symbol 'f9)]
-           [(21) (make-key #:symbol 'f10)]
-           [(23) (make-key #:symbol 'f11)]
-           [(24) (make-key #:symbol 'f12)]
-           [else (make-key #:symbol 'unknown)]))]
-      
-      ;; Unknown sequence
-      [else (make-key #:symbol 'unknown)])))
+  "Parse what follows ESC [.  Reads parameter bytes up to and including
+   the final byte (@ to ~), so keys typed straight after the sequence are
+   left unread."
+  (let ([first (read-char-within escape-timeout-ms)])
+    (cond
+     ;; Nothing followed: it was Alt+[
+     [(not first) (make-key #:char #\[ #:alt? #t)]
+     ;; Linux console F1-F5: ESC [ [ A..E
+     [(char=? first #\[)
+      (let ([ch (read-char-within escape-timeout-ms)])
+        (case ch
+          [(#\A) (make-key #:symbol 'f1)] [(#\B) (make-key #:symbol 'f2)]
+          [(#\C) (make-key #:symbol 'f3)] [(#\D) (make-key #:symbol 'f4)]
+          [(#\E) (make-key #:symbol 'f5)]
+          [else (make-key #:symbol 'unknown)]))]
+     [else
+      (let* ([body (let loop ([chars (list first)] [ch first])
+                     (if (and ch (char<=? #\@ ch #\~))
+                         (list->string (reverse chars))
+                         (let ([next (read-char-within escape-timeout-ms)])
+                           (if next
+                               (loop (cons next chars) next)
+                               (list->string (reverse chars))))))]
+             [final (string-ref body (- (string-length body) 1))]
+             [params (map string->number
+                          (string-split (substring body 0 (- (string-length body) 1)) #\;))]
+             [param (lambda (n) (and (> (length params) n) (list-ref params n)))])
+        (cond
+         [(not (char<=? #\@ final #\~)) (make-key #:symbol 'unknown)]  ; timed out
+         [(char=? final #\Z) (make-key #:symbol 'tab #:shift? #t)]
+         [(char=? final #\~)
+          (let ([symbol (tilde-key (param 0))])
+            (if symbol (modified-key symbol (param 1)) (make-key #:symbol 'unknown)))]
+         [(letter-key final) => (lambda (symbol) (modified-key symbol (param 1)))]
+         [else (make-key #:symbol 'unknown)]))])))
 
-(define (parse-function-sequence)
-  "Parse function key sequence starting with ESC O"
-  (let ([ch (read-char)])
-    (case ch
-      [(#\P) (make-key #:symbol 'f1)]
-      [(#\Q) (make-key #:symbol 'f2)]
-      [(#\R) (make-key #:symbol 'f3)]
-      [(#\S) (make-key #:symbol 'f4)]
-      [else (make-key #:symbol 'unknown)])))
+(define (parse-ss3-sequence)
+  "Parse what follows ESC O"
+  (let ([ch (read-char-within escape-timeout-ms)])
+    (cond
+     [(not ch) (make-key #:char #\O #:alt? #t)]      ; it was Alt+O
+     [(char=? ch #\M) (make-key #:symbol 'enter)]    ; keypad Enter
+     [(letter-key ch) => (lambda (symbol) (make-key #:symbol symbol))]
+     [else (make-key #:symbol 'unknown)])))
 
 (define (parse-control-character ch)
-  "Parse control character to key object"
+  "Key for a control character (code below 32, or DEL)"
   (let ([code (char->integer ch)])
     (cond
-     ;; Common control characters
      [(= code 9) (make-key #:symbol 'tab)]
-     [(= code 10) (make-key #:symbol 'enter)]
-     [(= code 13) (make-key #:symbol 'enter)]  ; CR
-     [(= code 127) (make-key #:symbol 'backspace)]  ; DEL
-     [(= code 8) (make-key #:symbol 'backspace)]    ; BS
-     
-     ;; Control + letter combinations
-     [(<= 1 code 26)
-      (make-key #:char (integer->char (+ code 96)) #:ctrl? #t)]  ; ^A = 1, etc.
-     
-     ;; Other control characters
-     [else
-      (make-key #:char ch)])))
+     [(or (= code 10) (= code 13)) (make-key #:symbol 'enter)]
+     [(or (= code 8) (= code 127)) (make-key #:symbol 'backspace)]
+     [(= code 27) (make-key #:symbol 'escape)]
+     ;; ^A .. ^Z
+     [(<= 1 code 26) (make-key #:char (integer->char (+ code 96)) #:ctrl? #t)]
+     ;; ^@ (Ctrl+Space) and ^\ ^] ^^ ^_
+     [else (make-key #:char (integer->char (+ code 64)) #:ctrl? #t)])))
 
 ;;; =================================================================
 ;;; HIGH-LEVEL INTERFACE

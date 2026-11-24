@@ -549,8 +549,10 @@
     (let ([color (ansi-params->color '(38 5 300) #f)])  ; Out of range
       (eq? color 'color-default)))  ; Should fallback to default
   
-  (test-assert "RGB values bounds are handled gracefully"
-    (color-rgb? (make-color-rgb 300 -50 128))))  ; Constructor should accept any values
+  ;; An out-of-range colour would only fail later, when written out as an
+  ;; invalid escape sequence, so the constructors reject it.
+  (test-error "RGB components out of range are rejected"
+    #t (make-color-rgb 300 -50 128)))
 
 ;;; =================================================================
 ;;; EDGE CASES AND BOUNDARY TESTS
@@ -590,4 +592,127 @@
       (eq? (sgr-intensity sgr) 'intensity-bold))))
 
 ;;; Test suite cleanup
+;;; =================================================================
+;;; STRICT TESTS
+;;; =================================================================
+
+(define (esc . parts) (apply string-append "\x1b" parts))
+(define (sgr . args) (apply make-sgr args))
+
+(test-group "strict: colour constructors"
+  (test-error "256 index too big" #t (make-color-256 256))
+  (test-error "256 index negative" #t (make-color-256 -1))
+  (test-error "256 index not an integer" #t (make-color-256 1.5))
+  (test-error "RGB component too big" #t (make-color-rgb 0 256 0))
+  (test-assert "extremes accepted" (and (color-256? (make-color-256 0)) (color-256? (make-color-256 255))
+                                        (color-rgb? (make-color-rgb 255 0 255))))
+  (test-error "unknown colour symbol" #t (color->ansi-params 'color-purple #f))
+  (test-error "not a colour" #t (color->ansi-params "red" #f)))
+
+(test-group "strict: full sequences"
+  (test-equal "default" "" (sgr->ansi-sequence (make-default-sgr)))
+  (test-equal "bold" (esc "[1m") (sgr->ansi-sequence (sgr #:intensity 'intensity-bold)))
+  (test-equal "256-colour foreground in order" (esc "[38;5;200m")
+              (sgr->ansi-sequence (sgr #:foreground-color (make-color-256 200))))
+  (test-equal "RGB background in order" (esc "[48;2;10;20;30m")
+              (sgr->ansi-sequence (sgr #:background-color (make-color-rgb 10 20 30))))
+  (test-equal "attributes, then foreground, then background" (esc "[1;4;31;48;5;17m")
+              (sgr->ansi-sequence (sgr #:intensity 'intensity-bold #:underline 'underline-single
+                                       #:foreground-color 'color-red
+                                       #:background-color (make-color-256 17))))
+  (test-equal "reverse video" (esc "[7m") (sgr->ansi-sequence (sgr #:polarity 'polarity-negative)))
+  (test-equal "font family" (esc "[13m") (sgr->ansi-sequence (sgr #:font-family 3))))
+
+(test-group "strict: minimal sequences"
+  (let ([plain (make-default-sgr)]
+        [bold (sgr #:intensity 'intensity-bold)]
+        [faint (sgr #:intensity 'intensity-faint)]
+        [red (sgr #:foreground-color 'color-red)]
+        [bold-red (sgr #:intensity 'intensity-bold #:foreground-color 'color-red)])
+    (test-equal "same: nothing" "" (sgr-minimal-sequence bold (sgr-copy bold)))
+    (test-equal "plain -> bold" (esc "[1m") (sgr-minimal-sequence plain bold))
+    (test-equal "bold -> plain turns bold off" (esc "[22m") (sgr-minimal-sequence bold plain))
+    (test-equal "bold -> faint ends bold first" (esc "[22;2m") (sgr-minimal-sequence bold faint))
+    (test-equal "red -> plain restores the default colour" (esc "[39m") (sgr-minimal-sequence red plain))
+    (test-equal "bold-red -> red changes only intensity" (esc "[22m") (sgr-minimal-sequence bold-red red))
+    (test-equal "red -> bold-red adds only bold" (esc "[1m") (sgr-minimal-sequence red bold-red))
+    (test-equal "every group can be turned off" (esc "[22;23;24;25;27;28;29;10;54;55;39;49m")
+                (sgr-minimal-sequence
+                 (sgr #:intensity 'intensity-bold #:font-style 'font-style-italic
+                      #:underline 'underline-single #:blink 'blink-slow
+                      #:polarity 'polarity-negative #:visibility 'visibility-concealed
+                      #:strikethrough 'strikethrough-crossed #:font-family 2
+                      #:frame 'frame-framed #:overline 'overline-overlined
+                      #:foreground-color 'color-red #:background-color 'color-blue)
+                 plain))
+    (test-equal "colour objects compared by value" ""
+                (sgr-minimal-sequence (sgr #:foreground-color (make-color-256 5))
+                                      (sgr #:foreground-color (make-color-256 5))))))
+
+(test-group "strict: parsing"
+  (test-assert "empty parameter list is the default" (sgr-equal? (make-default-sgr) (sgr-from-parameters '())))
+  (test-equal "bright foreground 90-97" 9
+              (color-256-index (sgr-foreground-color (sgr-from-parameters '(91)))))
+  (test-equal "bright background 100-107" 15
+              (color-256-index (sgr-background-color (sgr-from-parameters '(107)))))
+  (test-equal "later parameters win" 'color-blue (sgr-foreground-color (sgr-from-parameters '(31 34))))
+  (test-equal "reset in the middle" 'intensity-normal (sgr-intensity (sgr-from-parameters '(1 0))))
+  (test-equal "out-of-range RGB parameters fall back to the default" 'color-default
+              (ansi-params->color '(38 2 300 0 0) #f))
+  (let ([samples (list (sgr #:intensity 'intensity-bold #:foreground-color (make-color-256 200))
+                       (sgr #:underline 'underline-double #:background-color (make-color-rgb 1 2 3))
+                       (sgr #:font-style 'font-style-italic #:blink 'blink-rapid #:frame 'frame-encircled)
+                       (sgr #:polarity 'polarity-negative #:foreground-color 'color-cyan
+                            #:background-color 'color-yellow #:font-family 9))])
+    (test-assert "render -> parse round trip"
+                 (every (lambda (s)
+                          (let* ([seq (sgr->ansi-sequence s)]
+                                 [params (map string->number
+                                              (string-split (substring seq 2 (- (string-length seq) 1)) #\;))])
+                            (sgr-equal? s (sgr-from-parameters params))))
+                        samples))))
+
+(test-group "strict: palette conversion"
+  (test-equal "pure red" 196 (color-256-index (rgb->color-256 255 0 0)))
+  (test-equal "200 rounds to cube level 215, not 175" (+ 16 (* 36 4))
+              (color-256-index (rgb->color-256 200 0 0)))
+  (test-equal "cube level 95 exactly" (+ 16 36) (color-256-index (rgb->color-256 95 0 0)))
+  (test-equal "black grey" 232 (color-256-index (rgb->color-256 0 0 0)))
+  (test-equal "white grey" 255 (color-256-index (rgb->color-256 255 255 255)))
+  (test-equal "mid grey" 244 (color-256-index (rgb->color-256 128 128 128)))
+  (test-assert "every palette entry converts to RGB and back to itself (cube and greys)"
+               (every (lambda (i)
+                        (let ([c (color-256->rgb i)])
+                          (= i (color-256-index (rgb->color-256 (color-rgb-red c) (color-rgb-green c)
+                                                                (color-rgb-blue c))))))
+                      (append (filter (lambda (i)    ; skip the cube's greys, which map to the ramp
+                                        (let* ([c (- i 16)] [r (quotient c 36)]
+                                               [g (quotient (remainder c 36) 6)] [b (remainder c 6)])
+                                          (not (= r g b))))
+                                      (iota 216 16))
+                              (iota 24 232)))))
+
+(test-group "strict: setters"
+  (let ([s (make-default-sgr)])
+    (sgr-set-font-family! s 4)
+    (test-equal "font family" 4 (sgr-font-family s))
+    (test-error "font family out of range" #t (sgr-set-font-family! s 10))
+    (test-error "bad foreground" #t (sgr-set-foreground-color! s 'color-mauve))))
+
+(test-group "strict: rendering text with attributes"
+  (let ([plain (make-default-sgr)]
+        [bold (make-sgr #:intensity 'intensity-bold)]
+        [red (make-sgr #:foreground-color 'color-red)])
+    (test-equal "plain text needs no sequences" "abc" (sgr-render-text "abc" (list plain plain plain)))
+    (test-equal "empty" "" (sgr-render-text "" '()))
+    (test-equal "a bold word, then back to plain" "a\x1b[1mbc\x1b[22md"
+                (sgr-render-text "abcd" (list plain bold bold plain)))
+    (test-equal "ends in the default state" "\x1b[31mab\x1b[39m"
+                (sgr-render-text "ab" (list red red)))
+    (test-equal "only changes are sent" "\x1b[1ma\x1b[31mb\x1b[22mc\x1b[39m"
+                (sgr-render-text "abc" (list bold (make-sgr #:intensity 'intensity-bold
+                                                             #:foreground-color 'color-red)
+                                             red)))
+    (test-error "length mismatch" #t (sgr-render-text "ab" (list plain)))))
+
 (test-end "gano-rendering")

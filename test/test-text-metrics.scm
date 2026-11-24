@@ -1,1164 +1,343 @@
-#!/usr/bin/env guile
-!#
-;;; Test suite for text-metrics bidirectional text support
-;;; Uses SRFI-64 testing framework
-
-(use-modules (srfi srfi-64)        ; Testing framework
-	     (srfi srfi-1)         ; Lists helpers
-	     (srfi srfi-11)
-             (gano text-metrics)   ; Module under test
-             (gano rendering)      ; For SGR records
-	     (gano wcwidth)	   ; wcwidth
-             (gano uax9-core))     ; For bidi state records
-
-;;; =================================================================
-;;; Test Configuration
-;;; =================================================================
-
-(test-begin "text-metrics-bidi")
-
-;;; =================================================================
-;;; Helper Functions for Testing
-;;; =================================================================
-
-(define (make-test-string . chars)
-  "Create a test string from character list"
-  (list->string chars))
-
-(define (positions-only metrics)
-  "Extract just the cell positions from text-metrics for easier testing"
-  (text-metrics-cell-positions metrics))
-
-(define (positions-without-final metrics)
-  "Get cell positions without the final end-of-string position"
-  (let ([positions (text-metrics-cell-positions metrics)])
-    (take positions (string-length (text-metrics-string metrics)))))
-
-(define (make-ltr-char)
-  "Create a simple LTR character (narrow)"
-  #\a)
-
-(define (make-rtl-char) 
-  "Create a simple RTL character (narrow Hebrew Alef)"
-  #\x05D0)
-
-(define (make-wide-char)
-  "Create a wide character (CJK)"
-  #\x4E00)
-
-;; Hebrew character constants for readability
-(define hebrew-alef #\x05D0)      ; א
-(define hebrew-bet #\x05D1)       ; ב  
-(define hebrew-gimel #\x05D2)     ; ג
-(define hebrew-dalet #\x05D3)     ; ד
-
-;; CJK character constants
-(define cjk-one #\x4E00)         ; 一 (Chinese "one")
-(define cjk-two #\x4E8C)         ; 二 (Chinese "two") 
-(define cjk-three #\x4E09)       ; 三 (Chinese "three")
-(define cjk-four #\x56DB)        ; 四 (Chinese "four")
-(define cjk-five #\x4E94)        ; 五 (Chinese "five")
-
-;; Combining mark constants
-(define combining-acute #\x0301)  ; Combining acute accent
-(define zero-width-space #\x200B) ; Zero-width space
-
-;;; =================================================================
-;;; Basic Functionality Tests
-;;; =================================================================
-
-(test-group "basic-text-metrics-creation"
-  (test-equal "empty string"
-    '(0)
-    (positions-only (compute-text-metrics "" 8)))
-  
-  (test-equal "single LTR character"
-    '(0 1)
-    (positions-only (compute-text-metrics "a" 8)))
-  
-  (test-equal "single wide character"
-    '(0 2)
-    (positions-only (compute-text-metrics "中" 8 #:cjk? #t))))
-
-;;; =================================================================
-;;; Pure LTR Text Tests
-;;; =================================================================
-
-(test-group "pure-ltr-text"
-  (test-equal"three narrow LTR characters"
-    '(0 1 2 3)
-    (positions-only (compute-text-metrics "abc" 8)))
-  
-  (test-equal"mixed narrow and wide LTR"
-    '(0 1 2 4 5)  ; a=0, b=1, 中=3 (width 2), c=4
-    (positions-only (compute-text-metrics "ab中c" 8 #:cjk? #t)))
-  
-  (test-equal"LTR with tab"
-    '(0 1 8 9)    ; a=0, tab->8, b=9
-    (positions-only (compute-text-metrics "a\tb" 8))))
-
-;;; =================================================================
-;;; Pure RTL Text Tests
-;;; =================================================================
-
-(test-group "pure-rtl-text"
-  (test-equal"three narrow RTL characters (Hebrew)"
-    '(2 1 0 3)  ; RTL: positions go right-to-left, final position is total width
-    (positions-only (compute-text-metrics 
-                     (string hebrew-alef hebrew-bet hebrew-gimel) 8)))
-  
-  (test-equal"RTL with different character widths"
-    ;; Two Hebrew characters: Alef + Bet
-    '(1 0 2)
-    (positions-only (compute-text-metrics 
-                     (string hebrew-alef hebrew-bet) 8))))
-
-;;; =================================================================
-;;; Mixed Bidi Text Tests - The Main Challenge
-;;; =================================================================
-
-(test-group "mixed-bidi-text"
-  ;; The classic example: 3 LTR narrow + 4 RTL narrow + 5 LTR wide
-  ;; Expected: 0, 1, 2, 6, 5, 4, 3, 7, 9, 11, 13, 15
-  
-  (test-equal"LTR + RTL + LTR example"
-    ;; This is the test case from the human's description
-    ;; 3 LTR narrow (abc) + 4 RTL narrow + 5 LTR wide
-    '(0 1 2 6 5 4 3 7 9 11 13 15 17)
-    (positions-only (compute-text-metrics 
-                     (string-append "abc"
-                                   (string hebrew-alef hebrew-bet hebrew-gimel hebrew-dalet)
-                                   (string cjk-one cjk-two cjk-three cjk-four cjk-five))
-                     8 #:cjk? #t)))
-  
-  (test-equal"simple LTR-RTL boundary"
-    '(0 1 3 2 4)
-    (positions-only (compute-text-metrics 
-                     (string-append "ab" (string hebrew-alef hebrew-bet)) 8)))
-  
-  (test-equal"RTL in middle of LTR"
-    '(0 2 1 3 4)
-    (positions-only (compute-text-metrics 
-                     (string-append "a" (string hebrew-alef hebrew-bet) "c") 8)))
-  
-  (test-equal"multiple bidi runs"
-    ;; "ab" + Hebrew Alef+Bet + "cd" + Hebrew Gimel+Dalet
-    ;; LTR: a=0,b=1  RTL: Alef=3,Bet=2  LTR: c=4,d=5  RTL: Dalet=7,Gimel=6  final=8
-    '(0 1 3 2 4 5 7 6 8)
-    (positions-only (compute-text-metrics 
-                     (string-append "ab" 
-                                   (string hebrew-alef hebrew-bet)
-                                   "cd"
-                                   (string hebrew-gimel hebrew-dalet)) 8))))
-
-;;; =================================================================
-;;; Tab Handling in Bidi Context
-;;; =================================================================
-
-(test-group "tabs-in-bidi-context"
-  (test-equal"tab in LTR context"
-    '(0 1 8 9)  ; a=0, tab->8, b=9
-    (positions-only (compute-text-metrics "a\tb" 8)))
-  
-  (test-equal"tab in RTL context"
-    ;; Hebrew Alef + tab + Hebrew Bet in RTL context
-    ;; The tab calculation needs to consider the visual layout
-    '(1 8 0 9)  ; Complex case - may need adjustment
-    (positions-only (compute-text-metrics 
-                     (string hebrew-alef #\tab hebrew-bet) 8))))
-
-;;; =================================================================
-;;; Combining Marks Tests
-;;; =================================================================
-
-(test-group "combining-marks-bidi"
-  (test-equal"LTR base with combining mark"
-    '(0 0 1)  ; base=0, combining mark=0 (same position), final=1
-    (positions-only (compute-text-metrics 
-                     (string #\a combining-acute) 8))) ; a + combining acute
-  
-  (test-equal"RTL base with combining mark"
-    '(0 0 1)  ; RTL base and its combining mark
-    (positions-only (compute-text-metrics 
-                     (string hebrew-alef combining-acute) 8))))
-
-;;; =================================================================
-;;; Edge Cases and Error Conditions
-;;; =================================================================
-
-(test-group "edge-cases"
-  (test-equal"empty string positions"
-    '(0)
-    (positions-only (compute-text-metrics "" 8)))
-  
-  (test-equal"single character positions count"
-    2  ; Should have 2 positions: start + end
-    (length (positions-only (compute-text-metrics "a" 8))))
-  
-  (test-equal"bidi state list length matches string"
-    #t
-    (let* ([str (string-append "abc" (string hebrew-alef hebrew-bet hebrew-gimel))]
-           [metrics (compute-text-metrics str 8)])
-      (= (string-length str)
-         (length (text-metrics-bidi-state-list metrics)))))
-  
-  (test-equal"sgr list length matches string"
-    #t
-    (let* ([str (string-append "abc" (string hebrew-alef hebrew-bet hebrew-gimel))]
-           [metrics (compute-text-metrics str 8)])
-      (= (string-length str)
-         (length (text-metrics-sgr-list metrics))))))
-
-;;; =================================================================
-;;; Bidi State Access Tests
-;;; =================================================================
-
-(test-group "bidi-state-access"
-  (test-equal"get bidi state at valid index"
-    #t
-    (let* ([metrics (compute-text-metrics 
-                     (string-append "abc" (string hebrew-alef hebrew-bet hebrew-gimel)) 8)]
-           [state (text-metrics-get-bidi-state-at-index metrics 0)])
-      (bidi-state? state)))
-  
-  (test-equal"get bidi state at invalid index returns default"
-    #t
-    (let* ([metrics (compute-text-metrics "abc" 8)]
-           [state (text-metrics-get-bidi-state-at-index metrics 10)])
-      (and (bidi-state? state)
-           (= (bidi-state-embedding-level state) 0))))
-  
-  (test-equal"set bidi state returns new metrics"
-    #t
-    (let* ([metrics (compute-text-metrics "abc" 8)]
-           [new-state (make-bidi-state 2 'L 'none)]
-           [new-metrics (text-metrics-set-bidi-state-at-index metrics 1 new-state)])
-      (not (eq? metrics new-metrics)))))
-
-;;; =================================================================
-;;; Text Modification with Bidi Tests
-;;; =================================================================
-
-(test-group "text-modification-bidi"
-  (test-equal"insert character maintains bidi state count"
-    4  ; Original 3 chars + 1 inserted = 4
-    (let* ([original (compute-text-metrics "abc" 8)]
-           [new-state (make-bidi-state 0 'neutral 'none)]
-           [modified (text-metrics-insert-char-with-sgr-and-bidi 
-                     original 1 #\x new-state (make-default-sgr))])
-      (length (text-metrics-bidi-state-list modified))))
-  
-  (test-equal"delete range maintains synchronization"
-    #t
-    (let* ([original (compute-text-metrics "abcde" 8)]
-           [modified (text-metrics-delete-range original 1 3)]) ; Delete "bc"
-      (and (= (string-length (text-metrics-string modified))
-              (length (text-metrics-sgr-list modified)))
-           (= (string-length (text-metrics-string modified))
-              (length (text-metrics-bidi-state-list modified)))))))
-
-;;; =================================================================
-;;; Bidirectional Utility Function Tests  
-;;; =================================================================
-
-(test-group "bidi-utilities"
-  (test-equal"paragraph direction detection - LTR"
-    'ltr
-    (text-metrics-get-paragraph-direction (compute-text-metrics "abc" 8)))
-  
-  (test-equal"paragraph direction detection - RTL"
-    'rtl
-    (text-metrics-get-paragraph-direction (compute-text-metrics 
-                                          (string hebrew-alef hebrew-bet hebrew-gimel) 8)))
-  
-  (test-equal"RTL position detection"
-    #f  ; First character in LTR text should not be RTL
-    (text-metrics-is-rtl-at-position (compute-text-metrics "abc" 8) 0))
-  
-  (test-equal"resolved levels list length"
-    3
-    (length (text-metrics-get-resolved-levels (compute-text-metrics "abc" 8)))))
-
-;;; =================================================================
-;;; Performance and Stress Tests
-;;; =================================================================
-
-(test-group "performance-tests"
-  (test-equal"large string processing"
-    #t
-    (let* ([large-str (make-string 1000 #\a)]
-           [metrics (compute-text-metrics large-str 8)])
-      (= (length (text-metrics-cell-positions metrics)) 1001))) ; 1000 chars + final
-  
-  (test-equal"mixed large bidi string"
-    #t
-    (let* ([ltr-part (make-string 500 #\a)]
-           [rtl-part (make-string 500 hebrew-alef)] ; Hebrew Alef
-           [mixed-str (string-append ltr-part rtl-part)]
-           [metrics (compute-text-metrics mixed-str 8)])
-      (= (string-length mixed-str)
-         (length (text-metrics-bidi-state-list metrics))))))
-
-;;; =================================================================
-;;; Integration Tests with Rendering
-;;; =================================================================
-
-(test-group "rendering-integration"
-  (test-equal"render line with bidi text"
-    #t
-    (let* ([metrics (compute-text-metrics 
-                     (string-append "abc" (string hebrew-alef hebrew-bet hebrew-gimel)) 8)])
-      (let-values ([(rendered-str sgr-list bidi-list)
-                    (text-metrics-render-line metrics 0 10)])
-        (and (string? rendered-str)
-             (list? sgr-list)
-             (list? bidi-list)
-             (= (string-length rendered-str)
-                (length sgr-list)
-                (length bidi-list))))))
-  
-  (test-equal"render line string only"
-    #t
-    (let* ([metrics (compute-text-metrics "abc" 8)]
-           [rendered (text-metrics-render-line-string-only metrics 0 5)])
-      (string? rendered)))
-  
-  (test-equal"get rendered spans"
-    #t
-    (let* ([metrics (compute-text-metrics "abc" 8)]
-           [spans (text-metrics-get-rendered-spans metrics)])
-      (and (list? spans)
-           (every (lambda (span) 
-                   (and (pair? span)
-                        (string? (car span))))
-                 spans)))))
-
-;;; =================================================================
-;;; Regression Tests for Known Issues
-;;; =================================================================
-
-(test-group "regression-tests"
-  ;; Add specific test cases for any bugs discovered during development
-  
-  (test-equal"zero-width characters don't break positioning"
-    '(0 1 1 2)  ; Zero-width char should stay at same position
-    (positions-only (compute-text-metrics 
-                     (string #\a zero-width-space #\b) 8))) ; a + ZWSP + b
-  
-  (test-equal"final position is always last"
-    #t
-    (let* ([metrics (compute-text-metrics 
-                     (string-append "abc" (string hebrew-alef hebrew-bet hebrew-gimel)) 8)]
-           [positions (text-metrics-cell-positions metrics)])
-      (= (last positions)
-         (apply max positions)))))
-
-
-
-;;; Enhanced BIDI Control Character Tests for text-metrics
-;;; Add these test groups to your existing test-text-metrics.scm file
-
-;;; =================================================================
-;;; BIDI Control Character Constants
-;;; =================================================================
-
-;; Unicode BIDI control characters
-(define left-to-right-mark #\x200E)        ; LRM - Left-to-Right Mark
-(define right-to-left-mark #\x200F)        ; RLM - Right-to-Left Mark
-(define left-to-right-embedding #\x202A)   ; LRE - Left-to-Right Embedding
-(define right-to-left-embedding #\x202B)   ; RLE - Right-to-Left Embedding
-(define pop-directional-formatting #\x202C) ; PDF - Pop Directional Formatting
-(define left-to-right-override #\x202D)    ; LRO - Left-to-Right Override
-(define right-to-left-override #\x202E)    ; RLO - Right-to-Left Override
-(define left-to-right-isolate #\x2066)     ; LRI - Left-to-Right Isolate
-(define right-to-left-isolate #\x2067)     ; RLI - Right-to-Left Isolate
-(define first-strong-isolate #\x2068)      ; FSI - First Strong Isolate
-(define pop-directional-isolate #\x2069)   ; PDI - Pop Directional Isolate
-
-;;; =================================================================
-;;; BIDI Control Character Override Tests
-;;; =================================================================
-
-(test-group "bidi-control-overrides"
-  
-  ;; Test LRO (Left-to-Right Override) forcing RTL chars to render LTR
-  (test-equal "LRO forces RTL characters to LTR layout"
-    ;; LRO + Hebrew chars + PDF should render left-to-right
-    ;; Expected: LRO=0, Alef=0, Bet=1, Gimel=2, PDF=3, final=3
-    '(0 0 1 2 3 3)
-    (positions-only (compute-text-metrics 
-                     (string left-to-right-override
-                            hebrew-alef hebrew-bet hebrew-gimel
-                            pop-directional-formatting) 8)))
-  
-  ;; Test RLO (Right-to-Left Override) forcing LTR chars to render RTL
-  (test-equal "RLO forces LTR characters to RTL layout"
-    ;; RLO + "abc" + PDF should render right-to-left
-    ;; Expected: RLO=0, c=0, b=1, a=2, PDF=3, final=3
-    '(0 2 1 0 3 3)
-    (positions-only (compute-text-metrics 
-                     (string right-to-left-override
-                            #\a #\b #\c
-                            pop-directional-formatting) 8)))
-  
-  ;; Test mixed content with LRO override
-  (test-equal "LRO with mixed LTR/RTL content"
-    ;; "ab" + LRO + Hebrew + "cd" + PDF + "ef"
-    ;; The Hebrew should render LTR due to override
-    '(0 1 2 2 3 4 5 6 6 7 8)
-    (positions-only (compute-text-metrics 
-                     (string-append "ab"
-                                   (string left-to-right-override)
-                                   (string hebrew-alef hebrew-bet)
-                                   "cd"
-                                   (string pop-directional-formatting)
-                                   "ef") 8)))
-  
-  ;; Test mixed content with RLO override
-  (test-equal "RLO with mixed LTR/RTL content"
-    ;; Hebrew + RLO + "abc" + PDF + Hebrew
-    ;; The LTR chars should render RTL due to override
-    '(1 0 2 4 3 2 5 5 6)
-    (positions-only (compute-text-metrics 
-                     (string-append (string hebrew-alef hebrew-bet)
-                                   (string right-to-left-override)
-                                   "abc"
-                                   (string pop-directional-formatting)
-                                   (string hebrew-gimel)) 8))))
-
-;;; =================================================================
-;;; BIDI Embedding Tests (LRE/RLE)
-;;; =================================================================
-
-(test-group "bidi-embedding-tests"
-  
-  ;; Test LRE (Left-to-Right Embedding)
-  (test-equal "LRE creates LTR embedded context"
-    ;; Hebrew + LRE + Hebrew + PDF + Hebrew
-    ;; Middle Hebrew should render LTR due to embedding
-    '(1 0 2 2 3 4 4 5)
-    (positions-only (compute-text-metrics 
-                     (string-append (string hebrew-alef hebrew-bet)
-                                   (string left-to-right-embedding)
-                                   (string hebrew-gimel hebrew-dalet)
-                                   (string pop-directional-formatting)
-                                   (string hebrew-alef)) 8)))
-  
-  ;; Test RLE (Right-to-Left Embedding)
-  (test-equal "RLE creates RTL embedded context"
-    ;; "ab" + RLE + "cd" + PDF + "ef"
-    ;; Middle LTR chars should render RTL due to embedding
-    '(0 1 2 3 2 4 4 5 6)
-    (positions-only (compute-text-metrics 
-                     (string-append "ab"
-                                   (string right-to-left-embedding)
-                                   "cd"
-                                   (string pop-directional-formatting)
-                                   "ef") 8)))
-  
-  ;; Test nested embeddings
-  (test-equal "nested LRE within RLE"
-    ;; RLE + Hebrew + LRE + Hebrew + PDF + Hebrew + PDF
-	      ;; Complex nesting should be handled correctly
-	      ;; RLE A1 B1 LRE G D PDF A2 PDF
-	      ;; 0   4  3  1   1 2 3   0  5
-	      ;; A2 G D B1 A1
-    '(0 4 3 1 1 2 3 0 5)
-    (positions-only (compute-text-metrics 
-                     (string-append (string right-to-left-embedding)
-                                   (string hebrew-alef hebrew-bet)
-                                   (string left-to-right-embedding)
-                                   (string hebrew-gimel hebrew-dalet)
-                                   (string pop-directional-formatting)
-                                   (string hebrew-alef)
-                                   (string pop-directional-formatting)) 8))))
-
-;;; =================================================================
-;;; BIDI Isolate Tests (LRI/RLI/FSI)
-;;; =================================================================
-
-(test-group "bidi-isolate-tests"
-  
-  ;; Test LRI (Left-to-Right Isolate)
-  (test-equal "LRI isolates content from surrounding context"
-    ;; Hebrew + LRI + Hebrew + PDI + Hebrew
-	      ;; Isolated Hebrew should render LTR, surrounding RTL
-	      ;; B1 A1 D1 G1
-    '(2 1 0 3 3 4 5 5 6)
-    (positions-only (compute-text-metrics 
-                     (string-append (string hebrew-alef hebrew-bet)
-                                   (string left-to-right-isolate)
-                                   (string hebrew-gimel hebrew-dalet)
-                                   (string pop-directional-isolate)
-                                   (string hebrew-alef)) 8)))
-  
-  ;; Test RLI (Right-to-Left Isolate)  
-  (test-equal "RLI isolates content in RTL context"
-    ;; "ab" + RLI + "cd" + PDI + "ef"
-    ;; Isolated LTR chars should render RTL
-    '(0 1 2 4 3 2 5 5 6 7)
-    (positions-only (compute-text-metrics 
-                     (string-append "ab"
-                                   (string right-to-left-isolate)
-                                   "cd"
-                                   (string pop-directional-isolate)
-                                   "ef") 8)))
-  
-  ;; Test FSI (First Strong Isolate) with LTR content
-  (test-equal "FSI detects LTR content automatically"
-    ;; Hebrew + FSI + "abc" + PDI + Hebrew
-    ;; FSI should detect LTR and render accordingly
-    '(1 0 2 2 3 4 5 5 6)
-    (positions-only (compute-text-metrics 
-                     (string-append (string hebrew-alef hebrew-bet)
-                                   (string first-strong-isolate)
-                                   "abc"
-                                   (string pop-directional-isolate)
-                                   (string hebrew-gimel)) 8)))
-  
-  ;; Test FSI (First Strong Isolate) with RTL content
-  (test-equal "FSI detects RTL content automatically"
-    ;; "ab" + FSI + Hebrew + PDI + "cd"
-    ;; FSI should detect RTL and render accordingly
-    '(0 1 2 4 3 2 5 5 6 7)
-    (positions-only (compute-text-metrics 
-                     (string-append "ab"
-                                   (string first-strong-isolate)
-                                   (string hebrew-alef hebrew-bet)
-                                   (string pop-directional-isolate)
-                                   "cd") 8))))
-
-;;; =================================================================
-;;; BIDI Mark Tests (LRM/RLM)
-;;; =================================================================
-
-(test-group "bidi-mark-tests"
-  
-  ;; Test LRM (Left-to-Right Mark) affecting neutrals
-  (test-equal "LRM affects neutral character directionality"
-    ;; Hebrew + "1" + LRM + "2" + Hebrew
-    ;; Numbers should follow the mark directionality
-    '(1 0 2 2 3 4 5)
-    (positions-only (compute-text-metrics 
-                     (string-append (string hebrew-alef)
-                                   "1"
-                                   (string left-to-right-mark)
-                                   "2"
-                                   (string hebrew-bet)) 8)))
-  
-  ;; Test RLM (Right-to-Left Mark) affecting neutrals
-  (test-equal "RLM affects neutral character directionality"
-    ;; "a" + "1" + RLM + "2" + "b"
-    ;; Numbers should follow the mark directionality
-    '(0 1 2 2 4 3 5)
-    (positions-only (compute-text-metrics 
-                     (string-append "a1"
-                                   (string right-to-left-mark)
-                                   "2b") 8)))
-  
-  ;; Test marks at word boundaries
-  (test-equal "marks at word boundaries"
-    ;; "word" + LRM + Hebrew + RLM + "word"
-    ;; Marks should properly separate directionality contexts
-    '(0 1 2 3 4 4 6 5 4 7 7 8 9 10 11)
-    (positions-only (compute-text-metrics 
-                     (string-append "word"
-                                   (string left-to-right-mark)
-                                   (string hebrew-alef hebrew-bet)
-                                   (string right-to-left-mark)
-                                   "word") 8))))
-
-;;; =================================================================
-;;; Complex Mixed Override/Embedding Scenarios
-;;; =================================================================
-
-(test-group "complex-bidi-scenarios"
-  
-  ;; Test override within embedding
-  (test-equal "RLO within LRE context"
-    ;; LRE + Hebrew + RLO + "abc" + PDF + Hebrew + PDF
-    ;; Override should take precedence within embedding
-    '(0 0 1 4 3 2 1 5 6 7 7)
-    (positions-only (compute-text-metrics 
-                     (string-append (string left-to-right-embedding)
-                                   (string hebrew-alef)
-                                   (string right-to-left-override)
-                                   "abc"
-                                   (string pop-directional-formatting)
-                                   (string hebrew-bet)
-                                   (string pop-directional-formatting)) 8)))
-  
-  ;; Test isolate within override
-  (test-equal "LRI within RLO context"
-    ;; RLO + "ab" + LRI + Hebrew + PDI + "cd" + PDF
-    ;; Isolate should protect its content from override
-    '(0 1 0 1 3 2 1 5 4 3 6 6)
-    (positions-only (compute-text-metrics 
-                     (string-append (string right-to-left-override)
-                                   "ab"
-                                   (string left-to-right-isolate)
-                                   (string hebrew-alef hebrew-bet)
-                                   (string pop-directional-isolate)
-                                   "cd"
-                                   (string pop-directional-formatting)) 8)))
-  
-  ;; Test multiple nested contexts
-  (test-equal "deeply nested bidi contexts"
-    ;; RLE + LRE + RLO + Hebrew + PDF + PDF + PDF
-    ;; Multiple levels of nesting
-    '(0 3 2 1 0 4 4 4)
-    (positions-only (compute-text-metrics 
-                     (string-append (string right-to-left-embedding)
-                                   (string left-to-right-embedding) 
-                                   (string right-to-left-override)
-                                   (string hebrew-alef hebrew-bet hebrew-gimel)
-                                   (string pop-directional-formatting)
-                                   (string pop-directional-formatting)
-                                   (string pop-directional-formatting)) 8))))
-
-;;; =================================================================
-;;; BIDI with Combining Characters Tests
-;;; =================================================================
-
-(test-group "bidi-with-combining-chars"
-  
-  ;; Test combining marks within BIDI overrides
-  (test-equal "combining marks in RLO context"
-    ;; RLO + "a" + combining-acute + "b" + PDF
-    ;; Combining mark should stay with base even in override
-    '(0 1 1 0 2 2)
-    (positions-only (compute-text-metrics 
-                     (string right-to-left-override
-                            #\a combining-acute #\b
-                            pop-directional-formatting) 8)))
-  
-  ;; Test RTL base with combining mark in LRO
-  (test-equal "RTL base with combining mark in LRO"
-    ;; LRO + Hebrew-Alef + combining-acute + Hebrew-Bet + PDF
-    ;; Should render left-to-right due to override
-    '(0 0 0 1 2 2)
-    (positions-only (compute-text-metrics 
-                     (string left-to-right-override
-                            hebrew-alef combining-acute hebrew-bet
-                            pop-directional-formatting) 8))))
-
-;;; =================================================================
-;;; BIDI with Wide Characters Tests
-;;; =================================================================
-
-(test-group "bidi-with-wide-chars"
-  
-  ;; Test wide characters in BIDI override
-  (test-equal "wide CJK chars in RLO context"
-    ;; RLO + CJK chars + PDF - should render RTL with proper width
-    '(0 4 2 0 6 6)
-    (positions-only (compute-text-metrics 
-                     (string right-to-left-override
-                            cjk-one cjk-two  ; Each is width 2
-                            pop-directional-formatting) 8 #:cjk? #t)))
-  
-  ;; Test mixed wide and narrow in isolate
-  (test-equal "mixed wide/narrow in LRI"
-    ;; Hebrew + LRI + "a" + CJK + "b" + PDI + Hebrew
-    '(1 0 2 2 3 5 6 7 7 8)
-    (positions-only (compute-text-metrics 
-                     (string-append (string hebrew-alef hebrew-bet)
-                                   (string left-to-right-isolate)
-                                   "a"
-                                   (string cjk-one)  ; width 2
-                                   "b"
-                                   (string pop-directional-isolate)
-                                   (string hebrew-gimel)) 8 #:cjk? #t))))
-
-;;; =================================================================
-;;; BIDI Error Recovery Tests
-;;; =================================================================
-
-(test-group "bidi-error-recovery"
-  
-  ;; Test mismatched PDF (extra PDF)
-  (test-equal "extra PDF should be handled gracefully"
-    ;; "abc" + PDF (no matching LRE/RLE)
-    '(0 1 2 3 3)
-    (positions-only (compute-text-metrics 
-                     (string-append "abc" (string pop-directional-formatting)) 8)))
-  
-  ;; Test mismatched PDI (extra PDI)
-  (test-equal "extra PDI should be handled gracefully"
-    ;; Hebrew + PDI (no matching isolate)
-    '(1 0 2 2)
-    (positions-only (compute-text-metrics 
-                     (string-append (string hebrew-alef hebrew-bet)
-                                   (string pop-directional-isolate)) 8)))
-  
-  ;; Test unclosed embedding
-  (test-equal "unclosed LRE should be handled"
-    ;; Hebrew + LRE + Hebrew (no PDF)
-    '(1 0 2 2 3 4)
-    (positions-only (compute-text-metrics 
-                     (string-append (string hebrew-alef hebrew-bet)
-                                   (string left-to-right-embedding)
-                                   (string hebrew-gimel hebrew-dalet)) 8)))
-  
-  ;; Test unclosed isolate
-  (test-equal "unclosed RLI should be handled"
-    ;; "ab" + RLI + "cd" (no PDI)
-    '(0 1 2 4 3 2)
-    (positions-only (compute-text-metrics 
-                     (string-append "ab"
-                                   (string right-to-left-isolate)
-                                   "cd") 8))))
-
-;;; =================================================================
-;;; BIDI Rendering Integration Tests
-;;; =================================================================
-
-(test-group "bidi-rendering-integration"
-  
-  ;; Test rendering with BIDI controls
-  (test-equal "rendering preserves BIDI control positions"
-    #t
-    (let* ([test-str (string-append "abc"
-                                   (string left-to-right-override)
-                                   (string hebrew-alef hebrew-bet)
-                                   (string pop-directional-formatting)
-                                   "def")]
-           [metrics (compute-text-metrics test-str 8)])
-      (let-values ([(rendered-str sgr-list bidi-list)
-                    (text-metrics-render-line metrics 0 15)])
-        (and (= (string-length rendered-str)
-                (length sgr-list)
-                (length bidi-list))
-             (> (string-length rendered-str) 0)))))
-  
-  ;; Test SGR preservation through BIDI controls
-  (test-equal "SGR attributes preserved through BIDI"
-    #t
-    (let* ([test-str (string-append "a"
-                                   (string right-to-left-override)
-                                   "bc"
-                                   (string pop-directional-formatting)
-                                   "d")]
-           [metrics (compute-text-metrics test-str 8)]
-           [spans (text-metrics-get-rendered-spans metrics)])
-      (and (list? spans)
-           (> (length spans) 0)
-           (every (lambda (span) 
-                   (and (pair? span) (string? (car span))))
-                  spans)))))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-;;; Enhanced BIDI Control Character Tests for text-metrics
-;;; These tests reflect the CORRECT expected behavior for terminal rendering
-;;; BIDI controls should be zero-width but never cause negative positions
-
-;;; =================================================================
-;;; BIDI Control Character Constants
-;;; =================================================================
-
-;; Unicode BIDI control characters
-(define left-to-right-mark #\x200E)        ; LRM - Left-to-Right Mark
-(define right-to-left-mark #\x200F)        ; RLM - Right-to-Left Mark
-(define left-to-right-embedding #\x202A)   ; LRE - Left-to-Right Embedding
-(define right-to-left-embedding #\x202B)   ; RLE - Right-to-Left Embedding
-(define pop-directional-formatting #\x202C) ; PDF - Pop Directional Formatting
-(define left-to-right-override #\x202D)    ; LRO - Left-to-Right Override
-(define right-to-left-override #\x202E)    ; RLO - Right-to-Left Override
-(define left-to-right-isolate #\x2066)     ; LRI - Left-to-Right Isolate
-(define right-to-left-isolate #\x2067)     ; RLI - Right-to-Left Isolate
-(define first-strong-isolate #\x2068)      ; FSI - First Strong Isolate
-(define pop-directional-isolate #\x2069)   ; PDI - Pop Directional Isolate
-
-;;; =================================================================
-;;; BIDI Control Character Zero-Width Tests (CORRECT BEHAVIOR)
-;;; =================================================================
-
-(test-group "bidi-control-zero-width-correct"
-  
-  ;; Debug what wcwidth returns for BIDI controls
-  (test-equal "debug wcwidth for BIDI controls"
-    #t
-    (begin
-      (format #t "~%DEBUG wcwidth values:~%")
-      (format #t "  LRO: ~a~%" (wcwidth left-to-right-override #f))
-      (format #t "  RLO: ~a~%" (wcwidth right-to-left-override #f))
-      (format #t "  PDF: ~a~%" (wcwidth pop-directional-formatting #f))
-      (format #t "  LRM: ~a~%" (wcwidth left-to-right-mark #f))
-      (format #t "  RLM: ~a~%" (wcwidth right-to-left-mark #f))
-      #t))
-  
-  ;; BIDI control characters should be zero-width (don't advance cursor)
-  (test-equal "single LRO should be zero-width"
-    '(0 0)  ; LRO at position 0, final position 0 (no visual width)
-    (positions-only (compute-text-metrics 
-                     (string left-to-right-override) 8)))
-  
-  (test-equal "single RLO should be zero-width"
-    '(0 0)  ; RLO at position 0, final position 0
-    (positions-only (compute-text-metrics 
-                     (string right-to-left-override) 8)))
-  
-  ;; Debug what's happening with PDF
-  (test-equal "debug PDF behavior"
-    #t
-    (begin
-      (format #t "~%DEBUG PDF analysis:~%")
-      (let ([pdf-str (string pop-directional-formatting)])
-        (format #t "  PDF string length: ~a~%" (string-length pdf-str))
-        (format #t "  PDF char code: ~a~%" (char->integer pop-directional-formatting))
-        (format #t "  PDF wcwidth: ~a~%" (wcwidth pop-directional-formatting #f))
-        
-        ;; Try to create metrics and see what happens
-        (catch #t
-          (lambda ()
-            (let ([metrics (compute-text-metrics pdf-str 8)])
-              (format #t "  Metrics created successfully~%")
-              (format #t "  String: '~a'~%" (text-metrics-string metrics))
-              (format #t "  Cell positions length: ~a~%" 
-                      (length (text-metrics-cell-positions metrics)))
-              (format #t "  Cell positions: ~a~%" 
-                      (text-metrics-cell-positions metrics))))
-          (lambda (key . args)
-            (format #t "  ERROR creating metrics: ~a ~a~%" key args))))
-      #t))
-
-  (test-equal "single PDF should be zero-width"
-    '(0 0)  ; PDF at position 0, final position 0
-    (let ([pdf-str (string pop-directional-formatting)])
-      (catch #t
-        (lambda ()
-          (positions-only (compute-text-metrics pdf-str 8)))
-        (lambda (key . args)
-          (format #t "ERROR in PDF test: ~a ~a~%" key args)
-          '(error)))))
-  
-  ;; LRM and RLM should also be zero-width
-  (test-equal "LRM should be zero-width"
-    '(0 0)  ; LRM at position 0, final position 0
-    (positions-only (compute-text-metrics 
-                     (string left-to-right-mark) 8)))
-  
-  (test-equal "RLM should be zero-width"
-    '(0 0)  ; RLM at position 0, final position 0
-    (positions-only (compute-text-metrics 
-                     (string right-to-left-mark) 8))))
-
-;;; =================================================================
-;;; BIDI Control Characters with Content (CORRECT BEHAVIOR)
-;;; =================================================================
-
-(test-group "bidi-controls-with-content-correct"
-  
-  ;; Test basic Hebrew without controls (baseline)
-  (test-equal "basic Hebrew without controls"
-    '(2 1 0 3)  ; RTL: Gimel=2, Bet=1, Alef=0, final=3
-    (positions-only (compute-text-metrics 
-                     (string hebrew-alef hebrew-bet hebrew-gimel) 8)))
-  
-  ;; LRO should force Hebrew to render LTR (override natural direction)
-  (test-equal "LRO forces Hebrew to LTR order"
-    '(0 0 1 2 3 3)  ; LRO=0, Alef=0, Bet=1, Gimel=2, PDF=3, final=3
-    (positions-only (compute-text-metrics 
-                     (string left-to-right-override
-                            hebrew-alef hebrew-bet hebrew-gimel
-                            pop-directional-formatting) 8)))
-  
-  ;; Add diagnostic to understand the PDF positioning
-  (test-equal "debug LRO+Hebrew+PDF positioning"
-    #t
-    (let* ([test-str (string left-to-right-override
-                            hebrew-alef hebrew-bet hebrew-gimel
-                            pop-directional-formatting)]
-           [metrics (compute-text-metrics test-str 8)]
-           [positions (positions-only metrics)])
-      (begin
-        (format #t "~%DEBUG LRO+Hebrew+PDF:~%")
-        (format #t "  String length: ~a~%" (string-length test-str))
-        (format #t "  Positions: ~a~%" positions)
-        (format #t "  Expected: (0 0 1 2 3 3)~%")
-        (format #t "  Analysis:~%")
-        (format #t "    LRO (pos 0): ~a~%" (list-ref positions 0))
-        (format #t "    Alef (pos 1): ~a~%" (list-ref positions 1))
-        (format #t "    Bet (pos 2): ~a~%" (list-ref positions 2))
-        (format #t "    Gimel (pos 3): ~a~%" (list-ref positions 3))
-        (format #t "    PDF (pos 4): ~a~%" (list-ref positions 4))
-        (format #t "    Final (pos 5): ~a~%" (list-ref positions 5))
-        #t)))
-  
-  ;; RLO should force Latin to render RTL (override natural direction)
-  (test-equal "RLO forces Latin to RTL order"
-    '(0 2 1 0 0 3)  ; RLO=0, c=0, b=1, a=2, PDF=0 (part of RTL run), final=3
-    (positions-only (compute-text-metrics 
-                     (string right-to-left-override
-                            #\a #\b #\c
-                            pop-directional-formatting) 8)))
-  
-  ;; Add diagnostic to understand RLO positioning
-  (test-equal "debug RLO+Latin+PDF positioning"
-    #t
-    (let* ([test-str (string right-to-left-override #\a #\b #\c pop-directional-formatting)]
-           [metrics (compute-text-metrics test-str 8)]
-           [positions (positions-only metrics)])
-      (begin
-        (format #t "~%DEBUG RLO+Latin+PDF:~%")
-        (format #t "  Positions: ~a~%" positions)
-        (format #t "  Analysis:~%")
-        (format #t "    RLO (pos 0): ~a (zero-width control)~%" (list-ref positions 0))
-        (format #t "    'a' (pos 1): ~a (RTL-forced, rightmost char)~%" (list-ref positions 1))
-        (format #t "    'b' (pos 2): ~a (RTL-forced, middle char)~%" (list-ref positions 2))
-        (format #t "    'c' (pos 3): ~a (RTL-forced, leftmost char)~%" (list-ref positions 3))
-        (format #t "    PDF (pos 4): ~a (zero-width, part of RTL run)~%" (list-ref positions 4))
-        (format #t "    Final (pos 5): ~a (total width)~%" (list-ref positions 5))
-        (format #t "  PDF positioning interpretation: PDF is part of the override run~%")
-        #t)))
-  
-  ;; Simple case: single character with override
-  (test-equal "LRO with single character"
-    '(0 0 1 1)  ; LRO=0, char=0, PDF=1, final=1
-    (positions-only (compute-text-metrics 
-                     (string left-to-right-override #\a pop-directional-formatting) 8))))
-
-;;; =================================================================
-;;; BIDI Marks Tests (CORRECT BEHAVIOR)
-;;; =================================================================
-
-(test-group "bidi-marks-correct"
-  
-  ;; LRM between characters should not add width
-  (test-equal "LRM between characters is zero-width"
-    '(0 1 1 2)  ; a=0, LRM=1, b=1, final=2 (LRM doesn't advance cursor)
-    (positions-only (compute-text-metrics 
-                     (string #\a left-to-right-mark #\b) 8)))
-  
-  ;; RLM between characters should not add width
-  (test-equal "RLM between characters is zero-width"
-    '(0 1 1 2)  ; a=0, RLM=1, b=1, final=2
-    (positions-only (compute-text-metrics 
-                     (string #\a right-to-left-mark #\b) 8)))
-  
-  ;; Multiple marks should all be zero-width
-  (test-equal "multiple BIDI marks are zero-width"
-    '(0 1 1 1 2)  ; a=0, LRM=1, RLM=1, b=1, final=2
-    (positions-only (compute-text-metrics 
-                     (string #\a left-to-right-mark right-to-left-mark #\b) 8))))
-
-;;; =================================================================
-;;; BIDI Embedding Tests (CORRECT BEHAVIOR)
-;;; =================================================================
-
-(test-group "bidi-embedding-correct"
-  
-  ;; LRE should create LTR context without consuming width
-  (test-equal "LRE creates LTR context"
-    '(1 0 0 0 1 2 0)  ; Bet=1, Alef=0, LRE=0, Gimel=0, Dalet=1, PDF=2, final=2
-    (positions-only (compute-text-metrics 
-                     (string-append (string hebrew-alef hebrew-bet)
-                                   (string left-to-right-embedding)
-                                   (string hebrew-gimel hebrew-dalet)
-                                   (string pop-directional-formatting)) 8)))
-  
-  ;; RLE should create RTL context without consuming width
-  (test-equal "RLE creates RTL context"
-    '(0 1 2 3 2 1 0)  ; a=0, b=1, RLE=2, d=3, c=2, PDF=1, final=4
-    (positions-only (compute-text-metrics 
-                     (string-append "ab"
-                                   (string right-to-left-embedding)
-                                   "cd"
-                                   (string pop-directional-formatting)) 8))))
-
-;;; =================================================================
-;;; BIDI Isolate Tests (CORRECT BEHAVIOR)  
-;;; =================================================================
-
-(test-group "bidi-isolate-correct"
-  
-  ;; LRI should isolate content in LTR context
-  (test-equal "LRI isolates in LTR context"
-    '(1 0 0 0 1 2 0)  ; Similar to LRE but with isolation semantics
-    (positions-only (compute-text-metrics 
-                     (string-append (string hebrew-alef hebrew-bet)
-                                   (string left-to-right-isolate)
-                                   (string hebrew-gimel hebrew-dalet)
-                                   (string pop-directional-isolate)) 8)))
-  
-  ;; FSI should auto-detect direction
-  (test-equal "FSI detects LTR content"
-    '(1 0 0 0 1 2 0)  ; Hebrew context + FSI + Latin should detect Latin as LTR
-    (positions-only (compute-text-metrics 
-                     (string-append (string hebrew-alef hebrew-bet)
-                                   (string first-strong-isolate)
-                                   "ab"
-                                   (string pop-directional-isolate)) 8))))
-
-;;; =================================================================
-;;; Error Cases That Should Never Happen
-;;; =================================================================
-
-(test-group "no-negative-positions"
-  
-  ;; These tests verify that positions are never negative
-  (test-equal "no negative positions in any BIDI context"
-    #t
-    (let* ([test-cases (list
-                       (string left-to-right-override hebrew-alef pop-directional-formatting)
-                       (string right-to-left-override #\a pop-directional-formatting)
-                       (string #\a left-to-right-mark #\b)
-                       (string hebrew-alef right-to-left-mark #\a))]
-           [all-positions (apply append 
-                                (map (lambda (str) (positions-only (compute-text-metrics str 8)))
-                                     test-cases))])
-      ;; All positions should be >= 0
-      (every (lambda (pos) (>= pos 0)) all-positions)))
-  
-  ;; Test that final positions are always >= the maximum character position
-  (test-equal "final position is always >= max character position"
-    #t
-    (let ([metrics (compute-text-metrics 
-                    (string left-to-right-override
-                           hebrew-alef hebrew-bet hebrew-gimel
-                           pop-directional-formatting) 8)])
-      (let ([positions (positions-only metrics)])
-        (let ([final-pos (last positions)]
-              [char-positions (take positions (- (length positions) 1))])
-          (>= final-pos (apply max char-positions)))))))
-
-;;; =================================================================
-;;; Current Implementation Reality Check
-;;; =================================================================
-
-(test-group "current-implementation-check"
-  
-  ;; Document what the current implementation actually produces
-  ;; This will fail until the implementation is fixed
-  (test-expect-fail "current LRO behavior produces negative positions (BUG)")
-  (test-equal "current LRO with Hebrew (documenting current bug)"
-    '(0 0 1 2 3 3)  ; What SHOULD happen
-    (positions-only (compute-text-metrics 
-                     (string left-to-right-override
-                            hebrew-alef hebrew-bet hebrew-gimel
-                            pop-directional-formatting) 8)))
-  
-  ;; Show what it actually produces for debugging
-  (test-equal "document actual current behavior for debugging"
-    #t
-    (let ([actual (positions-only (compute-text-metrics 
-                                  (string left-to-right-override) 8))])
-      (begin 
-        (format #t "~%DEBUG: Single LRO positions: ~a~%" actual)
-        (format #t "DEBUG: LRO wcwidth: ~a~%" (wcwidth left-to-right-override #f))
-        (format #t "DEBUG: Contains negative positions: ~a~%" 
-                (any (lambda (x) (< x 0)) actual))
-        #t))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (debug-bidi-embedding)
-  "Debug the LRE embedding issue"
-  (let* ([test-str (string-append (string hebrew-alef hebrew-bet)
-                                 (string left-to-right-embedding)
-                                 (string hebrew-gimel hebrew-dalet)
-                                 (string pop-directional-formatting))]
-         [metrics (compute-text-metrics test-str 8)])
-    
-    (format #t "~%=== BIDI Embedding Debug ===~%")
-    (format #t "String: Alef+Bet+LRE+Gimel+Dalet+PDF~%")
-    (format #t "Length: ~a~%" (string-length test-str))
-    
-    ;; Show character codes
-    (format #t "~%Character codes:~%")
-    (string-for-each-with-index 
-     (lambda (i ch)
-       (format #t "  [~a]: ~c (U+~4,'0X)~%" i ch (char->integer ch)))
-     test-str)
-    
-    ;; Show BIDI levels from UAX9
-    (format #t "~%BIDI levels from resolve-paragraph-bidi:~%")
-    (let ([levels (resolve-paragraph-bidi test-str)])
-      (for-each (lambda (i level)
-                  (format #t "  [~a]: level ~a~%" i level))
-                (iota (length levels)) levels))
-    
-    ;; Show BIDI states
-    (format #t "~%BIDI states:~%")
-    (let ([bidi-states (text-metrics-bidi-state-list metrics)])
-      (for-each (lambda (i state)
-                  (format #t "  [~a]: level=~a override=~a isolate=~a~%" 
-                          i 
-                          (bidi-state-embedding-level state)
-                          (bidi-state-override-status state)
-                          (bidi-state-isolate-status state)))
-                (iota (length bidi-states)) bidi-states))
-    
-    ;; Show computed positions
-    (format #t "~%Computed positions:~%")
-    (let ([positions (text-metrics-cell-positions metrics)])
-      (for-each (lambda (i pos)
-                  (if (< i (string-length test-str))
-                      (format #t "  [~a]: ~c -> position ~a~%" 
-                              i (string-ref test-str i) pos)
-                      (format #t "  [~a]: final -> position ~a~%" i pos)))
-                (iota (length positions)) positions))
-    
-    ;; Expected vs actual
-    (format #t "~%Expected: (1 0 2 2 3 4 4)~%")
-    (format #t "Actual:   ~a~%" (text-metrics-cell-positions metrics))
-    
-    ;; Analysis
-    (format #t "~%Analysis:~%")
-    (let ([positions (text-metrics-cell-positions metrics)])
-      (when (not (= (list-ref positions 2) 2))
-        (format #t "  - LRE should be at position 2, but is at ~a~%" (list-ref positions 2)))
-      (when (not (and (= (list-ref positions 3) 2) (= (list-ref positions 4) 3)))
-        (format #t "  - Gimel/Dalet should be (2,3) but are (~a,~a) - embedding not working~%" 
-                (list-ref positions 3) (list-ref positions 4))))
-    
-    #t))
-
-;; Helper function for string-for-each-with-index if not available
-(define (string-for-each-with-index proc str)
-  (let loop ([i 0])
-    (when (< i (string-length str))
-      (proc i (string-ref str i))
-      (loop (+ i 1)))))
-
-;; Add this test to run the diagnostic
-(test-equal "run LRE embedding diagnostic"
-  #t
-  (debug-bidi-embedding))
-
-;; Main test execution
-(test-end "text-metrics-bidi")
-
-;;; =================================================================
-;;; Test Execution and Cleanup
-;;; =================================================================
-#|
-;; Helper function to run specific test groups
-(define (run-test-group group-name)
-  "Run a specific test group by name"
-  (format #t "Running test group: ~a~%" group-name)
-  ;; SRFI-64 doesn't have built-in group filtering, so we run all tests
-  ;; In a real implementation, you might want to add filtering capability
-  )
-
-;; Print test summary information
-(define (print-test-summary)
-  "Print summary of test results"
-  (format #t "~%=== Test Summary ===~%")
-  (format #t "Total tests: ~a~%" (test-runner-test-count (test-runner-current)))
-  (format #t "Passed: ~a~%" (test-runner-pass-count (test-runner-current)))
-  (format #t "Failed: ~a~%" (test-runner-fail-count (test-runner-current)))
-  (format #t "Skipped: ~a~%" (test-runner-skip-count (test-runner-current)))
-  (format #t "Expected failures: ~a~%" (test-runner-xfail-count (test-runner-current))))
-
-
-;; Print results summary
-(print-test-summary)
-
-;; Exit with appropriate code
-(exit (if (zero? (test-runner-fail-count (test-runner-current))) 0 1))
-|#
+;;; Strict tests for (gano text-metrics), left-to-right layout.
+;;;
+;;; Terms used by the module:
+;;;   x-index  index of a codepoint in the string
+;;;   x-data   index of a base (non-combining) character
+;;;   x-cell   terminal cell column; most characters take 1 cell, wide
+;;;            (CJK) characters 2, combining marks 0 (they share their
+;;;            base's cell) and a tab runs to the next tab stop.
+;;;            Control characters take 1 cell and render as "?".
+
+(define-module (test text-metrics)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-11)
+  #:use-module (srfi srfi-64)
+  #:use-module (gano text-metrics)
+  #:use-module (gano rendering)
+  #:use-module (gano wcwidth)
+  #:use-module (ice-9 format))
+
+(define (tm str . opts) (apply compute-text-metrics str 8 opts))
+(define (positions str . opts)
+  (text-metrics-cell-positions (apply tm str opts)))
+(define* (render str start width #:key (pad? #t) (tabsize 8) (cjk? #f))
+  (text-metrics-render-line-string-only
+   (compute-text-metrics str tabsize #:cjk? cjk?) start width #:pad? pad?))
+
+(define bold (make-sgr #:intensity 'intensity-bold))
+(define default (make-default-sgr))
+(define (bold? sgr) (eq? (sgr-intensity sgr) 'intensity-bold))
+(define (all-default? sgrs) (every (lambda (s) (sgr-equal? s default)) sgrs))
+
+(define (display-width str)
+  "Cells STR occupies when printed (combining marks are 0)."
+  (fold (lambda (ch acc) (+ acc (max 0 (wcwidth ch)))) 0 (string->list str)))
+
+(test-begin "text-metrics")
+
+;;; ---------------------------------------------------------------
+(test-group "construction"
+  (let ([m (tm "hello")])
+    (test-assert "record" (text-metrics? m))
+    (test-equal "string kept" "hello" (text-metrics-string m))
+    (test-equal "tab size kept" 8 (text-metrics-tabsize m))
+    (test-equal "cjk? defaults to #f" #f (text-metrics-cjk? m))
+    (test-equal "one SGR per codepoint" 5 (length (text-metrics-sgr-list m)))
+    (test-assert "SGRs are default" (all-default? (text-metrics-sgr-list m))))
+
+  (test-equal "cjk? kept" #t (text-metrics-cjk? (tm "x" #:cjk? #t)))
+
+  (let ([m (compute-text-metrics-with-sgr "ab" (list bold default) 4)])
+    (test-assert "explicit SGRs kept" (bold? (car (text-metrics-sgr-list m))))
+    (test-equal "explicit tab size" 4 (text-metrics-tabsize m)))
+
+  (test-error "SGR list too short" #t (compute-text-metrics-with-sgr "ab" (list bold) 8))
+  (test-error "SGR list too long" #t (compute-text-metrics-with-sgr "a" (list bold bold) 8))
+  (test-error "tab size 0" #t (compute-text-metrics "a" 0))
+  (test-error "negative tab size" #t (compute-text-metrics "a" -4))
+
+  (let ([m (tm "")])
+    (test-equal "empty: positions" '(0) (text-metrics-cell-positions m))
+    (test-equal "empty: no base chars" '() (text-metrics-base-indices m))
+    (test-equal "empty: cell length" 0 (text-metrics-cell-length m))))
+
+;;; ---------------------------------------------------------------
+(test-group "cell positions"
+  (test-equal "ascii" '(0 1 2 3) (positions "abc"))
+  (test-equal "wide" '(0 1 3 4) (positions "a日b"))
+  (test-equal "all wide" '(0 2 4 6) (positions "日本語"))
+  (test-equal "combining mark shares base's cell" '(0 0 1 2) (positions "éx"))
+  (test-equal "two combining marks" '(0 0 0 1) (positions "é̈"))
+  (test-equal "trailing combining mark" '(0 0 1) (positions "é"))
+  (test-equal "combining after wide" '(0 0 2) (positions "日́"))
+  (test-equal "lone tab" '(0 8) (positions "\t"))
+  (test-equal "tab mid-line" '(0 1 8 9) (positions "a\tb"))
+  (test-equal "trailing tab" '(0 1 2 3 4 5 8) (positions "abcde\t"))
+  (test-equal "tab at a tab stop" '(0 1 2 3 4 5 6 7 8 16)
+              (positions "abcdefgh\t"))
+  (test-equal "consecutive tabs" '(0 8 16) (positions "\t\t"))
+  (test-equal "tab after wide" '(0 2 8) (positions "日\t"))
+  (test-equal "tab size 4" '(0 1 4 5)
+              (text-metrics-cell-positions (compute-text-metrics "a\tb" 4)))
+  (test-equal "ambiguous width, cjk? #f" '(0 1) (positions "±"))
+  (test-equal "ambiguous width, cjk? #t" '(0 2) (positions "±" #:cjk? #t))
+  (test-equal "control char is one cell" '(0 1 2 3) (positions "a\x01b"))
+  (test-equal "DEL is one cell" '(0 1) (positions "\x7f"))
+  (test-equal "C1 control is one cell" '(0 1) (positions "\x85"))
+  (test-equal "zero-width space takes no cell" '(0 1 1 2) (positions "a​b"))
+  ;; क + ि (U+093F, a spacing mark): one cluster, two cells
+  (test-equal "spacing mark widens its cluster" '(0 0 2) (positions "\u0915\u093F"))
+  (test-equal "spacing mark then next char" '(0 0 2 3) (positions "\u0915\u093Fx"))
+  (test-equal "nonspacing and spacing marks" '(0 0 0 2) (positions "\u0915\u0301\u093F"))
+  (test-equal "always one more position than codepoints"
+              11 (length (positions "a日\tb́c\x01±de"))))
+
+;;; ---------------------------------------------------------------
+(test-group "base characters"
+  (let ([m (tm "éẍ")])
+    (test-equal "base indices" '(0 2) (text-metrics-base-indices m))
+    (test-equal "string-base-indices" '(0 2) (text-metrics-string-base-indices m))
+    (test-equal "string-base" "ex" (text-metrics-string-base m))
+    (test-equal "base length" 2 (text-metrics-string-base-length m)))
+  (test-equal "wide and tab are base chars" 3 (text-metrics-string-base-length (tm "日\tz"))))
+
+;;; ---------------------------------------------------------------
+(test-group "x-index <-> x-data"
+  (let ([m (tm "éx")])            ; indices 0 1 2, bases at 0 and 2
+    (test-equal "index 0" 0 (text-metrics-x-index->x-data m 0))
+    (test-equal "index of combining mark counts its base" 1 (text-metrics-x-index->x-data m 1))
+    (test-equal "index 2" 1 (text-metrics-x-index->x-data m 2))
+    (test-equal "index = length" 2 (text-metrics-x-index->x-data m 3))
+    (test-equal "index past end" #f (text-metrics-x-index->x-data m 4))
+    (test-equal "negative index" #f (text-metrics-x-index->x-data m -1))
+
+    (test-equal "data 0" 0 (text-metrics-x-data->x-index m 0))
+    (test-equal "data 1" 2 (text-metrics-x-data->x-index m 1))
+    (test-equal "data = base count is string length" 3 (text-metrics-x-data->x-index m 2))
+    (test-equal "data past end" #f (text-metrics-x-data->x-index m 3))
+    (test-equal "negative data" #f (text-metrics-x-data->x-index m -1)))
+
+  (let ([m (tm "́a")])             ; leading combining mark
+    (test-equal "leading mark: data 0 is index 0" 0 (text-metrics-x-data->x-index m 0))
+    (test-equal "leading mark: one base" 1 (text-metrics-string-base-length m)))
+
+  (let ([m (tm "")])
+    (test-equal "empty: data 0" 0 (text-metrics-x-data->x-index m 0))
+    (test-equal "empty: index 0" 0 (text-metrics-x-index->x-data m 0))
+    (test-equal "empty: data 1" #f (text-metrics-x-data->x-index m 1))))
+
+;;; ---------------------------------------------------------------
+(test-group "to cells"
+  (let ([m (tm "a日b")])
+    (test-equal "index->cell" '(0 1 3 4)
+                (map (lambda (i) (text-metrics-x-index->x-cell m i)) '(0 1 2 3)))
+    (test-equal "index->cell past end" #f (text-metrics-x-index->x-cell m 4))
+    (test-equal "index->cell negative" #f (text-metrics-x-index->x-cell m -1))
+    (test-equal "data->cell" '(0 1 3 4)
+                (map (lambda (d) (text-metrics-x-data->x-cell m d)) '(0 1 2 3)))
+    (test-equal "data->cell past end" #f (text-metrics-x-data->x-cell m 4))
+    (test-equal "data->cell negative" #f (text-metrics-x-data->x-cell m -1))
+    (test-equal "cell length" 4 (text-metrics-cell-length m)))
+  (test-equal "data->cell skips combining marks" 1
+              (text-metrics-x-data->x-cell (tm "éx") 1))
+  (test-equal "empty data->cell 0" 0 (text-metrics-x-data->x-cell (tm "") 0)))
+
+;;; ---------------------------------------------------------------
+(test-group "from cells"
+  (let ([m (tm "\u0915\u093Fx")])
+    (test-equal "both cells of a spacing-mark cluster map to its base" '(0 0 2 3)
+                (map (lambda (c) (text-metrics-x-cell->x-index m c)) '(0 1 2 3))))
+  ;; A cell maps to the base character drawn over it.
+  (let ([m (tm "a日b")])            ; a:0  日:1-2  b:3  end:4
+    (test-equal "cell->index" '(0 1 1 2 3)
+                (map (lambda (c) (text-metrics-x-cell->x-index m c)) '(0 1 2 3 4)))
+    (test-equal "cell->data" '(0 1 1 2 3)
+                (map (lambda (c) (text-metrics-x-cell->x-data m c)) '(0 1 2 3 4)))
+    (test-equal "cell past end" #f (text-metrics-x-cell->x-index m 5))
+    (test-equal "negative cell" #f (text-metrics-x-cell->x-index m -1)))
+  (let ([m (tm "a\tb")])                ; a:0  tab:1-7  b:8  end:9
+    (test-equal "cells inside a tab map to the tab" '(1 1 1 1 1 1 1)
+                (map (lambda (c) (text-metrics-x-cell->x-index m c)) '(1 2 3 4 5 6 7)))
+    (test-equal "after the tab" '(2 3)
+                (map (lambda (c) (text-metrics-x-cell->x-index m c)) '(8 9))))
+  (let ([m (tm "éx")])
+    (test-equal "cell maps to the base, not its combining mark" 0
+                (text-metrics-x-cell->x-index m 0))
+    (test-equal "next base" 2 (text-metrics-x-cell->x-index m 1))
+    (test-equal "end" 3 (text-metrics-x-cell->x-index m 2)))
+  (let ([m (tm "a​b")])            ; zero-width base shares b's cell
+    (test-equal "zero-width char: first codepoint at the cell" 1
+                (text-metrics-x-cell->x-index m 1)))
+  (test-equal "empty: cell 0" 0 (text-metrics-x-cell->x-index (tm "") 0))
+  (test-equal "empty: cell 1" #f (text-metrics-x-cell->x-index (tm "") 1))
+  ;; round trip for every base character
+  (let* ([s "x日\tq́éz"] [m (tm s)])
+    (test-assert "data -> cell -> data round trip"
+                 (every (lambda (d)
+                          (= d (text-metrics-x-cell->x-data m (text-metrics-x-data->x-cell m d))))
+                        (iota (+ 1 (text-metrics-string-base-length m)))))))
+
+;;; ---------------------------------------------------------------
+(test-group "SGR access"
+  (let ([m (compute-text-metrics-with-sgr "a日b" (list default bold default) 8)])
+    (test-assert "at index" (bold? (text-metrics-get-sgr-at-index m 1)))
+    (test-assert "at data" (bold? (text-metrics-get-sgr-at-data m 1)))
+    (test-assert "at cell (second half of wide char)" (bold? (text-metrics-get-sgr-at-cell m 2)))
+    (test-assert "at cell before" (not (bold? (text-metrics-get-sgr-at-cell m 0))))
+    (test-assert "out of range index gives default"
+                 (sgr-equal? default (text-metrics-get-sgr-at-index m 99)))
+    (test-assert "negative index gives default"
+                 (sgr-equal? default (text-metrics-get-sgr-at-index m -1)))
+    (test-assert "out of range data gives default"
+                 (sgr-equal? default (text-metrics-get-sgr-at-data m 99)))
+    (test-assert "out of range cell gives default"
+                 (sgr-equal? default (text-metrics-get-sgr-at-cell m 99)))))
+
+(test-group "SGR updates are non-destructive"
+  (let* ([m (tm "abcd")]
+         [m1 (text-metrics-set-sgr-at-index m 1 bold)])
+    (test-assert "new record has it" (bold? (list-ref (text-metrics-sgr-list m1) 1)))
+    (test-assert "original untouched" (all-default? (text-metrics-sgr-list m)))
+    (test-eq "invalid index returns the same record" m (text-metrics-set-sgr-at-index m 9 bold))
+    (test-eq "negative index returns the same record" m (text-metrics-set-sgr-at-index m -1 bold)))
+  (let ([m (text-metrics-set-sgr-at-data (tm "éx") 1 bold)])
+    (test-equal "set at data uses the base's index" '(#f #f #t)
+                (map bold? (text-metrics-sgr-list m))))
+  (let ([m (text-metrics-set-sgr-range (tm "abcdef") 1 4 bold)])
+    (test-equal "range" '(#f #t #t #t #f #f) (map bold? (text-metrics-sgr-list m))))
+  (let ([m (text-metrics-set-sgr-range (tm "abc") -5 99 bold)])
+    (test-equal "range is clamped" '(#t #t #t) (map bold? (text-metrics-sgr-list m))))
+  (let ([m (tm "abc")])
+    (test-eq "empty range is a no-op" m (text-metrics-set-sgr-range m 2 2 bold))
+    (test-eq "reversed range is a no-op" m (text-metrics-set-sgr-range m 2 1 bold)))
+  (let* ([m (compute-text-metrics-with-sgr "abc" (list bold bold default) 8)]
+         [copy (text-metrics-copy-sgr-range m 0 2)])
+    (test-equal "copy range" '(#t #t) (map bold? copy))
+    (test-assert "copies are fresh records" (not (eq? (car copy) (car (text-metrics-sgr-list m)))))
+    (test-equal "copy clamped" 3 (length (text-metrics-copy-sgr-range m -1 10)))
+    (test-equal "copy reversed range is empty" '() (text-metrics-copy-sgr-range m 2 1)))
+  (let* ([m (compute-text-metrics-with-sgr "ab" (list bold default) 8)])
+    (test-equal "propagate" '(#t #t)
+                (map bold? (text-metrics-sgr-list (text-metrics-propagate-sgr m 0 1))))
+    (test-equal "inherit for combining" '(#t #t)
+                (map bold? (text-metrics-sgr-list (text-metrics-inherit-sgr-for-combining m 0 1))))
+    (test-assert "default for range"
+                 (all-default? (text-metrics-sgr-list (text-metrics-default-sgr-for-range m 0 2))))))
+
+;;; ---------------------------------------------------------------
+(test-group "modification"
+  (let* ([m (tm "ac")]
+         [m1 (text-metrics-insert-char-with-sgr m 1 #\b bold)])
+    (test-equal "insert char" "abc" (text-metrics-string m1))
+    (test-equal "with its SGR" '(#f #t #f) (map bold? (text-metrics-sgr-list m1)))
+    (test-equal "positions recomputed" '(0 1 2 3) (text-metrics-cell-positions m1))
+    (test-equal "original untouched" "ac" (text-metrics-string m)))
+  (test-equal "insert at start" "xab"
+              (text-metrics-string (text-metrics-insert-char-with-sgr (tm "ab") 0 #\x bold)))
+  (test-equal "insert at end" "abx"
+              (text-metrics-string (text-metrics-insert-char-with-sgr (tm "ab") 2 #\x bold)))
+  (test-error "insert past end" #t (text-metrics-insert-char-with-sgr (tm "ab") 3 #\x bold))
+  (test-equal "insert keeps tab size and cjk"
+              '(4 #t)
+              (let ([m (text-metrics-insert-char-with-sgr (compute-text-metrics "a" 4 #:cjk? #t) 0 #\x bold)])
+                (list (text-metrics-tabsize m) (text-metrics-cjk? m))))
+
+  (let ([m (text-metrics-insert-string-with-sgr (tm "ad") 1 "bc" (list bold bold))])
+    (test-equal "insert string" "abcd" (text-metrics-string m))
+    (test-equal "with its SGRs" '(#f #t #t #f) (map bold? (text-metrics-sgr-list m))))
+  (test-error "insert string with wrong SGR count" #t
+              (text-metrics-insert-string-with-sgr (tm "ad") 1 "bc" (list bold)))
+
+  (let ([m (text-metrics-delete-range (compute-text-metrics-with-sgr "abcd" (list default bold bold default) 8) 1 3)])
+    (test-equal "delete range" "ad" (text-metrics-string m))
+    (test-assert "SGRs deleted with it" (all-default? (text-metrics-sgr-list m))))
+  (test-equal "delete clamps" "" (text-metrics-string (text-metrics-delete-range (tm "abc") -2 10)))
+  (test-equal "delete empty range" "abc" (text-metrics-string (text-metrics-delete-range (tm "abc") 1 1)))
+
+  (let ([m (text-metrics-replace-range (tm "abcd") 1 3 "XYZ" (list bold bold bold))])
+    (test-equal "replace range" "aXYZd" (text-metrics-string m))
+    (test-equal "with its SGRs" '(#f #t #t #t #f) (map bold? (text-metrics-sgr-list m))))
+  (test-error "replace with wrong SGR count" #t
+              (text-metrics-replace-range (tm "abcd") 1 3 "XY" (list bold))))
+
+;;; ---------------------------------------------------------------
+(test-group "rendering"
+  (test-equal "whole line, padded" "abc  " (render "abc" 0 5))
+  (test-equal "whole line, unpadded" "abc" (render "abc" 0 5 #:pad? #f))
+  (test-equal "window into the line" "cde" (render "abcdef" 2 3))
+  (test-equal "exact fit" "abc" (render "abc" 0 3))
+  (test-equal "start past end, padded" "   " (render "abc" 5 3))
+  (test-equal "start past end, unpadded" "" (render "abc" 5 3 #:pad? #f))
+  (test-equal "zero width" "" (render "abc" 0 0))
+  (test-equal "empty line" "    " (render "" 0 4))
+
+  ;; tabs
+  (test-equal "tab expands to the tab stop" "a       b " (render "a\tb" 0 10))
+  (test-equal "tab cut off at the right edge" "a   " (render "a\tb" 0 4))
+  (test-equal "tab cut off at the left edge" "     b" (render "a\tb" 3 6))
+  (test-equal "tab stops are absolute when scrolled" "b      cd " (render "ab\tcd" 1 10))
+  (test-equal "tab size 4" "a   b" (render "a\tb" 0 5 #:tabsize 4))
+
+  ;; wide characters
+  (test-equal "wide chars" "日本" (render "日本" 0 4))
+  (test-equal "wide char cut off at the right edge becomes a space" "日 "
+              (render "日本語" 0 3))
+  (test-equal "wide char cut off at the left edge becomes a space" " 本 "
+              (render "日本語" 1 4))
+  (test-equal "ambiguous width with cjk? #t" "\u00b1" (render "\u00b1x" 0 2 #:cjk? #t))
+  (test-equal "ambiguous width with cjk? #f" "\u00b1x" (render "\u00b1x" 0 2))
+
+  ;; combining marks and control characters
+  (test-equal "combining marks kept with their base" "éx " (render "éx" 0 3))
+  (test-equal "combining mark dropped with its base" "x" (render "éx" 1 1))
+  (test-equal "control characters shown as ?" "a?b" (render "a\x01b" 0 3))
+
+  (test-equal "cluster with a spacing mark" "\u0915\u093F " (render "\u0915\u093F" 0 3))
+  (test-equal "cluster with a spacing mark cut at the right edge" "a " (render "a\u0915\u093F" 0 2))
+  (test-equal "cluster with a spacing mark cut at the left edge" " x" (render "\u0915\u093Fx" 1 2))
+  ;; SGR list follows the rendered codepoints
+  (let-values ([(str sgrs)
+                (text-metrics-render-line
+                 (compute-text-metrics-with-sgr "a\tb" (list default bold default) 8) 0 10)])
+    (test-equal "one SGR per rendered codepoint" (string-length str) (length sgrs))
+    (test-equal "tab's spaces carry the tab's SGR" '(#f #t #t #t #t #t #t #t #f #f)
+                (map bold? sgrs)))
+  (let-values ([(str sgrs)
+                (text-metrics-render-line
+                 (compute-text-metrics-with-sgr "日本" (list bold default) 8) 1 3)])
+    (test-equal "half-wide space keeps that char's SGR" '(#t #f) (map bold? sgrs))
+    (test-equal "and the string matches" " 本" str))
+
+  ;; Every padded render fills exactly the requested width.
+  (let ([samples '("" "abc" "a\tb\tc" "日本語" "é̈x日\t!"
+                   "\t日á\x01b" "x±y")])
+    (test-assert "rendered width always equals the window width"
+                 (every (lambda (s)
+                          (every (lambda (start)
+                                   (every (lambda (w)
+                                            (= w (display-width (render s start w))))
+                                          (iota 12)))
+                                 (iota 12)))
+                        samples))))
+
+(test-group "spans"
+  (let ([m (compute-text-metrics-with-sgr "aabb" (list bold bold default default) 8)])
+    (let ([spans (text-metrics-render-line-with-sgr m 0 6)])
+      (test-equal "render spans: text" '("aa" "bb  ") (map car spans))
+      (test-equal "render spans: attributes" '(#t #f) (map (lambda (s) (bold? (cdr s))) spans)))
+    (let ([spans (text-metrics-get-rendered-spans m)])
+      (test-equal "whole-line spans" '("aa" "bb") (map car spans))))
+  (test-equal "no spans for an empty render" '() (text-metrics-render-line-with-sgr (tm "") 0 0))
+  (test-equal "no spans for an empty line" '() (text-metrics-get-rendered-spans (tm ""))))
+
+;;; ---------------------------------------------------------------
+(test-group "long lines"
+  ;; Building metrics should be linear, not quadratic, in line length.
+  (let* ([s (make-string 20000 #\a)]
+         [t0 (get-internal-real-time)]
+         [m (tm s)]
+         [secs (/ (- (get-internal-real-time) t0) internal-time-units-per-second 1.0)])
+    (test-equal "20000-char line" 20000 (text-metrics-cell-length m))
+    (test-assert (format #f "built in under 2s (took ~,2fs)" secs) (< secs 2.0))))
+
+(test-end "text-metrics")
