@@ -162,7 +162,8 @@
                ,(map sgr-copy (cbuf-sgr-stack cbuf)))
     (buffer-state ,(cbuf-modified? cbuf)
                   ,(cbuf-final-newline? cbuf)
-                  ,(cbuf-final-newline-policy cbuf))))
+                  ,(cbuf-final-newline-policy cbuf)
+                  ,(cbuf-line-ending cbuf))))
 
 (define (cbuf-restore-base-state! cbuf base-state)
   "Restore the base state for all operations"
@@ -204,10 +205,12 @@
     (when buffer-state
       (let ([modified? (cadr buffer-state)]
             [final-newline? (caddr buffer-state)]
-            [final-newline-policy (cadddr buffer-state)])
+            [final-newline-policy (cadddr buffer-state)]
+            [line-ending (list-ref buffer-state 4)])
         (set-cbuf-modified?! cbuf modified?)
         (set-cbuf-final-newline?! cbuf final-newline?)
-        (set-cbuf-final-newline-policy! cbuf final-newline-policy)))))
+        (set-cbuf-final-newline-policy! cbuf final-newline-policy)
+        (set-cbuf-line-ending! cbuf line-ending)))))
 
 ;;; =================================================================
 ;;; UNDO RECORDING AND EXECUTION
@@ -273,6 +276,8 @@
 
 (define (cbuf-set-max-undo-operations! max-ops)
   "Set the maximum number of undo operations to keep"
+  (unless (and (exact-integer? max-ops) (> max-ops 0))
+    (error "cbuf-set-max-undo-operations!: must be a positive integer" max-ops))
   (set! *max-undo-operations* max-ops))
 
 ;;; =================================================================
@@ -324,7 +329,7 @@
 ;; String insertion handler
 (define (capture-string-insertion-state cbuf string position)
   "Capture state for string insertion"
-  (if (string-contains string "\n")
+  (if (> (length (string-split-lines string)) 1)
       ;; Multi-line string insertion
       `((type multiline)
         (line-num ,(cbuf-line-cur cbuf))
@@ -375,8 +380,9 @@
         (end-line ,end-line)
         (start-line-metrics ,(list-ref (cbuf-text-metrics cbuf) start-line))
         (end-line-metrics ,(list-ref (cbuf-text-metrics cbuf) end-line))
+        ;; whole lines strictly between start-line and end-line
         (deleted-lines ,(take (drop (cbuf-text-metrics cbuf) (+ start-line 1)) 
-                             (- end-line start-line))))))
+                             (- end-line start-line 1))))))
 
 (define (restore-region-deletion-state cbuf state start-line start-x-data end-line end-x-data)
   "Restore state after region deletion"
@@ -525,11 +531,12 @@
     (validate-absolute-position-pure line column max-line max-column operation)))
 
 (define (cbuf-validate-combining-mark-insertion cbuf char-new position)
-  "Validate combining mark insertion using cbuf-utils validation"
+  "Check that inserting CHAR-NEW at data POSITION of the current line
+   doesn't give a grapheme cluster too many combining marks."
   (when (char-combining-mark? char-new)
     (let* ([txt (cbuf-text-cur cbuf)]
            [validation-result (validate-combining-marks-at-insertion
-                              txt position (string char-new))])
+                              txt (cbuf-x-data->x-index cbuf position) (string char-new))])
       (unless (car validation-result)
         (let ([violations (cadr validation-result)])
           (when (not (null? violations))
@@ -537,17 +544,12 @@
               (error "Invalid combining mark insertion" violation))))))))
 
 (define (cbuf-validate-string-insertion cbuf str position)
-  "Validate string insertion for combining mark limits"
-  (let* ([current-text (cbuf-text-cur cbuf)]
-         [validation-result (validate-string-combining-marks str)])
-
-    ;; First check if the string itself is valid
-    (unless (car validation-result)
-      (error "Invalid combining marks in inserted string" (cadr validation-result)))
-
-    ;; Then check insertion at position
+  "Check that inserting STR at data POSITION of the current line doesn't
+   give a grapheme cluster too many combining marks.  (A leading
+   combining mark in STR attaches to the character before POSITION.)"
+  (let ([current-text (cbuf-text-cur cbuf)])
     (let ([insertion-result (validate-combining-marks-at-insertion
-                            current-text position str)])
+                            current-text (cbuf-x-data->x-index cbuf position) str)])
       (unless (car insertion-result)
         (error "Invalid combining mark insertion at position"
                position (cadr insertion-result))))))
@@ -692,7 +694,13 @@
 ;;; =================================================================
 
 (define (cbuf-insert-char! cbuf char-new)
-  "Insert a character at the current position with undo support"
+  "Insert a character at the current position with undo support.
+   A line-ending character (LF, CR, LS, PS) splits the line instead."
+  (if (memv char-new '(#\newline #\return #\x2028 #\x2029))
+      (cbuf-insert-newline! cbuf)
+      (insert-ordinary-char! cbuf char-new)))
+
+(define (insert-ordinary-char! cbuf char-new)
   (let* ([x-data (cbuf-x-data cbuf)]
          [x-index (cbuf-x-data->x-index cbuf x-data)])
 
@@ -761,9 +769,7 @@
          [x-index (cbuf-x-data->x-index cbuf x-data)]
          [current-line (cbuf-line-cur cbuf)]
          [text (cbuf-text-cur cbuf)]
-         [sgr-list (cbuf-sgr-list-cur cbuf)]
-         [at-end-of-buffer? (and (= current-line (- (cbuf-line-count cbuf) 1))
-                                (= x-data (cbuf-text-cur-base-length cbuf)))])
+         [sgr-list (cbuf-sgr-list-cur cbuf)])
     
     ;; Save undo state
     (cbuf-save-undo! cbuf 'insert-newline x-data)
@@ -788,10 +794,6 @@
              [new-metrics-list (list-insert metrics-list (+ current-line 1) right-metrics)])
         (set-cbuf-text-metrics! cbuf new-metrics-list))
       
-      ;; Update final newline status
-      (when at-end-of-buffer?
-        (set-cbuf-final-newline?! cbuf #t))
-      
       ;; Move cursor to beginning of new line
       (cbuf-set-y! cbuf (+ current-line 1))
       (cbuf-set-x! cbuf 0 'data)
@@ -802,18 +804,10 @@
 (define (cbuf-delete-line! cbuf)
   "Delete the current line with undo support"
   (when (> (cbuf-line-count cbuf) 1)  ; Don't delete if it's the only line
-    (let ([current-line (cbuf-line-cur cbuf)]
-          [is-last-line? (= (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 1))]
-          [is-empty-last-line? (and (= (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 1))
-                                   (string-null? (cbuf-text-cur cbuf)))])
+    (let ([current-line (cbuf-line-cur cbuf)])
 
       ;; Save undo state
       (cbuf-save-undo! cbuf 'delete-line)
-
-      ;; Update final newline status
-      (when (and is-last-line? is-empty-last-line? (cbuf-final-newline? cbuf))
-        ;; Deleting empty last line removes final newline
-        (set-cbuf-final-newline?! cbuf #f))
 
       ;; Remove the line
       (let* ([metrics-list (cbuf-text-metrics cbuf)]
@@ -1046,6 +1040,13 @@
             (< end-line 0) (>= end-line (cbuf-line-count cbuf)))
     (error "cbuf-delete-region!: line numbers out of range" start-line end-line))
   
+  ;; Clamp columns to their lines
+  (let ([clamp (lambda (line x)
+                 (max 0 (min x (text-metrics-string-base-length
+                                (list-ref (cbuf-text-metrics cbuf) line)))))])
+    (set! start-x-data (clamp start-line start-x-data))
+    (set! end-x-data (clamp end-line end-x-data)))
+
   ;; Save undo state
   (cbuf-save-undo! cbuf 'delete-region start-line start-x-data end-line end-x-data)
   
@@ -1076,7 +1077,8 @@
                                                              #:cjk? (cbuf-cjk? cbuf))])
              
              ;; Update the line
-             (cbuf-update-metrics-cur! cbuf new-metrics)
+             (cbuf-restore-line-metrics! cbuf start-line new-metrics)
+             (set-cbuf-modified?! cbuf #t)
              
              ;; Position cursor at start of deletion
              (cbuf-set-y! cbuf start-line)
@@ -1192,11 +1194,8 @@
                              (max mark-x-data cursor-x-data)
                              (if (> mark-line cursor-line) mark-x-data cursor-x-data))])
 
-          ;; Position cursor at start of region
-          (cbuf-set-y! cbuf start-line)
-          (cbuf-set-x! cbuf start-x-data 'data)
-
-          ;; Delete the region (this will save its own undo)
+          ;; Delete the region (this saves its own undo, with the cursor
+          ;; and mark as they were, and leaves the cursor at the start)
           (cbuf-delete-region! cbuf start-line start-x-data end-line end-x-data)))
 
       ;; Clear the mark
@@ -1302,24 +1301,10 @@
   (cbuf-apply-final-newline-policy cbuf))
 
 (define (cbuf-normalize-final-newline! cbuf)
-  "Adjust buffer final newline state to match policy"
-  (let ([should-have? (cbuf-apply-final-newline-policy cbuf)]
-        [currently-has? (cbuf-final-newline? cbuf)])
-
-    (cond
-      ;; Need to add final newline
-      [(and should-have? (not currently-has?))
-       (cbuf-end-of-buffer! cbuf)
-       (cbuf-insert-newline! cbuf)]
-
-      ;; Need to remove final newline (delete empty last line)
-      [(and (not should-have?) currently-has?)
-       (let ([last-line-index (- (cbuf-line-count cbuf) 1)])
-         (when (and (> (cbuf-line-count cbuf) 1)
-                   (string-null? (cbuf-get-line-text cbuf last-line-index)))
-           (cbuf-set-y! cbuf last-line-index)
-           (cbuf-delete-line! cbuf)
-           (set-cbuf-final-newline?! cbuf #f)))])))
+  "Make final-newline? agree with the policy ('preserve leaves it alone).
+   The trailing line ending is not a line of the buffer, so no lines are
+   added or removed."
+  (set-cbuf-final-newline?! cbuf (cbuf-apply-final-newline-policy cbuf)))
 
 (define (cbuf-set-final-newline-policy! cbuf policy)
   "Set final newline policy and optionally apply it immediately"
@@ -1459,12 +1444,12 @@
   (< (cbuf-line-cur cbuf) (cbuf-form-size cbuf)))
 
 (define (cbuf-on-last-page? cbuf)
-  "Return #t if cursor is on last page"
+  "Return #t if the cursor's page (pages are FORM-SIZE lines) is the last:
+   no line of the buffer starts a following page."
   (let* ([y (cbuf-line-cur cbuf)]
          [ps (cbuf-form-size cbuf)]
-         [y-on-page (remainder y ps)]
          [y-start-of-next-page (* ps (+ (quotient y ps) 1))])
-    (>= (+ y-start-of-next-page y-on-page) (cbuf-line-count cbuf))))
+    (>= y-start-of-next-page (cbuf-line-count cbuf))))
 
 ;;; =================================================================
 ;;; MODULE INITIALIZATION
