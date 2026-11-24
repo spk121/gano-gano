@@ -11,16 +11,23 @@ Requires Guile 3.0.  From the source tree:
 The first run byte-compiles the modules into Guile's cache, which takes
 a minute; later starts are quick.
 
-Keys (minimum viable editor):
+Keys (M- means Alt, or Esc then the key):
 
-    arrows        move the cursor
-    Backspace     delete before the cursor (joins lines at line start)
-    Delete        delete under the cursor (joins lines at line end)
-    Enter         split the line
-    ^S            save
-    ^X            exit (refuses if there are unsaved changes)
-    ^Q            exit without saving
-    ^C            show the cursor position
+    arrows, Home/End, PgUp/PgDn   move (also ^A/^E, ^Y/^V)
+    Backspace, Delete             delete (joining lines at line ends)
+    Enter, Tab                    split the line, insert a tab
+    ^K / ^U                       cut line / paste (consecutive cuts
+                                  are pasted together)
+    M-U / M-E                     undo / redo
+    ^W                            search (ignores case, wraps around;
+                                  Enter at the prompt repeats the last)
+    ^_ or M-G                     go to line[,column]
+    ^S                            save (asks for a name if there is none)
+    ^O                            write out under a new name
+    ^X                            exit (offers to save unsaved changes)
+    ^Q                            exit, discarding unsaved changes
+    ^C                            show the cursor position; at a prompt,
+                                  cancel
 
 Testing
 -------

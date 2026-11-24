@@ -456,6 +456,10 @@
      ;; Control + letter combinations
      [(<= 1 code 26)
       (make-key #:char (integer->char (+ code 96)) #:ctrl? #t)]  ; ^A = 1, etc.
+
+     ;; ^\ ^] ^^ ^_ (28-31)
+     [(<= 28 code 31)
+      (make-key #:char (integer->char (+ code 64)) #:ctrl? #t)]
      
      ;; Other control characters
      [else

@@ -15,16 +15,19 @@
 (define (char-key ch) (make-key #:char ch))
 (define (sym-key s) (make-key #:symbol s))
 (define (ctrl-key* ch) (make-key #:char ch #:ctrl? #t))
+(define (alt-key ch) (make-key #:char ch #:alt? #t))
 
 (define (type! state . items)
   "Feed ITEMS to the editor: strings are typed character by character,
-   symbols are special keys, and (ctrl . #\\x) pairs are control keys."
+   symbols are special keys, and (ctrl . #\\x) / (alt . #\\x) pairs are
+   control / alt keys."
   (for-each
    (lambda (item)
      (cond
       [(string? item) (string-for-each (lambda (ch) (handle-key state (char-key ch))) item)]
       [(symbol? item) (handle-key state (sym-key item))]
       [(and (pair? item) (eq? (car item) 'ctrl)) (handle-key state (ctrl-key* (cdr item)))]
+      [(and (pair? item) (eq? (car item) 'alt)) (handle-key state (alt-key (cdr item)))]
       [else (error "bad item" item)]))
    items)
   state)
@@ -135,11 +138,28 @@
 
   (let ([st (open-editor "text\n")])
     (type! st "more" '(ctrl . #\x))
-    (test-assert "^X refuses with unsaved changes" (not (editor-quit? st)))
-    (test-assert "and says why" (string-prefix? "Buffer modified" (editor-status-message st)))
-    (type! st '(ctrl . #\q))
-    (test-assert "^Q quits anyway" (editor-quit? st))
+    (test-assert "^X with unsaved changes asks first" (not (editor-quit? st)))
+    (test-assert "asks to save" (string-prefix? "Save modified buffer?" (editor-prompt-label st)))
+    (type! st '(ctrl . #\c))
+    (test-assert "^C cancels the question" (not (editor-prompt-label st)))
+    (test-assert "and doesn't quit" (not (editor-quit? st)))
+    (type! st '(ctrl . #\x) "n")
+    (test-assert "N quits without saving" (editor-quit? st))
     (test-equal "file untouched" "text\n" (read-file (editor-filename st)))
+    (delete-file (editor-filename st)))
+
+  (let ([st (open-editor "text\n")])
+    (type! st "more " '(ctrl . #\x) "y")
+    (test-equal "Y offers the file name" (editor-filename st) (editor-prompt-input st))
+    (type! st 'enter)
+    (test-assert "then saves and quits" (editor-quit? st))
+    (test-equal "saved" "more text\n" (read-file (editor-filename st)))
+    (delete-file (editor-filename st)))
+
+  (let ([st (open-editor "text\n")])
+    (type! st "more" '(ctrl . #\q))
+    (test-assert "^Q quits without asking" (editor-quit? st))
+    (test-equal "file untouched by ^Q" "text\n" (read-file (editor-filename st)))
     (delete-file (editor-filename st)))
 
   (let ([st (open-editor "text\n")])
@@ -160,7 +180,7 @@
     (test-assert "text is drawn" (string-contains screen "first line"))
     (test-assert "file name in status line"
                  (string-contains screen (basename (editor-filename st))))
-    (test-assert "help is drawn" (string-contains screen "^X Exit"))
+    (test-assert "help is drawn" (string-contains screen "^S Sa"))
     (test-assert "cursor placed at top left" (string-suffix? "\x1b[1;1H\x1b[?25h" screen))
     (type! st 'down 'right 'right)
     (render-screen st)
@@ -193,6 +213,189 @@
   (let ([st (open-editor "bell\a!\n")])
     (test-assert "control characters are not sent to the terminal"
                  (not (string-index (render-screen st) #\alarm)))
+    (delete-file (editor-filename st))))
+
+;;; ---------------------------------------------------------------
+;;; Phase 3 commands
+;;; ---------------------------------------------------------------
+
+(test-group "home end page"
+  (let ([st (open-editor (string-join (map (lambda (i) (format #f "line ~a" i)) (iota 40))
+                                      "\n" 'suffix)
+                         #:width 40 #:height 13)])       ; 10 text rows
+    (type! st 'right 'right 'end)
+    (test-equal "End" '(0 6) (cursor st))
+    (type! st 'home)
+    (test-equal "Home" '(0 0) (cursor st))
+    (type! st '(ctrl . #\e))
+    (test-equal "^E" '(0 6) (cursor st))
+    (type! st '(ctrl . #\a))
+    (test-equal "^A" '(0 0) (cursor st))
+    (type! st 'page-down)
+    (test-equal "PgDn moves one screen" 10 (car (cursor st)))
+    (type! st '(ctrl . #\v) 'page-up)
+    (test-equal "^V and PgUp" 10 (car (cursor st)))
+    (type! st '(ctrl . #\y))
+    (test-equal "^Y" 0 (car (cursor st)))
+    (delete-file (editor-filename st))))
+
+(test-group "tab"
+  (let ([st (open-editor "ab\n")])
+    (type! st 'right 'tab)
+    (test-equal "Tab inserts a tab" "a\tb\n" (buffer-text st))
+    (test-assert "and it is drawn as spaces" (string-contains (render-screen st) "a       b"))
+    (delete-file (editor-filename st))))
+
+(test-group "cut and paste"
+  (let ([st (open-editor "one\ntwo\nthree\nfour\n")])
+    (type! st 'down '(ctrl . #\k) '(ctrl . #\k))
+    (test-equal "two cuts" "one\nfour\n" (buffer-text st))
+    (test-equal "clipboard collects consecutive cuts" "two\nthree\n" (editor-clipboard st))
+    (type! st '(ctrl . #\u))
+    (test-equal "paste puts both back" "one\ntwo\nthree\nfour\n" (buffer-text st))
+    (test-equal "cursor after the pasted text" '(3 0) (cursor st))
+    (type! st 'up 'up '(ctrl . #\k) 'down '(ctrl . #\k))
+    (test-equal "a cut after moving starts a new clipboard" "four" (editor-clipboard st))
+    (delete-file (editor-filename st)))
+
+  (let ([st (open-editor "a\nlast")])
+    (type! st 'down '(ctrl . #\k))
+    (test-equal "cutting the last line empties it" "a\n" (buffer-text st))
+    (test-equal "clipboard has the text" "last" (editor-clipboard st))
+    (type! st '(ctrl . #\k))
+    (test-equal "cutting an empty last line does nothing" "a\n" (buffer-text st))
+    (delete-file (editor-filename st)))
+
+  (let ([st (open-editor "x\n")])
+    (type! st '(ctrl . #\u))
+    (test-equal "nothing to paste" "Nothing to paste" (editor-status-message st))
+    (delete-file (editor-filename st))))
+
+(test-group "undo and redo"
+  (let ([st (open-editor "start\n")])
+    (type! st "hello world")
+    (test-equal "typed" "hello worldstart\n" (buffer-text st))
+    (type! st '(alt . #\u))
+    (test-equal "undo removes the last word" "hello start\n" (buffer-text st))
+    (type! st '(alt . #\u))
+    (test-equal "undo again removes the first" "start\n" (buffer-text st))
+    (test-assert "back to unmodified" (not (editor-modified? st)))
+    (test-equal "cursor restored" '(0 0) (cursor st))
+    (type! st '(alt . #\u))
+    (test-equal "nothing more to undo" "Nothing to undo" (editor-status-message st))
+    (type! st '(alt . #\e) '(alt . #\e))
+    (test-equal "redo twice" "hello worldstart\n" (buffer-text st))
+    (test-equal "cursor after redo" '(0 11) (cursor st))
+    (type! st '(alt . #\u) "X" '(alt . #\e))
+    (test-equal "an edit clears redo" "Nothing to redo" (editor-status-message st))
+    (delete-file (editor-filename st)))
+
+  (let ([st (open-editor "one\ntwo\nthree\n")])
+    (type! st 'down '(ctrl . #\k) 'enter 'backspace 'delete)
+    (test-equal "after edits" "one\nhree\n" (buffer-text st))
+    (type! st '(alt . #\u) '(alt . #\u) '(alt . #\u) '(alt . #\u))
+    (test-equal "each edit undone in turn" "one\ntwo\nthree\n" (buffer-text st))
+    (type! st 'down 'down '(alt . #\u))
+    (test-equal "movement isn't an edit" "Nothing to undo" (editor-status-message st))
+    (delete-file (editor-filename st))))
+
+(test-group "search"
+  (let ([st (open-editor "alpha beta\ngamma BETA\ndelta\n")])
+    (type! st '(ctrl . #\w))
+    (test-equal "search prompt" "Search: " (editor-prompt-label st))
+    (type! st "beta" 'enter)
+    (test-equal "found, cursor at start of match" '(0 6) (cursor st))
+    (type! st '(ctrl . #\w))
+    (test-equal "prompt offers previous search" "Search [beta]: " (editor-prompt-label st))
+    (type! st 'enter)
+    (test-equal "Enter repeats it; case is ignored" '(1 6) (cursor st))
+    (type! st '(ctrl . #\w) 'enter)
+    (test-equal "wraps to the top" '(0 6) (cursor st))
+    (test-equal "and says so" "Search wrapped" (editor-status-message st))
+    (type! st '(ctrl . #\w) "delt" 'enter)
+    (test-equal "another word" '(2 0) (cursor st))
+    (type! st '(ctrl . #\w) 'enter)
+    (test-equal "only one" "This is the only occurrence" (editor-status-message st))
+    (type! st '(ctrl . #\w) "zzz" 'enter)
+    (test-equal "not found" "\"zzz\" not found" (editor-status-message st))
+    (test-equal "cursor stays" '(2 0) (cursor st))
+    (type! st '(ctrl . #\w) "abc" 'backspace 'backspace)
+    (test-equal "backspace edits the prompt" "a" (editor-prompt-input st))
+    (type! st '(ctrl . #\c))
+    (test-equal "^C cancels" "Cancelled" (editor-status-message st))
+    (test-equal "search text isn't typed into the buffer"
+                "alpha beta\ngamma BETA\ndelta\n" (buffer-text st))
+    (delete-file (editor-filename st))))
+
+(test-group "go to line"
+  (let ([st (open-editor "a\nbb\nccc\ndddd\n")])
+    (type! st '(ctrl . #\_) "3" 'enter)
+    (test-equal "line 3" '(2 0) (cursor st))
+    (type! st '(alt . #\g) "4,3" 'enter)
+    (test-equal "line 4 column 3" '(3 2) (cursor st))
+    (type! st '(ctrl . #\_) "99,99" 'enter)
+    (test-equal "clamped to the end" '(3 4) (cursor st))
+    (type! st '(ctrl . #\_) "x" 'enter)
+    (test-equal "bad number" "Invalid line or column number" (editor-status-message st))
+    (delete-file (editor-filename st))))
+
+(test-group "write out"
+  (let* ([st (open-editor "text\n")]
+         [other (temp-file #f)])
+    (type! st "new " '(ctrl . #\o))
+    (test-equal "prompt shows current name" (editor-filename st) (editor-prompt-input st))
+    (type! st '(ctrl . #\u))
+    (test-equal "^U clears the prompt" "" (editor-prompt-input st))
+    (string-for-each (lambda (c) (type! st (string c))) other)
+    (type! st 'enter)
+    (test-equal "written under the new name" "new text\n" (read-file other))
+    (test-equal "which becomes the file name" other (editor-filename st))
+    (test-assert "saved" (not (editor-modified? st)))
+    (delete-file other))
+
+  (let* ([st (open-editor "mine\n")]
+         [mine (editor-filename st)]
+         [other (temp-file "theirs\n")])
+    (type! st '(ctrl . #\o) '(ctrl . #\u))
+    (string-for-each (lambda (c) (type! st (string c))) other)
+    (type! st 'enter)
+    (test-assert "asks before overwriting another file"
+                 (string-contains (editor-prompt-label st) "exists"))
+    (type! st "n")
+    (test-equal "N leaves it alone" "theirs\n" (read-file other))
+    (type! st '(ctrl . #\o) '(ctrl . #\u))
+    (string-for-each (lambda (c) (type! st (string c))) other)
+    (type! st 'enter "y")
+    (test-equal "Y overwrites" "mine\n" (read-file other))
+    (delete-file other)
+    (delete-file mine))
+
+  (let ([st (make-editor-state)])
+    (type! st "untitled" '(ctrl . #\s))
+    (test-equal "^S with no file name asks for one" "File Name to Write: "
+                (editor-prompt-label st))
+    (let ([name (temp-file #f)])
+      (string-for-each (lambda (c) (type! st (string c))) name)
+      (type! st 'enter)
+      (test-equal "and saves there" "untitled\n" (read-file name))
+      (delete-file name)))
+
+  (let* ([st (open-editor "x\n")]
+         [mine (editor-filename st)])
+    (type! st "y" '(ctrl . #\o) '(ctrl . #\u))
+    (string-for-each (lambda (c) (type! st (string c))) "/nonexistent-dir/file")
+    (type! st 'enter)
+    (test-assert "write errors are reported" (string-prefix? "Error writing" (editor-status-message st)))
+    (test-assert "buffer still modified" (editor-modified? st))
+    (delete-file mine)))
+
+(test-group "prompt rendering"
+  (let ([st (open-editor "x\n" #:width 40 #:height 10)])
+    (type! st '(ctrl . #\w) "ab")
+    (let ([screen (render-screen st)])
+      (test-assert "prompt drawn on the status row" (string-contains screen "\x1b[8;1H\x1b[7mSearch: ab"))
+      (test-assert "prompt help" (string-contains screen "^C Cancel"))
+      (test-assert "cursor in the prompt" (string-suffix? "\x1b[8;11H\x1b[?25h" screen)))
     (delete-file (editor-filename st))))
 
 (test-end "editor")
