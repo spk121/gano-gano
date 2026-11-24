@@ -96,6 +96,7 @@
 
     ;; Undo registration
     cbuf-register-standard-undo-operations!
+    cbuf-save-line-range-undo!            ; for compound operations elsewhere
     ))
 
 ;;; =================================================================
@@ -140,9 +141,13 @@
                 (length (cadr (assq 'lines state)))
                 (line-slice cbuf start (post-edit-line-count cbuf state))))))
 
-(define (save-line-range-undo! cbuf start end undo?)
+(define* (cbuf-save-line-range-undo! cbuf start end #:optional (undo? #t))
+  "Record one undo step for an edit about to change lines START .. END
+   (it may change how many lines there are).  Does nothing if UNDO? is #f."
   (when undo?
     (cbuf-save-undo! cbuf 'line-range start end)))
+
+(define save-line-range-undo! cbuf-save-line-range-undo!)
 
 ;;; =================================================================
 ;;; HELPER FUNCTIONS
