@@ -4,30 +4,49 @@ gano - a simple console text editor written in GNU Guile
 Running
 -------
 
-Requires Guile 3.0.  From the source tree:
+Requires Guile 3.0.  gano runs from the source tree (there is no
+`make install` yet):
 
     bin/gano [FILE]
+    bin/gano --help | --version
 
-Without a `make`, the first run byte-compiles the modules into
-.cache/guile, which takes about 20 seconds; later starts are quick.
+Run `make` first to byte-compile the modules; without it, the first run
+compiles them into .cache/guile, which takes about 20 seconds.
 
-Keys (M- means Alt, or Esc then the key):
+Files are read and written as UTF-8, keeping their line endings and
+whether they end with a newline.  A file that is not valid UTF-8 opens
+with its bad bytes shown as U+FFFD, and gano asks before saving over it.
+
+Keys
+----
+
+^G shows every command with its keys, and A-x runs any command by name
+(Tab completes the name).  ^ means Ctrl; A- means Alt (or Esc, then the
+key).  The main ones:
 
     arrows, Home/End, PgUp/PgDn   move (also ^A/^E, ^Y/^V)
+    C-left/C-right, C-up/C-down   move by word / paragraph
+    A-\ / A-/                     first / last line
+    ^_ or A-g                     go to line[,column]
     Backspace, Delete             delete (joining lines at line ends)
-    Enter, Tab                    split the line, insert a tab
     ^K / ^U                       cut line / paste (consecutive cuts
                                   are pasted together)
-    M-U / M-E                     undo / redo
-    ^W                            search (ignores case, wraps around;
-                                  Enter at the prompt repeats the last)
-    ^_ or M-G                     go to line[,column]
+    ^^ (Ctrl+6) or A-a            start selecting; A-6 copies
+    A-u / A-e                     undo / redo
+    ^W / A-q                      search forward / backward
+    ^\ or A-r                     replace, asking at each match
+                                  (Y/N, A for all the rest, ^C to stop)
     ^S                            save (asks for a name if there is none)
     ^O                            write out under a new name
     ^X                            exit (offers to save unsaved changes)
     ^Q                            exit, discarding unsaved changes
     ^C                            show the cursor position; at a prompt,
                                   cancel
+
+At the search, replace and go-to-line prompts, ^Y and ^V go to the
+first and last line.  The keys are kept in a command table
+(src/gano/commands.scm), which the help rows and ^G screen are made
+from.
 
 Building and testing
 --------------------
@@ -61,5 +80,5 @@ Layout
     src/gano/keys.scm       key objects
     src/gano/text-metrics.scm, char.scm, wcwidth.scm, ...
                             Unicode text measurement (left to right)
-    tools/                  generators for the Unicode tables
+    tools/                  the wcwidth table generator, compile cache helper
     attic/                  earlier experiments, kept for reference

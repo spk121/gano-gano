@@ -42,11 +42,15 @@
   #:use-module (gano commands)      ; Command table: names, modes, shortcuts
   #:use-module (srfi srfi-1)        ; List utilities
   #:use-module (srfi srfi-9)        ; Record types
+  #:use-module (srfi srfi-11)       ; let-values
   #:use-module (srfi srfi-13)       ; String utilities
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (ice-9 textual-ports)
-  #:export (make-editor-state
+  #:use-module (ice-9 binary-ports)
+  #:use-module (rnrs bytevectors)
+  #:export (gano-version
+            make-editor-state
             editor-state?
             editor-cbuf
             editor-frame
@@ -64,11 +68,16 @@
             editor-commands
 
             load-buffer
+            read-buffer
+            editor-bad-utf-8-file
             save-buffer
             handle-key
             editor-resize!
             render-screen
             editor-main))
+
+;; The version, also read by the Makefile
+(define gano-version "0.0.1")
 
 ;;; =================================================================
 ;;; EDITOR STATE
@@ -99,7 +108,7 @@
 (define-record-type <editor-state>
   (%make-editor-state cbuf frame filename width height quit? status-message
                       prompt typing-run saved-undo-top last-command
-                      clipboard last-search base-mode help)
+                      clipboard last-search base-mode help bad-utf-8-file)
   editor-state?
   (cbuf editor-cbuf set-editor-cbuf!)
   (frame editor-frame set-editor-frame!)
@@ -124,18 +133,23 @@
   (base-mode editor-base-mode set-editor-base-mode!)
   ;; While the help screen is shown, (CBUF . FRAME) holding the help
   ;; text; otherwise #f
-  (help editor-help set-editor-help!))
+  (help editor-help set-editor-help!)
+  ;; The name of the file if it was not valid UTF-8 when read (its bad
+  ;; bytes became U+FFFD, so saving over it changes them), else #f
+  (bad-utf-8-file editor-bad-utf-8-file set-editor-bad-utf-8-file!))
 
 (define (text-area-height height)
   (max 1 (- height reserved-rows)))
 
 (define* (make-editor-state #:key (filename #f) (cbuf (make-cbuf))
-                            (width 80) (height 24))
-  "Create editor state for CBUF, shown on a WIDTH x HEIGHT screen."
+                            (width 80) (height 24) (valid-utf-8? #t))
+  "Create editor state for CBUF, shown on a WIDTH x HEIGHT screen.
+   VALID-UTF-8? #f says that FILENAME was not valid UTF-8 when read."
   (let ([state (%make-editor-state cbuf
                                    (make-frame width (text-area-height height))
                                    filename width height #f ""
-                                   #f #f (undo-top cbuf) #f "" "" MMAIN #f)])
+                                   #f #f (undo-top cbuf) #f "" "" MMAIN #f
+                                   (and (not valid-utf-8?) filename))])
     (set-cbuf-form-size! cbuf (text-area-height height))   ; page size
     state))
 
@@ -178,20 +192,44 @@
 ;;; FILE OPERATIONS
 ;;; =================================================================
 
+(define (decode-utf-8 bytes)
+  "Decode the bytevector BYTES as UTF-8.  Returns two values: the text
+   and whether BYTES was valid UTF-8 (if not, each bad byte sequence
+   became U+FFFD)."
+  (catch 'decoding-error
+    (lambda () (values (utf8->string bytes) #t))
+    (lambda _
+      (let ([port (open-bytevector-input-port bytes)])
+        (set-port-encoding! port "UTF-8")
+        (set-port-conversion-strategy! port 'substitute)
+        (values (let ([text (get-string-all port)]) (if (eof-object? text) "" text))
+                #f)))))
+
+(define (read-buffer filename)
+  "Return two values: a fresh cbuf holding the contents of FILENAME
+   (UTF-8), or an empty cbuf if FILENAME is #f or the file does not
+   exist, and whether the file was valid UTF-8.  An existing file's line
+   ending and presence or absence of a final newline are kept when it
+   is saved; a new file is saved with a final newline.  A file that
+   cannot be read raises a system-error."
+  (let-values ([(text valid?)
+                (if (and filename (file-exists? filename))
+                    (decode-utf-8
+                     (let ([bytes (call-with-input-file filename get-bytevector-all
+                                    #:binary #t)])
+                       (if (eof-object? bytes) #vu8() bytes)))
+                    (values #f #t))])
+    (let ([cbuf (if text
+                    (text->cbuf text #:final-newline-policy 'preserve)
+                    (make-cbuf))])
+      ;; Loading is not an edit: nothing to undo, nothing unsaved.
+      (cbuf-clear-undo-history! cbuf)
+      (set-cbuf-modified?! cbuf #f)
+      (values cbuf valid?))))
+
 (define (load-buffer filename)
-  "Return a fresh cbuf holding the contents of FILENAME (UTF-8), or an
-   empty cbuf if FILENAME is #f or the file does not exist.  An existing
-   file's line ending and presence or absence of a final newline are
-   kept when it is saved; a new file is saved with a final newline."
-  (let ([cbuf (if (and filename (file-exists? filename))
-                  (text->cbuf (call-with-input-file filename get-string-all
-                                #:encoding "UTF-8")
-                              #:final-newline-policy 'preserve)
-                  (make-cbuf))])
-    ;; Loading is not an edit: nothing to undo, nothing unsaved.
-    (cbuf-clear-undo-history! cbuf)
-    (set-cbuf-modified?! cbuf #f)
-    cbuf))
+  "The cbuf read-buffer returns for FILENAME"
+  (let-values ([(cbuf valid?) (read-buffer filename)]) cbuf))
 
 (define (save-buffer state)
   "Write the buffer to the editor's file and report it in the status line."
@@ -202,6 +240,8 @@
       #:encoding "UTF-8")
     (set-cbuf-modified?! cbuf #f)
     (set-editor-saved-undo-top! state (undo-top cbuf))
+    (when (equal? filename (editor-bad-utf-8-file state))
+      (set-editor-bad-utf-8-file! state #f))   ; it is valid UTF-8 now
     (let ([n (cbuf-line-count cbuf)])
       (message! state "Wrote ~d line~a to ~a" n (if (= n 1) "" "s") filename))))
 
@@ -294,12 +334,26 @@
 
 ;; --- Files and exiting ---
 
+(define (confirm-bad-utf-8! state name proceed)
+  "Call PROCEED with the state, first asking if NAME is the file that
+   was read with bytes that were not valid UTF-8 (saving over it
+   replaces them with U+FFFD)."
+  (if (and name (equal? name (editor-bad-utf-8-file state)))
+      (ask-yes-no! state (format #f "~a was not valid UTF-8; saving changes the bad bytes. Save? (Y/N) "
+                                 (basename name))
+                   (lambda (state yes?)
+                     (if yes? (proceed state) (message! state "Not saved"))))
+      (proceed state)))
+
 (define (write-file-as! state name then)
   "Save the buffer as NAME (asking before overwriting another existing
-   file) and call THEN with the state if the save succeeds."
+   file, or a file that was not valid UTF-8) and call THEN with the
+   state if the save succeeds."
   (let ([do-write (lambda (state)
-                    (set-editor-filename! state name)
-                    (when (try-save state) (then state)))])
+                    (confirm-bad-utf-8! state name
+                                        (lambda (state)
+                                          (set-editor-filename! state name)
+                                          (when (try-save state) (then state)))))])
     (if (and (file-exists? name)
              (not (equal? name (editor-filename state))))
         (ask-yes-no! state (format #f "File \"~a\" exists; overwrite? (Y/N) " name)
@@ -318,7 +372,7 @@
 
 (define (cmd-save state)
   (if (editor-filename state)
-      (try-save state)
+      (confirm-bad-utf-8! state (editor-filename state) try-save)
       (cmd-write-out state)))
 
 (define (cmd-exit state)
@@ -984,33 +1038,59 @@
       (lambda ()
         (sigaction SIGWINCH (car old-handler) (cdr old-handler))))))
 
-(define (usage program)
-  (format (current-error-port) "Usage: ~a [FILE]~%" program))
+(define (usage port program)
+  (format port "Usage: ~a [FILE]~%~%" program)
+  (format port "Edit FILE (a new file if it does not exist) in the terminal.~%~%")
+  (format port "  -h, --help     show this help and exit~%")
+  (format port "  -V, --version  show the version and exit~%~%")
+  (format port "In the editor, ^G shows the keys and A-x runs a command by name.~%"))
+
+(define (error-message key args)
+  "A one-line description of an error thrown as (KEY . ARGS)"
+  (if (eq? key 'system-error)
+      (strerror (system-error-errno (cons key args)))
+      (error-text key args)))
 
 (define (editor-main args)
   "Program entry point.  ARGS is the command line, program name first."
   (setlocale LC_ALL "")
   (let ([program (if (pair? args) (basename (car args)) "gano")]
         [files (if (pair? args) (cdr args) '())])
+    ;; "--" ends the options, so "gano -- -file" edits "-file"
+    (define options? (not (and (pair? files) (equal? (car files) "--"))))
+    (define (option? arg) (and options? (> (string-length arg) 1) (string-prefix? "-" arg)))
+    (unless options? (set! files (cdr files)))
     (cond
-     [(and (pair? files) (member (car files) '("-h" "--help")))
-      (usage program)
+     [(and options? (pair? files) (member (car files) '("-h" "--help")))
+      (usage (current-output-port) program)
       (exit 0)]
-     [(> (length files) 1)
-      (usage program)
+     [(and options? (pair? files) (member (car files) '("-V" "--version")))
+      (format #t "gano ~a~%" gano-version)
+      (exit 0)]
+     [(and (pair? files) (option? (car files)))
+      (format (current-error-port) "~a: unknown option ~a~%" program (car files))
+      (usage (current-error-port) program)
       (exit 1)]
-     [(not (isatty? (current-input-port)))
-      (format (current-error-port) "~a: standard input is not a terminal~%" program)
+     [(> (length files) 1)
+      (usage (current-error-port) program)
       (exit 1)])
-    (let* ([filename (and (pair? files) (car files))]
-           [cbuf (catch #t
-                   (lambda () (load-buffer filename))
-                   (lambda (key . rest)
-                     (format (current-error-port) "~a: cannot read ~a~%" program filename)
-                     (exit 1)))]
-           [size (terminal-get-size)]
-           [state (make-editor-state #:filename filename #:cbuf cbuf
-                                     #:width (car size) #:height (cdr size))])
+    (let*-values ([(filename) (and (pair? files) (car files))]
+                  [(cbuf valid-utf-8?)
+                   (catch #t
+                     (lambda () (read-buffer filename))
+                     (lambda (key . args)
+                       (format (current-error-port) "~a: ~a: ~a~%"
+                               program filename (error-message key args))
+                       (exit 1)))]
+                  [(tty?) (or (isatty? (current-input-port))
+                              (begin
+                                (format (current-error-port)
+                                        "~a: standard input is not a terminal~%" program)
+                                (exit 1)))]
+                  [(size) (terminal-get-size)]
+                  [(state) (make-editor-state #:filename filename #:cbuf cbuf
+                                              #:width (car size) #:height (cdr size)
+                                              #:valid-utf-8? valid-utf-8?)])
       (set-port-encoding! (current-input-port) "UTF-8")
       (set-port-encoding! (current-output-port) "UTF-8")
       (set-editor-status-message!
@@ -1018,7 +1098,9 @@
               [(not filename) "New buffer"]
               [(file-exists? filename)
                (let ([n (cbuf-line-count cbuf)])
-                 (format #f "Read ~d line~a" n (if (= n 1) "" "s")))]
+                 (format #f "Read ~d line~a~a" n (if (= n 1) "" "s")
+                         (if valid-utf-8? ""
+                             " (not valid UTF-8: bad bytes shown as \ufffd)")))]
               [else "New file"]))
       ;; An error inside the loop is caught and reported only after the
       ;; terminal is back to normal; otherwise the message would be

@@ -10,7 +10,8 @@
 # Guile (default guile-3.0), or set GUILE / GUILD directly.
 
 PACKAGE    = gano
-VERSION    = 0.0.1
+# The version is defined once, in src/gano/editor.scm (gano --version)
+VERSION   := $(shell sed -n 's/^(define gano-version "\(.*\)")$$/\1/p' src/gano/editor.scm)
 
 PKG_CONFIG ?= pkg-config
 GUILE_PC   ?= guile-3.0

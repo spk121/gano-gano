@@ -13,6 +13,10 @@ First working version of the editor.
   and spacing marks, and control characters measured per Markus Kuhn's
   wcwidth (tables generated from Unicode 15.1).  Bidirectional reordering
   is left to the terminal.
+- A file that is not valid UTF-8 opens with its bad bytes shown as
+  U+FFFD, and saving over it asks first.  A file that cannot be read
+  (a directory, say) is reported plainly.
+- gano --help, gano --version; "--" ends the options.
 - Plain Makefile: make, make check, make dist.
 - Command registry (src/gano/commands.scm): each command has a short
   name, a help line, the modes it works in with their shortcuts, and the

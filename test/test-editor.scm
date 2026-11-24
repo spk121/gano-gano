@@ -7,7 +7,10 @@
   #:use-module (gano buffer)
   #:use-module (gano keys)
   #:use-module (gano commands)
-  #:use-module (ice-9 textual-ports))
+  #:use-module (ice-9 textual-ports)
+  #:use-module (ice-9 binary-ports)
+  #:use-module (ice-9 popen)
+  #:use-module (rnrs bytevectors))
 
 (setlocale LC_ALL "C.UTF-8")
 
@@ -782,6 +785,94 @@
     (test-assert "a selection backwards from the mark"
                  (string-contains (render-screen st) "\x1b[7ma\x1b[27mbcdef"))
     (delete-file (editor-filename st))))
+
+(define (temp-bytes bytes)
+  (let* ([port (mkstemp "/tmp/gano-test-XXXXXX")]
+         [name (port-filename port)])
+    (put-bytevector port bytes)
+    (close-port port)
+    name))
+
+(define (file-bytes name) (call-with-input-file name get-bytevector-all #:binary #t))
+
+(test-group "files that are not valid UTF-8"
+  (let ([name (temp-bytes #vu8(111 107 10 255 254 98 10))])        ; "ok\n" FF FE "b\n"
+    (call-with-values (lambda () (read-buffer name))
+      (lambda (cbuf valid?)
+        (test-eq "read-buffer says it is not valid" #f valid?)
+        (test-equal "bad bytes become U+FFFD" '("ok" "\ufffd\ufffdb") (cbuf-text cbuf))
+        (test-assert "and the buffer is clean" (not (cbuf-modified? cbuf)))))
+    (let ([st (make-editor-state #:filename name #:cbuf (load-buffer name) #:valid-utf-8? #f)])
+      (test-equal "the editor remembers the file" name (editor-bad-utf-8-file st))
+      (type! st "x" '(ctrl . #\s))
+      (test-assert "^S asks before saving over it"
+                   (string-contains (editor-prompt-label st) "was not valid UTF-8"))
+      (type! st "n")
+      (test-equal "N does not save" "Not saved" (editor-status-message st))
+      (test-equal "the file is untouched" #vu8(111 107 10 255 254 98 10) (file-bytes name))
+      (type! st '(ctrl . #\s) "y")
+      (test-equal "Y saves" (string-append "xok\n\ufffd\ufffdb\n")
+                  (call-with-input-file name get-string-all #:encoding "UTF-8"))
+      (test-eq "after which the file is valid" #f (editor-bad-utf-8-file st))
+      (type! st "y" '(ctrl . #\s))
+      (test-assert "so the next save does not ask" (not (editor-prompt-label st)))
+      (delete-file name)))
+  (let* ([name (temp-bytes #vu8(255 10))]
+         [other (temp-file #f)]
+         [st (make-editor-state #:filename name #:cbuf (load-buffer name) #:valid-utf-8? #f)])
+    (type! st '(ctrl . #\o) '(ctrl . #\u) other 'enter)
+    (test-assert "writing to another name does not ask" (not (editor-prompt-label st)))
+    (test-assert "and writes it" (file-exists? other))
+    (test-equal "the original keeps its bytes" #vu8(255 10) (file-bytes name))
+    (type! st '(ctrl . #\o) '(ctrl . #\u) name 'enter "y")
+    (test-assert "writing back over the original asks"
+                 (and (editor-prompt-label st)
+                      (string-contains (editor-prompt-label st) "was not valid UTF-8")))
+    (type! st '(ctrl . #\c))
+    (test-equal "and can be refused" #vu8(255 10) (file-bytes name))
+    (delete-file name) (delete-file other))
+  (let ([name (temp-bytes #vu8(226 130 172 10))])                     ; "€\n"
+    (call-with-values (lambda () (read-buffer name))
+      (lambda (cbuf valid?)
+        (test-eq "valid UTF-8 is valid" #t valid?)
+        (test-equal "and read as such" '("€") (cbuf-text cbuf))))
+    (delete-file name))
+  (let ([name (temp-bytes #vu8())])
+    (call-with-values (lambda () (read-buffer name))
+      (lambda (cbuf valid?)
+        (test-eq "an empty file is valid" #t valid?)
+        (test-equal "and empty" "" (cbuf->text cbuf))))
+    (delete-file name)))
+
+;;; The command line, by running bin/gano (standard input is not a
+;;; terminal, so it stops before starting the editor).
+(define top (dirname (dirname (current-filename))))
+
+(define (gano . args)
+  "Run bin/gano with ARGS and no terminal; return (status . output)"
+  (let* ([port (apply open-pipe* OPEN_READ "sh" "-c"
+                      "exec \"$0\" \"$@\" </dev/null 2>&1"
+                      (string-append top "/bin/gano") args)]
+         [output (get-string-all port)]
+         [status (status:exit-val (close-pipe port))])
+    (cons status (if (eof-object? output) "" output))))
+
+(test-group "command line"
+  (test-equal "--version" (cons 0 (string-append "gano " gano-version "\n")) (gano "--version"))
+  (test-equal "-V" (cons 0 (string-append "gano " gano-version "\n")) (gano "-V"))
+  (let ([r (gano "--help")])
+    (test-eqv "--help succeeds" 0 (car r))
+    (test-assert "and shows the usage" (string-prefix? "Usage: gano [FILE]" (cdr r)))
+    (test-assert "and the options" (string-contains (cdr r) "--version")))
+  (let ([r (gano "-z")])
+    (test-eqv "an unknown option fails" 1 (car r))
+    (test-assert "saying so" (string-prefix? "gano: unknown option -z\n" (cdr r))))
+  (test-eqv "two files fail" 1 (car (gano "a" "b")))
+  (test-equal "a directory is reported plainly" (cons 1 "gano: /tmp: Is a directory\n")
+              (gano "/tmp"))
+  (test-equal "-- ends the options" (cons 1 "gano: standard input is not a terminal\n")
+              (gano "--" "-z"))
+  (test-equal "no terminal" (cons 1 "gano: standard input is not a terminal\n") (gano)))
 
 (test-group "prompt rendering"
   (let ([st (open-editor "x\n" #:width 40 #:height 10)])
