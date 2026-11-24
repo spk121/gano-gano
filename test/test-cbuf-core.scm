@@ -214,3 +214,5 @@
     ;; For now, just verify the predicates exist
     (test-assert "error conditions defined" #t)))
 
+
+(test-end "cbuf-core")

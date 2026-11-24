@@ -3,6 +3,8 @@
 
 (define-module (gano string-split)
   #:use-module (srfi srfi-1)        ; List utilities
+  #:use-module ((gano string-utils) #:select (string-detect-line-ending))
+  #:re-export (string-detect-line-ending)
   #:export (
     ;; Core splitting functions
     string-split-on-string
@@ -12,7 +14,6 @@
     ;; Line ending utilities
     string-split-lines
     string-split-lines-with-final-newline-info
-    string-detect-line-ending
     string-normalize-line-endings
     
     ;; Helper functions
@@ -170,63 +171,6 @@
                (string-null? (last lines)))
           (cons (drop-right lines 1) #t)
           (cons lines #f)))]))
-
-(define (string-detect-line-ending str)
-  "Detect the primary line ending used in string.
-   Counts all 5 line ending types and returns the most common one.
-   Priority order for ties: LF, CRLF, CR, LS, PS.
-   Returns \\n as default if no line endings found."
-  (let* ([len (string-length str)])
-    
-    ;; Helper function to safely check character at position
-    (define (char-at-pos? i char)
-      (and (< i len) (char=? (string-ref str i) char)))
-    
-    ;; Count all line ending types using recursion
-    (let loop ([i 0] [crlf-count 0] [lf-count 0] [cr-count 0] [ls-count 0] [ps-count 0])
-      (cond
-        ;; Check for CRLF first (2 characters)
-        [(and (char-at-pos? i #\return) 
-              (char-at-pos? (+ i 1) #\newline))
-         (loop (+ i 2) (+ crlf-count 1) lf-count cr-count ls-count ps-count)]
-        
-        ;; Single character line endings
-        [(char-at-pos? i #\newline)
-         (loop (+ i 1) crlf-count (+ lf-count 1) cr-count ls-count ps-count)]
-        
-        [(char-at-pos? i #\return)
-         (loop (+ i 1) crlf-count lf-count (+ cr-count 1) ls-count ps-count)]
-        
-        [(char-at-pos? i #\x2028)  ; Line Separator
-         (loop (+ i 1) crlf-count lf-count cr-count (+ ls-count 1) ps-count)]
-        
-        [(char-at-pos? i #\x2029)  ; Paragraph Separator
-         (loop (+ i 1) crlf-count lf-count cr-count ls-count (+ ps-count 1))]
-        
-        ;; Regular character - continue
-        [(< i len)
-         (loop (+ i 1) crlf-count lf-count cr-count ls-count ps-count)]
-        
-        ;; End of string - find most common with priority
-        [else
-         (let* ([counts (list (cons lf-count "\n")      ; Priority 1
-                             (cons crlf-count "\r\n")   ; Priority 2  
-                             (cons cr-count "\r")       ; Priority 3
-                             (cons ls-count "\u2028")   ; Priority 4
-                             (cons ps-count "\u2029"))] ; Priority 5
-                [max-count (apply max (map car counts))])
-           
-           (cond
-             ;; No line endings found
-             [(= max-count 0) "\n"]
-             
-             ;; Find first (highest priority) entry with max count
-             [else
-              (let find-max ([remaining counts])
-                (cond
-                  [(null? remaining) "\n"]  ; Fallback
-                  [(= (caar remaining) max-count) (cdar remaining)]
-                  [else (find-max (cdr remaining))]))]))]))))
 
 (define (string-normalize-line-endings str target-ending)
   "Convert all line endings in string to target-ending.

@@ -6,11 +6,16 @@
 (define-module (gano cbuf-extra)
   #:use-module (gano cbuf-core)          ; Core record definitions
   #:use-module (gano cbuf-basic)         ; Basic operations
+  ;; Standard operations; this module supplies its own (SGR-preserving,
+  ;; smarter) versions of the three hidden procedures.
+  #:use-module ((gano cbuf-standard)
+                #:hide (cbuf-upcase-region! cbuf-downcase-region! cbuf-select-word!))
   #:use-module (gano cbuf-utils)         ; Pure utility functions
   #:use-module (gano text-metrics)       ; Immutable text metrics module
   #:use-module (gano rendering)          ; SGR support
   #:use-module (gano list-utils)         ; Immutable list operations
   #:use-module (gano char)               ; Character utilities
+  #:use-module (gano wcwidth)            ; Character cell widths
   #:use-module (gano string-split)       ; String splitting and joining
   #:use-module (gano string-utils)       ; String manipulation utilities
   #:use-module (srfi srfi-9)             ; Record types
@@ -75,28 +80,45 @@
 ;;; UNDO OPERATION HANDLERS FOR EXTRA OPERATIONS
 ;;; =================================================================
 ;; Line formatting handlers
-(define (capture-line-formatting-state cbuf operation-type)
+(define* (capture-line-formatting-state cbuf #:optional operation-type)
   "Capture state for line formatting operations"
   `((line-num ,(cbuf-line-cur cbuf))
     (old-metrics ,(cbuf-metrics-cur cbuf))
     (operation-type ,operation-type)))
-(define (restore-line-formatting-state cbuf state operation-type)
+(define* (restore-line-formatting-state cbuf state #:optional operation-type)
   "Restore state after line formatting"
   (let ([line-num (cadr (assq 'line-num state))]
         [old-metrics (cadr (assq 'old-metrics state))])
     (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
+;; Handlers for cbuf-save-line-modification-undo!, whose callers have
+;; already captured the line's old metrics.
+(define (capture-saved-line-state cbuf line-num old-metrics)
+  "Record a line's metrics as captured by the caller"
+  `((line-num ,line-num)
+    (old-metrics ,old-metrics)))
+(define (restore-saved-line-state cbuf state . args)
+  "Put back a line recorded by capture-saved-line-state"
+  (cbuf-restore-line-metrics! cbuf
+                              (cadr (assq 'line-num state))
+                              (cadr (assq 'old-metrics state))))
 ;; Buffer-wide transformation handlers
-(define (capture-buffer-transformation-state cbuf operation-type)
+(define* (capture-buffer-transformation-state cbuf #:optional operation-type)
   "Capture state for operations that transform the entire buffer"
   `((all-metrics ,(cbuf-text-metrics cbuf))
     (operation-type ,operation-type)))
-(define (restore-buffer-transformation-state cbuf state operation-type)
+(define* (restore-buffer-transformation-state cbuf state #:optional operation-type)
   "Restore state after buffer transformation"
   (let ([all-metrics (cadr (assq 'all-metrics state))])
     (set-cbuf-text-metrics! cbuf all-metrics)))
 ;; Region transformation handlers
-(define (capture-region-transformation-state cbuf start-line end-line operation-type)
-  "Capture state for operations that transform a region"
+(define* (capture-region-transformation-state cbuf
+                                              #:optional
+                                              (start-line 0)
+                                              (end-line (- (cbuf-line-count cbuf) 1))
+                                              operation-type)
+  "Capture state for operations that transform a region of lines.
+   Callers that don't pass START-LINE/END-LINE (e.g. the case-conversion
+   commands) get a snapshot of the whole buffer."
   (let ([affected-lines (let loop ([line start-line] [result '()])
                           (if (> line end-line)
                               (reverse result)
@@ -107,7 +129,7 @@
       (start-line ,start-line)
       (end-line ,end-line)
       (operation-type ,operation-type))))
-(define (restore-region-transformation-state cbuf state start-line end-line operation-type)
+(define (restore-region-transformation-state cbuf state . args)
   "Restore state after region transformation"
   (let ([affected-lines (cadr (assq 'affected-lines state))])
     (for-each (lambda (line-data)
@@ -117,14 +139,14 @@
                     (cbuf-restore-line-metrics! cbuf line-num old-metrics))))
               affected-lines)))
 ;; Line swapping handlers
-(define (capture-line-swapping-state cbuf line1 line2 operation-type)
+(define* (capture-line-swapping-state cbuf line1 line2 #:optional operation-type)
   "Capture state for line swapping operations"
   `((line1 ,line1)
     (line1-metrics ,(list-ref (cbuf-text-metrics cbuf) line1))
     (line2 ,line2)
     (line2-metrics ,(list-ref (cbuf-text-metrics cbuf) line2))
     (operation-type ,operation-type)))
-(define (restore-line-swapping-state cbuf state line1 line2 operation-type)
+(define* (restore-line-swapping-state cbuf state line1 line2 #:optional operation-type)
   "Restore state after line swapping"
   (let ([original-line1 (cadr (assq 'line1 state))]
         [line1-metrics (cadr (assq 'line1-metrics state))]
@@ -134,18 +156,18 @@
     (cbuf-restore-line-metrics! cbuf original-line1 line1-metrics)
     (cbuf-restore-line-metrics! cbuf original-line2 line2-metrics)))
 ;; Grapheme swapping handlers
-(define (capture-grapheme-swapping-state cbuf operation-type)
+(define* (capture-grapheme-swapping-state cbuf #:optional operation-type)
   "Capture state for grapheme swapping operations"
   `((line-num ,(cbuf-line-cur cbuf))
     (old-metrics ,(cbuf-metrics-cur cbuf))
     (operation-type ,operation-type)))
-(define (restore-grapheme-swapping-state cbuf state operation-type)
+(define* (restore-grapheme-swapping-state cbuf state #:optional operation-type)
   "Restore state after grapheme swapping"
   (let ([line-num (cadr (assq 'line-num state))]
         [old-metrics (cadr (assq 'old-metrics state))])
     (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
 ;; Sorting handlers
-(define (capture-sorting-state cbuf start-line end-line operation-type)
+(define* (capture-sorting-state cbuf start-line end-line #:optional operation-type)
   "Capture state for sorting operations"
   (let ([lines-to-sort (let loop ([line start-line] [result '()])
                          (if (> line end-line)
@@ -156,7 +178,7 @@
       (end-line ,end-line)
       (original-lines ,lines-to-sort)
       (operation-type ,operation-type))))
-(define (restore-sorting-state cbuf state start-line end-line operation-type)
+(define* (restore-sorting-state cbuf state start-line end-line #:optional operation-type)
   "Restore state after sorting"
   (let ([original-start (cadr (assq 'start-line state))]
         [original-end (cadr (assq 'end-line state))]
@@ -530,8 +552,8 @@
 (define (cbuf-line-less-than? line1 line2)
   "Compare two lines for sorting, ignoring leading whitespace.
    Returns #t if line1 should come before line2 in sorted order."
-  (let ([trimmed1 (string-trim-left line1)]
-        [trimmed2 (string-trim-left line2)])
+  (let ([trimmed1 (string-trim line1)]
+        [trimmed2 (string-trim line2)])
     (string-ci<? trimmed1 trimmed2)))
 
 (define (cbuf-replace-line-range! cbuf start-line end-line new-metrics-list)
@@ -612,8 +634,8 @@
         (lambda (metrics1 metrics2)
           (let* ([text1 (text-metrics-string metrics1)]
                  [text2 (text-metrics-string metrics2)]
-                 [compare-text1 (if ignore-leading-whitespace? (string-trim-left text1) text1)]
-                 [compare-text2 (if ignore-leading-whitespace? (string-trim-left text2) text2)])
+                 [compare-text1 (if ignore-leading-whitespace? (string-trim text1) text1)]
+                 [compare-text2 (if ignore-leading-whitespace? (string-trim text2) text2)])
             (predicate compare-text1 compare-text2)))))
 
 ;;; Convenience functions for common sorting patterns
@@ -976,7 +998,7 @@
                [else
                 (set! result-chars (cons ch result-chars))
                 (set! result-sgr (cons ch-sgr result-sgr))
-                (set! current-column (+ current-column (wcwidth (char->integer ch) (cbuf-cjk? cbuf))))
+                (set! current-column (+ current-column (max 0 (wcwidth ch))))
                 (loop (+ i 1))]))])))))
 
 (define (cbuf-process-space-sequence text sgr-list start-index current-column tab-size)
@@ -1426,9 +1448,9 @@
     (when (and (> available-width 0) (not (string-null? current-text)))
       
       ;; Strip whitespace and compute content metrics
-      (let* ([trimmed-text (string-trim current-text)]
+      (let* ([trimmed-text (string-trim-both current-text)]
              [trim-left-count (- (string-length current-text)
-                                (string-length (string-trim-left current-text)))]
+                                (string-length (string-trim current-text)))]
              [trim-right-count (- (string-length current-text)
                                  (string-length (string-trim-right current-text)))]
              [content-start-index trim-left-count]
@@ -1478,11 +1500,11 @@
   "Strip leading and trailing whitespace from current line (no additional undo save)"
   (let* ([current-text (cbuf-text-cur cbuf)]
          [current-sgr-list (cbuf-sgr-list-cur cbuf)]
-         [trimmed-text (string-trim current-text)])
+         [trimmed-text (string-trim-both current-text)])
     
     (unless (string=? current-text trimmed-text)
       (let* ([trim-left-count (- (string-length current-text)
-                                (string-length (string-trim-left current-text)))]
+                                (string-length (string-trim current-text)))]
              [trim-right-count (- (string-length current-text)
                                  (string-length (string-trim-right current-text)))]
              [content-start-index trim-left-count]
@@ -2065,7 +2087,7 @@
      [(cbuf-at-word-boundary? cbuf 'beginning)
       (let* ([current-index (cbuf-x-data->x-index cbuf current-x)]
              ;; Skip current word and any preceding delimiters
-             [before-current-word (skip-delimiters-backward text (- current-index 1))]
+             [before-current-word (skip-delimiters-backward text current-index)]
              ;; Find beginning of previous word
              [prev-word-start (if (>= before-current-word 0)
                                  (find-word-begin-backward text before-current-word char-word-delimiter?)
@@ -2156,6 +2178,13 @@
   (cbuf-register-undo-operation! 'sort-lines
                                   capture-sorting-state
                                   restore-sorting-state)
+  (cbuf-register-undo-operation! 'sort-lines-custom
+                                  capture-sorting-state
+                                  restore-sorting-state)
+  ;; Single-line re-indentation (one record per line touched)
+  (cbuf-register-undo-operation! 'align-indentation
+                                  capture-saved-line-state
+                                  restore-saved-line-state)
   ;; Indentation alignment operations
   (cbuf-register-undo-operation! 'align-indents
                                   capture-region-transformation-state

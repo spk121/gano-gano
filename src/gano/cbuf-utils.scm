@@ -285,7 +285,7 @@ skip to the previous word first."
    [(<= start-index 0) 0]
    [else
     ;; Skip preceding delimiters first (if we're on delimiters)
-    (let ([before-delimiters (skip-delimiters-backward txt (- start-index 1))])
+    (let ([before-delimiters (skip-delimiters-backward txt start-index)])
       ;; Skip back through word characters
       (skip-word-chars-backward txt before-delimiters delimiter-pred))]))
 

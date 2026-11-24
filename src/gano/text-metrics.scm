@@ -958,27 +958,23 @@
                ;; Bidi controls get positioned where they appear
                [(is-bidi-control? ch)
                 (vector-set! positions i visual-cursor)
-                (pk 'sequential-control ch 'pos i 'visual visual-cursor)
                 (loop (+ i 1) visual-cursor last-base-position)]  ; Controls don't advance cursor
                
                ;; Combining marks - position at last base character position
                [(char-combining-mark? ch)
                 (vector-set! positions i last-base-position)
-                (pk 'sequential-combining ch 'pos i 'visual last-base-position 'base-was-at last-base-position)
                 (loop (+ i 1) visual-cursor last-base-position)]  ; Combining marks don't advance cursor
                
                ;; Tab character
                [(char=? ch #\tab)
                 (vector-set! positions i visual-cursor)
                 (let ([next-tab (* tabsize (+ (quotient visual-cursor tabsize) 1))])
-                  (pk 'sequential-tab ch 'pos i 'visual visual-cursor 'next-cursor next-tab)
                   (loop (+ i 1) next-tab visual-cursor))]  ; Tab is new base position
                
                ;; Regular characters (base characters)
                [else
                 (let ([char-width (max 0 (wcwidth ch cjk?))])
                   (vector-set! positions i visual-cursor)
-                  (pk 'sequential-base ch 'pos i 'visual visual-cursor 'width char-width)
                   (loop (+ i 1) (+ visual-cursor char-width) visual-cursor))]))))
         
         ;; Pass 2: Apply bidi reordering to content within runs based on resolved levels
@@ -988,7 +984,6 @@
                             [end (cadr run)]
                             [level (caddr run)])
                         (when (odd? level)  ; Only reverse RTL runs (odd levels)
-                          (pk 'applying-rtl-reorder 'start start 'end end 'level level)
                           (apply-rtl-reordering-to-run str start end positions))))
                     runs))
         
@@ -1038,9 +1033,6 @@
              [visual-positions (map cdr cluster-infos)]
              [reversed-positions (reverse visual-positions)])
         
-        (pk 'rtl-grapheme-reorder 'clusters (map car cluster-infos))
-        (pk 'rtl-grapheme-reorder 'old-visuals visual-positions)
-        (pk 'rtl-grapheme-reorder 'new-visuals reversed-positions)
         
         ;; Apply reversed positions to each cluster
         (for-each (lambda (cluster-positions new-visual)

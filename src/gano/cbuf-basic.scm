@@ -23,6 +23,13 @@
   #:use-module (gano string-utils)       ; String manipulation utilities
   #:use-module (gano uax9-core)
   #:export (
+    ;; Low-level helpers shared with cbuf-standard / cbuf-extra /
+    ;; cbuf-serialization (not intended for editor code)
+    cbuf-restore-line-metrics!
+    cbuf-find-grapheme-cluster-bounds
+    cbuf-bracket-line
+    cbuf-bracket-x-data
+
     ;; Undo system API
     cbuf-register-undo-operation!
     cbuf-unregister-undo-operation!

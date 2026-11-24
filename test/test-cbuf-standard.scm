@@ -381,28 +381,3 @@
     (test-equal "after undo" "original text" (cbuf-get-all-text cbuf))))
 
 (test-end "cbuf-standard")
-
-;;; =================================================================
-;;; RUN ALL TESTS
-;;; =================================================================
-
-(define (run-all-tests)
-  "Run all cbuf-standard tests and display results"
-  (test-runner-current (test-runner-simple))
-  
-  (format #t "~%=== Running cbuf-standard Tests ===~%")
-  
-  ;; Run all test groups - they will execute when loaded
-  (let ([runner (test-runner-current)])
-    (format #t "~%=== Test Results ===~%")
-    ;; (format #t "Tests run: ~a~%" (test-runner-test-count runner))
-    (format #t "Passes: ~a~%" (test-runner-pass-count runner))  
-    (format #t "Failures: ~a~%" (test-runner-fail-count runner))
-    (format #t "Errors: ~a~%" (test-runner-xfail-count runner))
-    
-    (if (= (test-runner-fail-count runner) 0)
-        (format #t "~%✓ All tests passed!~%")
-        (format #t "~%✗ Some tests failed!~%"))))
-
-;; Auto-run tests when module is loaded
-(run-all-tests)

@@ -5,6 +5,8 @@
   #:use-module (srfi srfi-64)        ; Testing framework
   #:use-module (gano cbuf-core)      ; Core buffer functionality
   #:use-module (gano cbuf-basic)     ; Basic operations
+  #:use-module ((gano cbuf-standard)  ; Standard operations (superseded
+                #:hide (cbuf-upcase-region! cbuf-downcase-region! cbuf-select-word!)) ; by cbuf-extra)
   #:use-module (gano cbuf-extra)     ; Extra operations to test
   #:use-module (gano text-metrics)   ; Text metrics
   #:use-module (gano rendering)      ; SGR support
@@ -277,26 +279,3 @@
 
 (test-end "cbuf-extra-integration")
 
-;;; =================================================================
-;;; RUN ALL TESTS
-;;; =================================================================
-
-(define (run-all-tests)
-  "Run all cbuf-extra tests and display results"
-  (test-runner-current (test-runner-simple))
-  
-  (format #t "~%=== Running cbuf-extra Tests ===~%")
-  
-  (let ([runner (test-runner-current)])
-    (format #t "~%=== Test Results ===~%")
-    (format #t "Tests run: ~a~%" (test-runner-test-count runner))
-    (format #t "Passes: ~a~%" (test-runner-pass-count runner))  
-    (format #t "Failures: ~a~%" (test-runner-fail-count runner))
-    (format #t "Errors: ~a~%" (test-runner-xfail-count runner))
-    
-    (if (= (test-runner-fail-count runner) 0)
-        (format #t "~%✓ All tests passed!~%")
-        (format #t "~%✗ Some tests failed!~%"))))
-
-;; Auto-run tests when module is loaded
-(run-all-tests)

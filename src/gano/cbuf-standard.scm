@@ -121,20 +121,20 @@
     (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
 
 ;; Line/region modification handlers
-(define (capture-line-modification-state cbuf operation-data)
+(define* (capture-line-modification-state cbuf #:optional operation-data)
   "Capture state for operations that modify entire lines"
   `((line-num ,(cbuf-line-cur cbuf))
     (old-metrics ,(cbuf-metrics-cur cbuf))
     (operation-data ,operation-data)))
 
-(define (restore-line-modification-state cbuf state operation-data)
+(define* (restore-line-modification-state cbuf state #:optional operation-data)
   "Restore state after line modification"
   (let ([line-num (cadr (assq 'line-num state))]
         [old-metrics (cadr (assq 'old-metrics state))])
     (cbuf-restore-line-metrics! cbuf line-num old-metrics)))
 
 ;; Multi-line operation handlers
-(define (capture-multiline-operation-state cbuf start-line end-line operation-type)
+(define* (capture-multiline-operation-state cbuf start-line end-line #:optional operation-type)
   "Capture state for operations affecting multiple lines"
   (let ([affected-lines (let loop ([line start-line] [result '()])
                           (if (> line end-line)
@@ -147,7 +147,7 @@
       (end-line ,end-line)
       (operation-type ,operation-type))))
 
-(define (restore-multiline-operation-state cbuf state start-line end-line operation-type)
+(define* (restore-multiline-operation-state cbuf state start-line end-line #:optional operation-type)
   "Restore state after multi-line operation"
   (let ([affected-lines (cadr (assq 'affected-lines state))])
     (for-each (lambda (line-data)
@@ -198,12 +198,13 @@
          (cbuf-restore-line-metrics! cbuf next-line next-metrics))])))
 
 ;; Global buffer modification handlers
-(define (capture-global-modification-state cbuf operation-type)
-  "Capture state for operations that modify the entire buffer"
-  `((all-metrics ,(cbuf-text-metrics cbuf))
-    (operation-type ,operation-type)))
+(define (capture-global-modification-state cbuf . args)
+  "Capture state for operations that modify the entire buffer.
+   ARGS are the operation's own arguments (e.g. the search and replace
+   patterns for replace-all); they are not needed to restore the buffer."
+  `((all-metrics ,(cbuf-text-metrics cbuf))))
 
-(define (restore-global-modification-state cbuf state operation-type)
+(define (restore-global-modification-state cbuf state . args)
   "Restore state after global buffer modification"
   (let ([all-metrics (cadr (assq 'all-metrics state))])
     (set-cbuf-text-metrics! cbuf all-metrics)))
@@ -508,6 +509,16 @@
         (if (> match 0)
             (loop (string-contains-right (substring search-in 0 match) search-pattern))
             #f)]))))
+
+;; SRFI-13 has no right-to-left substring search, so provide one.
+(define (string-contains-right s pattern)
+  "Return the index of the last occurrence of PATTERN in S, or #f."
+  (let ([plen (string-length pattern)])
+    (let loop ([i (- (string-length s) plen)])
+      (cond
+       [(< i 0) #f]
+       [(string=? (substring s i (+ i plen)) pattern) i]
+       [else (loop (- i 1))]))))
 
 (define (preserve-case original replacement)
   "Preserve case pattern from original string when replacing with replacement.
