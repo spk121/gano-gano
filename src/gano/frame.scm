@@ -47,6 +47,7 @@
   #:use-module (srfi srfi-1)        ; List utilities (for iota)
   #:use-module (srfi srfi-9)        ; Record types
   #:use-module (srfi srfi-11)       ; let-values
+  #:use-module (srfi srfi-34)       ; raise (Guile's core raise sends a signal)
   #:use-module (srfi srfi-35)       ; Condition types
   #:export (
     ;; Record type and constructor
