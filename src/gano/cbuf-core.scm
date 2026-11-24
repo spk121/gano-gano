@@ -1,14 +1,12 @@
 ;;; Gano Character Buffer Core Module
 ;;; Core record definitions and basic accessors
 ;;; This module contains only the fundamental data structures
-;;; Updated for bidirectional text support
 
 (define-module (gano cbuf-core)
-  #:use-module (gano text-metrics)  ; Text metrics module with bidi support
+  #:use-module (gano text-metrics)  ; Text metrics module
   #:use-module (gano rendering)     ; SGR support
   #:use-module (gano cbuf-utils)    ; Utility functions
   #:use-module (gano string-split)  ; Enhanced string splitting
-  #:use-module (gano uax9-core)     ; Bidirectional text support
   #:use-module (srfi srfi-9)        ; Record types
   #:use-module (srfi srfi-35)       ; Condition types
   #:export (
@@ -51,17 +49,12 @@
     cbuf-text-cur
     cbuf-metrics-cur
     cbuf-sgr-list-cur
-    cbuf-bidi-state-list-cur
     cbuf-get-line-text
     cbuf-text-cur-length
     cbuf-text-cur-cell-length
     cbuf-text-cur-base-length
     
     ;; Bidi-specific accessors
-    cbuf-get-paragraph-direction
-    cbuf-get-resolved-levels
-    cbuf-is-rtl-at-position
-    cbuf-get-bidi-state-at-position
     
     ;; Validation functions
     cbuf-validate-line
@@ -127,13 +120,13 @@
              current-sgr default-grcm sgr-stack line-ending final-newline?
 	     final-newline-policy)
   cbuf?
-  ;; Text content (now with bidi support)
-  (text-metrics cbuf-text-metrics set-cbuf-text-metrics!) ; list of <text-metrics> with bidi
+  ;; Text content
+  (text-metrics cbuf-text-metrics set-cbuf-text-metrics!) ; list of <text-metrics>, one per line
   
   ;; Current position
   (line-cur cbuf-line-cur set-cbuf-line-cur!)        ; current line (y)
   (x-data cbuf-x-data set-cbuf-x-data!)              ; data position
-  (x-cell cbuf-x-cell set-cbuf-x-cell!)              ; cell position (now bidi-aware)
+  (x-cell cbuf-x-cell set-cbuf-x-cell!)              ; cell position
   (x-goal cbuf-x-goal set-cbuf-x-goal!)              ; goal cell position
   
   ;; Tab and formatting configuration
@@ -230,8 +223,7 @@
                     (cjk? #f) (initial-text "") (default-grcm 'replacing)
                     (line-ending "\n") (limit-pos #f) (final-newline? #t)
 		    (final-newline-policy 'always-add))
-  "Create a new character buffer with specified configuration.
-   Now includes bidirectional text support."
+  "Create a new character buffer with specified configuration."
   ;; Input validation
   (when (<= tab-size 0)
     (error "tab-size must be positive" tab-size))
@@ -246,7 +238,7 @@
   (let* ([lines (if (string-null? initial-text) 
                     (list "")
                     (string-split-lines initial-text))]
-         ;; Create text-metrics with bidi support
+         ;; Create text-metrics
          [metrics (map (lambda (line) 
                          (compute-text-metrics line tab-size #:cjk? cjk?))
                        lines)]
@@ -295,10 +287,6 @@
   "Return the SGR list of the current line (safe)"
   (text-metrics-sgr-list (cbuf-metrics-cur cbuf)))
 
-(define (cbuf-bidi-state-list-cur cbuf)
-  "Return the bidi state list of the current line (safe)"
-  (text-metrics-bidi-state-list (cbuf-metrics-cur cbuf)))
-
 (define (cbuf-get-line-text cbuf n)
   "Return the text of line N (safe)"
   (let ([metrics (cbuf-text-metrics cbuf)])
@@ -311,37 +299,10 @@
   (string-length (cbuf-text-cur cbuf)))
 
 (define (cbuf-text-cur-cell-length cbuf)
-  "Return the number of cells in the current line (safe, now bidi-aware)"
+  "Return the number of cells in the current line (safe)"
   (text-metrics-cell-length (cbuf-metrics-cur cbuf)))
 
 (define (cbuf-text-cur-base-length cbuf)
   "Return the number of base characters in the current line (safe)"
   (text-metrics-string-base-length (cbuf-metrics-cur cbuf)))
 
-;;; =================================================================
-;;; BIDIRECTIONAL TEXT ACCESSORS
-;;; =================================================================
-
-(define (cbuf-get-paragraph-direction cbuf)
-  "Get the paragraph direction for the current line"
-  (text-metrics-get-paragraph-direction (cbuf-metrics-cur cbuf)))
-
-(define (cbuf-get-resolved-levels cbuf)
-  "Get resolved bidi levels for the current line"
-  (text-metrics-get-resolved-levels (cbuf-metrics-cur cbuf)))
-
-(define (cbuf-is-rtl-at-position cbuf x-data)
-  "Check if the character at x-data position is in RTL context"
-  (let* ([metrics (cbuf-metrics-cur cbuf)]
-         [x-index (text-metrics-x-data->x-index metrics x-data)])
-    (if x-index
-        (text-metrics-is-rtl-at-position metrics x-index)
-        #f)))
-
-(define (cbuf-get-bidi-state-at-position cbuf x-data)
-  "Get bidi state at x-data position"
-  (let* ([metrics (cbuf-metrics-cur cbuf)]
-         [x-index (text-metrics-x-data->x-index metrics x-data)])
-    (if x-index
-        (text-metrics-get-bidi-state-at-index metrics x-index)
-        (make-bidi-state 0 'neutral 'none))))

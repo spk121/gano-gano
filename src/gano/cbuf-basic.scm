@@ -21,7 +21,6 @@
   #:use-module (gano char)               ; Character utilities
   #:use-module (gano string-split)       ; String splitting and joining
   #:use-module (gano string-utils)       ; String manipulation utilities
-  #:use-module (gano uax9-core)
   #:export (
     ;; Low-level helpers shared with cbuf-standard / cbuf-extra /
     ;; cbuf-serialization (not intended for editor code)
@@ -692,8 +691,6 @@
 ;;; CHARACTER OPERATIONS
 ;;; =================================================================
 
-(define bidi-state (make-bidi-state 0 'neutral 'none))
-
 (define (cbuf-insert-char! cbuf char-new)
   "Insert a character at the current position with undo support"
   (let* ([x-data (cbuf-x-data cbuf)]
@@ -706,12 +703,11 @@
     (cbuf-save-undo! cbuf 'insert-char char-new x-data)
 
     ;; Perform the operation
-    (let ([new-metrics (text-metrics-insert-char-with-sgr-and-bidi
+    (let ([new-metrics (text-metrics-insert-char-with-sgr
                         (cbuf-metrics-cur cbuf)
                         x-index
                         char-new
-                        (cbuf-current-sgr cbuf)
-                        bidi-state)])
+                        (cbuf-current-sgr cbuf))])
       
       (cbuf-update-metrics-cur! cbuf new-metrics)
       (cbuf-set-x! cbuf (+ x-data 1) 'data)
@@ -729,7 +725,6 @@
         ;; Save undo state
         (cbuf-save-undo! cbuf 'delete-char x-data)
 
-        ;; Use bidi-aware deletion from text-metrics
         (let ([new-metrics (text-metrics-delete-range (cbuf-metrics-cur cbuf) 
                                                      start-index end-index)])
           (cbuf-update-metrics-cur! cbuf new-metrics)
@@ -1433,7 +1428,7 @@
 
 (define* (cbuf-render-line-string-only cbuf x-cell-start x-width #:key (pad? #t))
   "Return only the rendered string"
-  (let-values ([(rendered-string sgr-list bidi-state-list)
+  (let-values ([(rendered-string sgr-list)
                 (cbuf-render-line cbuf x-cell-start x-width #:pad? pad?)])
     rendered-string))
 

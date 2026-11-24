@@ -11,3 +11,9 @@ gano/ holds superseded versions of the character buffer:
   cbuf-operations.scm  - two drafts that both declared (gano cbuf-operations)
 
 The old test suite is in ../old-test.
+
+uax9-*.scm (gano/) and their tests (../old-test/test-uax9-*.scm,
+test-text-metrics-bidi.scm) are a UAX #9 bidirectional algorithm that
+reordered cell positions visually.  That was the wrong model: terminals
+do their own bidi reordering of the logical text they are sent.  Bidi
+support is postponed; gano currently lays all text out left to right.

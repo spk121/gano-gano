@@ -412,7 +412,7 @@
         [width (frame-width frame)])
     (map (lambda (metrics)
            (if metrics
-               (let-values ([(str sgr-list . bidi-states)
+               (let-values ([(str sgr-list)
                              (text-metrics-render-line metrics x-frame width #:pad? pad?)])
                  str)
                (if pad? (make-string width #\space) "")))
@@ -425,7 +425,7 @@
         [width (frame-width frame)])
     (map (lambda (metrics)
            (if metrics
-               (let-values ([(str sgr-list . bidi-states)
+               (let-values ([(str sgr-list)
                              (text-metrics-render-line metrics x-frame width #:pad? pad?)])
                  (cons str sgr-list))
                (cons (make-string width #\space)
