@@ -14,6 +14,7 @@
 
 top=$(cd "$(dirname "$0")/.." && pwd)
 GUILE=${GUILE:-guile}
+. "$top/tools/guile-cache.sh"      # fresh compile cache after source changes
 logdir=$(mktemp -d "${TMPDIR:-/tmp}/gano-tests.XXXXXX")
 
 if [ $# -gt 0 ]; then
