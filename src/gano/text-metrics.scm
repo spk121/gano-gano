@@ -113,57 +113,53 @@
 (define* (compute-text-metrics-with-sgr str sgr-list tabsize #:key (cjk? #f))
   "Create a text-metrics record with explicit SGR attributes for each character.
    STR and SGR-LIST must have the same length."
+  (unless (and (exact-integer? tabsize) (> tabsize 0))
+    (error "Tab size must be a positive integer" tabsize))
   (when (not (= (string-length str) (length sgr-list)))
     (error "String length and SGR list length must match" 
            (string-length str) (length sgr-list)))
-  (let ([base-indices '()]
+  (let ([base-indices
+         ;; Indices of base (non-combining) characters, in order
+         (let loop ([i (- (string-length str) 1)] [acc '()])
+           (cond
+            [(< i 0) acc]
+            [(char-combining-mark? (string-ref str i)) (loop (- i 1) acc)]
+            [else (loop (- i 1) (cons i acc))]))]
         [cell-positions (compute-cell-positions str tabsize cjk?)])
-    
-    ;; Find base character indices (non-combining marks)
-    (string-for-each-index
-     (lambda (i)
-       (let ([ch (string-ref str i)])
-         (when (not (char-combining-mark? ch))
-           (set! base-indices (append base-indices (list i))))))
-     str)
-    
     (make-text-metrics str sgr-list base-indices cell-positions tabsize cjk?)))
 
 ;;; =================================================================
 ;;; Cell Positions
 ;;; =================================================================
 
+(define (char-control? ch)
+  "C0 controls (other than tab), DEL and C1 controls.  They have no
+   glyph of their own, so they are drawn as a one-cell substitute."
+  (let ([n (char->integer ch)])
+    (and (not (= n 9))
+         (or (< n 32) (= n 127) (<= #x80 n #x9f)))))
+
+(define (char-cells ch column tabsize cjk?)
+  "Number of cells CH occupies when it starts at COLUMN."
+  (cond
+   [(char=? ch #\tab) (- (* tabsize (+ (quotient column tabsize) 1)) column)]
+   [(char-combining-mark? ch) 0]
+   [(char-control? ch) 1]
+   [else (max 0 (wcwidth ch cjk?))]))
+
 (define (compute-cell-positions str tabsize cjk?)
   "Return a list of STR-LENGTH + 1 cell positions: the cell where each
    codepoint is drawn, followed by the cell just past the end.
-   Combining marks share the cell of their base character; a tab runs to
-   the next multiple of TABSIZE."
+   Combining marks share the cell of their base character."
   (let ([str-len (string-length str)])
-    (let loop ([i 0]
-               [visual-cursor 0]
-               [last-base-position 0]
-               [acc '()])
+    (let loop ([i 0] [column 0] [base-column 0] [acc '()])
       (if (= i str-len)
-          (reverse (cons visual-cursor acc))
+          (reverse (cons column acc))
           (let ([ch (string-ref str i)])
-            (cond
-             ;; Combining marks - position at last base character position
-             [(char-combining-mark? ch)
-              (loop (+ i 1) visual-cursor last-base-position
-                    (cons last-base-position acc))]
-             ;; Tab character
-             [(char=? ch #\tab)
-              (let ([next-tab (* tabsize (+ (quotient visual-cursor tabsize) 1))])
-                (loop (+ i 1) next-tab visual-cursor (cons visual-cursor acc)))]
-             ;; Regular characters (base characters)
-             [else
-              (let ([char-width (max 0 (wcwidth ch cjk?))])
-                (loop (+ i 1) (+ visual-cursor char-width) visual-cursor
-                      (cons visual-cursor acc)))]))))))
-
-;;; =================================================================
-;;; SGR Access and Manipulation (Immutable)
-;;; =================================================================
+            (if (char-combining-mark? ch)
+                (loop (+ i 1) column base-column (cons base-column acc))
+                (loop (+ i 1) (+ column (char-cells ch column tabsize cjk?)) column
+                      (cons column acc))))))))
 
 (define (text-metrics-get-sgr-at-index metrics index)
   "Get SGR at string index"
@@ -226,13 +222,15 @@
         metrics)))
 
 (define (text-metrics-copy-sgr-range metrics start-index end-index)
-  "Copy SGR attributes for a range of string indices"
-  (let ([sgr-list (text-metrics-sgr-list metrics)]
-        [str-len (string-length (text-metrics-string metrics))])
-    (let ([actual-start (max 0 start-index)]
-          [actual-end (min str-len end-index)])
-      (map (lambda (i) (sgr-copy (list-ref sgr-list i)))
-           (iota (- actual-end actual-start) actual-start)))))
+  "Copy SGR attributes for a range of string indices (clamped to the
+   string; an empty or reversed range gives '())"
+  (let* ([sgr-list (text-metrics-sgr-list metrics)]
+         [str-len (string-length (text-metrics-string metrics))]
+         [actual-start (max 0 start-index)]
+         [actual-end (min str-len end-index)])
+    (if (< actual-start actual-end)
+        (map sgr-copy (take (drop sgr-list actual-start) (- actual-end actual-start)))
+        '())))
 
 ;;; =================================================================
 ;;; SGR-Aware Text Modification (Fully Immutable)
@@ -325,75 +323,69 @@
 
 (define (text-metrics-x-index->x-data metrics n)
   "Returns the count of base characters in the first N codepoints.
-   If N > string length, returns #f.
-   If N = 0, returns 0."
+   If N is negative or greater than the string length, returns #f."
   (let ([str (text-metrics-string metrics)]
         [base-indices (text-metrics-base-indices metrics)])
     (cond
-     [(> n (string-length str)) #f]
-     [(= n 0) 0]
-     [else
-      ;; Count how many base indices are < n
-      (length (filter (lambda (idx) (< idx n)) base-indices))])))
+     [(or (< n 0) (> n (string-length str))) #f]
+     [else (count (lambda (idx) (< idx n)) base-indices)])))
 
 (define (text-metrics-x-index->x-cell metrics n)
-  "Returns the character cell location of the Nth codepoint.
-   If N > string length, returns #f.
-   If N = 0, returns 0."
-  (let ([str (text-metrics-string metrics)]
-        [cell-positions (text-metrics-cell-positions metrics)])
+  "Returns the cell where the Nth codepoint is drawn; N = string length
+   gives the cell just past the end.  Out of range N returns #f."
+  (let ([str (text-metrics-string metrics)])
     (cond
-     [(> n (string-length str)) #f]
-     [(= n 0) 0]
-     [else
-      (list-ref cell-positions n)])))
+     [(or (< n 0) (> n (string-length str))) #f]
+     [else (list-ref (text-metrics-cell-positions metrics) n)])))
 
 (define (text-metrics-x-data->x-index metrics n)
   "Returns the string index of the Nth base character.
+   Data position 0 is always index 0, the start of the line.
    If N = number of base chars, returns string length.
-   If N > number of base chars, returns #f."
+   If N is negative or greater than that, returns #f."
   (let ([base-indices (text-metrics-base-indices metrics)]
         [str-len (string-length (text-metrics-string metrics))])
     (cond
-     [(= n 0) 0]
+     [(< n 0) #f]
+     [(= n 0) 0]                ; start of line, even before a stray combining mark
      [(> n (length base-indices)) #f]
      [(= n (length base-indices)) str-len]
-     [else
-      (list-ref base-indices n)])))
+     [else (list-ref base-indices n)])))
 
 (define (text-metrics-x-data->x-cell metrics n)
-  "Returns the character cell location of the Nth base character.
-   If N = number of base chars, returns end-of-string cell position.
-   If N > number of base chars, returns #f."
-  (let ([base-count (text-metrics-string-base-length metrics)])
-    (cond
-     [(> n base-count) #f]
-     [(= n base-count) 
-      ;; Return end-of-string position
-      (last (text-metrics-cell-positions metrics))]
-     [else
-      (let ([str-index (text-metrics-x-data->x-index metrics n)])
-        (text-metrics-x-index->x-cell metrics str-index))])))
+  "Returns the cell where the Nth base character is drawn.
+   If N = number of base chars, returns the cell just past the end.
+   If N is negative or greater than that, returns #f."
+  (let ([index (text-metrics-x-data->x-index metrics n)])
+    (and index (text-metrics-x-index->x-cell metrics index))))
 
 (define (text-metrics-x-cell->x-index metrics n)
-  "Returns the string index of the first codepoint at cell N.
-   Uses binary search for efficiency."
-  (let ([cell-positions (text-metrics-cell-positions metrics)]
-        [str-len (string-length (text-metrics-string metrics))])
-    (let ([result (binary-search-ceiling cell-positions n)])
-      (let ([index (car result)])
-        (cond
-         [(= index str-len) str-len]  ; Past end of string
-         [(>= index (length cell-positions)) #f]  ; Beyond valid range
-         [else index])))))
+  "Returns the string index of the base character drawn over cell N: a
+   cell inside a wide character or a tab maps to that character.  Where
+   several base characters start at the same cell (zero-width ones), the
+   first is returned.  N = cell length gives the string length; N outside
+   0 .. cell length gives #f."
+  (let ([str-len (string-length (text-metrics-string metrics))]
+        [cell-length (text-metrics-cell-length metrics)]
+        [positions (list->vector (text-metrics-cell-positions metrics))])
+    (cond
+     [(or (< n 0) (> n cell-length)) #f]
+     [(= n cell-length) str-len]
+     [else
+      ;; Last base character starting at or before N, then back up over
+      ;; earlier base characters starting at the same cell.
+      (let loop ([bases (text-metrics-base-indices metrics)] [best #f])
+        (if (or (null? bases) (> (vector-ref positions (car bases)) n))
+            (let ([p (vector-ref positions best)])
+              (find (lambda (i) (= (vector-ref positions i) p))
+                    (text-metrics-base-indices metrics)))
+            (loop (cdr bases) (car bases))))])))
 
 (define (text-metrics-x-cell->x-data metrics n)
-  "Returns the number of base characters in the first N cells.
-   Uses binary search for efficiency."
-  (let ([str-index (text-metrics-x-cell->x-index metrics n)])
-    (cond
-     [(not str-index) #f]
-     [else (text-metrics-x-index->x-data metrics str-index)])))
+  "Returns the data position of the base character drawn over cell N
+   (see text-metrics-x-cell->x-index), or #f if N is out of range."
+  (let ([index (text-metrics-x-cell->x-index metrics n)])
+    (and index (text-metrics-x-index->x-data metrics index))))
 
 (define (text-metrics-cell-length metrics)
   "Returns the number of cells that the string occupies."
@@ -404,104 +396,71 @@
 ;;; =================================================================
 
 (define* (text-metrics-render-line metrics x-cell-start x-width #:key (pad? #t))
-  "Return the substring beginning at x-cell-start with x-width cells.
+  "Render the cells X-CELL-START .. X-CELL-START + X-WIDTH - 1 of the line.
    Returns two values: (values rendered-string sgr-list)
-   - rendered-string: The text content with tabs expanded to spaces
-   - sgr-list: List of SGR records corresponding to each character in rendered-string
-   Keyword arguments: #:pad? (default #t)"
+   - rendered-string: what to print.  Tabs become spaces, control
+     characters become ?, and a wide character or tab cut by either edge
+     of the window contributes spaces for the cells that are visible.
+     Combining marks follow their base character.
+   - sgr-list: one SGR per codepoint of rendered-string; the spaces from a
+     tab or cut-off character carry that character's SGR, padding gets the
+     default SGR.
+   With #:pad? #t (the default) the result fills exactly X-WIDTH cells;
+   otherwise it stops at the end of the line."
   (let* ([str (text-metrics-string metrics)]
-         [sgr-list (text-metrics-sgr-list metrics)]
-         [cell-positions (text-metrics-cell-positions metrics)]
+         [str-len (string-length str)]
+         [sgrs (list->vector (text-metrics-sgr-list metrics))]
+         [positions (list->vector (text-metrics-cell-positions metrics))]
          [tabsize (text-metrics-tabsize metrics)]
-         [x-cell-end (+ x-cell-start x-width)]
-         
-         ;; Find start and end indices using binary search
-         [i-start-result (binary-search-ceiling cell-positions x-cell-start)]
-         [i-end-result (binary-search-ceiling cell-positions x-cell-end)]
-         [i-start (car i-start-result)]
-         [i-end (car i-end-result)]
-         
-         ;; Calculate padding and content
-         [left-padding (if (< i-start (length cell-positions))
-                           (max 0 (- (list-ref cell-positions i-start) x-cell-start))
-                           0)]
-         [content-start (min i-start (string-length str))]
-         [content-end (min i-end (string-length str))]
-         [content-str (if (< content-start content-end)
-                          (substring str content-start content-end)
-                          "")]
-         
-         ;; Extract corresponding SGR records for content
-         [content-sgr (if (< content-start content-end)
-                          (take (drop sgr-list content-start) (- content-end content-start))
-                          '())]
-         
-         ;; Expand tabs in content with proper visual columns
-         [expanded-result (expand-tabs-with-sgr content-str content-sgr tabsize)]
-         [expanded-content (car expanded-result)]
-         [expanded-sgr (cadr expanded-result)]
-         
-         ;; Calculate content width and right padding
-         [content-width (if (< content-end (length cell-positions))
-                            (- (list-ref cell-positions content-end)
-			       (list-ref cell-positions content-start))
-                            (- (text-metrics-cell-length metrics)
-			       (if (< content-start (length cell-positions))
-                                   (list-ref cell-positions content-start)
-                                   0)))]
-         [right-padding (if pad?
-                            (max 0 (- x-width left-padding content-width))
-                            0)]
-         
-         ;; Create SGR records for padding (use defaults)
-         [default-sgr (make-default-sgr)]
-         [left-padding-sgr (make-list left-padding default-sgr)]
-         [right-padding-sgr (make-list right-padding default-sgr)]
-         
-         ;; Combine all parts using immutable string operations
-         [final-string (string-join-with (list (string-repeat-char #\space left-padding)
-					       expanded-content
-					       (string-repeat-char #\space right-padding)) "")]
-         [final-sgr-list (append left-padding-sgr
-                                 expanded-sgr
-                                 right-padding-sgr)])
-    
-    (values final-string final-sgr-list)))
-
-(define (expand-tabs-with-sgr content-str content-sgr tabsize)
-  "Expand tabs to spaces while preserving SGR associations.
-   Returns (list expanded-string expanded-sgr-list)"
-  (if (string-null? content-str)
-      (list "" '())
-      (let loop ([i 0]
-                 [current-visual-column 0]  ; Track visual position
-                 [result-chars '()]
-                 [result-sgr '()])
-        (if (>= i (string-length content-str))
-            ;; Convert result to string and return using immutable operations
-            (list (string-from-chars (reverse result-chars))
-                  (reverse result-sgr))
-            
-            ;; Process current character
-            (let ([ch (string-ref content-str i)]
-                  [ch-sgr (list-ref content-sgr i)])
-	      (if (char=? ch #\tab)
-                  ;; Tab character - expand to proper number of spaces
-                  (let* ([next-tab-stop (* tabsize (+ (quotient current-visual-column tabsize) 1))]
-                         [spaces-needed (- next-tab-stop current-visual-column)]
-                         [spaces (make-list spaces-needed #\space)]
-                         [space-sgrs (make-list spaces-needed ch-sgr)])
-                    (loop (+ i 1)
-                          next-tab-stop  ; Visual column advances to tab stop
-                          (append (reverse spaces) result-chars)
-                          (append (reverse space-sgrs) result-sgr)))
-                  
-                  ;; Regular character - keep as-is and advance visual column
-                  (let ([char-width (wcwidth ch #f)])
-                    (loop (+ i 1)
-                          (+ current-visual-column char-width)
-                          (cons ch result-chars)
-                          (cons ch-sgr result-sgr)))))))))
+         [cjk? (text-metrics-cjk? metrics)]
+         [window-start x-cell-start]
+         [window-end (+ x-cell-start (max 0 x-width))])
+    (let loop ([i 0]
+               [base-shown? #f]          ; was the last base char drawn whole?
+               [chars '()]               ; reversed output
+               [out-sgrs '()])
+      (if (= i str-len)
+          ;; Pad from the end of the line to the end of the window
+          (let* ([end-cell (vector-ref positions str-len)]
+                 [pad (if pad?
+                          (max 0 (- window-end (max window-start end-cell)))
+                          0)])
+            (values (string-append (list->string (reverse chars))
+                                   (make-string pad #\space))
+                    (append (reverse out-sgrs)
+                            (make-list pad (make-default-sgr)))))
+          (let* ([ch (string-ref str i)]
+                 [sgr (vector-ref sgrs i)]
+                 [start (vector-ref positions i)])
+            (if (char-combining-mark? ch)
+                ;; Combining marks are drawn only with their base
+                (if base-shown?
+                    (loop (+ i 1) #t (cons ch chars) (cons sgr out-sgrs))
+                    (loop (+ i 1) #f chars out-sgrs))
+                (let* ([width (char-cells ch start tabsize cjk?)]
+                       [end (+ start width)])
+                  (cond
+                   ;; Wholly inside the window (zero-width chars included
+                   ;; when they sit inside it)
+                   [(and (>= start window-start)
+                         (if (zero? width) (< start window-end) (<= end window-end)))
+                    (cond
+                     [(char=? ch #\tab)
+                      (loop (+ i 1) #f
+                            (append (make-list width #\space) chars)
+                            (append (make-list width sgr) out-sgrs))]
+                     [(char-control? ch)
+                      (loop (+ i 1) #t (cons #\? chars) (cons sgr out-sgrs))]
+                     [else
+                      (loop (+ i 1) #t (cons ch chars) (cons sgr out-sgrs))])]
+                   ;; Partly inside: blank out the visible cells
+                   [(and (< start window-end) (> end window-start))
+                    (let ([visible (- (min end window-end) (max start window-start))])
+                      (loop (+ i 1) #f
+                            (append (make-list visible #\space) chars)
+                            (append (make-list visible sgr) out-sgrs)))]
+                   ;; Outside the window
+                   [else (loop (+ i 1) #f chars out-sgrs)]))))))))
 
 (define* (text-metrics-render-line-string-only metrics x-cell-start x-width #:key (pad? #t))
   "Return only the rendered string."
