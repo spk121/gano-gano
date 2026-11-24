@@ -14,3 +14,7 @@ First working version of the editor.
   wcwidth (tables generated from Unicode 15.1).  Bidirectional reordering
   is left to the terminal.
 - Plain Makefile: make, make check, make dist.
+- Command registry (src/gano/commands.scm): each command has a short
+  name, a help line, the modes it works in with their shortcuts, and the
+  inputs it asks for.  The standard table covers the buffer and frame
+  operations; the editor does not use it yet.

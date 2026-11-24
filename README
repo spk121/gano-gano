@@ -52,6 +52,7 @@ Layout
     Makefile                build, check, dist
     bin/gano                launcher script
     src/gano/editor.scm     the editor: state, key handling, screen
+    src/gano/commands.scm   command registry: names, help, modes, shortcuts
     src/gano/buffer.scm     one import for the character buffer layers
     src/gano/cbuf-*.scm     the character buffer (core, basic, standard,
                             extra, serialization, utils)
