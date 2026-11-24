@@ -85,6 +85,10 @@
   (test-equal "DEL is one cell" '(0 1) (positions "\x7f"))
   (test-equal "C1 control is one cell" '(0 1) (positions "\x85"))
   (test-equal "zero-width space takes no cell" '(0 1 1 2) (positions "a​b"))
+  ;; क + ि (U+093F, a spacing mark): one cluster, two cells
+  (test-equal "spacing mark widens its cluster" '(0 0 2) (positions "\u0915\u093F"))
+  (test-equal "spacing mark then next char" '(0 0 2 3) (positions "\u0915\u093Fx"))
+  (test-equal "nonspacing and spacing marks" '(0 0 0 2) (positions "\u0915\u0301\u093F"))
   (test-equal "always one more position than codepoints"
               11 (length (positions "a日\tb́c\x01±de"))))
 
@@ -140,6 +144,9 @@
 
 ;;; ---------------------------------------------------------------
 (test-group "from cells"
+  (let ([m (tm "\u0915\u093Fx")])
+    (test-equal "both cells of a spacing-mark cluster map to its base" '(0 0 2 3)
+                (map (lambda (c) (text-metrics-x-cell->x-index m c)) '(0 1 2 3))))
   ;; A cell maps to the base character drawn over it.
   (let ([m (tm "a日b")])            ; a:0  日:1-2  b:3  end:4
     (test-equal "cell->index" '(0 1 1 2 3)
@@ -285,6 +292,9 @@
   (test-equal "combining mark dropped with its base" "x" (render "éx" 1 1))
   (test-equal "control characters shown as ?" "a?b" (render "a\x01b" 0 3))
 
+  (test-equal "cluster with a spacing mark" "\u0915\u093F " (render "\u0915\u093F" 0 3))
+  (test-equal "cluster with a spacing mark cut at the right edge" "a " (render "a\u0915\u093F" 0 2))
+  (test-equal "cluster with a spacing mark cut at the left edge" " x" (render "\u0915\u093Fx" 1 2))
   ;; SGR list follows the rendered codepoints
   (let-values ([(str sgrs)
                 (text-metrics-render-line

@@ -143,21 +143,23 @@
   "Number of cells CH occupies when it starts at COLUMN."
   (cond
    [(char=? ch #\tab) (- (* tabsize (+ (quotient column tabsize) 1)) column)]
-   [(char-combining-mark? ch) 0]
    [(char-control? ch) 1]
    [else (max 0 (wcwidth ch cjk?))]))
 
 (define (compute-cell-positions str tabsize cjk?)
   "Return a list of STR-LENGTH + 1 cell positions: the cell where each
    codepoint is drawn, followed by the cell just past the end.
-   Combining marks share the cell of their base character."
+   A combining mark belongs to its base character's grapheme cluster, so
+   it gets the base's position; a spacing mark (Mc) still widens the
+   cluster by its own width (nonspacing marks have width 0)."
   (let ([str-len (string-length str)])
     (let loop ([i 0] [column 0] [base-column 0] [acc '()])
       (if (= i str-len)
           (reverse (cons column acc))
           (let ([ch (string-ref str i)])
             (if (char-combining-mark? ch)
-                (loop (+ i 1) column base-column (cons base-column acc))
+                (loop (+ i 1) (+ column (char-cells ch column tabsize cjk?)) base-column
+                      (cons base-column acc))
                 (loop (+ i 1) (+ column (char-cells ch column tabsize cjk?)) column
                       (cons column acc))))))))
 
@@ -398,13 +400,14 @@
 (define* (text-metrics-render-line metrics x-cell-start x-width #:key (pad? #t))
   "Render the cells X-CELL-START .. X-CELL-START + X-WIDTH - 1 of the line.
    Returns two values: (values rendered-string sgr-list)
-   - rendered-string: what to print.  Tabs become spaces, control
-     characters become ?, and a wide character or tab cut by either edge
-     of the window contributes spaces for the cells that are visible.
-     Combining marks follow their base character.
+   - rendered-string: what to print.  It is built from whole grapheme
+     clusters (a base character and its combining marks).  Tabs become
+     spaces and control characters become ?.  A cluster cut by either
+     edge of the window (a wide character, a tab, a base with spacing
+     marks) contributes spaces for the cells that are visible.
    - sgr-list: one SGR per codepoint of rendered-string; the spaces from a
-     tab or cut-off character carry that character's SGR, padding gets the
-     default SGR.
+     tab or cut-off cluster carry its base character's SGR, padding gets
+     the default SGR.
    With #:pad? #t (the default) the result fills exactly X-WIDTH cells;
    otherwise it stops at the end of the line."
   (let* ([str (text-metrics-string metrics)]
@@ -415,8 +418,13 @@
          [cjk? (text-metrics-cjk? metrics)]
          [window-start x-cell-start]
          [window-end (+ x-cell-start (max 0 x-width))])
+    (define (cluster-end i)
+      ;; index after the combining marks following I
+      (let loop ([j (+ i 1)])
+        (if (and (< j str-len) (char-combining-mark? (string-ref str j)))
+            (loop (+ j 1))
+            j)))
     (let loop ([i 0]
-               [base-shown? #f]          ; was the last base char drawn whole?
                [chars '()]               ; reversed output
                [out-sgrs '()])
       (if (= i str-len)
@@ -429,38 +437,37 @@
                                    (make-string pad #\space))
                     (append (reverse out-sgrs)
                             (make-list pad (make-default-sgr)))))
-          (let* ([ch (string-ref str i)]
+          (let* ([j (cluster-end i)]
+                 [ch (string-ref str i)]
                  [sgr (vector-ref sgrs i)]
-                 [start (vector-ref positions i)])
-            (if (char-combining-mark? ch)
-                ;; Combining marks are drawn only with their base
-                (if base-shown?
-                    (loop (+ i 1) #t (cons ch chars) (cons sgr out-sgrs))
-                    (loop (+ i 1) #f chars out-sgrs))
-                (let* ([width (char-cells ch start tabsize cjk?)]
-                       [end (+ start width)])
-                  (cond
-                   ;; Wholly inside the window (zero-width chars included
-                   ;; when they sit inside it)
-                   [(and (>= start window-start)
-                         (if (zero? width) (< start window-end) (<= end window-end)))
-                    (cond
-                     [(char=? ch #\tab)
-                      (loop (+ i 1) #f
-                            (append (make-list width #\space) chars)
-                            (append (make-list width sgr) out-sgrs))]
-                     [(char-control? ch)
-                      (loop (+ i 1) #t (cons #\? chars) (cons sgr out-sgrs))]
-                     [else
-                      (loop (+ i 1) #t (cons ch chars) (cons sgr out-sgrs))])]
-                   ;; Partly inside: blank out the visible cells
-                   [(and (< start window-end) (> end window-start))
-                    (let ([visible (- (min end window-end) (max start window-start))])
-                      (loop (+ i 1) #f
-                            (append (make-list visible #\space) chars)
-                            (append (make-list visible sgr) out-sgrs)))]
-                   ;; Outside the window
-                   [else (loop (+ i 1) #f chars out-sgrs)]))))))))
+                 [start (vector-ref positions i)]
+                 [end (if (< j str-len) (vector-ref positions j) (vector-ref positions str-len))]
+                 [width (- end start)])
+            (cond
+             ;; Wholly inside the window (zero-width clusters included
+             ;; when they sit inside it)
+             [(and (>= start window-start)
+                   (if (zero? width) (< start window-end) (<= end window-end)))
+              (let* ([base-width (char-cells ch start tabsize cjk?)]
+                     [base-chars (cond [(char=? ch #\tab) (make-list base-width #\space)]
+                                       [(char-control? ch) (list #\?)]
+                                       [else (list ch)])]
+                     [mark-indices (iota (- j i 1) (+ i 1))])
+                (loop j
+                      (append (reverse (map (lambda (k) (string-ref str k)) mark-indices))
+                              (reverse base-chars)
+                              chars)
+                      (append (reverse (map (lambda (k) (vector-ref sgrs k)) mark-indices))
+                              (make-list (length base-chars) sgr)
+                              out-sgrs)))]
+             ;; Partly inside: blank out the visible cells
+             [(and (< start window-end) (> end window-start))
+              (let ([visible (- (min end window-end) (max start window-start))])
+                (loop j
+                      (append (make-list visible #\space) chars)
+                      (append (make-list visible sgr) out-sgrs)))]
+             ;; Outside the window
+             [else (loop j chars out-sgrs)]))))))
 
 (define* (text-metrics-render-line-string-only metrics x-cell-start x-width #:key (pad? #t))
   "Return only the rendered string."
