@@ -37,9 +37,7 @@ TESTS      := $(sort $(wildcard test/test-*.scm))
 DISTFILES  = Makefile README NEWS AUTHORS COPYING LICENSE \
              bin/gano $(MODULES) \
              test/run-all.sh $(TESTS) \
-             tools/guile-cache.sh tools/generate-wcwidth.py \
-             tools/generate_bidi_class.py tools/generate_bracket_pairs.py \
-             $(wildcard doc/*)
+             tools/guile-cache.sh tools/generate-wcwidth.py
 DISTDIR    = $(PACKAGE)-$(VERSION)
 
 .PHONY: all check dist distcheck clean
