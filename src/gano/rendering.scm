@@ -88,17 +88,30 @@
 
 ;; 256-color palette entry (0-255)
 (define-record-type <color-256>
-  (make-color-256 index)
+  (%make-color-256 index)
   color-256?
   (index color-256-index))  ; 0-255
 
 ;; RGB color (24-bit true color)
 (define-record-type <color-rgb>
-  (make-color-rgb red green blue)
+  (%make-color-rgb red green blue)
   color-rgb?
   (red color-rgb-red)      ; 0-255
   (green color-rgb-green)  ; 0-255  
   (blue color-rgb-blue))   ; 0-255
+
+(define (byte? n) (and (exact-integer? n) (<= 0 n 255)))
+
+(define (make-color-256 index)
+  "A colour from the 256-colour palette (INDEX 0-255)"
+  (unless (byte? index) (error "make-color-256: index must be 0-255" index))
+  (%make-color-256 index))
+
+(define (make-color-rgb red green blue)
+  "A 24-bit colour (each component 0-255)"
+  (unless (and (byte? red) (byte? green) (byte? blue))
+    (error "make-color-rgb: components must be 0-255" red green blue))
+  (%make-color-rgb red green blue))
 
 ;;; Color type detection
 (define (color-type color)
@@ -130,7 +143,7 @@
                           [(color-magenta) 5]
                           [(color-cyan) 6]
                           [(color-white) 7]
-                          [else 0])])
+                          [else (error "Unknown colour" color)])])
           (list (+ base color-num))))]
    
    ;; 256-color palette
@@ -145,7 +158,7 @@
           (color-rgb-blue color))]
    
    ;; Unknown color type
-   [else '()]))
+   [else (error "Unknown colour" color)]))
 
 (define (ansi-params->color params is-background?)
   "Convert ANSI SGR parameters to a color value"
@@ -184,33 +197,31 @@
    [(and (= (length params) 5)
          (or (= (car params) 38) (= (car params) 48))
          (= (cadr params) 2))
-    (make-color-rgb (caddr params) (cadddr params) (list-ref params 4))]
+    (let ([r (caddr params)] [g (cadddr params)] [b (list-ref params 4)])
+      (if (and (byte? r) (byte? g) (byte? b))
+          (make-color-rgb r g b)
+          'color-default))]
    
    ;; Unknown format
    [else 'color-default]))
 
 (define (rgb->color-256 red green blue)
-  "Convert RGB color to closest 256-color palette entry"
-  ;; 256-color palette structure:
-  ;; 0-15: Standard colors
-  ;; 16-231: 6x6x6 color cube (216 colors)
-  ;; 232-255: Grayscale ramp (24 colors)
-  
+  "Closest entry of the xterm 256-colour palette to an RGB colour: a
+   grey from the 232-255 ramp for (near-)greys, otherwise the nearest
+   entry of the 6x6x6 cube (levels 0, 95, 135, 175, 215, 255)."
+  (define (cube-level v)                ; index 0-5 of the nearest cube level
+    (cond [(< v 48) 0] [(< v 115) 1] [else (min 5 (quotient (- v 35) 40))]))
   (cond
-   ;; Check if it's close to grayscale
-   [(and (< (abs (- red green)) 10) 
-         (< (abs (- green blue)) 10) 
+   [(and (< (abs (- red green)) 10)
+         (< (abs (- green blue)) 10)
          (< (abs (- red blue)) 10))
-    ;; Grayscale: map to 232-255 range
-    (let ([gray-level (quotient (+ red green blue) 3)])
-      (make-color-256 (+ 232 (quotient (* gray-level 23) 255))))]
-   
+    ;; Grey ramp 232-255 has levels 8, 18, ..., 238
+    (let ([gray (quotient (+ red green blue) 3)])
+      (make-color-256 (+ 232 (max 0 (min 23 (round->exact (/ (- gray 8) 10)))))))]
    [else
-    ;; Color cube: 6x6x6 mapping
-    (let ([r6 (quotient (* red 5) 255)]
-          [g6 (quotient (* green 5) 255)]
-          [b6 (quotient (* blue 5) 255)])
-      (make-color-256 (+ 16 (* r6 36) (* g6 6) b6)))]))
+    (make-color-256 (+ 16 (* 36 (cube-level red)) (* 6 (cube-level green)) (cube-level blue)))]))
+
+(define (round->exact x) (inexact->exact (round x)))
 
 (define (color-256->rgb index)
   "Convert 256-color palette entry to approximate RGB values"
@@ -358,7 +369,7 @@
        (eq? (sgr-polarity sgr1) (sgr-polarity sgr2))
        (eq? (sgr-visibility sgr1) (sgr-visibility sgr2))
        (eq? (sgr-strikethrough sgr1) (sgr-strikethrough sgr2))
-       (eq? (sgr-font-family sgr1) (sgr-font-family sgr2))
+       (eqv? (sgr-font-family sgr1) (sgr-font-family sgr2))
        (eq? (sgr-frame sgr1) (sgr-frame sgr2))
        (eq? (sgr-overline sgr1) (sgr-overline sgr2))
        (equal? (sgr-foreground-color sgr1) (sgr-foreground-color sgr2))
@@ -521,6 +532,12 @@
   "Apply a list of SGR attributes to an SGR record"
   (for-each (lambda (attr) (sgr-apply-attribute! sgr attr)) attributes))
 
+(define (sgr-set-font-family! sgr family)
+  "Set the font family: 0 (primary) to 9 (alternative fonts)"
+  (unless (and (exact-integer? family) (<= 0 family 9))
+    (error "Font family must be 0-9" family))
+  (set-sgr-font-family! sgr family))
+
 (define (sgr-set-foreground-color! sgr color)
   "Set foreground color (standard symbol, 256-color, or RGB)"
   (cond
@@ -552,6 +569,15 @@
                  (sgr-apply-attribute! sgr attribute)
                  (loop rest))]
            
+           ;; Bright foreground 90-97 / background 100-107 (aixterm, xterm):
+           ;; palette entries 8-15
+           [(<= 90 param 97)
+            (set-sgr-foreground-color! sgr (make-color-256 (- param 82)))
+            (loop rest)]
+           [(<= 100 param 107)
+            (set-sgr-background-color! sgr (make-color-256 (- param 92)))
+            (loop rest)]
+
            ;; 256-color foreground: 38;5;n
            [(and (= param 38) (>= (length rest) 2) (= (car rest) 5))
             (let ([color-index (cadr rest)])
@@ -592,53 +618,49 @@
 ;;; SGR RENDERING TO ANSI SEQUENCES
 ;;; =================================================================
 
+(define (group-parameters attribute)
+  "SGR parameters that select ATTRIBUTE (a group value symbol)"
+  (list (hash-ref attribute->parameter attribute)))
+
+(define (sgr-parameter-list sgr from)
+  "SGR parameters that turn the attributes FROM into those of SGR, for
+   the groups where they differ (FROM #f means: all non-default ones)."
+  (define (changed? get default)
+    (if from
+        (not (equal? (get sgr) (get from)))
+        (not (equal? (get sgr) default))))
+  (append
+   (if (changed? sgr-intensity 'intensity-normal)
+       ;; going between bold and faint, end the old one first (22)
+       (if (and from
+                (not (eq? (sgr-intensity from) 'intensity-normal))
+                (not (eq? (sgr-intensity sgr) 'intensity-normal)))
+           (cons 22 (group-parameters (sgr-intensity sgr)))
+           (group-parameters (sgr-intensity sgr)))
+       '())
+   (if (changed? sgr-font-style 'font-style-normal) (group-parameters (sgr-font-style sgr)) '())
+   (if (changed? sgr-underline 'underline-none) (group-parameters (sgr-underline sgr)) '())
+   (if (changed? sgr-blink 'blink-none) (group-parameters (sgr-blink sgr)) '())
+   (if (changed? sgr-polarity 'polarity-positive) (group-parameters (sgr-polarity sgr)) '())
+   (if (changed? sgr-visibility 'visibility-revealed) (group-parameters (sgr-visibility sgr)) '())
+   (if (changed? sgr-strikethrough 'strikethrough-normal) (group-parameters (sgr-strikethrough sgr)) '())
+   (if (changed? sgr-font-family 0) (list (+ 10 (sgr-font-family sgr))) '())
+   (if (changed? sgr-frame 'frame-none) (group-parameters (sgr-frame sgr)) '())
+   (if (changed? sgr-overline 'overline-normal) (group-parameters (sgr-overline sgr)) '())
+   (if (changed? sgr-foreground-color 'color-default)
+       (color->ansi-params (sgr-foreground-color sgr) #f) '())
+   (if (changed? sgr-background-color 'color-default)
+       (color->ansi-params (sgr-background-color sgr) #t) '())))
+
+(define (csi-sgr params)
+  (if (null? params)
+      ""
+      (string-append "\x1b[" (string-join (map number->string params) ";") "m")))
+
 (define (sgr->ansi-sequence sgr)
-  "Generate ANSI escape sequence for SGR record"
-  (let ([params '()])
-    
-    ;; Add parameters for non-default attributes
-    (unless (eq? (sgr-intensity sgr) 'intensity-normal)
-      (set! params (cons (hash-ref attribute->parameter (sgr-intensity sgr)) params)))
-    
-    (unless (eq? (sgr-font-style sgr) 'font-style-normal)
-      (set! params (cons (hash-ref attribute->parameter (sgr-font-style sgr)) params)))
-    
-    (unless (eq? (sgr-underline sgr) 'underline-none)
-      (set! params (cons (hash-ref attribute->parameter (sgr-underline sgr)) params)))
-    
-    (unless (eq? (sgr-blink sgr) 'blink-none)
-      (set! params (cons (hash-ref attribute->parameter (sgr-blink sgr)) params)))
-    
-    (unless (eq? (sgr-polarity sgr) 'polarity-positive)
-      (set! params (cons (hash-ref attribute->parameter (sgr-polarity sgr)) params)))
-    
-    (unless (eq? (sgr-visibility sgr) 'visibility-revealed)
-      (set! params (cons (hash-ref attribute->parameter (sgr-visibility sgr)) params)))
-    
-    (unless (eq? (sgr-strikethrough sgr) 'strikethrough-normal)
-      (set! params (cons (hash-ref attribute->parameter (sgr-strikethrough sgr)) params)))
-    
-    (unless (= (sgr-font-family sgr) 0)
-      (set! params (cons (+ 10 (sgr-font-family sgr)) params)))
-    
-    (unless (eq? (sgr-frame sgr) 'frame-none)
-      (set! params (cons (hash-ref attribute->parameter (sgr-frame sgr)) params)))
-    
-    (unless (eq? (sgr-overline sgr) 'overline-normal)
-      (set! params (cons (hash-ref attribute->parameter (sgr-overline sgr)) params)))
-    
-    (unless (eq? (sgr-foreground-color sgr) 'color-default)
-      (set! params (append (color->ansi-params (sgr-foreground-color sgr) #f) params)))
-    
-    (unless (eq? (sgr-background-color sgr) 'color-default)
-      (set! params (append (color->ansi-params (sgr-background-color sgr) #t) params)))
-    
-    ;; Generate escape sequence
-    (if (null? params)
-        ""  ; No attributes, no sequence needed
-        (string-append "\x1b[" 
-                       (string-join (map number->string (reverse params)) ";")
-                       "m"))))
+  "ANSI sequence that sets SGR's non-default attributes, starting from
+   the default state (\"\" if every attribute is the default)"
+  (csi-sgr (sgr-parameter-list sgr #f)))
 
 (define (sgr-differences sgr1 sgr2)
   "Return list of attributes that differ between two SGR records"
@@ -670,9 +692,8 @@
     diffs))
 
 (define (sgr-minimal-sequence from-sgr to-sgr)
-  "Generate minimal ANSI sequence to change from one SGR to another"
-  (let ([diffs (sgr-differences from-sgr to-sgr)])
-    (if (null? diffs)
-        ""  ; No changes needed
-        (sgr->ansi-sequence to-sgr))))  ; For now, just output full sequence
-        
+  "ANSI sequence that changes the terminal from FROM-SGR to TO-SGR,
+   setting only the groups that differ (each group has an \"off\"
+   parameter, so attributes can be turned off without a full reset).
+   \"\" if nothing differs."
+  (csi-sgr (sgr-parameter-list to-sgr from-sgr)))
