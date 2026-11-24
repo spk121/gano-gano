@@ -1433,7 +1433,7 @@
 
 (define* (cbuf-render-line-string-only cbuf x-cell-start x-width #:key (pad? #t))
   "Return only the rendered string"
-  (let-values ([(rendered-string sgr-list)
+  (let-values ([(rendered-string sgr-list bidi-state-list)
                 (cbuf-render-line cbuf x-cell-start x-width #:pad? pad?)])
     rendered-string))
 

@@ -1,0 +1,19 @@
+#!/bin/sh
+# Run the gano text editor from the source tree.
+#
+#   bin/gano [FILE]
+#
+# The (gano ...) modules are found relative to this script, so it works
+# from any directory (and through a symlink).  Set GUILE to choose the
+# Guile binary.  The first run byte-compiles the modules into Guile's
+# cache, which takes a little while.
+
+script=$0
+if command -v readlink >/dev/null 2>&1; then
+    script=$(readlink -f "$0" 2>/dev/null || echo "$0")
+fi
+top=$(cd "$(dirname "$script")/.." && pwd)
+
+exec "${GUILE:-guile}" -L "$top/src" \
+     -c '((@ (gano editor) editor-main) (cons "gano" (cdr (command-line))))' \
+     "$@"

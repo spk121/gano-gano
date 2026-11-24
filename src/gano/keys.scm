@@ -239,9 +239,11 @@
                 [(key-char key)
                  (string (key-char key))]
                 [(key-symbol key)
-                 (or (car (find (lambda (entry) (eq? (cdr entry) (key-symbol key)))
-                               (append *special-keys* *function-keys*)))
-                     (symbol->string (key-symbol key)))]
+                 (let ([entry (find (lambda (entry) (eq? (cdr entry) (key-symbol key)))
+                                    (append *special-keys* *function-keys*))])
+                   (if entry
+                       (car entry)
+                       (symbol->string (key-symbol key))))]
                 [else "?"])])
     
     ;; Special case: single control character uses ^X notation

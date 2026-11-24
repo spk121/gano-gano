@@ -28,6 +28,7 @@
   #:use-module (ice-9 rdelim)       ; Line reading
   #:use-module (ice-9 binary-ports) ; Binary I/O
   #:use-module (ice-9 regex)
+  #:use-module (ice-9 popen)        ; stty
   #:export (
     ;; Terminal setup/cleanup
     terminal-raw-mode-enter
@@ -83,25 +84,39 @@
 (define *terminal-saved-state* #f)
 (define *terminal-raw-mode?* #f)
 
+(define (stty-output . args)
+  "Run stty with ARGS on the controlling terminal (our stdin) and return
+   its first line of output, or #f if it failed."
+  (catch #t
+    (lambda ()
+      ;; ARGS are fixed option strings from this module, never user input.
+      (let* ([port (open-input-pipe
+                    (string-append "stty " (string-join args " ") " 2>/dev/null"))]
+             [line (read-line port)]
+             [status (close-pipe port)])
+        (and (zero? (status:exit-val status))
+             (string? line)
+             line)))
+    (lambda _ #f)))
+
 (define (terminal-save-state)
-  "Save current terminal state"
-  (system "stty -g > /tmp/terminal-state")
-  (set! *terminal-saved-state* #t))
+  "Save current terminal state (in memory, as printed by stty -g)"
+  (set! *terminal-saved-state* (stty-output "-g")))
 
 (define (terminal-restore-state)
   "Restore saved terminal state"
   (when *terminal-saved-state*
-    (system "stty $(cat /tmp/terminal-state)")
-    (system "rm -f /tmp/terminal-state")
-    (set! *terminal-saved-state* #f)
-    (set! *terminal-raw-mode?* #f)))
+    (system* "stty" *terminal-saved-state*)
+    (set! *terminal-saved-state* #f))
+  (set! *terminal-raw-mode?* #f))
 
 (define (terminal-raw-mode-enter)
   "Enter raw mode for character-by-character input"
   (unless *terminal-raw-mode?*
     (terminal-save-state)
-    ;; Disable canonical mode, echo, signals
-    (system "stty raw -echo -isig")
+    ;; Disable canonical mode, echo, signals and flow control (so that
+    ;; ^C, ^Q, ^S, ^Z reach the editor as keys)
+    (system* "stty" "raw" "-echo" "-isig" "-ixon")
     (set! *terminal-raw-mode?* #t)))
 
 (define (terminal-raw-mode-exit)
@@ -192,9 +207,19 @@
 ;;; =================================================================
 
 (define (terminal-get-size)
-  "Get terminal size as (width . height)"
-  ;; Query cursor position after moving to bottom-right
-  (cons 80 24))
+  "Get terminal size as (width . height).
+   Asks stty first, then the COLUMNS/LINES environment variables, and
+   falls back to 80x24."
+  (define (env-number name)
+    (let ([v (getenv name)])
+      (and v (let ([n (string->number v)]) (and n (> n 0) n)))))
+  (let* ([size (stty-output "size")]
+         [fields (and size (map string->number (string-tokenize size)))])
+    (if (and fields (= (length fields) 2) (every number? fields)
+             (> (car fields) 0) (> (cadr fields) 0))
+        (cons (cadr fields) (car fields))      ; stty prints "rows cols"
+        (cons (or (env-number "COLUMNS") 80)
+              (or (env-number "LINES") 24)))))
   ;; (let ([old-pos (terminal-get-cursor-position)])
   ;;   (display (ansi-csi "999;999H"))  ; Move to large position
   ;;   (let ([max-pos (terminal-get-cursor-position)])
@@ -291,18 +316,31 @@
       (usleep 1000)  ; Sleep 1ms
       (loop chars (- timeout 1))])))
 
+(define* (read-char-within ms)
+  "Read a character if one arrives within MS milliseconds, else #f."
+  (let loop ([ms ms])
+    (cond
+     [(char-ready?) (let ([ch (read-char)]) (if (eof-object? ch) #f ch))]
+     [(<= ms 0) #f]
+     [else (usleep 1000) (loop (- ms 1))])))
+
 (define (terminal-read-key)
-  "Read a single key and convert to key object"
+  "Read a single key and convert to key object.
+   Returns a key with symbol 'eof if standard input is closed."
   (let ([ch (read-char)])
     (cond
+     [(eof-object? ch)
+      (make-key #:symbol 'eof)]
+
      ;; Escape sequence
      [(char=? ch #\escape)
       (if (char-ready?)
           (parse-escape-sequence)
           (make-key #:symbol 'escape))]
      
-     ;; Control characters
-     [(< (char->integer ch) 32)
+     ;; Control characters, including DEL (what most terminals send
+     ;; for the Backspace key)
+     [(or (< (char->integer ch) 32) (= (char->integer ch) 127))
       (parse-control-character ch)]
      
      ;; Printable characters
@@ -311,28 +349,47 @@
 
 (define (parse-escape-sequence)
   "Parse escape sequence starting after ESC"
-  (let ([next-char (read-char)])
+  (let ([next-char (read-char-within 50)])
     (cond
+     [(not next-char)
+      (make-key #:symbol 'escape)]
+
      ;; CSI sequence: ESC [
      [(char=? next-char #\[)
       (parse-csi-sequence)]
      
+     ;; Function key / application cursor key sequence: ESC O
+     ;; (checked before Alt+char, since O is graphic)
+     [(char=? next-char #\O)
+      (parse-function-sequence)]
+
      ;; Alt + character: ESC + char
      [(char-graphic? next-char)
       (make-key #:char next-char #:alt? #t)]
-     
-     ;; Function key sequence: ESC O
-     [(char=? next-char #\O)
-      (parse-function-sequence)]
      
      ;; Unknown escape sequence
      [else
       (make-key #:symbol 'escape)])))
 
 (define (parse-csi-sequence)
-  "Parse CSI (Control Sequence Introducer) sequence"
-  (let* ([sequence (terminal-read-input-sequence)]
-         [last-char (string-ref sequence (- (string-length sequence) 1))])
+  "Parse CSI (Control Sequence Introducer) sequence.
+   Reads parameter bytes up to and including the final byte (@ to ~),
+   so keys typed right after the sequence are left unread."
+  (let* ([sequence (let loop ([chars '()])
+                     (let ([ch (read-char-within 50)])
+                       (cond
+                        [(not ch) (list->string (reverse chars))]
+                        [(char<=? #\@ ch #\~) (list->string (reverse (cons ch chars)))]
+                        [else (loop (cons ch chars))])))]
+         [last-char (if (string-null? sequence)
+                        #\nul
+                        (string-ref sequence (- (string-length sequence) 1)))]
+         ;; First numeric parameter, e.g. 3 in "3~" or "3;5~"
+         [params (if (string-null? sequence)
+                     ""
+                     (substring sequence 0 (- (string-length sequence) 1)))]
+         [first-param (let ([fields (string-split params #\;)])
+                        (and (pair? fields) (string->number (car fields))))])
     
     (case last-char
       ;; Arrow keys
@@ -347,7 +404,7 @@
       
       ;; Function keys and other sequences
       [(#\~)
-       (let ([code (string->number (substring sequence 0 (- (string-length sequence) 1)))])
+       (let ([code first-param])
          (case code
            [(1) (make-key #:symbol 'home)]
            [(2) (make-key #:symbol 'insert)]
@@ -370,8 +427,15 @@
 
 (define (parse-function-sequence)
   "Parse function key sequence starting with ESC O"
-  (let ([ch (read-char)])
+  (let ([ch (read-char-within 50)])
     (case ch
+      ;; Arrow/Home/End keys in application cursor mode
+      [(#\A) (make-key #:symbol 'up)]
+      [(#\B) (make-key #:symbol 'down)]
+      [(#\C) (make-key #:symbol 'right)]
+      [(#\D) (make-key #:symbol 'left)]
+      [(#\H) (make-key #:symbol 'home)]
+      [(#\F) (make-key #:symbol 'end)]
       [(#\P) (make-key #:symbol 'f1)]
       [(#\Q) (make-key #:symbol 'f2)]
       [(#\R) (make-key #:symbol 'f3)]
