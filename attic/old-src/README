@@ -17,3 +17,7 @@ test-text-metrics-bidi.scm) are a UAX #9 bidirectional algorithm that
 reordered cell positions visually.  That was the wrong model: terminals
 do their own bidi reordering of the logical text they are sent.  Bidi
 support is postponed; gano currently lays all text out left to right.
+
+gano/statusbar.scm formatted a status line and menus for the first
+editor prototype; it refers to that prototype's editor-state accessors,
+which no longer exist.  The editor draws its own status line.
