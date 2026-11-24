@@ -40,7 +40,6 @@ build-aux/missing
 config.status
 *.old
 *.so
-Makefile
 Makefile.in
 configure
 
@@ -51,3 +50,6 @@ tools/uninstalled-env
 *.trs
 *.log
 
+
+# Build products of the plain Makefile
+build/

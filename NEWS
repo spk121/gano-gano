@@ -1,1 +1,16 @@
+gano NEWS
 
+* 0.0.1 (unreleased)
+
+First working version of the editor.
+
+- A nano-style terminal editor: open, edit and save UTF-8 files (line
+  endings and the final newline are kept); cut/paste, undo/redo, search,
+  go to line, write out; prompts in the status line; redraws on resize.
+- Character buffer (src/gano/cbuf-*.scm) with undo and redo for every
+  editing command, recorded as partial line state per operation.
+- Text is laid out left to right, with wide characters, tabs, combining
+  and spacing marks, and control characters measured per Markus Kuhn's
+  wcwidth (tables generated from Unicode 15.1).  Bidirectional reordering
+  is left to the terminal.
+- Plain Makefile: make, make check, make dist.
