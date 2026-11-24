@@ -699,4 +699,20 @@
     (test-error "font family out of range" #t (sgr-set-font-family! s 10))
     (test-error "bad foreground" #t (sgr-set-foreground-color! s 'color-mauve))))
 
+(test-group "strict: rendering text with attributes"
+  (let ([plain (make-default-sgr)]
+        [bold (make-sgr #:intensity 'intensity-bold)]
+        [red (make-sgr #:foreground-color 'color-red)])
+    (test-equal "plain text needs no sequences" "abc" (sgr-render-text "abc" (list plain plain plain)))
+    (test-equal "empty" "" (sgr-render-text "" '()))
+    (test-equal "a bold word, then back to plain" "a\x1b[1mbc\x1b[22md"
+                (sgr-render-text "abcd" (list plain bold bold plain)))
+    (test-equal "ends in the default state" "\x1b[31mab\x1b[39m"
+                (sgr-render-text "ab" (list red red)))
+    (test-equal "only changes are sent" "\x1b[1ma\x1b[31mb\x1b[22mc\x1b[39m"
+                (sgr-render-text "abc" (list bold (make-sgr #:intensity 'intensity-bold
+                                                             #:foreground-color 'color-red)
+                                             red)))
+    (test-error "length mismatch" #t (sgr-render-text "ab" (list plain)))))
+
 (test-end "gano-rendering")

@@ -24,9 +24,9 @@
 (define-module (gano editor)
   #:use-module (gano buffer)        ; Character buffer (all layers)
   #:use-module (gano frame)         ; Viewport onto the buffer
-  #:use-module (gano keys)          ; Key objects
-  #:use-module (gano char)          ; char-graphic?
+  #:use-module (gano keys)          ; Key objects and key names
   #:use-module (gano terminal)      ; Raw mode, ANSI output, key input
+  #:use-module (gano rendering)     ; SGR attributes -> ANSI
   #:use-module (srfi srfi-1)        ; List utilities
   #:use-module (srfi srfi-9)        ; Record types
   #:use-module (srfi srfi-13)       ; String utilities
@@ -202,36 +202,36 @@
     (set-editor-prompt! state #f)
     (on-done state answer)))
 
+(define (key-is? key name)
+  "Is KEY the key called NAME (in (gano keys) notation, e.g. \"^C\")?"
+  (key-equivalent? key (string->key name)))
+
 (define (handle-prompt-key state key)
   (let* ([p (editor-prompt state)]
-         [ch (key-char key)]
-         [sym (key-symbol key)])
+         [ch (key-char key)])
     (cond
      ;; ^C, Escape or end of input cancels any prompt
-     [(or (and (key-ctrl? key) (eqv? ch #\c))
-          (memq sym '(escape eof)))
+     [(or (key-is? key "^C") (key-is? key "escape") (eq? (key-symbol key) 'eof))
       (cancel-prompt! state)
-      (when (eq? sym 'eof) (set-editor-quit?! state #t))]
+      (when (eq? (key-symbol key) 'eof) (set-editor-quit?! state #t))]
 
      [(eq? (prompt-kind p) 'yes-no)
       (cond
-       [(and ch (not (key-modifier? key)) (memv ch '(#\y #\Y)))
-        (finish-prompt! state #t)]
-       [(and ch (not (key-modifier? key)) (memv ch '(#\n #\N)))
-        (finish-prompt! state #f)]
+       [(or (key-is? key "y") (key-is? key "Y")) (finish-prompt! state #t)]
+       [(or (key-is? key "n") (key-is? key "N")) (finish-prompt! state #f)]
        [else #f])]                      ; ignore anything else
 
-     [(eq? sym 'enter)
+     [(key-is? key "enter")
       (finish-prompt! state (prompt-input p))]
-     [(eq? sym 'backspace)
+     [(key-is? key "backspace")
       (let ([input (prompt-input p)])
         (unless (string-null? input)
           (set-prompt-input! p (substring input 0 (- (string-length input) 1)))))]
-     [(and (key-ctrl? key) (eqv? ch #\u))        ; ^U clears the line
+     [(key-is? key "^U")                         ; ^U clears the line
       (set-prompt-input! p "")]
      [(insertable-char? key)
       (set-prompt-input! p (string-append (prompt-input p) (string ch)))]
-     [(eq? sym 'tab)
+     [(key-is? key "tab")
       (set-prompt-input! p (string-append (prompt-input p) "\t"))]
      [else #f])))
 
@@ -485,68 +485,77 @@
   (message! state "Unknown key: ~a" (key->string key)))
 
 (define (insertable-char? key)
-  (let ([ch (key-char key)])
-    (and ch
-         (not (key-modifier? key))
-         (or (char=? ch #\space)
-             (char-graphic? ch)
-             ;; combining marks etc. are not char-graphic? in all locales
-             (> (char->integer ch) 127)))))
+  "Does KEY type a character into the text?"
+  (or (key-printable? key)
+      ;; characters char-graphic? doesn't cover (combining marks etc.)
+      (let ([ch (key-char key)])
+        (and ch (not (key-modifier? key)) (> (char->integer ch) 127)))))
 
-;; Key bindings: each entry is (KEY-SPEC COMMAND EDIT-KIND), where
-;; KEY-SPEC is (ctrl . CHAR), (alt . CHAR) or a key symbol, and EDIT-KIND
-;; is #f for commands that don't change the buffer, otherwise the undo
-;; kind passed to edit!.
+;; Key bindings, by key name in (gano keys) notation.  Alt+letter is
+;; case-insensitive, as in nano ("A-u" also covers Alt+U).
 (define bindings
-  `(((ctrl . #\s) . ,cmd-save)
-    ((ctrl . #\o) . ,cmd-write-out)
-    ((ctrl . #\x) . ,cmd-exit)
-    ((ctrl . #\q) . ,cmd-force-quit)
-    ((ctrl . #\c) . ,cmd-show-position)
-    ((ctrl . #\w) . ,cmd-search)
-    ((ctrl . #\_) . ,cmd-goto-line)
-    ((alt . #\g) . ,cmd-goto-line)
-    ((ctrl . #\k) . ,cmd-cut-line)
-    ((ctrl . #\u) . ,cmd-paste)
-    ((alt . #\u) . ,cmd-undo)
-    ((alt . #\e) . ,cmd-redo)
-    ((ctrl . #\a) . ,cmd-home)
-    ((ctrl . #\e) . ,cmd-end)
-    ((ctrl . #\y) . ,cmd-page-up)
-    ((ctrl . #\v) . ,cmd-page-down)
-    (up . ,cmd-cursor-up)
-    (down . ,cmd-cursor-down)
-    (left . ,cmd-cursor-left)
-    (right . ,cmd-cursor-right)
-    (home . ,cmd-home)
-    (end . ,cmd-end)
-    (page-up . ,cmd-page-up)
-    (page-down . ,cmd-page-down)
-    (backspace . ,cmd-backspace)
-    (delete . ,cmd-delete)
-    (enter . ,cmd-enter)
-    (eof . ,cmd-force-quit)))          ; input closed: nothing more to do
+  `(("^S" . ,cmd-save)
+    ("^O" . ,cmd-write-out)
+    ("^X" . ,cmd-exit)
+    ("^Q" . ,cmd-force-quit)
+    ("^C" . ,cmd-show-position)
+    ("^W" . ,cmd-search)
+    ("^_" . ,cmd-goto-line)
+    ("A-g" . ,cmd-goto-line)
+    ("^K" . ,cmd-cut-line)
+    ("^U" . ,cmd-paste)
+    ("A-u" . ,cmd-undo)
+    ("A-e" . ,cmd-redo)
+    ("^A" . ,cmd-home)
+    ("^E" . ,cmd-end)
+    ("^Y" . ,cmd-page-up)
+    ("^V" . ,cmd-page-down)
+    ("up" . ,cmd-cursor-up)
+    ("down" . ,cmd-cursor-down)
+    ("left" . ,cmd-cursor-left)
+    ("right" . ,cmd-cursor-right)
+    ("home" . ,cmd-home)
+    ("end" . ,cmd-end)
+    ("pageup" . ,cmd-page-up)
+    ("pagedown" . ,cmd-page-down)
+    ("backspace" . ,cmd-backspace)
+    ("delete" . ,cmd-delete)
+    ("enter" . ,cmd-enter)
+    ("eof" . ,cmd-force-quit)))         ; input closed: nothing more to do
 
-(define (key-spec key)
-  (let ([ch (key-char key)])
-    (cond
-     [(and ch (key-ctrl? key) (not (key-alt? key))) (cons 'ctrl (char-downcase ch))]
-     [(and ch (key-alt? key) (not (key-ctrl? key))) (cons 'alt (char-downcase ch))]
-     [else (key-symbol key)])))
+(define (binding-name key)
+  "The canonical name KEY is bound under"
+  (key->string
+   (if (and (key-alt? key) (key-char key) (not (key-ctrl? key)))
+       (make-key #:char (char-downcase (key-char key)) #:alt? #t #:shift? (key-shift? key))
+       key)))
+
+(define binding-table
+  (let ([table (make-hash-table)])
+    (for-each (lambda (b)
+                (hash-set! table
+                           (if (string=? (car b) "eof") "eof" (binding-name (string->key (car b))))
+                           (cdr b)))
+              bindings)
+    table))
+
+(define (key-command key)
+  "The command bound to KEY, or #f"
+  (hash-ref binding-table (binding-name key) #f))
 
 (define (handle-key state key)
   "Update STATE in response to KEY.  Returns STATE."
   (if (editor-prompt state)
       (handle-prompt-key state key)
-      (let ([binding (assoc (key-spec key) bindings)])
+      (let ([command (key-command key)])
         (cond
-         [(or (insertable-char? key) (eq? (key-symbol key) 'tab))
+         [(or (insertable-char? key) (key-is? key "tab"))
           (cmd-insert-char state (or (key-char key) #\tab))
           (set-editor-last-command! state 'insert)]
-         [binding
+         [command
           (set-editor-typing-run! state #f)
-          ((cdr binding) state)
-          (set-editor-last-command! state (procedure-name (cdr binding)))]
+          (command state)
+          (set-editor-last-command! state (procedure-name command))]
          [else
           (set-editor-typing-run! state #f)
           (unknown-key state key)
@@ -557,12 +566,12 @@
 ;;; RENDERING
 ;;; =================================================================
 
-(define (esc . parts) (apply string-append "\x1b[" parts))
-(define (goto row col) (esc (number->string row) ";" (number->string col) "H"))
+(define reverse-video (make-sgr #:polarity 'polarity-negative))
 
 (define (printable-string str)
   "Replace control characters, which would be interpreted by the
-   terminal, with '?'."
+   terminal, with '?'.  (Buffer text is already made printable by
+   text-metrics; this is for file names and prompt input.)"
   (string-map (lambda (ch)
                 (let ([n (char->integer ch)])
                   (if (or (< n 32) (= n 127) (<= #x80 n #x9f)) #\? ch)))
@@ -616,37 +625,43 @@
          [text-rows (frame-height frame)]
          [prompt (editor-prompt state)])
     (frame-update-frame cbuf frame)
-    (let ([out (open-output-string)])
-      (define (emit . strs) (for-each (lambda (s) (display s out)) strs))
-      (emit (esc "?25l"))                ; hide cursor while drawing
-      ;; Text area
-      (let loop ([lines (frame-render-frame cbuf frame)] [row 1])
-        (when (and (pair? lines) (<= row text-rows))
-          (emit (goto row 1) (printable-string (car lines)) (esc "K"))
-          (loop (cdr lines) (+ row 1))))
-      (when (> height reserved-rows)
-        (let ([help (cond [(not prompt) editing-help]
-                          [(eq? (prompt-kind prompt) 'yes-no) yes-no-help]
-                          [else text-prompt-help])])
-          ;; Status line or prompt
-          (emit (goto (- height 2) 1) (esc "7m")
-                (printable-string
-                 (if prompt
-                     (fit (string-append (prompt-label prompt) (prompt-input prompt)) width)
-                     (status-line state)))
-                (esc "0m")
-                (goto (- height 1) 1) (help-line (first help) width)
-                (goto height 1) (help-line (second help) width))))
-      ;; Cursor: in the prompt if one is open, else in the text
-      (if (and prompt (> height reserved-rows))
-          (emit (goto (- height 2)
-                      (min width (+ 1 (string-length (prompt-label prompt))
-                                    (string-length (prompt-input prompt)))))
-                (esc "?25h"))
-          (let ([pos (frame-get-cursor-position cbuf frame)])
-            (when pos
-              (emit (goto (+ (cdr pos) 1) (+ (car pos) 1)) (esc "?25h")))))
-      (get-output-string out))))
+    (with-output-to-string
+      (lambda ()
+        (terminal-hide-cursor)             ; while drawing
+        ;; Text area, with the text's attributes
+        (let loop ([lines (frame-render-frame-with-sgr cbuf frame)] [row 1])
+          (when (and (pair? lines) (<= row text-rows))
+            (terminal-cursor-position row 1)
+            (display (sgr-render-text (car (car lines)) (cdr (car lines))))
+            (terminal-clear-to-eol)
+            (loop (cdr lines) (+ row 1))))
+        (when (> height reserved-rows)
+          (let ([help (cond [(not prompt) editing-help]
+                            [(eq? (prompt-kind prompt) 'yes-no) yes-no-help]
+                            [else text-prompt-help])])
+            ;; Status line or prompt, in reverse video
+            (terminal-cursor-position (- height 2) 1)
+            (display (sgr->ansi-sequence reverse-video))
+            (display (printable-string
+                      (if prompt
+                          (fit (string-append (prompt-label prompt) (prompt-input prompt)) width)
+                          (status-line state))))
+            (terminal-reset-attributes)
+            (terminal-cursor-position (- height 1) 1)
+            (display (help-line (first help) width))
+            (terminal-cursor-position height 1)
+            (display (help-line (second help) width))))
+        ;; Cursor: in the prompt if one is open, else in the text
+        (if (and prompt (> height reserved-rows))
+            (begin
+              (terminal-cursor-position (- height 2)
+                                        (min width (+ 1 (string-length (prompt-label prompt))
+                                                      (string-length (prompt-input prompt)))))
+              (terminal-show-cursor))
+            (let ([pos (frame-get-cursor-position cbuf frame)])
+              (when pos
+                (terminal-cursor-position (+ (cdr pos) 1) (+ (car pos) 1))
+                (terminal-show-cursor))))))))
 
 ;;; =================================================================
 ;;; MAIN PROGRAM

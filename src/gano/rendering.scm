@@ -61,6 +61,7 @@
     sgr->ansi-sequence
     sgr-differences
     sgr-minimal-sequence
+    sgr-render-text
     
     ;; Extended color types
     <color-256> make-color-256 color-256? color-256-index
@@ -697,3 +698,23 @@
    parameter, so attributes can be turned off without a full reset).
    \"\" if nothing differs."
   (csi-sgr (sgr-parameter-list to-sgr from-sgr)))
+
+(define (sgr-render-text text sgr-list)
+  "ANSI output that draws TEXT with the attributes in SGR-LIST (one per
+   character), starting from and ending in the default state.  Only the
+   changes between neighbouring characters are sent."
+  (unless (= (string-length text) (length sgr-list))
+    (error "sgr-render-text: need one SGR per character"
+           (string-length text) (length sgr-list)))
+  (let ([default (make-default-sgr)]
+        [out (open-output-string)])
+    (let loop ([i 0] [sgrs sgr-list] [current default])
+      (if (null? sgrs)
+          (begin
+            (display (sgr-minimal-sequence current default) out)
+            (get-output-string out))
+          (begin
+            (unless (sgr-equal? current (car sgrs))
+              (display (sgr-minimal-sequence current (car sgrs)) out))
+            (write-char (string-ref text i) out)
+            (loop (+ i 1) (cdr sgrs) (car sgrs)))))))

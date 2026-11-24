@@ -445,6 +445,24 @@
     (test-assert "buffer still modified" (editor-modified? st))
     (delete-file mine)))
 
+(test-group "keys and attributes through the shared modules"
+  (let ([st (open-editor "x\n")])
+    (type! st "ab" '(alt . #\U))
+    (test-equal "Alt+Shift+U is undo too" "x\n" (buffer-text st))
+    (handle-key st (make-key #:symbol 'f5))
+    (test-equal "unknown keys are named with key->string" "Unknown key: F5"
+                (editor-status-message st))
+    (handle-key st (make-key #:symbol 'up #:ctrl? #t))
+    (test-equal "modified keys too" "Unknown key: C-up" (editor-status-message st))
+    (delete-file (editor-filename st)))
+  (let* ([st (open-editor "" #:width 20 #:height 6)]
+         [cbuf (editor-cbuf st)])
+    (set-cbuf-current-sgr! cbuf ((@ (gano rendering) make-sgr) #:intensity 'intensity-bold))
+    (type! st "hi")
+    (test-assert "text attributes reach the screen"
+                 (string-contains (render-screen st) "\x1b[1;1H\x1b[1mhi\x1b[22m"))
+    (delete-file (editor-filename st))))
+
 (test-group "prompt rendering"
   (let ([st (open-editor "x\n" #:width 40 #:height 10)])
     (type! st '(ctrl . #\w) "ab")
