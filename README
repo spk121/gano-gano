@@ -29,9 +29,11 @@ key).  The main ones:
     A-\ / A-/                     first / last line
     ^_ or A-g                     go to line[,column]
     Backspace, Delete             delete (joining lines at line ends)
-    ^K / ^U                       cut line / paste (consecutive cuts
-                                  are pasted together)
-    ^^ (Ctrl+6) or A-a            start selecting; A-6 copies
+    ^^ (Ctrl+6) or A-a            start selecting
+    ^K / A-6 / ^U                 cut / copy / paste: the selection if
+                                  there is one, else the line
+                                  (consecutive cuts or copies are
+                                  pasted together)
     A-u / A-e                     undo / redo
     ^W / A-q                      search forward / backward
     ^\ or A-r                     replace, asking at each match

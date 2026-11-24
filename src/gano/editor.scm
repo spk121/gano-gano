@@ -578,23 +578,55 @@
                             (and (not (char-whitespace? char))
                                  (cons (cbuf-line-cur cbuf) (cbuf-x-data cbuf))))))
 
+(define (add-to-clipboard! state text continuing)
+  "Put TEXT in the clipboard, after what is there if the previous
+   command was CONTINUING (so that a run of cuts, or of copies, is
+   pasted back in one go)"
+  (set-editor-clipboard! state
+                         (if (equal? (editor-last-command state) continuing)
+                             (string-append (editor-clipboard state) text)
+                             text)))
+
 (define (cmd-cut-line state)
-  "Cut the current line.  Consecutive cuts are collected together, so
-   that one paste puts them all back."
-  (let* ([cbuf (editor-cbuf state)]
-         [last-line? (= (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 1))]
-         [text (string-append (cbuf-text-cur cbuf) (if last-line? "" "\n"))])
-    (unless (and last-line? (string-null? text))
-      (if last-line?
-          ;; The last line has no newline to take: just empty it.
-          (begin (cbuf-save-line-range-undo! cbuf (cbuf-line-cur cbuf) (cbuf-line-cur cbuf))
-                 (cbuf-beginning-of-line! cbuf)
-                 (cbuf-delete-to-end-of-line! cbuf #:undo? #f))
-          (cbuf-cut-line! cbuf))
-      (set-editor-clipboard! state
-                             (if (equal? (editor-last-command state) "cut-line")
-                                 (string-append (editor-clipboard state) text)
-                                 text)))))
+  "Cut the selection if there is one, else the current line, as nano
+   does.  Consecutive cuts are collected together, so that one paste
+   puts them all back."
+  (let ([cbuf (editor-cbuf state)])
+    (if (cbuf-mark-set? cbuf)
+        (let ([text (cbuf-get-region-text cbuf)])
+          (if (string-null? text)
+              (cbuf-clear-mark! cbuf)              ; nothing selected
+              (begin
+                (cbuf-cut-region! cbuf)            ; also clears the mark
+                (add-to-clipboard! state text "cut-line"))))
+        (let* ([last-line? (= (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 1))]
+               [text (string-append (cbuf-text-cur cbuf) (if last-line? "" "\n"))])
+          (unless (and last-line? (string-null? text))
+            (if last-line?
+                ;; The last line has no newline to take: just empty it.
+                (begin (cbuf-save-line-range-undo! cbuf (cbuf-line-cur cbuf) (cbuf-line-cur cbuf))
+                       (cbuf-beginning-of-line! cbuf)
+                       (cbuf-delete-to-end-of-line! cbuf #:undo? #f))
+                (cbuf-cut-line! cbuf))
+            (add-to-clipboard! state text "cut-line"))))))
+
+(define (cmd-copy state)
+  "Copy the selection if there is one, else the current line (moving
+   to the next, so that consecutive copies take consecutive lines), as
+   nano does"
+  (let ([cbuf (editor-cbuf state)])
+    (if (cbuf-mark-set? cbuf)
+        (let ([text (cbuf-get-region-text cbuf)])
+          (cbuf-clear-mark! cbuf)
+          (unless (string-null? text)
+            (add-to-clipboard! state text "copy")))
+        (let* ([last-line? (= (cbuf-line-cur cbuf) (- (cbuf-line-count cbuf) 1))]
+               [text (string-append (cbuf-text-cur cbuf) (if last-line? "" "\n"))])
+          (unless (string-null? text)
+            (add-to-clipboard! state text "copy"))
+          (if last-line?
+              (cbuf-end-of-line! cbuf)
+              (begin (cbuf-next-line! cbuf) (cbuf-beginning-of-line! cbuf)))))))
 
 (define (cmd-paste state)
   (let ([text (editor-clipboard state)])
@@ -744,7 +776,8 @@
     ;; In place of the standard commands of these names:
     (editor-command "search"    "Search forward for text, wrapping" cmd-search "^W" "F6")
     (editor-command "goto-line" "Go to a line and column" cmd-goto-line "^_" "A-g")
-    (editor-command "cut-line"  "Cut the current line" cmd-cut-line "^K")
+    (editor-command "cut-line"  "Cut the selection, or else the line" cmd-cut-line "^K")
+    (editor-command "copy"      "Copy the selection, or else the line" cmd-copy "A-6")
     (editor-command "paste"     "Paste the cut text" cmd-paste "^U")
     (editor-command "undo"      "Undo the last change" cmd-undo "A-u")
     (editor-command "redo"      "Redo the last undone change" cmd-redo "A-e"))))
