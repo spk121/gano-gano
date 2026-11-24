@@ -715,4 +715,13 @@
                                              red)))
     (test-error "length mismatch" #t (sgr-render-text "ab" (list plain)))))
 
+(test-begin "sgr-invert-polarity")
+(let* ([bold (make-sgr #:intensity 'intensity-bold)]
+       [inv (sgr-invert-polarity bold)])
+  (test-eq "normal becomes reverse" 'polarity-negative (sgr-polarity inv))
+  (test-eq "other attributes kept" 'intensity-bold (sgr-intensity inv))
+  (test-eq "the original is unchanged" 'polarity-positive (sgr-polarity bold))
+  (test-eq "reverse becomes normal" 'polarity-positive (sgr-polarity (sgr-invert-polarity inv))))
+(test-end "sgr-invert-polarity")
+
 (test-end "gano-rendering")

@@ -419,19 +419,48 @@
                (if pad? (make-string width #\space) "")))
          (frame-visible-line-metrics buf frame))))
 
-(define* (frame-render-frame-with-sgr buf frame #:key (pad? #t))
+(define (highlight-metrics metrics line region)
+  "METRICS for LINE with the part inside REGION in inverted video.
+   REGION is ((START-LINE . START-X-DATA) . (END-LINE . END-X-DATA)),
+   start first."
+  (let* ([start (car region)]
+         [end (cdr region)]
+         [len (string-length (text-metrics-string metrics))])
+    (if (or (< line (car start)) (> line (car end)))
+        metrics
+        (let ([from (if (= line (car start)) (text-metrics-x-data->x-index metrics (cdr start)) 0)]
+              [to (if (= line (car end)) (text-metrics-x-data->x-index metrics (cdr end)) len)])
+          (if (>= from to)
+              metrics
+              (make-text-metrics (text-metrics-string metrics)
+                                 (append (take (text-metrics-sgr-list metrics) from)
+                                         (map sgr-invert-polarity
+                                              (take (drop (text-metrics-sgr-list metrics) from)
+                                                    (- to from)))
+                                         (drop (text-metrics-sgr-list metrics) to))
+                                 (text-metrics-base-indices metrics)
+                                 (text-metrics-cell-positions metrics)
+                                 (text-metrics-tabsize metrics)
+                                 (text-metrics-cjk? metrics)))))))
+
+(define* (frame-render-frame-with-sgr buf frame #:key (pad? #t) (region #f))
   "Render frame with SGR formatting information.
-   Returns list of (string . sgr-list) pairs."
+   Returns list of (string . sgr-list) pairs.  With REGION,
+   ((START-LINE . START-X-DATA) . (END-LINE . END-X-DATA)) with the start
+   first, the text in it is shown in inverted video."
   (let ([x-frame (frame-x-start frame)]
         [width (frame-width frame)])
-    (map (lambda (metrics)
+    (map (lambda (metrics line)
            (if metrics
                (let-values ([(str sgr-list)
-                             (text-metrics-render-line metrics x-frame width #:pad? pad?)])
+                             (text-metrics-render-line
+                              (if region (highlight-metrics metrics line region) metrics)
+                              x-frame width #:pad? pad?)])
                  (cons str sgr-list))
                (cons (make-string width #\space)
                      (make-list width (make-default-sgr)))))
-         (frame-visible-line-metrics buf frame))))
+         (frame-visible-line-metrics buf frame)
+         (iota (frame-height frame) (frame-y-start frame)))))
 
 ;;;; Query Functions
 

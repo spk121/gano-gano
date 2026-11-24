@@ -24,5 +24,8 @@ First working version of the editor.
 - Help comes from the command table: the help rows show the current
   mode's shortcuts, and ^G (or F1) opens a help screen listing every
   command with its keys and help line.
+- Interactive replace (^\\ or A-r): Y/N at each match, A for all the
+  rest, ^C to stop; it wraps round to where it began.  The match being
+  asked about, and any selection, are shown in reverse video.
 - Commands report what happened ("Not found", "Replaced 3
   occurrences").  Scrolling the view takes the cursor along, as in nano.

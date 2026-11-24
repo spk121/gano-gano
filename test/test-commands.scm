@@ -31,7 +31,7 @@
 ;;; ---------------------------------------------------------------
 (test-group "modes"
   (test-equal "mode values" '(main search replace replace-with goto-line write-file
-                              insert-file extended help yes-no prompt)
+                              insert-file extended help yes-no prompt replace-ask)
               all-modes)
   (test-equal "text prompt modes" '(search replace replace-with goto-line write-file
                                     insert-file extended prompt)

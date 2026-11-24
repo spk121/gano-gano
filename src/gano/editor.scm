@@ -84,14 +84,17 @@
 ;;   on-done   (lambda (state answer)) called with the input string,
 ;;             or #t/#f for a yes-no prompt.  Not called on cancel.
 ;;   mode      the editor mode while the prompt is open
+;;   on-cancel (lambda (state)) called when the prompt is cancelled, or
+;;             #f to just say "Cancelled"
 (define-record-type <prompt>
-  (make-prompt kind label input on-done mode)
+  (make-prompt kind label input on-done mode on-cancel)
   prompt?
   (kind prompt-kind)
   (label prompt-label)
   (input prompt-input set-prompt-input!)
   (on-done prompt-on-done)
-  (mode prompt-mode))
+  (mode prompt-mode)
+  (on-cancel prompt-on-cancel))
 
 (define-record-type <editor-state>
   (%make-editor-state cbuf frame filename width height quit? status-message
@@ -217,15 +220,19 @@
 
 (define* (ask-text! state label default on-done #:key (mode MPROMPT))
   "Open a text prompt in MODE showing LABEL, with DEFAULT already typed."
-  (set-editor-prompt! state (make-prompt 'text label default on-done mode)))
+  (set-editor-prompt! state (make-prompt 'text label default on-done mode #f)))
 
-(define (ask-yes-no! state label on-done)
-  "Open a Y/N prompt showing LABEL."
-  (set-editor-prompt! state (make-prompt 'yes-no label "" on-done MYESNO)))
+(define* (ask-yes-no! state label on-done #:key (mode MYESNO) (on-cancel #f))
+  "Open a prompt showing LABEL that is answered by a key (Y or N, and in
+   MREPLACEASK also A for all), not by typing a line."
+  (set-editor-prompt! state (make-prompt 'yes-no label "" on-done mode on-cancel)))
 
 (define (cancel-prompt! state)
-  (set-editor-prompt! state #f)
-  (message! state "Cancelled"))
+  (let ([on-cancel (prompt-on-cancel (editor-prompt state))])
+    (set-editor-prompt! state #f)
+    (if on-cancel
+        (on-cancel state)
+        (message! state "Cancelled"))))
 
 (define (finish-prompt! state answer)
   "Close the prompt, then call its continuation (which may open another)."
@@ -410,6 +417,99 @@
                              (when (third hit) (message! state "Search wrapped"))]))))))
                #:mode MSEARCH)))
 
+;; --- Replace ---
+
+(define (search-default-label label previous)
+  (if (string-null? previous)
+      (string-append label ": ")
+      (format #f "~a [~a]: " label previous)))
+
+(define (cmd-replace state)
+  "Ask for the text to replace and its replacement, then go through the
+   matches from the cursor, asking at each whether to replace it"
+  (let ([previous (editor-last-search state)])
+    (ask-text! state (search-default-label "Search (to replace)" previous) ""
+               (lambda (state answer)
+                 (let ([search (if (string-null? answer) previous answer)])
+                   (if (string-null? search)
+                       (message! state "Cancelled")
+                       (begin
+                         (set-editor-last-search! state search)
+                         (ask-text! state "Replace with: " ""
+                                    (lambda (state replacement)
+                                      (replace-interactively! state search replacement))
+                                    #:mode MREPLACEWITH)))))
+               #:mode MREPLACE)))
+
+(define (replace-interactively! state search replacement)
+  "Replace matches of SEARCH (ignoring case) with REPLACEMENT, from the
+   cursor to the end of the buffer and then from the start back round
+   to where it began, asking at each match: Y replaces it, N skips it,
+   A replaces it and all the rest, ^C stops.  Each replacement is its
+   own undo step."
+  (let* ([cbuf (editor-cbuf state)]
+         [start-line (cbuf-line-cur cbuf)]
+         [start-index (cbuf-x-data->x-index cbuf (cbuf-x-data cbuf))]
+         [wrapped? #f]
+         [found 0]
+         [replaced 0]
+         ;; Where the cursor ends: after the last replacement, else
+         ;; where it started
+         [end-position (cons start-line (cbuf-x-data cbuf))])
+    (define (match-index)                 ; where the selected match starts
+      (cbuf-x-data->x-index cbuf (cbuf-mark-x-data cbuf)))
+    (define (before-start?)
+      (or (not wrapped?)
+          (< (cbuf-mark-line cbuf) start-line)
+          (and (= (cbuf-mark-line cbuf) start-line) (< (match-index) start-index))))
+    (define (search!)
+      (cbuf-clear-mark! cbuf)
+      (cbuf-search-forward! cbuf search #:case-insensitive? #t))
+    (define (next-match!)
+      "Select the next match, wrapping once; #f when back at the start"
+      (and (or (search!)
+               (and (not wrapped?)
+                    (begin (set! wrapped? #t)
+                           (cbuf-beginning-of-buffer! cbuf)
+                           (search!))))
+           (before-start?)
+           (begin (set! found (+ found 1)) #t)))
+    (define (replace!)
+      (let ([line (cbuf-mark-line cbuf)]
+            [index (match-index)]
+            [old-length (string-length (cbuf-get-region-text cbuf))])
+        (cbuf-search-replace! cbuf search replacement #:case-insensitive? #t)
+        (set! replaced (+ replaced 1))
+        (set! end-position (cons (cbuf-line-cur cbuf) (cbuf-x-data cbuf)))
+        ;; A replacement before the starting point on its line moves it
+        (when (and wrapped? (= line start-line) (< index start-index))
+          (set! start-index (+ start-index (- (string-length replacement) old-length))))))
+    (define (finish! state)
+      (cbuf-clear-mark! cbuf)
+      (cbuf-set-y! cbuf (car end-position))
+      (cbuf-set-x! cbuf (cdr end-position) 'data)
+      (cond
+       [(zero? found) (message! state "\"~a\" not found" search)]
+       [else (message! state "Replaced ~a occurrence~a" replaced (if (= replaced 1) "" "s"))]))
+    (define (replace-rest!)
+      (let loop ()
+        (when (next-match!)
+          (replace!)
+          (loop)))
+      (finish! state))
+    (define (ask-next! state)
+      (if (next-match!)
+          (ask-yes-no! state "Replace this instance? (Y/N/A, ^C to stop) "
+                       (lambda (state answer)
+                         (case answer
+                           [(#t) (replace!) (ask-next! state)]
+                           [(#f) (ask-next! state)]
+                           [(all) (replace!) (replace-rest!)]))
+                       #:mode MREPLACEASK
+                       #:on-cancel finish!)
+          (finish! state)))
+    (ask-next! state)))
+
 ;; --- Editing ---
 
 (define (cmd-insert-char state char)
@@ -489,7 +589,7 @@
   "The help screen's text, made from the command table"
   (let ([prompt-commands
          (filter (lambda (c) (and (not (command-in-mode? c MMAIN))
-                                  (or (command-in-mode? c MPROMPT) (command-in-mode? c MYESNO))))
+                                  (not (command-in-mode? c MHELP))))
                  (command-table-commands editor-commands))])
     (string-join
      (append
@@ -502,8 +602,7 @@
             "")
       (map (lambda (c) (help-entry c MMAIN)) (command-table-commands editor-commands MMAIN))
       (list "" "At a prompt" "")
-      (map (lambda (c) (help-entry c (if (command-in-mode? c MPROMPT) MPROMPT MYESNO)))
-           prompt-commands))
+      (map (lambda (c) (help-entry c (car (command-modes c)))) prompt-commands))
      "\n")))
 
 (define (cmd-help state)
@@ -572,7 +671,7 @@
     (prompt-command "accept"    "Accept the answer" prompt-accept!
                     text-prompt-modes "enter")
     (prompt-command "cancel"    "Cancel" cancel-prompt!
-                    (cons MYESNO text-prompt-modes) "^C" "escape")
+                    (cons* MYESNO MREPLACEASK text-prompt-modes) "^C" "escape")
     (prompt-command "input-bksp" "Delete the last character typed" prompt-backspace!
                     text-prompt-modes "backspace")
     (prompt-command "clear-input" "Clear the answer" prompt-clear!
@@ -580,9 +679,14 @@
     (prompt-command "complete"  "Complete the command name" cmd-complete
                     (list MEXTCMD) "tab")
     (prompt-command "yes"       "Answer yes" (lambda (state) (finish-prompt! state #t))
-                    (list MYESNO) "y" "Y")
+                    (list MYESNO MREPLACEASK) "y" "Y")
     (prompt-command "no"        "Answer no" (lambda (state) (finish-prompt! state #f))
-                    (list MYESNO) "n" "N")
+                    (list MYESNO MREPLACEASK) "n" "N")
+    (prompt-command "all"       "Replace this and all the rest"
+                    (lambda (state) (finish-prompt! state 'all))
+                    (list MREPLACEASK) "a" "A")
+    (editor-command "replace"   "Replace text, asking at each match" cmd-replace
+                    "^\\" "A-r")
     ;; In place of the standard commands of these names:
     (editor-command "search"    "Search forward for text, wrapping" cmd-search "^W" "F6")
     (editor-command "goto-line" "Go to a line and column" cmd-goto-line "^_" "A-g")
@@ -764,6 +868,17 @@
   (let ([cell (max 1 (quotient width (max 1 (length entries))))])
     (fit (string-concatenate (map (lambda (e) (fit e cell)) entries)) width)))
 
+(define (selection cbuf)
+  "The selected text as ((START-LINE . X-DATA) . (END-LINE . X-DATA)),
+   or #f if the mark is not set"
+  (and (cbuf-mark-set? cbuf)
+       (let ([mark (cons (cbuf-mark-line cbuf) (cbuf-mark-x-data cbuf))]
+             [point (cons (cbuf-line-cur cbuf) (cbuf-x-data cbuf))])
+         (if (or (< (car mark) (car point))
+                 (and (= (car mark) (car point)) (<= (cdr mark) (cdr point))))
+             (cons mark point)
+             (cons point mark)))))
+
 (define (render-screen state)
   "Return the ANSI output that redraws the whole screen for STATE.
    Also scrolls the frame so the cursor is visible."
@@ -779,7 +894,8 @@
       (lambda ()
         (terminal-hide-cursor)             ; while drawing
         ;; Text area, with the text's attributes
-        (let loop ([lines (frame-render-frame-with-sgr cbuf frame)] [row 1])
+        (let loop ([lines (frame-render-frame-with-sgr cbuf frame #:region (selection cbuf))]
+                   [row 1])
           (when (and (pair? lines) (<= row text-rows))
             (terminal-cursor-position row 1)
             (display (sgr-render-text (car (car lines)) (cdr (car lines))))

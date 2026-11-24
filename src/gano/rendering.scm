@@ -49,6 +49,7 @@
     ;; Constructors and utilities
     make-default-sgr
     sgr-copy
+    sgr-invert-polarity
     sgr-reset!
     sgr-equal?
     
@@ -330,6 +331,14 @@
 (define (make-default-sgr)
   "Create an SGR record with all default attributes"
   (make-sgr))
+
+(define (sgr-invert-polarity sgr)
+  "A copy of SGR in reverse video if it was not, or normal video if it was"
+  (let ([new (sgr-copy sgr)])
+    (set-sgr-polarity! new (if (eq? (sgr-polarity sgr) 'polarity-negative)
+                               'polarity-positive
+                               'polarity-negative))
+    new))
 
 (define (sgr-copy sgr)
   "Create a copy of an SGR record"

@@ -45,7 +45,7 @@
   #:export (
     ;; Editor modes
     MMAIN MSEARCH MREPLACE MREPLACEWITH MGOTOLINE MWRITEFILE
-    MINSERTFILE MEXTCMD MHELP MYESNO MPROMPT
+    MINSERTFILE MEXTCMD MHELP MYESNO MPROMPT MREPLACEASK
     all-modes
     text-prompt-modes
     mode?
@@ -122,10 +122,11 @@
 (define MHELP        'help)          ; reading the help text
 (define MYESNO       'yes-no)        ; answering a yes/no question
 (define MPROMPT      'prompt)        ; typing any other answer
+(define MREPLACEASK  'replace-ask)   ; replace this match? (yes/no/all)
 
 (define all-modes
   (list MMAIN MSEARCH MREPLACE MREPLACEWITH MGOTOLINE MWRITEFILE
-        MINSERTFILE MEXTCMD MHELP MYESNO MPROMPT))
+        MINSERTFILE MEXTCMD MHELP MYESNO MPROMPT MREPLACEASK))
 
 ;; The modes of a prompt where a line of text is typed
 (define text-prompt-modes
