@@ -16,13 +16,16 @@
 ;;;   rows H-1, H     key help
 ;;;
 ;;; Keys are looked up in a command table (see (gano commands)) under
-;;; the editor's current mode, which for now is always MMAIN.  The table
-;;; is the standard one with the editor's own commands (saving, exiting,
-;;; and versions of search, go to line, cut, paste, undo and redo that
-;;; know about the editor's state) put in place of the standard
-;;; commands of the same names.  A command that needs input from the
-;;; user gets it through prompts in the status line before it runs.
-;;; Printable characters and Tab are typed into the text directly.
+;;; the editor's current mode: MMAIN while editing, or the mode of the
+;;; open prompt (MSEARCH, MGOTOLINE, MYESNO, ...).  The table is the
+;;; standard one with the editor's own commands put in place of the
+;;; standard commands of the same names: saving and exiting; versions
+;;; of search, go to line, cut, paste, undo and redo that know about the
+;;; editor's state; the prompt keys (accept, cancel, ...); and A-x, which
+;;; runs any main-mode command by name.  A command that needs input from
+;;; the user gets it through prompts in the status line before it runs.
+;;; Printable characters and Tab are typed directly, into the text or
+;;; into the open prompt.
 ;;;
 ;;; Undo and redo use the buffer's own undo history (cbuf-undo,
 ;;; cbuf-redo!).  Typing is undone a word at a time: the first character
@@ -80,18 +83,20 @@
 ;;   input     what has been typed so far
 ;;   on-done   (lambda (state answer)) called with the input string,
 ;;             or #t/#f for a yes-no prompt.  Not called on cancel.
+;;   mode      the editor mode while the prompt is open
 (define-record-type <prompt>
-  (make-prompt kind label input on-done)
+  (make-prompt kind label input on-done mode)
   prompt?
   (kind prompt-kind)
   (label prompt-label)
   (input prompt-input set-prompt-input!)
-  (on-done prompt-on-done))
+  (on-done prompt-on-done)
+  (mode prompt-mode))
 
 (define-record-type <editor-state>
   (%make-editor-state cbuf frame filename width height quit? status-message
                       prompt typing-run saved-undo-top last-command
-                      clipboard last-search mode)
+                      clipboard last-search base-mode)
   editor-state?
   (cbuf editor-cbuf set-editor-cbuf!)
   (frame editor-frame set-editor-frame!)
@@ -112,8 +117,8 @@
   (last-command editor-last-command set-editor-last-command!)
   (clipboard editor-clipboard set-editor-clipboard!)
   (last-search editor-last-search set-editor-last-search!)
-  ;; The mode keys are looked up in (MMAIN, MSEARCH, ...)
-  (mode editor-mode set-editor-mode!))
+  ;; The mode when no prompt is open
+  (base-mode editor-base-mode set-editor-base-mode!))
 
 (define (text-area-height height)
   (max 1 (- height reserved-rows)))
@@ -135,6 +140,11 @@
 (define (editor-modified? state)
   "Has the buffer changed since it was loaded or last saved?"
   (cbuf-modified? (editor-cbuf state)))
+
+(define (editor-mode state)
+  "The mode keys are looked up in: the open prompt's, else the base mode"
+  (let ([p (editor-prompt state)])
+    (if p (prompt-mode p) (editor-base-mode state))))
 
 (define (editor-prompt-label state)
   "The label of the open prompt, or #f if no prompt is open."
@@ -199,13 +209,13 @@
 ;;; PROMPTS
 ;;; =================================================================
 
-(define (ask-text! state label default on-done)
-  "Open a text prompt showing LABEL, with DEFAULT already typed."
-  (set-editor-prompt! state (make-prompt 'text label default on-done)))
+(define* (ask-text! state label default on-done #:key (mode MPROMPT))
+  "Open a text prompt in MODE showing LABEL, with DEFAULT already typed."
+  (set-editor-prompt! state (make-prompt 'text label default on-done mode)))
 
 (define (ask-yes-no! state label on-done)
   "Open a Y/N prompt showing LABEL."
-  (set-editor-prompt! state (make-prompt 'yes-no label "" on-done)))
+  (set-editor-prompt! state (make-prompt 'yes-no label "" on-done MYESNO)))
 
 (define (cancel-prompt! state)
   (set-editor-prompt! state #f)
@@ -221,34 +231,21 @@
   "Is KEY the key called NAME (in (gano keys) notation, e.g. \"^C\")?"
   (key-equivalent? key (string->key name)))
 
-(define (handle-prompt-key state key)
+(define (prompt-accept! state)
+  (finish-prompt! state (prompt-input (editor-prompt state))))
+
+(define (prompt-backspace! state)
   (let* ([p (editor-prompt state)]
-         [ch (key-char key)])
-    (cond
-     ;; ^C, Escape or end of input cancels any prompt
-     [(or (key-is? key "^C") (key-is? key "escape") (eq? (key-symbol key) 'eof))
-      (cancel-prompt! state)
-      (when (eq? (key-symbol key) 'eof) (set-editor-quit?! state #t))]
+         [input (prompt-input p)])
+    (unless (string-null? input)
+      (set-prompt-input! p (substring input 0 (- (string-length input) 1))))))
 
-     [(eq? (prompt-kind p) 'yes-no)
-      (cond
-       [(or (key-is? key "y") (key-is? key "Y")) (finish-prompt! state #t)]
-       [(or (key-is? key "n") (key-is? key "N")) (finish-prompt! state #f)]
-       [else #f])]                      ; ignore anything else
+(define (prompt-clear! state)
+  (set-prompt-input! (editor-prompt state) ""))
 
-     [(key-is? key "enter")
-      (finish-prompt! state (prompt-input p))]
-     [(key-is? key "backspace")
-      (let ([input (prompt-input p)])
-        (unless (string-null? input)
-          (set-prompt-input! p (substring input 0 (- (string-length input) 1)))))]
-     [(key-is? key "^U")                         ; ^U clears the line
-      (set-prompt-input! p "")]
-     [(insertable-char? key)
-      (set-prompt-input! p (string-append (prompt-input p) (string ch)))]
-     [(key-is? key "tab")
-      (set-prompt-input! p (string-append (prompt-input p) "\t"))]
-     [else #f])))
+(define (prompt-type! state char)
+  (let ([p (editor-prompt state)])
+    (set-prompt-input! p (string-append (prompt-input p) (string char)))))
 
 ;;; =================================================================
 ;;; UNDO
@@ -303,7 +300,8 @@
              (lambda (state name)
                (if (string-null? name)
                    (message! state "Cancelled")
-                   (write-file-as! state name then)))))
+                   (write-file-as! state name then)))
+             #:mode MWRITEFILE))
 
 (define (cmd-save state)
   (if (editor-filename state)
@@ -352,7 +350,8 @@
                      (begin
                        (cbuf-set-y! cbuf (max 0 (min (- line 1) (- (cbuf-line-count cbuf) 1))))
                        (cbuf-set-x! cbuf (max 0 (min (- col 1) (cbuf-text-cur-base-length cbuf)))
-                                    'data)))))))
+                                    'data)))))
+             #:mode MGOTOLINE))
 
 ;; --- Search ---
 
@@ -402,7 +401,8 @@
                              (message! state "This is the only occurrence")]
                             [else
                              (goto-position! cbuf (first hit) (second hit))
-                             (when (third hit) (message! state "Search wrapped"))])))))))))
+                             (when (third hit) (message! state "Search wrapped"))]))))))
+               #:mode MSEARCH)))
 
 ;; --- Editing ---
 
@@ -462,6 +462,49 @@
   (make-command name help (lambda (ctx) (proc (command-context-editor ctx)))
                 #:modes `((,MMAIN ,@keys))))
 
+;; A command for the keys KEYS in each of MODES
+(define (prompt-command name help proc modes . keys)
+  (make-command name help (lambda (ctx) (proc (command-context-editor ctx)))
+                #:modes (map (lambda (mode) (cons mode keys)) modes)))
+
+;; --- Extended commands (A-x) ---
+
+(define (main-command-names)
+  (command-table-names editor-commands MMAIN))
+
+(define (common-prefix strings)
+  (fold (lambda (s prefix) (substring prefix 0 (string-prefix-length prefix s)))
+        (car strings) (cdr strings)))
+
+(define (cmd-complete state)
+  "Complete the command name typed at the prompt as far as it is
+   unambiguous; list the choices if there are several"
+  (let* ([p (editor-prompt state)]
+         [typed (prompt-input p)]
+         [matches (filter (lambda (name) (string-prefix? typed name)) (main-command-names))])
+    (cond
+     [(null? matches)
+      (message! state "No command starts with \"~a\"" typed)]
+     [(null? (cdr matches))
+      (set-prompt-input! p (car matches))]
+     [else
+      (set-prompt-input! p (common-prefix matches))
+      (message! state "~a" (string-join matches " "))])))
+
+(define (cmd-extended state)
+  "Ask for a command name and run that command"
+  (ask-text! state "Command: " ""
+             (lambda (state name)
+               (let* ([name (string-trim-both name)]
+                      [command (command-table-ref editor-commands name)])
+                 (cond
+                  [(string-null? name) (message! state "Cancelled")]
+                  [(and command (command-in-mode? command MMAIN))
+                   (execute-command! state command)
+                   (set-editor-last-command! state name)]
+                  [else (message! state "No command called \"~a\"" name)])))
+             #:mode MEXTCMD))
+
 (define editor-commands
   (command-table-override
    standard-commands
@@ -471,6 +514,22 @@
     (editor-command "exit"      "Close the file, asking to save it" cmd-exit "^X")
     (editor-command "discard"   "Quit without saving" cmd-force-quit "^Q")
     (editor-command "location"  "Show the cursor position" cmd-show-position "^C")
+    (editor-command "command"   "Run a command by name" cmd-extended "A-x")
+    ;; At prompts:
+    (prompt-command "accept"    "Accept the answer" prompt-accept!
+                    text-prompt-modes "enter")
+    (prompt-command "cancel"    "Cancel" cancel-prompt!
+                    (cons MYESNO text-prompt-modes) "^C" "escape")
+    (prompt-command "input-bksp" "Delete the last character typed" prompt-backspace!
+                    text-prompt-modes "backspace")
+    (prompt-command "clear-input" "Clear the answer" prompt-clear!
+                    text-prompt-modes "^U")
+    (prompt-command "complete"  "Complete the command name" cmd-complete
+                    (list MEXTCMD) "tab")
+    (prompt-command "yes"       "Answer yes" (lambda (state) (finish-prompt! state #t))
+                    (list MYESNO) "y" "Y")
+    (prompt-command "no"        "Answer no" (lambda (state) (finish-prompt! state #f))
+                    (list MYESNO) "n" "N")
     ;; In place of the standard commands of these names:
     (editor-command "search"    "Search forward for text, wrapping" cmd-search "^W" "F6")
     (editor-command "goto-line" "Go to a line and column" cmd-goto-line "^_" "A-g")
@@ -537,15 +596,31 @@
                                (let ([parsed (parse-input input answer)])
                                  (if (string? parsed)
                                      (message! state "~a" parsed)
-                                     (ask (cdr inputs) (cons (car parsed) values))))))))))))
+                                     (ask (cdr inputs) (cons (car parsed) values))))))
+                         #:mode (command-input-mode input)))))))
+
+(define (handle-prompt-key state key)
+  "A key while a prompt is open: a command of the prompt's mode, or a
+   character typed into a text prompt"
+  (let ([command (command-table-key-ref editor-commands (editor-mode state) key)])
+    (cond
+     [(and command (command-needs-input? command))
+      (message! state "~a cannot run at a prompt" (command-name command))]
+     [command
+      (run-in-editor! state command '())]
+     [(and (eq? (prompt-kind (editor-prompt state)) 'text)
+           (or (insertable-char? key) (key-is? key "tab")))
+      (prompt-type! state (or (key-char key) #\tab))]
+     [else #f])))                       ; ignore anything else
 
 (define (handle-key state key)
   "Update STATE in response to KEY.  Returns STATE."
   (cond
+   [(eq? (key-symbol key) 'eof)           ; input closed: nothing more to do
+    (when (editor-prompt state) (cancel-prompt! state))
+    (cmd-force-quit state)]
    [(editor-prompt state)
     (handle-prompt-key state key)]
-   [(eq? (key-symbol key) 'eof)           ; input closed: nothing more to do
-    (cmd-force-quit state)]
    [(or (insertable-char? key) (key-is? key "tab"))
     (cmd-insert-char state (or (key-char key) #\tab))
     (set-editor-last-command! state 'insert)]
@@ -553,7 +628,9 @@
     => (lambda (command)
          (set-editor-typing-run! state #f)
          (execute-command! state command)
-         (set-editor-last-command! state (command-name command)))]
+         ;; Running a command by name counts as running that command
+         (unless (equal? (command-name command) "command")
+           (set-editor-last-command! state (command-name command))))]
    [else
     (set-editor-typing-run! state #f)
     (unknown-key state key)
@@ -606,6 +683,9 @@
 (define text-prompt-help
   '(("Enter Accept") ("^C Cancel")))
 
+(define extended-help
+  '(("Enter Run" "Tab Complete") ("^C Cancel")))
+
 (define yes-no-help
   '(("Y Yes") ("N No" "^C Cancel")))
 
@@ -636,7 +716,9 @@
         (when (> height reserved-rows)
           (let ([help (cond [(not prompt) editing-help]
                             [(eq? (prompt-kind prompt) 'yes-no) yes-no-help]
-                            [else text-prompt-help])])
+                            [(eq? (prompt-mode prompt) MEXTCMD) extended-help]
+                            [else text-prompt-help])]
+                [msg (editor-status-message state)])
             ;; Status line or prompt, in reverse video
             (terminal-cursor-position (- height 2) 1)
             (display (sgr->ansi-sequence reverse-video))
@@ -645,8 +727,12 @@
                           (fit (string-append (prompt-label prompt) (prompt-input prompt)) width)
                           (status-line state))))
             (terminal-reset-attributes)
+            ;; While a prompt is open, a message (such as the choices
+            ;; for a completion) takes the first help line.
             (terminal-cursor-position (- height 1) 1)
-            (display (help-line (first help) width))
+            (display (if (and prompt (not (string-null? msg)))
+                         (fit (printable-string msg) width)
+                         (help-line (first help) width)))
             (terminal-cursor-position height 1)
             (display (help-line (second help) width))))
         ;; Cursor: in the prompt if one is open, else in the text

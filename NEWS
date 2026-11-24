@@ -17,5 +17,7 @@ First working version of the editor.
 - Command registry (src/gano/commands.scm): each command has a short
   name, a help line, the modes it works in with their shortcuts, and the
   inputs it asks for.  The standard table covers the buffer and frame
-  operations.  The editor's main mode takes its keys from it, prompting
-  for any inputs a command needs.
+  operations.  The editor takes its keys from it in every mode, the
+  prompts included (so ^Y/^V jump to the first/last line while typing a
+  search), prompting for any inputs a command needs.
+- A-x runs any command by name, with Tab completion.

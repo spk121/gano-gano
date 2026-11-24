@@ -43,8 +43,9 @@
   #:export (
     ;; Editor modes
     MMAIN MSEARCH MREPLACE MREPLACEWITH MGOTOLINE MWRITEFILE
-    MINSERTFILE MEXTCMD MHELP MYESNO
+    MINSERTFILE MEXTCMD MHELP MYESNO MPROMPT
     all-modes
+    text-prompt-modes
     mode?
 
     ;; Limits
@@ -57,6 +58,7 @@
     command-input-kind
     command-input-prompt
     command-input-choices
+    command-input-mode
     input-kinds
 
     ;; Commands
@@ -115,10 +117,16 @@
 (define MEXTCMD      'extended)      ; typing a command name (M-x)
 (define MHELP        'help)          ; reading the help text
 (define MYESNO       'yes-no)        ; answering a yes/no question
+(define MPROMPT      'prompt)        ; typing any other answer
 
 (define all-modes
   (list MMAIN MSEARCH MREPLACE MREPLACEWITH MGOTOLINE MWRITEFILE
-        MINSERTFILE MEXTCMD MHELP MYESNO))
+        MINSERTFILE MEXTCMD MHELP MYESNO MPROMPT))
+
+;; The modes of a prompt where a line of text is typed
+(define text-prompt-modes
+  (list MSEARCH MREPLACE MREPLACEWITH MGOTOLINE MWRITEFILE MINSERTFILE
+        MEXTCMD MPROMPT))
 
 (define (mode? x) (and (memq x all-modes) #t))
 
@@ -135,18 +143,23 @@
 ;;   integer  a whole number (the prompt says whether counting from 1)
 ;;   char     a single character
 ;;   choice   one of a fixed list of strings, passed as the string
+;;
+;; Each input also names the mode the editor is in while asking for it,
+;; which decides what keys do at that prompt: MYESNO for a yes-no input,
+;; one of text-prompt-modes for the others (MPROMPT unless given).
 (define input-kinds '(yes-no string integer char choice))
 
 (define-record-type <command-input>
-  (%make-command-input kind prompt choices)
+  (%make-command-input kind prompt choices mode)
   command-input?
   (kind command-input-kind)
   (prompt command-input-prompt)
-  (choices command-input-choices))
+  (choices command-input-choices)
+  (mode command-input-mode))
 
-(define* (make-command-input kind prompt #:key (choices '()))
-  "An input of KIND (one of input-kinds) asked for with PROMPT.  A
-   'choice input lists its CHOICES (strings)."
+(define* (make-command-input kind prompt #:key (choices '()) (mode #f))
+  "An input of KIND (one of input-kinds) asked for with PROMPT in MODE.
+   A 'choice input lists its CHOICES (strings)."
   (unless (memq kind input-kinds)
     (error "make-command-input: unknown input kind" kind))
   (unless (and (string? prompt) (not (string-null? prompt)))
@@ -156,7 +169,13 @@
         (error "make-command-input: a choice needs a list of strings" choices))
       (unless (null? choices)
         (error "make-command-input: only a choice has choices" kind)))
-  (%make-command-input kind prompt choices))
+  (let ([mode (or mode (if (eq? kind 'yes-no) MYESNO MPROMPT))])
+    (if (eq? kind 'yes-no)
+        (unless (eq? mode MYESNO)
+          (error "make-command-input: a yes-no input is asked in MYESNO" mode))
+        (unless (memq mode text-prompt-modes)
+          (error "make-command-input: not a text prompt mode" mode)))
+    (%make-command-input kind prompt choices mode)))
 
 (define (input-value-ok? input value)
   (case (command-input-kind input)
@@ -482,14 +501,9 @@
                  #:inputs inputs
                  #:modes (if (null? modes) (list MMAIN) modes))))
 
-(define (ask kind prompt . choices)
-  (if (null? choices)
-      (make-command-input kind prompt)
-      (make-command-input kind prompt #:choices choices)))
+(define* (ask kind prompt #:key (mode #f) (choices '()))
+  (make-command-input kind prompt #:mode mode #:choices choices))
 
-;; Moving to the first or last line also works while typing at the
-;; search and go-to-line prompts, as in nano.
-(define prompt-modes (list MSEARCH MREPLACE MREPLACEWITH MGOTOLINE))
 
 ;;; ---- Moving by character, line and page -------------------------
 
@@ -519,17 +533,17 @@
 (buffer-command "page-down"   "Go down one screenful" cbuf-page-down!
                 `(,MMAIN "pagedown" "^V"))
 (asking-command "goto-line"   "Go to a line number"
-                (list (ask 'integer "Enter line number"))
+                (list (ask 'integer "Enter line number" #:mode MGOTOLINE))
                 (lambda (cbuf line) (cbuf-goto-line! cbuf (- line 1)))
                 `(,MMAIN "^_" "A-g"))
 (asking-command "goto-col"    "Go to a column number"
-                (list (ask 'integer "Enter column number"))
+                (list (ask 'integer "Enter column number" #:mode MGOTOLINE))
                 (lambda (cbuf column) (cbuf-move-to-column! cbuf (- column 1))))
 (asking-command "set-line"    "Go to a line, keeping the column"
-                (list (ask 'integer "Enter line number"))
+                (list (ask 'integer "Enter line number" #:mode MGOTOLINE))
                 (lambda (cbuf line) (cbuf-set-y! cbuf (- line 1))))
 (asking-command "set-index"   "Go to a character index on the line"
-                (list (ask 'integer "Enter character index (from 0)"))
+                (list (ask 'integer "Enter character index (from 0)" #:mode MGOTOLINE))
                 (lambda (cbuf index) (cbuf-set-x! cbuf index 'index)))
 
 ;;; ---- Moving by word, sentence and paragraph ---------------------
@@ -575,19 +589,19 @@
                (lambda (ctx page)
                  (frame-page-position-absolute (command-context-cbuf ctx) (ctx-frame ctx)
                                                (- page 1)))
-               #:inputs (list (ask 'integer "Enter page number"))))
+               #:inputs (list (ask 'integer "Enter page number" #:mode MGOTOLINE))))
 (command-table-add!
  standard-commands
  (make-command "view-fwd"    "Show a page N pages on"
                (lambda (ctx n)
                  (frame-page-position-forward (command-context-cbuf ctx) (ctx-frame ctx) n))
-               #:inputs (list (ask 'integer "Number of pages forward"))))
+               #:inputs (list (ask 'integer "Number of pages forward" #:mode MGOTOLINE))))
 (command-table-add!
  standard-commands
  (make-command "view-back"   "Show a page N pages back"
                (lambda (ctx n)
                  (frame-page-position-backward (command-context-cbuf ctx) (ctx-frame ctx) n))
-               #:inputs (list (ask 'integer "Number of pages back"))))
+               #:inputs (list (ask 'integer "Number of pages back" #:mode MGOTOLINE))))
 
 ;;; ---- Inserting and deleting -------------------------------------
 
@@ -666,31 +680,33 @@
 ;;; ---- Search and replace -----------------------------------------
 
 (asking-command "search"      "Search forward for text"
-                (list (ask 'string "Search"))
+                (list (ask 'string "Search" #:mode MSEARCH))
                 cbuf-search-forward!
                 `(,MMAIN "^W" "F6"))
 (asking-command "search-back" "Search backward for text"
-                (list (ask 'string "Search backward"))
+                (list (ask 'string "Search backward" #:mode MSEARCH))
                 cbuf-search-backward!
                 `(,MMAIN "A-q"))
 (asking-command "search-ci"   "Search forward, ignoring case"
-                (list (ask 'string "Search (ignoring case)"))
+                (list (ask 'string "Search (ignoring case)" #:mode MSEARCH))
                 (lambda (cbuf pattern)
                   (cbuf-search-forward! cbuf pattern #:case-insensitive? #t)))
 (asking-command "search-word" "Search forward for a whole word"
-                (list (ask 'string "Search (whole word)"))
+                (list (ask 'string "Search (whole word)" #:mode MSEARCH))
                 (lambda (cbuf pattern)
                   (cbuf-search-forward! cbuf pattern #:whole-word? #t)))
 (asking-command "replace"     "Replace the next match of some text"
-                (list (ask 'string "Search (to replace)") (ask 'string "Replace with"))
+                (list (ask 'string "Search (to replace)" #:mode MREPLACE)
+                      (ask 'string "Replace with" #:mode MREPLACEWITH))
                 replace-next!
                 `(,MMAIN "^\\" "A-R"))
 (asking-command "replace-sel" "Replace the selection if it matches"
-                (list (ask 'string "Replace the selection if it is")
-                      (ask 'string "Replace with"))
+                (list (ask 'string "Replace the selection if it is" #:mode MREPLACE)
+                      (ask 'string "Replace with" #:mode MREPLACEWITH))
                 cbuf-search-replace!)
 (asking-command "replace-all" "Replace every match of some text"
-                (list (ask 'string "Search (to replace all)") (ask 'string "Replace with")
+                (list (ask 'string "Search (to replace all)" #:mode MREPLACE)
+                      (ask 'string "Replace with" #:mode MREPLACEWITH)
                       (ask 'yes-no "Replace every match?"))
                 (lambda (cbuf search replace yes?)
                   (if yes? (cbuf-search-replace-all! cbuf search replace) 0)))
@@ -759,7 +775,7 @@
 ;;; ---- Final newline ----------------------------------------------
 
 (asking-command "final-nl"    "Set the final newline policy"
-                (list (ask 'choice "Final newline" "always-add" "never-add" "preserve"))
+                (list (ask 'choice "Final newline" #:choices '("always-add" "never-add" "preserve")))
                 (lambda (cbuf policy)
                   (cbuf-set-final-newline-policy! cbuf (string->symbol policy))))
 (buffer-command "apply-fnl"   "Apply the final newline policy"

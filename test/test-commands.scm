@@ -31,8 +31,11 @@
 ;;; ---------------------------------------------------------------
 (test-group "modes"
   (test-equal "mode values" '(main search replace replace-with goto-line write-file
-                              insert-file extended help yes-no)
+                              insert-file extended help yes-no prompt)
               all-modes)
+  (test-equal "text prompt modes" '(search replace replace-with goto-line write-file
+                                    insert-file extended prompt)
+              text-prompt-modes)
   (test-eq "MMAIN" 'main MMAIN)
   (test-eq "MSEARCH" 'search MSEARCH)
   (test-assert "mode?" (and (mode? MMAIN) (mode? MYESNO)))
@@ -47,6 +50,15 @@
   (let ([i (make-command-input 'choice "Pick" #:choices '("a" "b"))])
     (test-equal "choices" '("a" "b") (command-input-choices i)))
   (test-equal "kinds" '(yes-no string integer char choice) input-kinds)
+  (test-eq "a text input is asked in MPROMPT" MPROMPT
+           (command-input-mode (make-command-input 'string "S")))
+  (test-eq "a yes-no input in MYESNO" MYESNO
+           (command-input-mode (make-command-input 'yes-no "Sure?")))
+  (test-eq "a given mode" MSEARCH
+           (command-input-mode (make-command-input 'string "S" #:mode MSEARCH)))
+  (test-error "a text input in MYESNO" #t (make-command-input 'string "S" #:mode MYESNO))
+  (test-error "a text input in MMAIN" #t (make-command-input 'string "S" #:mode MMAIN))
+  (test-error "a yes-no input elsewhere" #t (make-command-input 'yes-no "S" #:mode MPROMPT))
   (test-error "unknown kind" #t (make-command-input 'colour "Pick"))
   (test-error "empty prompt" #t (make-command-input 'string ""))
   (test-error "prompt not a string" #t (make-command-input 'string 'search))
@@ -262,6 +274,13 @@
     (test-equal "final-nl offers the policies" '("always-add" "never-add" "preserve")
                 (command-input-choices (car (command-inputs (std "final-nl")))))
     (test-assert "motion needs nothing" (not (command-needs-input? (std "forward"))))
+    (let ([modes (lambda (name) (map command-input-mode (command-inputs (std name))))])
+      (test-equal "search asks in search mode" (list MSEARCH) (modes "search"))
+      (test-equal "replace asks in the replace modes" (list MREPLACE MREPLACEWITH) (modes "replace"))
+      (test-equal "replace-all" (list MREPLACE MREPLACEWITH MYESNO) (modes "replace-all"))
+      (test-equal "goto-line" (list MGOTOLINE) (modes "goto-line"))
+      (test-equal "view-page" (list MGOTOLINE) (modes "view-page"))
+      (test-equal "anything else in MPROMPT" (list MPROMPT) (modes "insert-text")))
     (test-equal "commands that ask"
                 '("clear" "final-nl" "goto-col" "goto-line" "insert-char" "insert-text"
                   "replace" "replace-all" "replace-sel" "search" "search-back" "search-ci"
