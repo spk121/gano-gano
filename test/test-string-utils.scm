@@ -4,6 +4,7 @@
 ;;; Uses SRFI-64 testing framework
 
 (use-modules (srfi srfi-64)
+             (ice-9 regex)
              (gano string-utils))
 
 (test-begin "string-utils")
@@ -481,6 +482,67 @@
   (test-equal "multiple char positions should match single finds"
     (string-find-char "hello world" #\l)
     (car (string-char-positions "hello world" #\l))))
+
+;;; =================================================================
+;;; GRAPHEME-AWARE SEARCH (strict)
+;;; =================================================================
+;;; A grapheme boundary is any position that is not just before a
+;;; combining mark.  Matches must start and end on boundaries of the
+;;; whole string.
+
+(test-group "string-grapheme-boundary?"
+  (test-assert "start of string" (string-grapheme-boundary? "éx" 0))
+  (test-assert "before a combining mark is not" (not (string-grapheme-boundary? "éx" 1)))
+  (test-assert "after the cluster" (string-grapheme-boundary? "éx" 2))
+  (test-assert "end of string" (string-grapheme-boundary? "éx" 3))
+  (test-assert "before a space" (string-grapheme-boundary? "a b" 1))
+  (test-assert "before a tab" (string-grapheme-boundary? "a\tb" 1))
+  (test-assert "before a control char" (string-grapheme-boundary? "a\x01" 1))
+  (test-assert "before a wide char" (string-grapheme-boundary? "a日" 1)))
+
+(test-group "string-contains-graphemes"
+  (test-equal "followed by a space" 0 (string-contains-graphemes "say hi" "say"))
+  (test-equal "preceded by a space" 4 (string-contains-graphemes "say hi" "hi"))
+  (test-equal "the space itself" 3 (string-contains-graphemes "say hi" " "))
+  (test-equal "followed by a tab" 0 (string-contains-graphemes "x\ty" "x"))
+  (test-equal "won't end before a combining mark" #f (string-contains-graphemes "éx" "e"))
+  (test-equal "won't start on a combining mark" #f (string-contains-graphemes "éx" "́x"))
+  (test-equal "whole cluster" 0 (string-contains-graphemes "éx" "é"))
+  (test-equal "skips a bad match for a good one" 3 (string-contains-graphemes "é e" "e"))
+  (test-equal "not found" #f (string-contains-graphemes "abc" "z"))
+  (test-equal "case-sensitive" #f (string-contains-graphemes "ABC" "b"))
+  (test-equal "empty pattern matches at the start" 0 (string-contains-graphemes "abc" ""))
+  (test-equal "start1: index into the whole string" 3 (string-contains-graphemes "ab ab" "ab" 1))
+  (test-equal "end1 limits the search" #f (string-contains-graphemes "abcab" "ab" 1 4))
+  (test-equal "a match may end at end1" 3 (string-contains-graphemes "abcab" "ab" 1 5))
+  (test-equal "a match ending at end1 still can't split a cluster" #f
+              (string-contains-graphemes "xé" "e" 0 2))
+  (test-equal "a match starting at start1 still can't split a cluster" #f
+              (string-contains-graphemes "éx" "́x" 1))
+  (test-equal "start2/end2 select part of the pattern" 2
+              (string-contains-graphemes "abcd" "xcdx" 0 4 1 3)))
+
+(test-group "string-contains-graphemes-ci"
+  (test-equal "ignores case" 1 (string-contains-graphemes-ci "ABC" "b"))
+  (test-equal "followed by a space" 0 (string-contains-graphemes-ci "SAY hi" "say"))
+  (test-equal "won't split a cluster" #f (string-contains-graphemes-ci "Éx" "e"))
+  (test-equal "start1" 3 (string-contains-graphemes-ci "Ab aB" "ab" 1)))
+
+(test-group "string-match-graphemes"
+  (let ([m (string-match-graphemes "[0-9]+" "ab 123 c")])
+    (test-assert "match" (regexp-match? m))
+    (test-equal "start" 3 (match:start m))
+    (test-equal "end" 6 (match:end m)))
+  (test-equal "followed by a space" 0 (match:start (string-match-graphemes "say" "say hi")))
+  (test-equal "won't split a cluster" #f (string-match-graphemes "e" "é"))
+  (test-equal "skips to an acceptable match" 3 (match:start (string-match-graphemes "e" "é e")))
+  (test-equal "from a start position" 4 (match:start (string-match-graphemes "b+" "ab abb" 3)))
+  (test-equal "^ only at the start of the string" #f (string-match-graphemes "^a" "aa" 1))
+  (test-equal "^ at the start" 0 (match:start (string-match-graphemes "^a" "aa")))
+  (test-equal "accepts a compiled regexp" 1
+              (match:start (string-match-graphemes (make-regexp "b" regexp/icase) "aB")))
+  (test-equal "no match" #f (string-match-graphemes "z" "abc"))
+  (test-error "bad regex" #t (string-match-graphemes "(" "abc")))
 
 (test-end "string-utils")
 

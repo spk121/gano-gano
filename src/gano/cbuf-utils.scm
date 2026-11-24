@@ -389,10 +389,9 @@ skip to the previous word first."
 
 (define (grapheme-boundary? text pos)
   "Is POS (0 .. length) between two grapheme clusters?  True at either
-   end of TEXT and before any character that is not a combining mark."
-  (or (<= pos 0)
-      (>= pos (string-length text))
-      (not (char-combining-mark? (string-ref text pos)))))
+   end of TEXT and before any character that is not a combining mark.
+   (Same as string-grapheme-boundary? in (gano string-utils).)"
+  (string-grapheme-boundary? text pos))
 
 (define (is-whole-word-match? text match-start match-end)
   "Is [MATCH-START, MATCH-END) bounded by word delimiters or the ends of TEXT?"

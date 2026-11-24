@@ -39,8 +39,10 @@
 	    string-detect-line-ending
 
 	    ;; Grapheme-aware search utilities
+	    string-grapheme-boundary?
 	    string-contains-graphemes
 	    string-contains-graphemes-ci
+	    string-match-graphemes
 
 	    ;; Unicode-aware utilities
 	    ;; string-for-each-index
@@ -404,133 +406,64 @@
 ;;; GRAPHEME-AWARE SEARCH UTILITIES
 ;;; =================================================================
 
+;;; A grapheme cluster here is a base character and the combining marks
+;;; after it, so a position is a cluster boundary unless the character
+;;; there is a combining mark.  Matches must begin and end on boundaries
+;;; of the whole string (not of a START/END sub-range).
+
+(define (string-grapheme-boundary? str pos)
+  "Is POS (0 .. length) between two grapheme clusters of STR?  True at
+   either end and before any character that is not a combining mark."
+  (or (<= pos 0)
+      (>= pos (string-length str))
+      (not (char-combining-mark? (string-ref str pos)))))
+
+(define (grapheme-match? str start end)
+  (and (string-grapheme-boundary? str start)
+       (string-grapheme-boundary? str end)))
+
+(define (contains-graphemes contains s1 s2 start1 end1 start2 end2)
+  "Shared search for string-contains-graphemes[-ci], using CONTAINS
+   (string-contains or string-contains-ci)."
+  (let* ([s1-start (or start1 0)]
+         [s1-end (or end1 (string-length s1))]
+         [pattern (substring s2 (or start2 0) (or end2 (string-length s2)))]
+         [plen (string-length pattern)])
+    (let loop ([from s1-start])
+      (and (<= from s1-end)
+           (let ([m (contains s1 pattern from s1-end)])
+             (cond
+              [(not m) #f]
+              [(grapheme-match? s1 m (+ m plen)) m]
+              [else (loop (+ m 1))]))))))
+
 (define* (string-contains-graphemes s1 s2 #:optional start1 end1 start2 end2)
   "Grapheme-aware version of string-contains.
-   Does string S1 contain string S2? Return the index in S1 where S2
-   occurs as a substring, or false. Ensures matches respect grapheme boundaries.
-   The optional start/end indices restrict the operation to the indicated substrings."
-  (let* ([s1-start (or start1 0)]
-         [s1-end (or end1 (string-length s1))]
-         [s2-start (or start2 0)]
-         [s2-end (or end2 (string-length s2))]
-         [s1-sub (substring s1 s1-start s1-end)]
-         [s2-sub (substring s2 s2-start s2-end)])
-
-    ;; Find all potential matches using the standard function
-    (let loop ([search-start 0])
-      (let ([match-pos (string-contains s1-sub s2-sub search-start)])
-        (cond
-         [(not match-pos) #f]  ; No more matches found
-         ;; Check if this match respects grapheme boundaries
-         [(is-valid-grapheme-match? s1-sub match-pos (+ match-pos (string-length s2-sub)))
-          ;; Valid match - return position adjusted for the original string
-          (+ s1-start match-pos)]
-         [else
-          ;; Invalid match, continue searching from next position
-          (loop (+ match-pos 1))])))))
+   Return the index in S1 of the first occurrence of S2 that neither
+   starts nor ends inside a grapheme cluster, or #f.  The optional
+   indices restrict the search to S1[START1, END1) and the pattern to
+   S2[START2, END2); the returned index is into all of S1."
+  (contains-graphemes string-contains s1 s2 start1 end1 start2 end2))
 
 (define* (string-contains-graphemes-ci s1 s2 #:optional start1 end1 start2 end2)
-  "Case-insensitive grapheme-aware version of string-contains.
-   Does string S1 contain string S2? Return the index in S1 where S2
-   occurs as a substring, or false. Ensures matches respect grapheme boundaries.
-   Character comparison is done case-insensitively.
-   The optional start/end indices restrict the operation to the indicated substrings."
-  (let* ([s1-start (or start1 0)]
-         [s1-end (or end1 (string-length s1))]
-         [s2-start (or start2 0)]
-         [s2-end (or end2 (string-length s2))]
-         [s1-sub (substring s1 s1-start s1-end)]
-         [s2-sub (substring s2 s2-start s2-end)])
+  "Case-insensitive string-contains-graphemes."
+  (contains-graphemes string-contains-ci s1 s2 start1 end1 start2 end2))
 
-    ;; Find all potential matches using the case-insensitive standard function
-    (let loop ([search-start 0])
-      (let ([match-pos (string-contains-ci s1-sub s2-sub search-start)])
-        (cond
-         [(not match-pos) #f]  ; No more matches found
-         ;; Check if this match respects grapheme boundaries
-         [(is-valid-grapheme-match? s1-sub match-pos (+ match-pos (string-length s2-sub)))
-          ;; Valid match - return position adjusted for the original string
-          (+ s1-start match-pos)]
-         [else
-          ;; Invalid match, continue searching from next position
-          (loop (+ match-pos 1))])))))
-
-;;; Helper functions for grapheme boundary detection
-
-(define (is-valid-grapheme-match? text match-start match-end)
-  "Check if a match respects grapheme boundaries.
-   A valid match must:
-   1. Start at the beginning of a grapheme (not in the middle of combining marks)
-   2. End at the end of a grapheme (include all combining marks of the last base char)"
-  (and (is-grapheme-boundary-start? text match-start)
-       (is-grapheme-boundary-end? text match-end)))
-
-(define (is-grapheme-boundary-start? text pos)
-  "Check if position is at the start of a grapheme.
-   True if:
-   - pos is 0 (start of string), OR
-   - pos is at a base character"
-  (cond
-   [(= pos 0) #t]  ; Beginning of string is always a boundary
-   [(>= pos (string-length text)) #t]  ; End of string is always a boundary
-   [else
-    ;; Check if character at pos is a base character
-    (let ([char-at-pos (string-ref text pos)])
-      (char-base? char-at-pos))]))
-
-(define (is-grapheme-boundary-end? text pos)
-  "Check if position is at the end of a grapheme.
-   True if:
-   - pos is at end of string, OR
-   - pos is just after a complete grapheme (base char + all its combining marks)"
-  (cond
-   [(>= pos (string-length text)) #t]  ; End of string is always a boundary
-   [(= pos 0) #t]  ; Beginning of string is always a boundary
-   [else
-    ;; Check if we're at the end of a complete grapheme
-    ;; This means the character at pos should be a base character (starting next grapheme)
-    (let ([char-at-pos (string-ref text pos)])
-      (char-base? char-at-pos))]))
-
-(define* (string-match-graphemes pattern str #:optional start)
+(define* (string-match-graphemes pattern str #:optional (start 0))
   "Grapheme-aware version of string-match.
-   Compile the string PATTERN into a regular expression and match it with STR.
-   Ensures matches respect grapheme boundaries - will not match partial graphemes.
-   Returns a match structure or #f if no valid grapheme-respecting match found."
-  (let ([search-start (or start 0)])
-
-    ;; Try to find regex matches starting from search-start
-    (let loop ([pos search-start])
-      (let ([match (string-match pattern str pos)])
-        (cond
-         [(not match) #f]  ; No match found
-         [else
-          ;; Check if this match respects grapheme boundaries
-          (let ([match-start (match:start match)]
-                [match-end (match:end match)])
-            (cond
-             [(is-valid-grapheme-match? str match-start match-end)
-              ;; Valid grapheme match - return it
-              match]
-             [(< (+ match-start 1) (string-length str))
-              ;; Invalid match, try searching from next position
-              (loop (+ match-start 1))]
-             [else
-              ;; Can't advance further, no valid match
-              #f]))])))))
-
-;;; Helper function to validate regex matches for grapheme boundaries
-(define (validate-regex-match-graphemes match)
-  "Validate that a regex match respects grapheme boundaries.
-   Returns the match if valid, #f otherwise."
-  (if (not match)
-      #f
-      (let ([match-start (match:start match)]
-            [match-end (match:end match)]
-            [str (match:string match)])
-        (if (is-valid-grapheme-match? str match-start match-end)
-            match
-            #f))))
+   PATTERN is a regular expression string (compiled as extended syntax)
+   or a compiled regexp.  Returns the first match at or after START that
+   neither starts nor ends inside a grapheme cluster, or #f.  ^ only
+   matches at the start of STR, even when START is later."
+  (let ([rx (if (regexp? pattern) pattern (make-regexp pattern regexp/extended))]
+        [len (string-length str)])
+    (let loop ([pos start])
+      (and (<= pos len)
+           (let ([m (regexp-exec rx str pos (if (> pos 0) regexp/notbol 0))])
+             (cond
+              [(not m) #f]
+              [(grapheme-match? str (match:start m) (match:end m)) m]
+              [else (loop (+ (match:start m) 1))]))))))
 
 ;;; =================================================================
 ;;; UNICODE-AWARE UTILITIES
