@@ -6,7 +6,8 @@
              (srfi srfi-1)      ; List utilities
              (srfi srfi-13)     ; String utilities
 	     (srfi srfi-35)     ; Condition types
-	     (srfi srfi-34))	; Guard
+	     (srfi srfi-34)	; Guard
+	     (ice-9 regex))	; regexp-match?
 
 ;;; Start test suite
 (test-begin "cbuf-utils")
@@ -1383,6 +1384,160 @@
                    (> (find-word-end-forward large-line 0 char-word-delimiter?) 0)))))
 
 ;;; End test suite
+;;; =================================================================
+;;; STRICT TESTS
+;;; =================================================================
+
+(define (match-starts ms) (map pattern-match-start ms))
+(define (match-texts ms) (map pattern-match-text ms))
+
+(test-group "strict: count-base-characters"
+  (test-equal "spaces count" 3 (count-base-characters "a b"))
+  (test-equal "tabs count" 3 (count-base-characters "a\tb"))
+  (test-equal "control characters count" 2 (count-base-characters "a\x01"))
+  (test-equal "combining marks don't" 2 (count-base-characters "éẍ"))
+  (test-equal "leading combining mark doesn't" 1 (count-base-characters "́a"))
+  (test-equal "empty" 0 (count-base-characters "")))
+
+(test-group "strict: insertion validation window"
+  ;; The window looked at starts 10 characters before the insertion;
+  ;; it must not start inside a grapheme cluster.
+  (let ([s (string-append "é̂" (make-string 9 #\a))])
+    (test-equal "cluster just outside the window is not an error" '(#t ())
+                (validate-combining-marks-at-insertion s 11 "z")))
+  (test-assert "a fifth combining mark is still caught"
+               (not (car (validate-combining-marks-at-insertion "é̂̃̄" 5 "̅"))))
+  (test-assert "inserting at the very start is fine"
+               (car (validate-combining-marks-at-insertion "abc" 0 "x"))))
+
+(test-group "strict: compute-tab-column"
+  (test-error "tab size 0" #t (compute-tab-column 3 0 1))
+  (test-error "negative tab size" #t (compute-tab-column 3 -8 1))
+  (test-equal "forward from a stop" 16 (compute-tab-column 8 8 1))
+  (test-equal "two forward" 16 (compute-tab-column 3 8 2))
+  (test-equal "backward from between stops" 0 (compute-tab-column 5 8 -1))
+  (test-equal "backward from a stop" 8 (compute-tab-column 16 8 -1))
+  (test-equal "backward past 0 stops at 0" 0 (compute-tab-column 3 8 -5)))
+
+(test-group "strict: word boundaries use the given predicate"
+  (let ([x? (lambda (c) (char=? c #\x))])
+    (test-equal "forward skips predicate delimiters, not punctuation" 4
+                (find-word-end-forward "xxab" 0 x?))
+    (test-equal "punctuation is a word character for this predicate" 3
+                (find-word-end-forward "a.bxc" 0 x?))
+    (test-equal "backward skips predicate delimiters" 0
+                (find-word-begin-backward "abxx" 4 x?))
+    (test-equal "backward word with punctuation" 2
+                (find-word-begin-backward "cx.b" 4 x?))))
+
+(test-group "strict: grapheme boundaries"
+  (test-assert "start" (grapheme-boundary? "éx" 0))
+  (test-assert "before a combining mark is not" (not (grapheme-boundary? "éx" 1)))
+  (test-assert "after the cluster" (grapheme-boundary? "éx" 2))
+  (test-assert "end" (grapheme-boundary? "éx" 3))
+  (test-assert "before a space" (grapheme-boundary? "a b" 1)))
+
+(test-group "strict: literal search"
+  (test-equal "followed by a space" 0 (find-pattern-in-text "say hi" "say" 0))
+  (test-equal "followed by a tab" 0 (find-pattern-in-text "x\ty" "x" 0))
+  (test-equal "from a start position" 4 (find-pattern-in-text "ab ab" "b" 3))
+  (test-equal "start position is inclusive" 3 (find-pattern-in-text "ab ab" "ab" 3))
+  (test-equal "#f start means 0" 0 (find-pattern-in-text "ab" "a" #f))
+  (test-equal "start past end finds nothing" #f (find-pattern-in-text "ab" "a" 5))
+  (test-equal "start at end finds nothing" #f (find-pattern-in-text "ab" "a" 2))
+  (test-equal "not found" #f (find-pattern-in-text "abc" "x" 0))
+  (test-equal "empty pattern never matches" #f (find-pattern-in-text "abc" "" 0))
+  (test-equal "case-sensitive by default" #f (find-pattern-in-text "ABC" "b" 0))
+  (test-equal "case-insensitive" 1 (find-pattern-in-text "ABC" "b" 0 #:case-insensitive? #t))
+  (test-equal "won't end before a combining mark" #f (find-pattern-in-text "éx" "e" 0))
+  (test-equal "won't start on a combining mark" #f (find-pattern-in-text "éx" "́x" 0))
+  (test-equal "matches the whole cluster" 0 (find-pattern-in-text "éx" "é" 0))
+  (test-equal "skips a bad match to a good one" 3 (find-pattern-in-text "é e" "e" 0))
+  (test-equal "whole word skips partial" 7 (find-pattern-in-text "concat cat" "cat" 0 #:whole-word? #t))
+  (test-equal "whole word at punctuation" 0 (find-pattern-in-text "cat, dog" "cat" 0 #:whole-word? #t))
+  (test-equal "whole word not found" #f (find-pattern-in-text "concat" "cat" 0 #:whole-word? #t)))
+
+(test-group "strict: regex search"
+  (test-equal "basic" 1 (find-pattern-in-text "abbc" "b+" 0 #:regex? #t))
+  (test-equal "from a start position" 4 (find-pattern-in-text "ab abb" "b+" 3 #:regex? #t))
+  (test-equal "extended syntax: alternation" 2 (find-pattern-in-text "x cat" "dog|cat" 0 #:regex? #t))
+  (test-equal "case-insensitive" 1 (find-pattern-in-text "aB" "b" 0 #:regex? #t #:case-insensitive? #t))
+  (test-equal "case-sensitive by default" #f (find-pattern-in-text "aB" "b" 0 #:regex? #t))
+  (test-equal "^ matches at the start of the text" 0 (find-pattern-in-text "ab" "^a" 0 #:regex? #t))
+  (test-equal "^ doesn't match at a later start position" #f
+              (find-pattern-in-text "aa" "^a" 1 #:regex? #t))
+  (test-equal "$ matches at the end" 2 (find-pattern-in-text "abc" "c$" 0 #:regex? #t))
+  (test-equal "whole word" 5 (find-pattern-in-text "cats cat" "cat" 0 #:regex? #t #:whole-word? #t))
+  (test-equal "won't split a cluster" #f (find-pattern-in-text "é" "e" 0 #:regex? #t))
+  (test-error "invalid regex raises an error" #t (find-pattern-in-text "abc" "(" 0 #:regex? #t))
+  (let ([m (find-pattern-in-text-detailed "x123y" "[0-9]+" 0 #:regex? #t)])
+    (test-equal "detailed: start" 1 (pattern-match-start m))
+    (test-equal "detailed: end" 4 (pattern-match-end m))
+    (test-equal "detailed: text" "123" (pattern-match-text m))
+    (test-equal "detailed: full text" "x123y" (pattern-match-full-text m))
+    (test-assert "detailed: regex match" (regexp-match? (pattern-match-regex-match m)))))
+
+(test-group "strict: literal detailed match"
+  (let ([m (find-pattern-in-text-detailed "Hello" "ELL" 0 #:case-insensitive? #t)])
+    (test-assert "record" (pattern-match? m))
+    (test-equal "text is what was matched, not the pattern" "ell" (pattern-match-text m))
+    (test-equal "end" 4 (pattern-match-end m))
+    (test-equal "no regex match" #f (pattern-match-regex-match m)))
+  (test-equal "no match" #f (find-pattern-in-text-detailed "abc" "z" 0)))
+
+(test-group "strict: find all"
+  (test-equal "non-overlapping" '(0 2) (match-starts (find-all-pattern-matches "aaaa" "aa")))
+  (test-equal "odd overlap" '(0) (match-starts (find-all-pattern-matches "aaa" "aa")))
+  (test-equal "case-insensitive" '("Ab" "ab")
+              (match-texts (find-all-pattern-matches "Ab ab" "ab" #:case-insensitive? #t)))
+  (test-equal "whole words" '(5) (match-starts (find-all-pattern-matches "cats cat" "cat" #:whole-word? #t)))
+  (test-equal "empty literal" '() (find-all-pattern-matches "abc" ""))
+  (test-equal "regex" '("12" "3") (match-texts (find-all-pattern-matches "a12b3" "[0-9]+" #:regex? #t)))
+  (test-equal "empty regex matches advance" '(0 1 2 3)
+              (match-starts (find-all-pattern-matches "abc" "x*" #:regex? #t)))
+  (test-equal "find-all-regex-matches, 3 arguments" '(1 3)
+              (match-starts (find-all-regex-matches "aBcB" "b" #t)))
+  (test-equal "find-all-regex-matches, whole-word" '(3)
+              (match-starts (find-all-regex-matches "ab b" "b" #f #t)))
+  (test-equal "count" 2 (count-pattern-matches "a.b.c" "." ))
+  (test-equal "count regex" 5 (count-pattern-matches "a.b.c" "." #:regex? #t))
+  (test-equal "positions" '(1 3) (pattern-match-positions (find-all-pattern-matches "a.b.c" ".")))
+  (test-equal "summary" '(((start . 1) (end . 2) (text . ".") (length . 1)))
+              (pattern-match-summary (find-all-pattern-matches "a.b" "."))))
+
+(test-group "strict: replace"
+  (test-equal "first only" '("xbab" . 0)
+              (let ([r (replace-pattern-in-text "abab" "a" "x")])
+                (cons (car r) (pattern-match-start (cdr r)))))
+  (test-equal "from a start position" "abxb"
+              (car (replace-pattern-in-text "abab" "a" "x" #:start-pos 1)))
+  (test-equal "no match" '(#f . #f) (replace-pattern-in-text "abc" "z" "x"))
+  (test-equal "replace all" '("x-x-x" . 3) (replace-all-patterns-in-text "a-a-a" "a" "x"))
+  (test-equal "replace all, non-overlapping" '("xxa" . 2) (replace-all-patterns-in-text "aaaaa" "aa" "x"))
+  (test-equal "replace all, longer replacement" '("[a][a]" . 2) (replace-all-patterns-in-text "aa" "a" "[a]"))
+  (test-equal "replace all, none" '("abc" . 0) (replace-all-patterns-in-text "abc" "z" "x"))
+  (test-equal "replace all, whole words" '("dog concat dog" . 2)
+              (replace-all-patterns-in-text "cat concat cat" "cat" "dog" #:whole-word? #t))
+  (test-equal "replace all, regex" '("a#b#" . 2)
+              (replace-all-patterns-in-text "a12b3" "[0-9]+" "#" #:regex? #t))
+  (test-equal "regex replacement is literal" '("a\\1b" . 1)
+              (replace-regex-in-text "axb" "(x)" "\\1"))
+  (test-equal "replace-regex-in-text first" '("bonana" . 1) (replace-regex-in-text "banana" "a" "o"))
+  (test-equal "replace-regex-in-text all" '("bonono" . 3)
+              (replace-regex-in-text "banana" "a" "o" #:replace-all? #t))
+  (test-equal "replace-regex-in-text ci" '("x-x" . 2)
+              (replace-regex-in-text "A-a" "a" "x" #:replace-all? #t #:case-insensitive? #t))
+  (test-equal "replace-regex-in-text none" '("abc" . 0) (replace-regex-in-text "abc" "z" "x"))
+  (test-equal "highlight" "<b>ab</b> c <b>ab</b>"
+              (highlight-pattern-matches "ab c ab" (find-all-pattern-matches "ab c ab" "ab") "<b>" "</b>"))
+  (test-equal "highlight nothing" "abc" (highlight-pattern-matches "abc" '() "<" ">")))
+
+(test-group "strict: is-whole-word-match?"
+  (test-assert "whole string" (is-whole-word-match? "cat" 0 3))
+  (test-assert "between spaces" (is-whole-word-match? "a cat b" 2 5))
+  (test-assert "inside a word" (not (is-whole-word-match? "concat" 3 6)))
+  (test-assert "prefix of a word" (not (is-whole-word-match? "cats" 0 3))))
+
 (test-end "cbuf-utils")
 
 ;;; Print summary if running interactively

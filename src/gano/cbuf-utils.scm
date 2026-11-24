@@ -35,10 +35,28 @@
     char-word-delimiter?
 
     ;; Find/Replace
+    ;; (positions are string indices; matches never split a grapheme
+    ;; cluster, i.e. never start on or end before a combining mark)
+    grapheme-boundary?
+    is-whole-word-match?
     find-pattern-in-text
     find-pattern-in-text-detailed
+    find-all-pattern-matches
     find-all-regex-matches
+    count-pattern-matches
+    replace-pattern-in-text
+    replace-all-patterns-in-text
     replace-regex-in-text
+    <pattern-match>
+    pattern-match?
+    pattern-match-start
+    pattern-match-end
+    pattern-match-text
+    pattern-match-full-text
+    pattern-match-regex-match
+    pattern-match-summary
+    pattern-match-positions
+    highlight-pattern-matches
     
     ;; Position validation helpers
     validate-line-movement-pure
@@ -144,7 +162,12 @@
   (let* ([new-str (string-insert-string str insertion-point insert-str)]
          
          ;; Only need to validate around the insertion boundaries
-         [start-check (max 0 (- insertion-point 10))]  ; Check a few chars before
+         ;; Check a few chars before, backing up so the window doesn't
+         ;; start in the middle of a grapheme cluster
+         [start-check (let loop ([i (max 0 (- insertion-point 10))])
+                        (if (and (> i 0) (char-combining-mark? (string-ref new-str i)))
+                            (loop (- i 1))
+                            i))]
          [end-check (min (string-length new-str) 
                         (+ insertion-point (string-length insert-str) 10))] ; Check a few chars after
          [check-region (substring new-str start-check end-check)])
@@ -203,13 +226,9 @@
 ;;; =================================================================
 
 (define (count-base-characters str)
-  "Count base characters in string efficiently"
-  (let loop ([i 0] [count 0])
-    (if (>= i (string-length str))
-        count
-        (if (char-base? (string-ref str i))
-            (loop (+ i 1) (+ count 1))
-            (loop (+ i 1) count)))))
+  "Count the base (non-combining) characters in STR: the number of data
+   positions it occupies, as in (gano text-metrics)."
+  (string-count str (lambda (c) (not (char-combining-mark? c)))))
 
 ;;; Alternative implementations using string-utils:
 #;(define (count-base-characters-functional str)
@@ -233,6 +252,8 @@
   "If N is positive, compute the presentation position of the nth next
 forward tabulation. If N is negative, compute the position of the
 backward tabulation. This function does not do bracketing."
+  (unless (and (exact-integer? tabsize) (> tabsize 0))
+    (error "compute-tab-column: tab size must be a positive integer" tabsize))
   (cond
    [(< n 0)
     ;; Move backward n tab stops
@@ -269,7 +290,7 @@ skip to the next word first."
       (let ([word-start (if (and (< start-index len)
                                 (delimiter-pred (string-ref txt start-index)))
                            ;; Skip delimiters to find start of next word
-                           (skip-delimiters-forward txt start-index)
+                           (skip-while-forward txt start-index delimiter-pred)
                            ;; Already on a word character
                            start-index)])
         ;; Now find the end of this word
@@ -285,7 +306,7 @@ skip to the previous word first."
    [(<= start-index 0) 0]
    [else
     ;; Skip preceding delimiters first (if we're on delimiters)
-    (let ([before-delimiters (skip-delimiters-backward txt start-index)])
+    (let ([before-delimiters (skip-while-backward txt start-index delimiter-pred)])
       ;; Skip back through word characters
       (skip-word-chars-backward txt before-delimiters delimiter-pred))]))
 
@@ -354,328 +375,191 @@ skip to the previous word first."
 ;;; FIND / REPLACE HELPERS
 ;;; =================================================================
 
-(define* (find-pattern-in-text text pattern start-pos 
-                              #:key 
-                              (case-insensitive? #f)
-                              (whole-word? #f)
-                              (regex? #f))
-  "Find pattern in text starting from start-pos with options.
-   Returns match position or #f if not found.
-   Uses grapheme-aware search to respect Unicode character boundaries.
-   
-   Parameters:
-   - text: string to search in
-   - pattern: string pattern to find (literal or regex)
-   - start-pos: position to start searching from (optional)
-   - case-insensitive?: if #t, ignore case (keyword)
-   - whole-word?: if #t, match only whole words (keyword)  
-   - regex?: if #t, treat pattern as regular expression (keyword)
-   
-   Returns: match position (integer) or #f if not found"
-  
-  (cond
-   [regex?
-    ;; Use regex search with grapheme awareness
-    (find-regex-pattern text pattern start-pos case-insensitive? whole-word?)]
-   [else
-    ;; Use literal string search with grapheme awareness
-    (find-literal-pattern text pattern start-pos case-insensitive? whole-word?)]))
-
-;;; Literal string pattern search (existing functionality)
-(define (find-literal-pattern text pattern start-pos case-insensitive? whole-word?)
-  "Find literal string pattern with grapheme awareness."
-  ;; Choose the appropriate search function based on case sensitivity
-  (let ([search-func (if case-insensitive? 
-                         string-contains-graphemes-ci 
-                         string-contains-graphemes)])
-    
-    (let loop ([pos (or start-pos 0)])
-      (let ([match (search-func text pattern pos)])
-        (cond
-         [(not match) #f]  ; No match found
-         [(not whole-word?) match]  ; Found match and whole-word not required
-         [(is-whole-word-match? text match (+ match (string-length pattern)))
-          match]  ; Found whole-word match
-         [else
-          ;; Not a whole-word match, continue searching after this match
-          (loop (+ match 1))])))))
-
-;;; Regular expression pattern search
-(define (find-regex-pattern text pattern start-pos case-insensitive? whole-word?)
-  "Find regex pattern with grapheme awareness."
-  (let ([regex-pattern (if case-insensitive?
-                          (string-append "(?i)" pattern)  ; Case-insensitive flag
-                          pattern)]
-        [search-start (or start-pos 0)])
-    
-    (let loop ([pos search-start])
-      (let ([match (string-match-graphemes regex-pattern text pos)])
-        (cond
-         [(not match) #f]  ; No match found
-         [(not whole-word?) (match:start match)]  ; Found match and whole-word not required
-         [(is-whole-word-regex-match? match)
-          (match:start match)]  ; Found whole-word match
-         [else
-          ;; Not a whole-word match, continue searching after this match
-          (let ([next-pos (+ (match:start match) 1)])
-            (if (< next-pos (string-length text))
-                (loop next-pos)
-                #f))])))))
-
-;;; Enhanced match result structure for regex support
+;;; A match is described by a <pattern-match>: START and END are string
+;;; indices (END exclusive), TEXT the matched text, FULL-TEXT the string
+;;; searched, REGEX-MATCH the regexp match object (#f for literals).
 (define-record-type <pattern-match>
   (make-pattern-match start end matched-text full-match regex-match)
   pattern-match?
   (start pattern-match-start)
-  (end pattern-match-end) 
+  (end pattern-match-end)
   (matched-text pattern-match-text)
   (full-match pattern-match-full-text)
-  (regex-match pattern-match-regex-match))  ; Original regex match object
+  (regex-match pattern-match-regex-match))
+
+(define (grapheme-boundary? text pos)
+  "Is POS (0 .. length) between two grapheme clusters?  True at either
+   end of TEXT and before any character that is not a combining mark."
+  (or (<= pos 0)
+      (>= pos (string-length text))
+      (not (char-combining-mark? (string-ref text pos)))))
+
+(define (is-whole-word-match? text match-start match-end)
+  "Is [MATCH-START, MATCH-END) bounded by word delimiters or the ends of TEXT?"
+  (and (or (= match-start 0)
+           (char-word-delimiter? (string-ref text (- match-start 1))))
+       (or (>= match-end (string-length text))
+           (char-word-delimiter? (string-ref text match-end)))))
+
+(define (acceptable-match? text start end whole-word?)
+  (and (grapheme-boundary? text start)
+       (grapheme-boundary? text end)
+       (or (not whole-word?) (is-whole-word-match? text start end))))
+
+(define (literal-search text pattern start case-insensitive? whole-word?)
+  "First acceptable match of the literal PATTERN at or after START, as
+   (start . end), or #f.  An empty pattern never matches."
+  (let ([contains (if case-insensitive? string-contains-ci string-contains)]
+        [plen (string-length pattern)]
+        [len (string-length text)])
+    (and (> plen 0)
+         (let loop ([pos start])
+           (and (<= pos len)
+                (let ([m (contains text pattern pos)])
+                  (cond
+                   [(not m) #f]
+                   [(acceptable-match? text m (+ m plen) whole-word?) (cons m (+ m plen))]
+                   [else (loop (+ m 1))])))))))
+
+(define (compile-regex pattern case-insensitive?)
+  (if case-insensitive?
+      (make-regexp pattern regexp/extended regexp/icase)
+      (make-regexp pattern regexp/extended)))
+
+(define (regex-search text rx start whole-word?)
+  "First acceptable match of the compiled regexp RX at or after START, or
+   #f.  ^ only matches at the start of TEXT."
+  (let ([len (string-length text)])
+    (let loop ([pos start])
+      (and (<= pos len)
+           (let ([m (regexp-exec rx text pos (if (> pos 0) regexp/notbol 0))])
+             (cond
+              [(not m) #f]
+              [(acceptable-match? text (match:start m) (match:end m) whole-word?) m]
+              [else (loop (+ (match:start m) 1))]))))))
+
+(define (normalize-start text start-pos)
+  "START-POS as a search start: #f means 0; past the end means no search."
+  (let ([start (or start-pos 0)])
+    (and (<= 0 start (string-length text)) start)))
 
 (define* (find-pattern-in-text-detailed text pattern start-pos
-                                       #:key 
+                                        #:key
+                                        (case-insensitive? #f)
+                                        (whole-word? #f)
+                                        (regex? #f))
+  "Find the first match of PATTERN in TEXT at or after START-POS (#f = 0).
+   PATTERN is a literal string, or a POSIX extended regular expression if
+   #:regex? is true.  Matches never split a grapheme cluster; with
+   #:whole-word? they must also be bounded by word delimiters.
+   Returns a <pattern-match>, or #f.  An empty literal never matches."
+  (let ([start (normalize-start text start-pos)])
+    (and start
+         (if regex?
+             (let ([m (regex-search text (compile-regex pattern case-insensitive?) start whole-word?)])
+               (and m (make-pattern-match (match:start m) (match:end m)
+                                          (match:substring m) text m)))
+             (let ([m (literal-search text pattern start case-insensitive? whole-word?)])
+               (and m (make-pattern-match (car m) (cdr m)
+                                          (substring text (car m) (cdr m)) text #f)))))))
+
+(define* (find-pattern-in-text text pattern start-pos
+                               #:key
+                               (case-insensitive? #f)
+                               (whole-word? #f)
+                               (regex? #f))
+  "Like find-pattern-in-text-detailed, but return just the start index
+   of the match, or #f."
+  (let ([m (find-pattern-in-text-detailed text pattern start-pos
+                                          #:case-insensitive? case-insensitive?
+                                          #:whole-word? whole-word?
+                                          #:regex? regex?)])
+    (and m (pattern-match-start m))))
+
+(define* (find-all-pattern-matches text pattern
+                                   #:key
+                                   (case-insensitive? #f)
+                                   (whole-word? #f)
+                                   (regex? #f))
+  "All non-overlapping matches of PATTERN in TEXT, left to right, as a
+   list of <pattern-match>.  After an empty regex match the search resumes
+   one character later."
+  (let loop ([pos 0] [acc '()])
+    (let ([m (find-pattern-in-text-detailed text pattern pos
+                                            #:case-insensitive? case-insensitive?
+                                            #:whole-word? whole-word?
+                                            #:regex? regex?)])
+      (if m
+          (loop (max (pattern-match-end m) (+ (pattern-match-start m) 1))
+                (cons m acc))
+          (reverse acc)))))
+
+(define* (find-all-regex-matches text pattern case-insensitive? #:optional (whole-word? #f))
+  "All non-overlapping matches of the regular expression PATTERN in TEXT."
+  (find-all-pattern-matches text pattern
+                            #:case-insensitive? case-insensitive?
+                            #:whole-word? whole-word?
+                            #:regex? #t))
+
+(define* (count-pattern-matches text pattern
+                                #:key (case-insensitive? #f) (whole-word? #f) (regex? #f))
+  "Number of non-overlapping matches of PATTERN in TEXT."
+  (length (find-all-pattern-matches text pattern
+                                    #:case-insensitive? case-insensitive?
+                                    #:whole-word? whole-word?
+                                    #:regex? regex?)))
+
+(define* (replace-pattern-in-text text pattern replacement
+                                  #:key
+                                  (case-insensitive? #f)
+                                  (whole-word? #f)
+                                  (regex? #f)
+                                  (start-pos 0))
+  "Replace the first match at or after START-POS with REPLACEMENT (used
+   literally, also for regexes).
+   Returns (new-text . pattern-match), or (#f . #f) if there is no match."
+  (let ([m (find-pattern-in-text-detailed text pattern start-pos
+                                          #:case-insensitive? case-insensitive?
+                                          #:whole-word? whole-word?
+                                          #:regex? regex?)])
+    (if m
+        (cons (string-replace-range text (pattern-match-start m) (pattern-match-end m) replacement)
+              m)
+        (cons #f #f))))
+
+(define* (replace-all-patterns-in-text text pattern replacement
+                                       #:key
                                        (case-insensitive? #f)
                                        (whole-word? #f)
                                        (regex? #f))
-  "Enhanced version that returns detailed match information.
-   Returns a pattern-match record or #f if no match found."
-  
-  (cond
-   [regex?
-    (let ([match (find-regex-pattern text pattern start-pos case-insensitive? whole-word?)])
-      (if match
-          (let ([regex-match (string-match-graphemes 
-                             (if case-insensitive? 
-                                 (string-append "(?i)" pattern) 
-                                 pattern) 
-                             text match)])
-            (and regex-match
-                 (make-pattern-match 
-                  (match:start regex-match)
-                  (match:end regex-match)
-                  (match:substring regex-match)
-                  text
-                  regex-match)))
-          #f))]
-   [else
-    (let ([match-pos (find-literal-pattern text pattern start-pos case-insensitive? whole-word?)])
-      (if match-pos
-          (make-pattern-match
-           match-pos
-           (+ match-pos (string-length pattern))
-           pattern
-           text
-           #f)  ; No regex match for literal patterns
-          #f))]))
-
-;;; Helper functions for whole-word matching with regex
-(define (is-whole-word-regex-match? match)
-  "Check if a regex match constitutes a whole word."
-  (let ([text (match:string match)]
-        [start (match:start match)]
-        [end (match:end match)])
-    (is-whole-word-match? text start end)))
-
-(define (is-whole-word-match? text match-start match-end)
-  "Check if the match at [match-start, match-end) constitutes a whole word.
-   A whole word means the match is bounded by word delimiters or string boundaries."
-  (and 
-   ;; Check start boundary: either at string start or preceded by delimiter
-   (or (= match-start 0)
-       (char-word-delimiter? (string-ref text (- match-start 1))))
-   ;; Check end boundary: either at string end or followed by delimiter  
-   (or (>= match-end (string-length text))
-       (char-word-delimiter? (string-ref text match-end)))))
-
-;;; Advanced regex utilities
-(define (find-all-regex-matches text pattern case-insensitive?)
-  "Find all regex matches in text. Returns list of pattern-match records."
-  (let ([regex-pattern (if case-insensitive?
-                          (string-append "(?i)" pattern)
-                          pattern)])
-    (let loop ([pos 0] [matches '()])
-      (let ([match (string-match-graphemes regex-pattern text pos)])
-        (if match
-            (let* ([match-start (match:start match)]
-                   [match-end (match:end match)]
-                   [match-record (make-pattern-match 
-                                 match-start match-end
-                                 (match:substring match)
-                                 text match)])
-              ;; Continue searching after this match
-              (loop (max (+ match-start 1) match-end) 
-                    (cons match-record matches)))
-            ;; No more matches, return in forward order
-            (reverse matches))))))
-
-;;; Regex replacement with grapheme awareness
-(define* (replace-regex-in-text text pattern replacement 
-                               #:key 
-                               (case-insensitive? #f)
-                               (replace-all? #f))
-  "Replace regex pattern with replacement text, respecting grapheme boundaries.
+  "Replace every non-overlapping match with REPLACEMENT (used literally).
    Returns (new-text . match-count)."
-  (let ([matches (find-all-regex-matches text pattern case-insensitive?)])
-    (cond
-     [(null? matches) (cons text 0)]  ; No matches
-     [replace-all?
-      ;; Replace all matches using string-utils for efficiency
-      (let* ([replacements (map (lambda (match)
-                                 (list (pattern-match-start match)
-                                       (pattern-match-end match)
-                                       replacement))
-                               matches)]
-             [new-text (string-replace-multiple text replacements)])
-        (cons new-text (length matches)))]
-     [else
-      ;; Replace only first match
-      (let* ([first-match (car matches)]
-             [start (pattern-match-start first-match)]
-             [end (pattern-match-end first-match)]
-             [new-text (string-replace-range text start end replacement)])
-        (cons new-text 1))])))
-        
-;;; =================================================================
-;;; FIND ALL OPERATIONS (Unified API)
-;;; =================================================================
-
-(define* (find-all-pattern-matches text pattern 
-                                  #:key 
-                                  (case-insensitive? #f)
-                                  (whole-word? #f)
-                                  (regex? #f))
-  "Find all matches of pattern in text. Returns list of pattern-match records.
-   Works for both literal strings and regular expressions."
-  (if regex?
-      (find-all-regex-matches text pattern case-insensitive? whole-word?)
-      (find-all-literal-matches text pattern case-insensitive? whole-word?)))
-
-(define (find-all-literal-matches text pattern case-insensitive? whole-word?)
-  "Find all literal string matches in text. Returns list of pattern-match records."
-  (let ([search-func (if case-insensitive? 
-                         string-contains-graphemes-ci 
-                         string-contains-graphemes)])
-    (let loop ([pos 0] [matches '()])
-      (let ([match-pos (search-func text pattern pos)])
-        (cond
-         [(not match-pos) (reverse matches)]  ; No more matches
-         [else
-          (let* ([match-start match-pos]
-                 [match-end (+ match-pos (string-length pattern))]
-                 [is-whole-word (or (not whole-word?)
-                                   (is-whole-word-match? text match-start match-end))])
-            (if is-whole-word
-                ;; Valid match - add to results and continue
-                (let ([match-record (make-pattern-match 
-                                    match-start match-end
-                                    pattern text #f)])
-                  (loop (+ match-start 1) (cons match-record matches)))
-                ;; Not a whole-word match - continue searching
-                (loop (+ match-start 1) matches)))])))))
-
-(define (find-all-regex-matches text pattern case-insensitive? whole-word?)
-  "Find all regex matches in text. Returns list of pattern-match records."
-  (let ([regex-pattern (if case-insensitive?
-                          (string-append "(?i)" pattern)
-                          pattern)])
-    (let loop ([pos 0] [matches '()])
-      (let ([match (string-match-graphemes regex-pattern text pos)])
-        (cond
-         [(not match) (reverse matches)]  ; No more matches
-         [else
-          (let* ([match-start (match:start match)]
-                 [match-end (match:end match)]
-                 [is-whole-word (or (not whole-word?)
-                                   (is-whole-word-regex-match? match))])
-            (if is-whole-word
-                ;; Valid match - add to results and continue  
-                (let ([match-record (make-pattern-match 
-                                    match-start match-end
-                                    (match:substring match)
-                                    text match)])
-                  (loop (max (+ match-start 1) match-end) 
-                        (cons match-record matches)))
-                ;; Not a whole-word match - continue searching
-                (loop (+ match-start 1) matches)))])))))
-
-;;; =================================================================
-;;; REPLACE ALL OPERATIONS (Unified API)
-;;; =================================================================
-
-(define* (replace-all-patterns-in-text text pattern replacement
-                                      #:key 
-                                      (case-insensitive? #f)
-                                      (whole-word? #f)
-                                      (regex? #f))
-  "Replace all occurrences of pattern with replacement text.
-   Returns (new-text . match-count).
-   Works for both literal strings and regular expressions."
-  (if regex?
-      (replace-all-regex-in-text text pattern replacement case-insensitive? whole-word?)
-      (replace-all-literal-in-text text pattern replacement case-insensitive? whole-word?)))
-
-(define (replace-all-literal-in-text text pattern replacement case-insensitive? whole-word?)
-  "Replace all literal string occurrences with replacement text.
-   Returns (new-text . match-count)."
-  (let ([matches (find-all-literal-matches text pattern case-insensitive? whole-word?)])
+  (let ([matches (find-all-pattern-matches text pattern
+                                           #:case-insensitive? case-insensitive?
+                                           #:whole-word? whole-word?
+                                           #:regex? regex?)])
     (if (null? matches)
-        (cons text 0)  ; No matches
-        ;; Use string-utils for efficient bulk replacement
-        (let* ([replacements (map (lambda (match)
-                                   (list (pattern-match-start match)
-                                         (pattern-match-end match)
-                                         replacement))
-                                 matches)]
-               [new-text (string-replace-multiple text replacements)])
-          (cons new-text (length matches))))))
+        (cons text 0)
+        (cons (string-replace-multiple
+               text
+               (map (lambda (m) (list (pattern-match-start m) (pattern-match-end m) replacement))
+                    matches))
+              (length matches)))))
 
-(define (replace-all-regex-in-text text pattern replacement case-insensitive? whole-word?)
-  "Replace all regex occurrences with replacement text.
-   Returns (new-text . match-count)."
-  (let ([matches (find-all-regex-matches text pattern case-insensitive? whole-word?)])
-    (if (null? matches)
-        (cons text 0)  ; No matches
-        ;; Use string-utils for efficient bulk replacement
-        (let* ([replacements (map (lambda (match)
-                                   (list (pattern-match-start match)
-                                         (pattern-match-end match)
-                                         replacement))
-                                 matches)]
-               [new-text (string-replace-multiple text replacements)])
-          (cons new-text (length matches))))))
-
-;;; =================================================================
-;;; SINGLE REPLACE OPERATIONS (Unified API)
-;;; =================================================================
-
-(define* (replace-pattern-in-text text pattern replacement
-                                 #:key 
-                                 (case-insensitive? #f)
-                                 (whole-word? #f)
-                                 (regex? #f)
-                                 (start-pos 0))
-  "Replace first occurrence of pattern with replacement text.
-   Returns (new-text . match-record) where match-record is the replaced match,
-   or (#f . #f) if no match found."
-  
-  ;; Find the first match
-  (let ([match-pos (find-pattern-in-text text pattern start-pos
-                                         #:case-insensitive? case-insensitive?
-                                         #:whole-word? whole-word?
-                                         #:regex? regex?)])
-    (if match-pos
-        ;; Get detailed match information
-        (let ([match-record (find-pattern-in-text-detailed text pattern start-pos
-                                                          #:case-insensitive? case-insensitive?
-                                                          #:whole-word? whole-word?
-                                                          #:regex? regex?)])
-          (if match-record
-              (let* ([start (pattern-match-start match-record)]
-                     [end (pattern-match-end match-record)]
-                     [new-text (string-replace-range text start end replacement)])
-                (cons new-text match-record))
-              (cons #f #f)))
-        (cons #f #f))))
+(define* (replace-regex-in-text text pattern replacement
+                                #:key
+                                (case-insensitive? #f)
+                                (replace-all? #f))
+  "Replace the first (or with #:replace-all?, every) match of the regular
+   expression PATTERN with REPLACEMENT.  Returns (new-text . match-count)."
+  (if replace-all?
+      (replace-all-patterns-in-text text pattern replacement
+                                    #:case-insensitive? case-insensitive? #:regex? #t)
+      (let ([result (replace-pattern-in-text text pattern replacement
+                                             #:case-insensitive? case-insensitive? #:regex? #t)])
+        (if (car result)
+            (cons (car result) 1)
+            (cons text 0)))))
 
 ;;; =================================================================
 ;;; UTILITY FUNCTIONS FOR PATTERN MATCHING
@@ -690,36 +574,20 @@ skip to the previous word first."
            (length . ,(- (pattern-match-end match) (pattern-match-start match)))))
        matches))
 
-(define (count-pattern-matches text pattern case-insensitive? whole-word? regex?)
-  "Count the number of pattern matches without creating match objects."
-  (length (find-all-pattern-matches text pattern 
-                                   #:case-insensitive? case-insensitive?
-                                   #:whole-word? whole-word?
-                                   #:regex? regex?)))
-
 (define (pattern-match-positions matches)
   "Extract just the start positions from a list of pattern matches."
   (map pattern-match-start matches))
 
 (define (highlight-pattern-matches text matches open-tag close-tag)
-  "Insert highlight tags around pattern matches in text.
-   Returns new string with matches wrapped in open-tag/close-tag.
-   Example: (highlight-pattern-matches \"hello world\" matches \"<mark>\" \"</mark>\")"
-  (if (null? matches)
-      text
-      ;; Use string-utils for efficient bulk insertion
-      (let* ([insertions (append
-                          ;; Opening tags (insert at start positions)
-                          (map (lambda (match)
-                                (cons (pattern-match-start match) open-tag))
-                               matches)
-                          ;; Closing tags (insert at end positions, adjusted for opening tags)
-                          (map (lambda (match)
-                                (cons (+ (pattern-match-end match) 
-                                        (string-length open-tag)) close-tag))
-                               matches))]
-             [sorted-insertions (sort insertions (lambda (a b) (< (car a) (car b))))])
-        (string-insert-multiple text sorted-insertions))))
+  "Wrap each of MATCHES (non-overlapping, from TEXT) in OPEN-TAG and
+   CLOSE-TAG.  Example: (highlight-pattern-matches \"hello world\" matches
+   \"<mark>\" \"</mark>\")"
+  (string-replace-multiple
+   text
+   (map (lambda (m)
+          (list (pattern-match-start m) (pattern-match-end m)
+                (string-append open-tag (pattern-match-text m) close-tag)))
+        matches)))
 
 ;;; =================================================================
 ;;; POSITION VALIDATION HELPERS (Pure functions)
