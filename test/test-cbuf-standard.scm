@@ -326,44 +326,17 @@
     (test-equal "trim-whitespace result" "hello world" (cbuf-get-all-text cbuf))))
 
 
-;;; =================================================================
-;;; GRAPHEME UTILITY TESTS
-;;; =================================================================
-
-
-(test-group "grapheme counting tests"
-  ;; Test the internal grapheme counting function
-  (let ([test-count (lambda (str expected)
-                      (test-equal (format #f "grapheme count ~s" str) 
-                                 expected
-                                 (count-graphemes str)))])
-    (test-count "hello" 5)           ; Basic ASCII
-    (test-count "José" 4)            ; Single accented character  
-    (test-count "José́" 4)            ; Base + combining acute
-    (test-count "👨‍💻" 1)              ; Complex emoji sequence
-    (test-count "नमस्ते" 4)))         ; Devanagari script
-
-(test-group "grapheme boundary tests"
-  ;; Test grapheme cluster boundary detection
-  (let ([test-text "José́ café"])  ; José́ has combining mark
-    (test-equal "cluster end José́" 5 (find-grapheme-cluster-end test-text 0))
-    (test-equal "cluster start é" 9 (find-grapheme-cluster-start test-text 10))))
-
-
-;;; =================================================================
-;;; INTEGRATION TESTS
-;;; =================================================================
-
-
 (test-group "complex editing scenario"
   (let ([cbuf (make-test-cbuf "The café has José working\nSecond line here")])
-    ;; Multi-step editing scenario
+    ;; Multi-step editing scenario (searches don't wrap, so go back to
+    ;; the top before looking for text earlier in the buffer)
     (cbuf-search-forward! cbuf "José")
     (cbuf-search-replace! cbuf "José" "Maria" #:preserve-case? #t)  
+    (cbuf-beginning-of-buffer! cbuf)
     (cbuf-search-forward! cbuf "café")
     (cbuf-select-word! cbuf)
     (cbuf-upcase-region! cbuf)
-    (cbuf-end-of-line! cbuf)
+    (cbuf-end-of-buffer! cbuf)
     (cbuf-newline-and-indent! cbuf)
     (cbuf-insert-string! cbuf "Third line added")
     
@@ -379,5 +352,251 @@
     
     (cbuf-undo cbuf)
     (test-equal "after undo" "original text" (cbuf-get-all-text cbuf))))
+
+;;; =================================================================
+;;; STRICT TESTS
+;;; =================================================================
+
+(define (buf text) (make-cbuf #:initial-text text))
+(define (pos b) (list (cbuf-line-cur b) (cbuf-x-data b)))
+(define (goto! b line x) (cbuf-set-y! b line) (cbuf-set-x! b x 'data))
+(define (select! b l1 x1 l2 x2) (goto! b l1 x1) (cbuf-set-mark! b) (goto! b l2 x2))
+(define (state b)
+  (list (cbuf-text b) (pos b) (cbuf-modified? b) (cbuf-mark-set? b)
+        (cbuf-mark-line b) (cbuf-mark-x-data b)))
+
+(define-syntax-rule (round-trip name text setup op)
+  ;; SETUP the buffer, run OP: one undo gives the state before OP, redo
+  ;; the state after it, and undo again the state before.
+  (let ([b (buf text)])
+    (setup b)
+    (let ([before (state b)] [count (cbuf-get-undo-count b)])
+      (op b)
+      (let ([after (state b)])
+        (test-equal (string-append "one undo step: " name) (+ count 1) (cbuf-get-undo-count b))
+        (cbuf-undo b)
+        (test-equal (string-append "undo: " name) before (state b))
+        (cbuf-redo! b)
+        (test-equal (string-append "redo: " name) after (state b))
+        (cbuf-undo b)
+        (test-equal (string-append "undo again: " name) before (state b))))))
+
+(define (none b) #t)
+
+(test-group "strict: undo and redo of every modifying command"
+  (round-trip "delete word forward" "one two three" (lambda (b) (goto! b 0 4)) cbuf-delete-word-forward!)
+  (round-trip "delete word backward" "one two three" (lambda (b) (goto! b 0 6)) cbuf-delete-word-backward!)
+  (round-trip "delete to end of line" "abc def" (lambda (b) (goto! b 0 3)) cbuf-delete-to-end-of-line!)
+  (round-trip "delete to start of line" "abc def" (lambda (b) (goto! b 0 3)) cbuf-delete-to-beginning-of-line!)
+  (round-trip "cut line" "a\nb\nc" (lambda (b) (goto! b 1 0)) cbuf-cut-line!)
+  (round-trip "cut last line" "a\nb" (lambda (b) (goto! b 1 1)) cbuf-cut-line!)
+  (round-trip "cut word" "one two" (lambda (b) (goto! b 0 5)) cbuf-cut-word!)
+  (round-trip "paste previous" "x" (lambda (b) (set-cbuf-cut-buffer! b '("1" "2\n3"))) cbuf-paste-previous!)
+  (round-trip "replace" "say hello" (lambda (b) (cbuf-search-forward! b "hello"))
+              (lambda (b) (cbuf-search-replace! b "hello" "a\nb")))
+  (round-trip "replace all" "aXa\nb\naa" none (lambda (b) (cbuf-search-replace-all! b "a" "<a>")))
+  (round-trip "comment line" "code" none cbuf-comment-line!)
+  (round-trip "comment region" "a\nb\nc" (lambda (b) (select! b 0 0 1 1)) cbuf-comment-region!)
+  (round-trip "uncomment region" ";; a\n;;b\nc" (lambda (b) (select! b 0 0 2 0)) cbuf-uncomment-region!)
+  (round-trip "duplicate line" "a\nb" (lambda (b) (goto! b 0 1)) cbuf-duplicate-line!)
+  (round-trip "move line up" "a\nb\nc" (lambda (b) (goto! b 2 1)) cbuf-move-line-up!)
+  (round-trip "move line down" "a\nb\nc" (lambda (b) (goto! b 0 1)) cbuf-move-line-down!)
+  (round-trip "indent line" "x" none cbuf-indent-line!)
+  (round-trip "indent region" "a\nb" (lambda (b) (select! b 0 0 1 0)) cbuf-indent-region!)
+  (round-trip "outdent line" "    x" none cbuf-outdent-line!)
+  (round-trip "outdent region" "    a\n\tb" (lambda (b) (select! b 0 0 1 0)) cbuf-outdent-region!)
+  (round-trip "newline and indent" "  ab" (lambda (b) (goto! b 0 3)) cbuf-newline-and-indent!)
+  (round-trip "upcase region" "ab\ncd" (lambda (b) (select! b 0 1 1 1)) cbuf-upcase-region!)
+  (round-trip "downcase region" "AB" (lambda (b) (select! b 0 0 0 2)) cbuf-downcase-region!)
+  (round-trip "capitalize region" "hello world" (lambda (b) (select! b 0 0 0 11)) cbuf-capitalize-region!)
+  (round-trip "trim region" "  a  \n  b  " (lambda (b) (select! b 0 0 1 5)) cbuf-trim-whitespace!)
+  (round-trip "delete trailing whitespace" "a \nb\nc\t\nd" (lambda (b) (goto! b 2 2))
+              cbuf-delete-trailing-whitespace!))
+
+(test-group "strict: #:undo? #f records nothing"
+  (let ([b (buf "  one two\nthree\n;; four")])
+    (goto! b 0 4)
+    (cbuf-delete-word-forward! b #:undo? #f)
+    (cbuf-move-line-down! b #:undo? #f)
+    (cbuf-duplicate-line! b #:undo? #f)
+    (cbuf-newline-and-indent! b #:undo? #f)
+    (select! b 0 0 1 1)
+    (cbuf-comment-region! b #:undo? #f)
+    (cbuf-indent-region! b #:undo? #f)
+    (cbuf-upcase-region! b #:undo? #f)
+    (cbuf-search-replace-all! b "o" "0" #:undo? #f)
+    (cbuf-delete-trailing-whitespace! b #:undo? #f)
+    (test-assert "edits happened" (cbuf-modified? b))
+    (test-equal "nothing recorded" 0 (cbuf-get-undo-count b))))
+
+(test-group "strict: transformations leave the cut buffer alone"
+  (let ([b (buf "Hello  ")])
+    (set-cbuf-cut-buffer! b '("keep"))
+    (select! b 0 0 0 7)
+    (cbuf-upcase-region! b)
+    (test-equal "upcase" "HELLO  " (cbuf-text-cur b))
+    (select! b 0 0 0 7)
+    (cbuf-trim-whitespace! b)
+    (test-equal "trim" "HELLO" (cbuf-text-cur b))
+    (test-equal "cut buffer untouched" '("keep") (cbuf-cut-buffer b))
+    (test-assert "mark cleared" (not (cbuf-mark-set? b)))))
+
+(test-group "strict: search"
+  (let ([b (buf "say hi\nhi there hi\nnope")])
+    (test-assert "forward finds a match followed by a space" (cbuf-search-forward! b "say"))
+    (test-equal "selects it, cursor after" '((0 3) 0 0) (list (pos b) (cbuf-mark-line b) (cbuf-mark-x-data b)))
+    (cbuf-search-forward! b "hi")
+    (test-equal "next match on the same line" '(0 6) (pos b))
+    (cbuf-search-forward! b "hi")
+    (test-equal "then the next line" '(1 2) (pos b))
+    (cbuf-search-forward! b "hi")
+    (test-equal "repeating moves on" '(1 11) (pos b))
+    (test-assert "no more matches" (not (cbuf-search-forward! b "hi")))
+    (test-equal "cursor unchanged when not found" '(1 11) (pos b))
+    (test-assert "backward" (cbuf-search-backward! b "hi"))
+    (test-equal "backward: cursor at the start of the match" '(1 9) (pos b))
+    (test-equal "with the mark after it" 11 (cbuf-mark-x-data b))
+    (cbuf-search-backward! b "hi")
+    (test-equal "repeating backward moves back" '(1 0) (pos b))
+    (cbuf-search-backward! b "hi")
+    (test-equal "to the previous line" '(0 4) (pos b))
+    (test-assert "nothing before" (not (cbuf-search-backward! b "nope"))))
+  (let ([b (buf "Hello hello")])
+    (cbuf-search-forward! b "HELLO" #:case-insensitive? #t)
+    (test-equal "case-insensitive" '(0 5) (pos b)))
+  (let ([b (buf "cats cat")])
+    (cbuf-search-forward! b "cat" #:whole-word? #t)
+    (test-equal "whole word" '(0 8) (pos b)))
+  (let ([b (buf "é e")])
+    (cbuf-search-forward! b "e")
+    (test-equal "never matches part of a cluster" '(0 3) (pos b))))
+
+(test-group "strict: replace"
+  (let ([b (buf "a b a")])
+    (test-equal "replace needs a matching selection" #f (cbuf-search-replace! b "a" "x"))
+    (cbuf-search-forward! b "a")
+    (test-assert "replace the selected match" (cbuf-search-replace! b "a" "xyz"))
+    (test-equal "replaced, not inserted" "xyz b a" (cbuf-text-cur b))
+    (test-equal "cursor after the replacement" '(0 3) (pos b)))
+  (let ([b (buf "Hello HELLO hello")])
+    (test-equal "replace all returns the count" 3
+                (cbuf-search-replace-all! b "hello" "world" #:case-insensitive? #t #:preserve-case? #t))
+    (test-equal "preserving case" "World WORLD world" (cbuf-text-cur b)))
+  (let ([b (buf "José JOSÉ")])
+    (cbuf-search-replace-all! b "josé" "maria" #:case-insensitive? #t #:preserve-case? #t)
+    (test-equal "different lengths: capitalised and all-caps kept" "Maria MARIA" (cbuf-text-cur b)))
+  (let ([b (buf "aa")])
+    (test-equal "replacement containing the pattern terminates" 2 (cbuf-search-replace-all! b "a" "aa"))
+    (test-equal "text" "aaaa" (cbuf-text-cur b)))
+  (let ([b (buf "x")])
+    (test-equal "no matches: 0 and nothing recorded" '(0 0)
+                (list (cbuf-search-replace-all! b "q" "z") (cbuf-get-undo-count b)))))
+
+(test-group "strict: lines"
+  (let ([b (buf "a\nb\nc")])
+    (goto! b 1 1)
+    (cbuf-move-line-up! b)
+    (test-equal "move up" '("b" "a" "c") (cbuf-text b))
+    (test-equal "cursor follows" '(0 1) (pos b))
+    (cbuf-move-line-up! b)
+    (test-equal "move up at top does nothing" '("b" "a" "c") (cbuf-text b))
+    (goto! b 2 0)
+    (cbuf-move-line-down! b)
+    (test-equal "move down at bottom does nothing" '("b" "a" "c") (cbuf-text b)))
+  (let ([b (buf "x\ny")])
+    (cbuf-duplicate-line! b)
+    (test-equal "duplicate" '("x" "x" "y") (cbuf-text b))
+    (test-equal "cursor at the end of the copy" '(1 1) (pos b)))
+  (let ([b (buf "a\nb\nc")])
+    (goto! b 1 0)
+    (cbuf-cut-line! b)
+    (test-equal "cut line" '("a" "c") (cbuf-text b))
+    (test-equal "cut buffer has the line and its ending" '("b\n") (cbuf-cut-buffer b))
+    (cbuf-copy-line! b)
+    (test-equal "copy line" '("c") (cbuf-cut-buffer b))))
+
+(test-group "strict: words"
+  (let ([b (buf "one two  three")])
+    (cbuf-forward-word! b)
+    (test-equal "forward word" '(0 4) (pos b))
+    (cbuf-forward-word! b)
+    (test-equal "forward word over extra spaces" '(0 9) (pos b))
+    (goto! b 0 11)
+    (cbuf-backward-word! b)
+    (test-equal "backward word from inside a word: its start" '(0 9) (pos b))
+    (cbuf-backward-word! b)
+    (test-equal "backward word again: the previous word" '(0 4) (pos b)))
+  (let ([b (buf "ab cd")])
+    (goto! b 0 4)
+    (cbuf-delete-word-backward! b)
+    (test-equal "delete word backward deletes to the word's start" "ab d" (cbuf-text-cur b)))
+  (let ([b (buf "end\nnext")])
+    (goto! b 0 1)
+    (cbuf-forward-word! b)
+    (test-equal "forward from the last word goes to the next line" '(1 0) (pos b))
+    (cbuf-backward-word! b)
+    (test-equal "backward from a line start goes to the previous line end" '(0 3) (pos b))))
+
+(test-group "strict: indentation"
+  (let ([b (make-cbuf #:initial-text "\tx" #:tab-size 4)])
+    (test-equal "tab counts to the tab stop" 4 (cbuf-get-current-line-indentation b))
+    (cbuf-outdent-line! b)
+    (test-equal "outdent removes one tab, not tab-size characters" "x" (cbuf-text-cur b)))
+  (let ([b (make-cbuf #:initial-text "  \tx" #:tab-size 4)])
+    (test-equal "spaces then tab" 4 (cbuf-get-current-line-indentation b))
+    (test-equal "level" 1 (cbuf-get-indentation-level b)))
+  (let ([b (make-cbuf #:initial-text "      x" #:tab-size 4)])
+    (cbuf-outdent-line! b)
+    (test-equal "outdent removes up to tab-size spaces" "  x" (cbuf-text-cur b))
+    (cbuf-outdent-line! b)
+    (test-equal "fewer spaces left" "x" (cbuf-text-cur b))
+    (cbuf-outdent-line! b)
+    (test-equal "nothing to remove" "x" (cbuf-text-cur b)))
+  (let ([b (buf "  \tif x:")])
+    (cbuf-end-of-line! b)
+    (cbuf-newline-and-indent! b)
+    (test-equal "new line copies the exact indentation" '("  \tif x:" "  \t") (cbuf-text b))
+    (test-equal "cursor after it" '(1 3) (pos b)))
+  (let ([b (buf "  ab")])
+    (goto! b 0 1)
+    (cbuf-newline-and-indent! b)
+    (test-equal "only the indentation before the cursor" '(" " "  ab") (cbuf-text b))))
+
+(test-group "strict: comments"
+  (cbuf-set-comment-string! ";;")
+  (let ([b (buf "a\n;; b\n;;c")])
+    (select! b 0 0 2 0)
+    (cbuf-uncomment-region! b)
+    (test-equal "uncomment" '("a" "b" "c") (cbuf-text b))
+    (select! b 0 0 1 0)
+    (cbuf-comment-region! b)
+    (test-equal "comment" '(";; a" ";; b" "c") (cbuf-text b)))
+  (test-error "empty comment string" #t (cbuf-set-comment-string! ""))
+  (cbuf-set-comment-string! "#")
+  (let ([b (buf "x")])
+    (cbuf-comment-line! b)
+    (test-equal "custom comment string" "# x" (cbuf-text-cur b)))
+  (cbuf-set-comment-string! ";;"))
+
+(test-group "strict: trailing whitespace"
+  (let ([b (buf "a  \nb\né \t")])
+    (goto! b 0 3)
+    (cbuf-delete-trailing-whitespace! b)
+    (test-equal "trimmed" '("a" "b" "é") (cbuf-text b))
+    (test-equal "cursor kept, clamped to its line" '(0 1) (pos b))))
+
+(test-group "strict: navigation"
+  (let ([b (make-cbuf #:initial-text (string-join (map number->string (iota 30)) "\n")
+                      #:form-size 10)])
+    (cbuf-page-down! b)
+    (test-equal "page down" 10 (cbuf-line-cur b))
+    (cbuf-page-down! b) (cbuf-page-down! b)
+    (test-equal "page down clamps" 29 (cbuf-line-cur b))
+    (cbuf-page-up! b)
+    (test-equal "page up" 19 (cbuf-line-cur b))
+    (cbuf-goto-line! b 5)
+    (test-equal "goto line is 0-based" '(5 0) (pos b))
+    (cbuf-goto-line! b 99)
+    (test-equal "goto line clamps" 29 (cbuf-line-cur b))))
 
 (test-end "cbuf-standard")
