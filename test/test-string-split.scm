@@ -313,6 +313,108 @@
 ;;; RUN TESTS
 ;;; =================================================================
 
+;;; =================================================================
+;;; STRICT TESTS
+;;; =================================================================
+
+(define (seconds thunk)
+  (let ([t0 (get-internal-real-time)])
+    (thunk)
+    (/ (- (get-internal-real-time) t0) internal-time-units-per-second 1.0)))
+
+(test-group "strict: string-split-at-char"
+  (test-equal "only the delimiter" '("" "") (string-split-at-char "," #\,))
+  (test-equal "only delimiters" '("" "" "") (string-split-at-char ",," #\,))
+  (test-equal "non-ASCII delimiter" '("a" "b") (string-split-at-char "a\u00b7b" #\x00b7))
+  (test-equal "N delimiters give N+1 pieces" 51
+              (length (string-split-at-char (make-string 50 #\,) #\,)))
+  (test-equal "join undoes split" "a,,b,c,"
+              (string-join-with (string-split-at-char "a,,b,c," #\,) ",")))
+
+(test-group "strict: string-split-on-string"
+  (test-equal "empty string, empty delimiter" '("") (string-split-on-string "" ""))
+  (test-equal "matches are non-overlapping, left to right" '("" "" "a")
+              (string-split-on-string "aaaaa" "aa"))
+  (test-equal "partial match at the end" '("ab" ":")
+              (string-split-on-string "ab:::" "::"))
+  (test-equal "join undoes split" "x::y::::z"
+              (string-join-with (string-split-on-string "x::y::::z" "::") "::")))
+
+(test-group "strict: string-split-on-any"
+  (test-equal "earliest match wins over list order" '("a" "b" "c")
+              (string-split-on-any "a;b,c" '("," ";")))
+  (test-equal "at the same position, list order decides" '("a" "\nb")
+              (string-split-on-any "a\r\nb" '("\r" "\r\n")))
+  (test-equal "longer delimiter first takes it whole" '("a" "b")
+              (string-split-on-any "a\r\nb" '("\r\n" "\r")))
+  (test-equal "empty delimiters are ignored" '("a" "b")
+              (string-split-on-any "a,b" '("" ",")))
+  (test-equal "only empty delimiters: no split (and no hang)" '("abc")
+              (string-split-on-any "abc" '("")))
+  (test-equal "delimiter at the end" '("a" "")
+              (string-split-on-any "a;" '(";")))
+  (test-equal "adjacent delimiters" '("a" "" "b")
+              (string-split-on-any "a;,b" '("," ";"))))
+
+(test-group "strict: string-split-lines"
+  (test-equal "trailing newline gives a final empty line" '("a" "")
+              (string-split-lines "a\n"))
+  (test-equal "just a newline" '("" "") (string-split-lines "\n"))
+  (test-equal "CR then CRLF" '("" "" "") (string-split-lines "\r\r\n"))
+  (test-equal "LF then CR are two endings" '("" "" "") (string-split-lines "\n\r"))
+  (test-equal "CRLF then LF" '("" "" "") (string-split-lines "\r\n\n"))
+  (test-equal "paragraph separator at end" '("a" "") (string-split-lines "a\u2029"))
+  (test-equal "form feed is not a line ending" '("a\fb") (string-split-lines "a\fb"))
+  (test-equal "NEL is not a line ending" '("a\x85b") (string-split-lines "a\x85b"))
+  (test-equal "vertical tab is not a line ending" '("a\vb") (string-split-lines "a\vb")))
+
+(test-group "strict: string-split-lines-with-final-newline-info"
+  (test-equal "empty" '(("") . #f) (string-split-lines-with-final-newline-info ""))
+  (test-equal "no ending" '(("a") . #f) (string-split-lines-with-final-newline-info "a"))
+  (test-equal "LF" '(("a") . #t) (string-split-lines-with-final-newline-info "a\n"))
+  (test-equal "CRLF" '(("a") . #t) (string-split-lines-with-final-newline-info "a\r\n"))
+  (test-equal "CR" '(("a") . #t) (string-split-lines-with-final-newline-info "a\r"))
+  (test-equal "LS" '(("a") . #t) (string-split-lines-with-final-newline-info "a\u2028"))
+  (test-equal "PS" '(("a") . #t) (string-split-lines-with-final-newline-info "a\u2029"))
+  (test-equal "just a newline is one empty line" '(("") . #t)
+              (string-split-lines-with-final-newline-info "\n"))
+  (test-equal "blank last line is kept" '(("a" "") . #t)
+              (string-split-lines-with-final-newline-info "a\n\n"))
+  (test-equal "several lines" '(("a" "b") . #f)
+              (string-split-lines-with-final-newline-info "a\nb")))
+
+(test-group "strict: string-normalize-line-endings"
+  (test-equal "trailing ending is kept" "a\nb\n"
+              (string-normalize-line-endings "a\r\nb\r\n" "\n"))
+  (test-equal "to LS" "a\u2028b" (string-normalize-line-endings "a\nb" "\u2028"))
+  (test-equal "empty" "" (string-normalize-line-endings "" "\r\n"))
+  (test-equal "same as joining split lines" "x\ny\n\nz"
+              (string-join-with (string-split-lines "x\ry\r\n\u2029z") "\n")))
+
+(test-group "strict: shared helpers"
+  (test-eq "string-find-string is string-utils'" (@ (gano string-utils) string-find-string)
+           string-find-string)
+  (test-eq "string-char-positions is string-utils'" (@ (gano string-utils) string-char-positions)
+           string-char-positions)
+  (test-eq "string-detect-line-ending is string-utils'" (@ (gano string-utils) string-detect-line-ending)
+           string-detect-line-ending)
+  (test-equal "join-with empty list" "" (string-join-with '() ","))
+  (test-equal "join-with one item" "a" (string-join-with '("a") ",")))
+
+(test-group "strict: linear time"
+  (let ([text (string-join-with (make-list 50000 "some line of text") "\n")])
+    (test-assert "split 50000 lines in under 2s"
+                 (< (seconds (lambda () (string-split-lines text))) 2.0))
+    (test-equal "into 50000 lines" 50000 (length (string-split-lines text)))
+    (test-assert "split-on-any over 50000 lines in under 4s"
+                 (< (seconds (lambda () (string-split-on-any text '("\r\n" "\n")))) 4.0))
+    (test-assert "split-on-string over 50000 lines in under 2s"
+                 (< (seconds (lambda () (string-split-on-string text "\n"))) 2.0))
+    (test-assert "join 50000 lines in under 1s"
+                 (< (seconds (lambda () (string-join-with (make-list 50000 "x") "\n"))) 1.0)))
+  (test-assert "split-at-char on 100000 delimiters in under 2s"
+               (< (seconds (lambda () (string-split-at-char (make-string 100000 #\,) #\,))) 2.0)))
+
 (test-end "string-split")
 
 ;; Local Variables:

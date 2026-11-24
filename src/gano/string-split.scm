@@ -1,10 +1,18 @@
 ;;; string-split.scm
 ;;; Enhanced string splitting functions for multi-character delimiters
 
+;;; All functions run in time linear in the length of the input.
+
 (define-module (gano string-split)
   #:use-module (srfi srfi-1)        ; List utilities
-  #:use-module ((gano string-utils) #:select (string-detect-line-ending))
-  #:re-export (string-detect-line-ending)
+  #:use-module (srfi srfi-13)       ; string-contains, string-join
+  #:use-module ((gano string-utils)
+                #:select (string-detect-line-ending
+                          string-find-string
+                          string-char-positions))
+  #:re-export (string-detect-line-ending
+               string-find-string
+               string-char-positions)
   #:export (
     ;; Core splitting functions
     string-split-on-string
@@ -17,166 +25,107 @@
     string-normalize-line-endings
     
     ;; Helper functions
-    string-find-string
-    string-char-positions
     string-join-with))
 
 ;;; =================================================================
 ;;; HELPER FUNCTIONS
 ;;; =================================================================
 
-(define (string-find-string str search-str)
-  "Return first position where SEARCH-STR appears in STR, or #f if not found."
-  (let ([str-len (string-length str)]
-        [search-len (string-length search-str)])
-    (cond
-      [(> search-len str-len) #f]
-      [(= search-len 0) 0]
-      [else
-       (let loop ([i 0])
-         (cond
-           [(> (+ i search-len) str-len) #f]
-           [(string=? (substring str i (+ i search-len)) search-str) i]
-           [else (loop (+ i 1))]))])))
-
-(define (string-char-positions str char)
-  "Return list of all positions where CHAR appears in STR."
-  (let loop ([i 0] [positions '()])
-    (if (>= i (string-length str))
-        (reverse positions)
-        (if (char=? (string-ref str i) char)
-            (loop (+ i 1) (cons i positions))
-            (loop (+ i 1) positions)))))
-
 (define (string-join-with string-list separator)
   "Join list of strings with SEPARATOR between them."
-  (cond
-    [(null? string-list) ""]
-    [(null? (cdr string-list)) (car string-list)]
-    [else
-     (let loop ([remaining (cdr string-list)]
-                [result (car string-list)])
-       (if (null? remaining)
-           result
-           (loop (cdr remaining)
-                 (string-append result separator (car remaining)))))]))
+  (string-join string-list separator))
 
 ;;; =================================================================
 ;;; CORE SPLITTING FUNCTIONS
 ;;; =================================================================
 
 (define (string-split-at-char str char)
-  "Split string at all occurrences of CHAR, returning list of substrings."
-  (let ([positions (cons -1 (append (string-char-positions str char) 
-                                    (list (string-length str))))])
-    (let loop ([pos-list positions] [result '()])
-      (if (< (length pos-list) 2)
-          (reverse result)
-          (let ([start (+ (car pos-list) 1)]
-                [end (cadr pos-list)])
-            (loop (cdr pos-list) 
-                  (cons (substring str start end) result)))))))
+  "Split string at all occurrences of CHAR, returning list of substrings.
+   N occurrences give N+1 pieces (some possibly empty)."
+  (let loop ([end (string-length str)] [i (- (string-length str) 1)] [acc '()])
+    (cond
+     [(< i 0) (cons (substring str 0 end) acc)]
+     [(char=? (string-ref str i) char)
+      (loop i (- i 1) (cons (substring str (+ i 1) end) acc))]
+     [else (loop end (- i 1) acc)])))
 
 (define (string-split-on-string str delimiter)
-  "Split string on all occurrences of DELIMITER string.
-   Returns list of substrings. Empty delimiter returns list of single characters."
+  "Split string on all non-overlapping occurrences of DELIMITER, scanning
+   left to right.  An empty DELIMITER splits STR into single characters.
+   The empty string gives (\"\")."
   (cond
     [(string-null? str) '("")]
     [(string-null? delimiter) (map string (string->list str))]
-    [(= (string-length delimiter) 1)
-     ;; Optimize single character case
-     (string-split-at-char str (string-ref delimiter 0))]
     [else
-     ;; Multi-character delimiter
      (let ([delimiter-len (string-length delimiter)])
-       (let loop ([start 0] [result '()])
-         (let ([pos (string-find-string (substring str start) delimiter)])
-           (cond
-             ;; No more occurrences - add final part
-             [(not pos)
-              (reverse (cons (substring str start) result))]
-             
-             ;; Found delimiter - add part before it and continue after it
-             [else
-              (let* ([actual-pos (+ start pos)]
-                     [part (substring str start actual-pos)]
-                     [new-start (+ actual-pos delimiter-len)])
-                (loop new-start (cons part result)))]))))]))
+       (let loop ([start 0] [acc '()])
+         (let ([pos (string-contains str delimiter start)])
+           (if pos
+               (loop (+ pos delimiter-len) (cons (substring str start pos) acc))
+               (reverse (cons (substring str start) acc))))))]))
 
 (define (string-split-on-any str delimiters)
-  "Split string on any of the delimiter strings in DELIMITERS list.
-   Processes delimiters in order, so longer delimiters should come first
-   to avoid incorrect splitting (e.g., put '\\r\\n' before '\\n')."
-  (cond
-    [(string-null? str) '("")]
-    [(null? delimiters) (list str)]
-    [else
-     ;; Find the first occurrence of any delimiter
-     (let* ([delimiter-positions 
-             (filter-map (lambda (delim)
-                          (let ([pos (string-find-string str delim)])
-                            (and pos (cons pos delim))))
-                        delimiters)]
-            [earliest (and (not (null? delimiter-positions))
-                          (fold (lambda (item acc)
-                                 (if (< (car item) (car acc)) item acc))
-                               (car delimiter-positions)
-                               (cdr delimiter-positions)))])
-       
-       (cond
-         ;; No delimiters found
-         [(not earliest) (list str)]
-         
-         ;; Found delimiter - split and recurse
-         [else
-          (let* ([pos (car earliest)]
-                 [delimiter (cdr earliest)]
-                 [delimiter-len (string-length delimiter)]
-                 [before (substring str 0 pos)]
-                 [after (substring str (+ pos delimiter-len))])
-            (cons before (string-split-on-any after delimiters)))]))]))
+  "Split string on any of the delimiter strings in DELIMITERS.  At each
+   position the first delimiter in the list that matches there is used,
+   so put longer delimiters first (e.g. \"\\r\\n\" before \"\\n\").
+   Empty delimiters are ignored.  The empty string gives (\"\")."
+  (let ([delimiters (remove string-null? delimiters)]
+        [len (string-length str)])
+    (define (match-at i)
+      ;; The delimiter matching at I, or #f
+      (find (lambda (d) (string-prefix? d str 0 (string-length d) i len)) delimiters))
+    (if (null? delimiters)
+        (list str)
+        (let loop ([i 0] [start 0] [acc '()])
+          (if (>= i len)
+              (reverse (cons (substring str start) acc))
+              (let ([d (match-at i)])
+                (if d
+                    (let ([next (+ i (string-length d))])
+                      (loop next next (cons (substring str start i) acc)))
+                    (loop (+ i 1) start acc))))))))
 
 ;;; =================================================================
 ;;; LINE ENDING UTILITIES
 ;;; =================================================================
 
 (define (string-split-lines str)
-  "Split string into lines, handling multiple line ending types.
-   Recognizes \\r\\n, \\n, \\r, and Unicode line separators."
-  (string-split-on-any str '("\r\n" "\n" "\r" "\u2028" "\u2029")))
+  "Split string into lines at line endings: \\r\\n, \\n, \\r, and the Unicode
+   line and paragraph separators U+2028 and U+2029.  A trailing line
+   ending gives a final empty line; the empty string gives (\"\")."
+  (let ([len (string-length str)])
+    (let loop ([i 0] [start 0] [acc '()])
+      (if (>= i len)
+          (reverse (cons (substring str start) acc))
+          (let ([ch (string-ref str i)])
+            (cond
+             [(and (char=? ch #\return) (< (+ i 1) len)
+                   (char=? (string-ref str (+ i 1)) #\newline))
+              (loop (+ i 2) (+ i 2) (cons (substring str start i) acc))]
+             [(memv ch '(#\newline #\return #\x2028 #\x2029))
+              (loop (+ i 1) (+ i 1) (cons (substring str start i) acc))]
+             [else (loop (+ i 1) start acc)]))))))
 
 (define (string-split-lines-with-final-newline-info str)
-  "Split string into lines, handling multiple line ending types.
-   Recognizes \\r\\n, \\n, \\r, and Unicode line separators."
+  "Split string into lines as string-split-lines does, but without the
+   empty line that follows a trailing line ending.
+   Returns (lines . ends-with-line-ending?).  The empty string gives
+   ((\"\") . #f)."
   (cond
    [(string-null? str)
     (cons '("") #f)]
    [else
     (let* ([lines (string-split-lines str)]
-           ;; Check if original string ended with any line ending
-           [str-len (string-length str)]
-           [last-char (string-ref str (- str-len 1))]
-           [ends-with-newline? (or (char=? last-char #\newline)
-                                   (char=? last-char #\return)
-                                   (char=? last-char #\x2028)  ; Line separator
-                                   (char=? last-char #\x2029)  ; Paragraph separator
-                                   ;; Check for CRLF
-                                   (and (>= str-len 2)
-                                        (char=? (string-ref str (- str-len 2)) #\return)
-                                        (char=? last-char #\newline)))])
-       
-      ;; If string ended with line ending, remove the extra empty line that split creates
-      (if (and ends-with-newline? 
-               (not (null? lines))
-               (string-null? (last lines)))
+           [last-char (string-ref str (- (string-length str) 1))]
+           [ends-with-newline? (and (memv last-char '(#\newline #\return #\x2028 #\x2029)) #t)])
+      (if ends-with-newline?
           (cons (drop-right lines 1) #t)
           (cons lines #f)))]))
 
 (define (string-normalize-line-endings str target-ending)
-  "Convert all line endings in string to target-ending.
-   TARGET-ENDING should be one of: \\n, \\r\\n, \\r, LS, or PS"
-  (let ([lines (string-split-lines str)])
-    (string-join-with lines target-ending)))
+  "Convert all line endings in string to TARGET-ENDING (any string, e.g.
+   \"\\n\", \"\\r\\n\", \"\\r\", or U+2028/U+2029)."
+  (string-join (string-split-lines str) target-ending))
 
 ;;; =================================================================
 ;;; TESTING AND EXAMPLES
