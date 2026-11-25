@@ -1031,6 +1031,9 @@
     (test-assert "selecting" (< (draw! '(ctrl . #\^) 'right 'right 'down) 150))
     (test-assert "opening a prompt" (< (draw! '(ctrl . #\c) '(ctrl . #\w)) 250))
     (test-assert "typing in it" (< (draw! "w") 15))
+    (test-equal "^L (redraw) changes nothing on the screen" 0 (draw! '(ctrl . #\l)))
+    (test-equal "nor at a prompt, which stays open" MSEARCH
+                (begin (draw! '(ctrl . #\l)) (editor-mode st)))
     (test-assert "the help screen and back" (and (draw! '(ctrl . #\c) '(ctrl . #\g))
                                                  (draw! "q")))
     ;; a long session

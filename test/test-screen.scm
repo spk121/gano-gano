@@ -522,4 +522,25 @@
     (test-equal "every update gives the screen asked for" 0 failures)
     (test-assert "in under half the bytes of redrawing" (< (* 2 bytes) redraw-bytes))))
 
+;;; ---------------------------------------------------------------
+;;; The terminal
+;;; ---------------------------------------------------------------
+
+(test-group "showing screens"
+  (let ([a (screen-of 40 10 paragraph)]
+        [b (screen-of 40 10 (cons "It was the BEST of times," (cdr paragraph)))]
+        [sent (lambda (screen)
+                (call-with-output-string (lambda (port) (show-screen screen port))))])
+    (redraw-screen)
+    (test-equal "the first screen is drawn in full" (screen-update-string #f a) (sent a))
+    (test-equal "the next as a change to it" (screen-update-string a b) (sent b))
+    (test-equal "the same again sends nothing" "" (sent b))
+    (redraw-screen)
+    (test-equal "after redraw-screen it is drawn in full again"
+                (screen-update-string #f b) (sent b))
+    (test-equal "and then changes are sent as before" (screen-update-string b a) (sent a))
+    (test-equal "show-screen returns how much it sent"
+                (string-length (screen-update-string a b))
+                (show-screen b (%make-void-port "w")))))
+
 (test-end "screen")

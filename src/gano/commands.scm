@@ -42,6 +42,7 @@
   #:use-module (gano keys)
   #:use-module (gano buffer)
   #:use-module (gano frame)
+  #:use-module (gano screen)
   #:export (
     ;; Editor modes
     MMAIN MSEARCH MREPLACE MREPLACEWITH MGOTOLINE MWRITEFILE
@@ -623,8 +624,15 @@
 (frame-command "view-prev"   "Show the previous page"
                (lambda (cbuf frame) (frame-preceding-page cbuf frame 1))
                `(,MMAIN "A-pageup") `(,MHELP "pageup" "^Y" "A-space"))
-(frame-command "view-cursor" "Scroll so the cursor can be seen" frame-update-frame
-               `(,MMAIN "^L"))
+(frame-command "view-cursor" "Scroll so the cursor can be seen" frame-update-frame)
+
+;; Redrawing is wanted wherever the screen can be garbled (by noise on
+;; a serial line, or another program's output): in every mode.
+(command-table-add!
+ standard-commands
+ (make-command "redraw" "Redraw the whole screen"
+               (lambda (ctx) (redraw-screen))
+               #:modes (map (lambda (mode) (list mode "^L")) all-modes)))
 (command-table-add!
  standard-commands
  (make-command "view-page" "Show a page by number"

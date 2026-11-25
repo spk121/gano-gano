@@ -24,7 +24,8 @@ First working version of the editor.
   (regions too), inserting and deleting lines and characters, erasing,
   repeats and the shortest cursor moves.  Typing a character sends
   about 25 bytes where a redraw sent 2000, so the editor stays
-  responsive on a slow line.
+  responsive on a slow line.  ^L (the redraw command) redraws
+  everything, in any mode, for when the terminal has been garbled.
 - gano --help, gano --version; "--" ends the options.
 - Plain Makefile: make, make check, make dist.
 - Command registry (src/gano/commands.scm): each command has a short

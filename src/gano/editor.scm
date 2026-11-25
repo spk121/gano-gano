@@ -1068,19 +1068,12 @@
 ;;; MAIN PROGRAM
 ;;; =================================================================
 
-(define (make-drawer)
-  "Return a procedure (draw STATE [REDRAW?]) that brings the terminal
-   up to date with STATE.  It remembers the screen it last drew and
-   sends only what turns that into the new one: a fraction of a full
-   redraw, which matters on a slow line.  With REDRAW? true, or the
-   first time, it does not rely on what the terminal shows, and redraws
-   everything (as it must after the terminal is resized)."
-  (let ([shown #f])
-    (lambda* (state #:optional (redraw? #f))
-      (let ([screen (editor-screen state)])
-        (display (screen-update-string (and (not redraw?) shown) screen))
-        (force-output)
-        (set! shown screen)))))
+(define (draw state)
+  "Bring the terminal up to date with STATE.  Only what turns the
+   screen last drawn into the new one is sent: a fraction of a full
+   redraw, which matters on a slow line.  Everything is redrawn the
+   first time, and after redraw-screen (the redraw command, ^L)."
+  (show-screen (editor-screen state)))
 
 (define (check-size! state)
   "Re-read the terminal size; return #t if it changed."
@@ -1103,18 +1096,20 @@
   ;; SIGWINCH only sets a flag; the loop notices it between waits.
   (let ([old-handler (sigaction SIGWINCH)]
         [resized? #f]
-        [draw (make-drawer)]
         [port (current-input-port)])
     (dynamic-wind
       (lambda ()
         (sigaction SIGWINCH (lambda (sig) (set! resized? #t))))
       (lambda ()
+        (redraw-screen)                 ; nothing of ours is on it yet
         (draw state)
         (let loop ()
           (unless (editor-quit? state)
             (when resized?
               (set! resized? #f)
-              (when (check-size! state) (draw state #t)))
+              (when (check-size! state)
+                (redraw-screen)         ; the terminal's contents moved
+                (draw state)))
             (when (wait-for-key port 250000)
               (let ([key (terminal-read-key)])
                 ;; A message is shown until the next key press.

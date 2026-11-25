@@ -9,6 +9,14 @@
 ;;;   (screen-update BEFORE AFTER)  =>  list of operations
 ;;;   (ops->string OPS)             =>  the bytes to send
 ;;;
+;;; and, for a program with one terminal, on top of those:
+;;;
+;;;   (show-screen SCREEN)   sends what turns the screen last shown
+;;;                          into SCREEN
+;;;   (redraw-screen)        has the next show-screen redraw everything,
+;;;                          for when the terminal no longer shows what
+;;;                          was sent (line noise, a resize)
+;;;
 ;;; A screen is a grid of character cells, each with its attributes,
 ;;; plus the cursor.  Build one with make-screen, screen-put-string! and
 ;;; screen-set-cursor!; build a new one for every frame (screen-update
@@ -128,7 +136,10 @@
             screen-update-string
             screen-apply-ops
             ops->string
-            ops-byte-count))
+            ops-byte-count
+
+            show-screen
+            redraw-screen))
 
 ;;; =================================================================
 ;;; ATTRIBUTES AS SMALL INTEGERS
@@ -1186,3 +1197,30 @@
   "The characters to send to the terminal to turn the screen BEFORE
    into the screen AFTER; see screen-update."
   (ops->string (apply screen-update before after options)))
+
+;;; =================================================================
+;;; THE TERMINAL
+;;; =================================================================
+
+;; The screen the terminal is showing, or #f when that is not known:
+;; before anything is shown, and after redraw-screen.
+(define shown #f)
+
+(define* (show-screen screen #:optional (port (current-output-port)))
+  "Make the terminal on PORT show SCREEN, sending only what turns the
+   screen last shown into it (see screen-update), or a full redraw the
+   first time and after redraw-screen.  Returns the number of
+   characters sent.  SCREEN must not be changed afterwards: it is kept
+   to compare the next screen with."
+  (let ([out (screen-update-string shown screen)])
+    (display out port)
+    (force-output port)
+    (set! shown screen)
+    (string-length out)))
+
+(define (redraw-screen)
+  "Stop relying on what the terminal shows: the next show-screen erases
+   it and draws its screen in full.  For when the terminal may not show
+   what was sent to it, as after noise on a serial line, output from
+   another program, or a change of size.  Nothing is sent now."
+  (set! shown #f))
