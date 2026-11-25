@@ -18,6 +18,14 @@ First working version of the editor.
   (a directory, say) is reported plainly.
 - ^K cuts the selection if there is one, else the line, and A-6 copies
   the same way, as in nano; ^U pastes either.
+- The terminal is brought up to date with as few bytes as possible
+  (src/gano/screen.scm) rather than redrawn: the editor works out what
+  turns the screen it last drew into the new one, using scrolling
+  (regions too), inserting and deleting lines and characters, erasing,
+  repeats and the shortest cursor moves.  Typing a character sends
+  about 25 bytes where a redraw sent 2000, so the editor stays
+  responsive on a slow line.  ^L (the redraw command) redraws
+  everything, in any mode, for when the terminal has been garbled.
 - gano --help, gano --version; "--" ends the options.
 - Plain Makefile: make, make check, make dist.
 - Command registry (src/gano/commands.scm): each command has a short

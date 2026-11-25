@@ -6,8 +6,10 @@
 ;;;
 ;;;   - make-editor-state / handle-key change the editor state in
 ;;;     response to key objects from (gano keys);
-;;;   - render-screen turns the state into a string of ANSI output;
-;;;   - editor-main wires those to the real terminal.
+;;;   - editor-screen turns the state into a screen (see (gano screen)),
+;;;     and render-screen into ANSI output that draws all of it;
+;;;   - editor-main wires those to the real terminal, sending only what
+;;;     turns the screen it last drew into the new one.
 ;;;
 ;;; Screen layout (H = terminal height):
 ;;;
@@ -39,6 +41,7 @@
   #:use-module (gano keys)          ; Key objects and key names
   #:use-module (gano terminal)      ; Raw mode, ANSI output, key input
   #:use-module (gano rendering)     ; SGR attributes -> ANSI
+  #:use-module (gano screen)        ; Screens, and updating the terminal
   #:use-module (gano commands)      ; Command table: names, modes, shortcuts
   #:use-module (srfi srfi-1)        ; List utilities
   #:use-module (srfi srfi-9)        ; Record types
@@ -74,6 +77,7 @@
             handle-key
             editor-resize!
             render-screen
+            editor-screen
             editor-main))
 
 ;; The version, also read by the Makefile
@@ -966,13 +970,65 @@
              (cons mark point)
              (cons point mark)))))
 
-(define (render-screen state)
-  "Return the ANSI output that redraws the whole screen for STATE.
-   Also scrolls the frame so the cursor is visible."
+(define (status-row state)
+  "What the status row shows: the open prompt, or the status line"
+  (let ([prompt (editor-prompt state)])
+    (printable-string
+     (if prompt
+         (fit (string-append (prompt-label prompt) (prompt-input prompt)) (editor-width state))
+         (status-line state)))))
+
+(define (help-row state n)
+  "Help row N (1 or 2).  While a prompt is open, a message (such as the
+   choices for a completion) takes the first one."
+  (let ([msg (editor-status-message state)]
+        [width (editor-width state)])
+    (if (and (= n 1) (editor-prompt state) (not (string-null? msg)))
+        (fit (printable-string msg) width)
+        (help-line (list-ref (help-rows (editor-mode state)) (- n 1)) width))))
+
+(define (prompt-cursor-column state)
+  "The 1-based column of the cursor in the open prompt"
+  (let ([prompt (editor-prompt state)])
+    (min (editor-width state)
+         (+ 1 (string-length (prompt-label prompt)) (string-length (prompt-input prompt))))))
+
+(define (editor-screen state)
+  "Return the screen for STATE: what the terminal should show.  Also
+   scrolls the frame so the cursor is visible.  render-screen draws
+   the same thing."
   (let* ([help-view (editor-help state)]
          [cbuf (if help-view (car help-view) (editor-cbuf state))]
          [frame (if help-view (cdr help-view) (editor-frame state))]
-         [width (editor-width state)]
+         [height (editor-height state)]
+         [screen (make-screen (editor-width state) height)])
+    (frame-update-frame cbuf frame)
+    ;; Text area, with the text's attributes
+    (let loop ([lines (frame-render-frame-with-sgr cbuf frame #:region (selection cbuf))]
+               [row 0])
+      (when (and (pair? lines) (< row (min height (frame-height frame))))
+        (screen-put-string! screen row 0 (car (car lines)) (cdr (car lines)))
+        (loop (cdr lines) (+ row 1))))
+    (when (> height reserved-rows)
+      (screen-put-string! screen (- height 3) 0 (status-row state) reverse-video)
+      (screen-put-string! screen (- height 2) 0 (help-row state 1))
+      (screen-put-string! screen (- height 1) 0 (help-row state 2)))
+    ;; Cursor: in the prompt if one is open, else in the text
+    (if (and (editor-prompt state) (> height reserved-rows))
+        (screen-set-cursor! screen (- height 3) (- (prompt-cursor-column state) 1))
+        (let ([pos (and (not help-view) (frame-get-cursor-position cbuf frame))])
+          (if pos
+              (screen-set-cursor! screen (cdr pos) (car pos))
+              (screen-set-cursor! screen 0 0 #f))))
+    screen))
+
+(define (render-screen state)
+  "Return the ANSI output that redraws the whole screen for STATE.
+   Also scrolls the frame so the cursor is visible.  (The editor itself
+   sends much less: see draw.)"
+  (let* ([help-view (editor-help state)]
+         [cbuf (if help-view (car help-view) (editor-cbuf state))]
+         [frame (if help-view (cdr help-view) (editor-frame state))]
          [height (editor-height state)]
          [text-rows (frame-height frame)]
          [prompt (editor-prompt state)])
@@ -989,30 +1045,19 @@
             (terminal-clear-to-eol)
             (loop (cdr lines) (+ row 1))))
         (when (> height reserved-rows)
-          (let ([help (help-rows (editor-mode state))]
-                [msg (editor-status-message state)])
-            ;; Status line or prompt, in reverse video
-            (terminal-cursor-position (- height 2) 1)
-            (display (sgr->ansi-sequence reverse-video))
-            (display (printable-string
-                      (if prompt
-                          (fit (string-append (prompt-label prompt) (prompt-input prompt)) width)
-                          (status-line state))))
-            (terminal-reset-attributes)
-            ;; While a prompt is open, a message (such as the choices
-            ;; for a completion) takes the first help line.
-            (terminal-cursor-position (- height 1) 1)
-            (display (if (and prompt (not (string-null? msg)))
-                         (fit (printable-string msg) width)
-                         (help-line (first help) width)))
-            (terminal-cursor-position height 1)
-            (display (help-line (second help) width))))
+          ;; Status line or prompt, in reverse video
+          (terminal-cursor-position (- height 2) 1)
+          (display (sgr->ansi-sequence reverse-video))
+          (display (status-row state))
+          (terminal-reset-attributes)
+          (terminal-cursor-position (- height 1) 1)
+          (display (help-row state 1))
+          (terminal-cursor-position height 1)
+          (display (help-row state 2)))
         ;; Cursor: in the prompt if one is open, else in the text
         (if (and prompt (> height reserved-rows))
             (begin
-              (terminal-cursor-position (- height 2)
-                                        (min width (+ 1 (string-length (prompt-label prompt))
-                                                      (string-length (prompt-input prompt)))))
+              (terminal-cursor-position (- height 2) (prompt-cursor-column state))
               (terminal-show-cursor))
             (let ([pos (and (not help-view) (frame-get-cursor-position cbuf frame))])
               (when pos
@@ -1024,8 +1069,11 @@
 ;;; =================================================================
 
 (define (draw state)
-  (display (render-screen state))
-  (force-output))
+  "Bring the terminal up to date with STATE.  Only what turns the
+   screen last drawn into the new one is sent: a fraction of a full
+   redraw, which matters on a slow line.  Everything is redrawn the
+   first time, and after redraw-screen (the redraw command, ^L)."
+  (show-screen (editor-screen state)))
 
 (define (check-size! state)
   "Re-read the terminal size; return #t if it changed."
@@ -1053,12 +1101,15 @@
       (lambda ()
         (sigaction SIGWINCH (lambda (sig) (set! resized? #t))))
       (lambda ()
+        (redraw-screen)                 ; nothing of ours is on it yet
         (draw state)
         (let loop ()
           (unless (editor-quit? state)
             (when resized?
               (set! resized? #f)
-              (when (check-size! state) (draw state)))
+              (when (check-size! state)
+                (redraw-screen)         ; the terminal's contents moved
+                (draw state)))
             (when (wait-for-key port 250000)
               (let ([key (terminal-read-key)])
                 ;; A message is shown until the next key press.

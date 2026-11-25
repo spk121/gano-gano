@@ -44,6 +44,8 @@ key).  The main ones:
     ^Q                            exit, discarding unsaved changes
     ^C                            show the cursor position; at a prompt,
                                   cancel
+    ^L                            redraw the screen (after line noise, say);
+                                  works at prompts and in the help too
 
 At the search, replace and go-to-line prompts, ^Y and ^V go to the
 first and last line.  The keys are kept in a command table
@@ -78,6 +80,8 @@ Layout
     src/gano/cbuf-*.scm     the character buffer (core, basic, standard,
                             extra, serialization, utils)
     src/gano/frame.scm      viewport onto a buffer
+    src/gano/screen.scm     screen contents, and the fewest bytes that turn
+                            the screen the terminal shows into a new one
     src/gano/terminal.scm   raw mode, ANSI output, key input
     src/gano/keys.scm       key objects
     src/gano/text-metrics.scm, char.scm, wcwidth.scm, ...

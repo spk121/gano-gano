@@ -272,7 +272,11 @@
               ("pageup" "page-up") ("pagedown" "page-down") ("home" "home") ("end" "line-end")
               ("backspace" "backspace") ("delete" "delete") ("enter" "newline") ("tab" "tab")
               ("A-\\" "first-line") ("A-/" "last-line") ("^^" "set-mark") ("A-6" "copy")
-              ("A-down" "scroll-up") ("A-up" "scroll-down") ("^L" "view-cursor")))
+              ("A-down" "scroll-up") ("A-up" "scroll-down") ("^L" "redraw")))
+  (for-each (lambda (mode)
+              (test-equal (format #f "^L redraws in ~a mode" mode) "redraw"
+                          (command-name (command-table-key-ref standard-commands mode "^L"))))
+            all-modes)
   (test-equal "^Y in the search prompt goes to the first line" "first-line"
               (command-name (command-table-key-ref standard-commands MSEARCH "^Y")))
   (test-equal "^V at the go-to-line prompt goes to the last line" "last-line"

@@ -57,6 +57,8 @@
     sgr-apply-attribute!
     sgr-apply-attributes!
     sgr-from-parameters
+    sgr-apply-parameters!
+    sgr-parameter-list
     
     ;; SGR rendering
     sgr->ansi-sequence
@@ -567,7 +569,13 @@
 (define (sgr-from-parameters parameters)
   "Create an SGR record from a list of ANSI SGR parameters.
    Handles standard colors, 256-color (38;5;n and 48;5;n), and RGB (38;2;r;g;b and 48;2;r;g;b)"
-  (let ([sgr (make-default-sgr)])
+  (sgr-apply-parameters! (make-default-sgr) parameters))
+
+(define (sgr-apply-parameters! sgr parameters)
+  "Change SGR as a terminal would on receiving the ANSI SGR PARAMETERS
+   (a list of numbers), and return it.  Groups the parameters do not
+   mention keep their values."
+  (begin
     (let loop ([params parameters])
       (unless (null? params)
         (let ([param (car params)]
