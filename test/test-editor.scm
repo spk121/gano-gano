@@ -2,11 +2,13 @@
 ;;; and check the buffer, the saved file and the rendered screen.
 
 (define-module (test editor)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (gano editor)
   #:use-module (gano buffer)
   #:use-module (gano keys)
   #:use-module (gano commands)
+  #:use-module (gano screen)
   #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 popen)
@@ -933,6 +935,117 @@
       (test-assert "prompt drawn on the status row" (string-contains screen "\x1b[8;1H\x1b[7mSearch: ab"))
       (test-assert "prompt help, from the search mode's shortcuts" (string-contains screen "^C cancel"))
       (test-assert "cursor in the prompt" (string-suffix? "\x1b[8;11H\x1b[?25h" screen)))
+    (delete-file (editor-filename st))))
+
+;;; ---------------------------------------------------------------
+;;; The screen, and updating the terminal
+;;; ---------------------------------------------------------------
+
+(define (screen-rows-of st)
+  (let ([screen (editor-screen st)])
+    (map (lambda (r) (string-trim-right (screen-row-string screen r)))
+         (iota (screen-height screen)))))
+
+(test-group "editor screen"
+  (let* ([st (open-editor "first line\nsecond\tline\n" #:width 30 #:height 8)]
+         [screen (editor-screen st)]
+         [rows (screen-rows-of st)])
+    (test-equal "the size of the terminal" '(30 8)
+                (list (screen-width screen) (screen-height screen)))
+    (test-equal "text rows" '("first line" "second  line" "" "" "") (list-head rows 5))
+    (test-assert "status row" (string-prefix? (string-append " " (basename (editor-filename st)))
+                                              (list-ref rows 5)))
+    (test-eq "in reverse video" 'polarity-negative
+             ((@ (gano rendering) sgr-polarity) (screen-cell-sgr screen 5 0)))
+    (test-assert "help rows" (and (string-prefix? "^G he" (list-ref rows 6))
+                                  (string-prefix? "^X ex" (list-ref rows 7))))
+    (type! st 'down 'right 'right)
+    (let ([screen (editor-screen st)])
+      (test-equal "the cursor" '(1 2 #t)
+                  (list (screen-cursor-row screen) (screen-cursor-col screen)
+                        (screen-cursor-visible? screen))))
+    (type! st '(ctrl . #\w) "ab")
+    (let ([screen (editor-screen st)])
+      (test-assert "an open prompt is on the status row"
+                   (string-prefix? "Search: ab" (screen-row-string screen 5)))
+      (test-equal "with the cursor after its input" '(5 10)
+                  (list (screen-cursor-row screen) (screen-cursor-col screen))))
+    (type! st '(ctrl . #\c) '(ctrl . #\g))
+    (test-assert "the cursor is hidden on the help screen"
+                 (not (screen-cursor-visible? (editor-screen st))))
+    (delete-file (editor-filename st)))
+  (let ([st (open-editor "abcdef\n" #:width 40 #:height 10)])
+    (type! st 'right '(ctrl . #\^) 'right 'right)
+    (let ([screen (editor-screen st)])
+      (test-equal "the selection is in reverse video"
+                  '(polarity-positive polarity-negative polarity-negative polarity-positive)
+                  (map (lambda (col)
+                         ((@ (gano rendering) sgr-polarity) (screen-cell-sgr screen 0 col)))
+                       '(0 1 2 3))))
+    (delete-file (editor-filename st)))
+  (let ([st (open-editor "x\n" #:width 20 #:height 2)])
+    (test-equal "a terminal too short for the status and help rows" '("x" "")
+                (screen-rows-of st))
+    (delete-file (editor-filename st))))
+
+(test-group "updating the terminal"
+  ;; Edit a file as a user would, keeping a terminal up to date with
+  ;; screen-update, as the editor's main loop does.
+  (let* ([text (string-concatenate
+                (map (lambda (i)
+                       (format #f "~a: ~a~%" i
+                               (list-ref '("It was the best of times, it was the worst of times,"
+                                           "it was the age of wisdom,"
+                                           ""
+                                           "    it was the age of foolishness, it was the epoch"
+                                           "we had everything before us, we had nothing before us")
+                                         (modulo (* i 7) 5))))
+                     (iota 120)))]
+         [st (open-editor text #:width 60 #:height 20)]
+         [terminal #f]                  ; the screen the terminal shows
+         [sizes '()])
+    (define (draw! . keys)
+      "Type KEYS, update the terminal, and return the bytes sent"
+      (apply type! st keys)
+      (let* ([screen (editor-screen st)]
+             [ops (screen-update terminal screen)])
+        (set! terminal (screen-apply-ops (or terminal (make-screen 60 20)) ops))
+        (unless (screen-equal? terminal screen) (error "the terminal is out of date after" keys))
+        (ops-byte-count ops)))
+    (define redraw (draw!))
+    (test-assert "the first draw" (> redraw 500))
+    (test-equal "no change, nothing sent" 0 (draw!))
+    (test-assert "typing a character" (< (draw! "x") 50))
+    (test-assert "and another" (< (draw! "y") 30))
+    (test-assert "moving the cursor" (< (draw! 'right) 30))
+    (test-assert "deleting a character" (< (draw! 'backspace) 30))
+    (test-assert "a new line moves the rows below down" (< (draw! 'enter) 120))
+    (test-assert "joining lines moves them back up" (< (draw! 'backspace) 120))
+    (test-assert "cutting a line" (< (draw! '(ctrl . #\k)) 150))
+    (test-assert "paging down scrolls the rows still in view"
+                 (< (draw! 'pagedown) (* 0.7 redraw)))
+    (test-assert "the end of a long line: the text slides sideways"
+                 (begin (type! st 'down 'down 'down)
+                        (< (draw! 'end) (* 0.5 redraw))))
+    (test-assert "and back" (< (draw! 'home) (* 0.7 redraw)))
+    (test-assert "selecting" (< (draw! '(ctrl . #\^) 'right 'right 'down) 150))
+    (test-assert "opening a prompt" (< (draw! '(ctrl . #\c) '(ctrl . #\w)) 250))
+    (test-assert "typing in it" (< (draw! "w") 15))
+    (test-assert "the help screen and back" (and (draw! '(ctrl . #\c) '(ctrl . #\g))
+                                                 (draw! "q")))
+    ;; a long session
+    (let ([total 0] [count 0])
+      (for-each
+       (lambda (keys)
+         (set! total (+ total (apply draw! keys)))
+         (set! count (+ count 1)))
+       (append-map (lambda (i)
+                     (list '(down) '(down) '(right) '("a") '(enter) '("b" "c") '(up) '(end)
+                           '(backspace) '(home) '((ctrl . #\k)) '(pagedown) '(down) '((ctrl . #\u))
+                           '(pageup) '(pagedown) '((alt . #\u)) '(left) '("  ") '(down)))
+                   (iota 12)))
+      (test-assert "over a long session, a small part of redrawing every time"
+                   (< total (* 0.15 count redraw))))
     (delete-file (editor-filename st))))
 
 (test-end "editor")

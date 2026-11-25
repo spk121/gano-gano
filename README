@@ -78,6 +78,8 @@ Layout
     src/gano/cbuf-*.scm     the character buffer (core, basic, standard,
                             extra, serialization, utils)
     src/gano/frame.scm      viewport onto a buffer
+    src/gano/screen.scm     screen contents, and the fewest bytes that turn
+                            the screen the terminal shows into a new one
     src/gano/terminal.scm   raw mode, ANSI output, key input
     src/gano/keys.scm       key objects
     src/gano/text-metrics.scm, char.scm, wcwidth.scm, ...
