@@ -44,6 +44,20 @@
   (test-equal "alternate screen on" (esc "[?1049h") (out terminal-alternate-screen-enter))
   (test-equal "alternate screen off" (esc "[?1049l") (out terminal-alternate-screen-exit)))
 
+(test-group "compact screen controls"
+  (define (control op)
+    (call-with-output-string (lambda (port) (terminal-write-screen-control op port))))
+  (test-equal "control characters" "\r\n\b"
+              (string-append (control '(cr)) (control '(lf)) (control '(bs))))
+  (test-equal "default and explicit counts" (esc "[C") (control '(cuf 1)))
+  (test-equal "multi-digit count" (esc "[12@") (control '(ich 12)))
+  (test-equal "home" (esc "[H") (control '(cup 1 1)))
+  (test-equal "row only" (esc "[4H") (control '(cup 4 1)))
+  (test-equal "column only" (esc "[1;7H") (control '(cup 1 7)))
+  (test-equal "scroll region" (esc "[2;9r") (control '(stbm 2 9)))
+  (test-equal "reset scroll region" (esc "[r") (control '(stbm)))
+  (test-error "unknown operation" #t (control '(unknown))))
+
 (test-group "attributes"
   (test-equal "reset" (esc "[0m") (out terminal-reset-attributes))
   (test-equal "bold" (esc "[1m") (out terminal-bold))
