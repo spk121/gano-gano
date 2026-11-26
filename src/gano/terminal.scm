@@ -29,6 +29,7 @@
   #:use-module (ice-9 binary-ports) ; Binary I/O
   #:use-module (ice-9 regex)
   #:use-module (ice-9 popen)        ; stty
+  #:use-module (ice-9 match)
   #:export (
     ;; Terminal setup/cleanup
     terminal-raw-mode-enter
@@ -49,6 +50,7 @@
     terminal-cursor-right
     terminal-show-cursor
     terminal-hide-cursor
+    terminal-write-screen-control
     
     ;; Alternate screen
     terminal-alternate-screen-enter
@@ -142,6 +144,46 @@
 (define (ansi-csi . args)
   "Generate CSI (Control Sequence Introducer) sequence"
   (ansi-escape (apply format #f args)))
+
+(define (terminal-write-screen-control op port)
+  "Write screen control operation OP to PORT using compact ANSI sequences."
+  (define (csi n final)
+    (display "\x1b[" port)
+    (unless (= n 1) (display n port))
+    (display final port))
+  (match op
+    [('cr) (write-char #\return port)]
+    [('lf) (write-char #\newline port)]
+    [('bs) (write-char #\backspace port)]
+    [('rep n) (csi n "b")]
+    [('cuu n) (csi n "A")]
+    [('cud n) (csi n "B")]
+    [('cuf n) (csi n "C")]
+    [('cub n) (csi n "D")]
+    [('cha n) (csi n "G")]
+    [('vpa n) (csi n "d")]
+    [('ech n) (csi n "X")]
+    [('ich n) (csi n "@")]
+    [('dch n) (csi n "P")]
+    [('il n) (csi n "L")]
+    [('dl n) (csi n "M")]
+    [('su n) (csi n "S")]
+    [('sd n) (csi n "T")]
+    [('cup row col)
+     (display "\x1b[" port)
+     (when (or (> row 1) (> col 1)) (display row port))
+     (when (> col 1) (display ";" port) (display col port))
+     (display "H" port)]
+    [('el) (display "\x1b[K" port)]
+    [('ed 2) (display "\x1b[2J" port)]
+    [('stbm) (display "\x1b[r" port)]
+    [('stbm top bottom)
+     (display "\x1b[" port) (display top port)
+     (display ";" port) (display bottom port)
+     (display "r" port)]
+    [('cursor-show) (display "\x1b[?25h" port)]
+    [('cursor-hide) (display "\x1b[?25l" port)]
+    [_ (error "screen: unknown operation" op)]))
 
 ;;; Screen control
 (define (terminal-clear-screen)

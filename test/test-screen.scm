@@ -122,6 +122,9 @@
   (test-equal "cursor position" "\x1b[H\x1b[4H\x1b[4;7H\x1b[1;7H"
               (ops->string '((cup 1 1) (cup 4 1) (cup 4 7) (cup 1 7))))
   (test-equal "attributes" "\x1b[m\x1b[1;31m" (ops->string '((sgr) (sgr 1 31))))
+  (test-equal "extended attributes and explicit reset" "\x1b[38;2;10;20;30m\x1b[0m"
+              (ops->string '((sgr 38 2 10 20 30) (sgr 0))))
+  (test-error "unknown operation" #t (ops->string '((unknown))))
   (test-equal "erasing" "\x1b[K\x1b[3X\x1b[2J" (ops->string '((el) (ech 3) (ed 2))))
   (test-equal "inserting and deleting" "\x1b[2@\x1b[P\x1b[3L\x1b[M"
               (ops->string '((ich 2) (dch 1) (il 3) (dl 1))))

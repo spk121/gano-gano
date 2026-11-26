@@ -115,6 +115,7 @@
 
 (define-module (gano screen)
   #:use-module (gano rendering)     ; SGR attributes
+  #:use-module (gano terminal)      ; Terminal controls
   #:use-module (gano wcwidth)       ; Character widths
   #:use-module (srfi srfi-1)        ; List utilities
   #:use-module (srfi srfi-9)        ; Record types
@@ -441,48 +442,11 @@
   (fold (lambda (op n) (+ n (op-bytes op))) 0 ops))
 
 (define (write-op op port)
-  (define (csi n final)
-    (display "\x1b[" port)
-    (unless (= n 1) (display n port))
-    (display final port))
   (match op
     [('text str) (display str port)]
-    [('cr) (write-char #\return port)]
-    [('lf) (write-char #\newline port)]
-    [('bs) (write-char #\backspace port)]
-    [('rep n) (csi n "b")]
-    [('cuu n) (csi n "A")]
-    [('cud n) (csi n "B")]
-    [('cuf n) (csi n "C")]
-    [('cub n) (csi n "D")]
-    [('cha n) (csi n "G")]
-    [('vpa n) (csi n "d")]
-    [('ech n) (csi n "X")]
-    [('ich n) (csi n "@")]
-    [('dch n) (csi n "P")]
-    [('il n) (csi n "L")]
-    [('dl n) (csi n "M")]
-    [('su n) (csi n "S")]
-    [('sd n) (csi n "T")]
-    [('cup row col)
-     (display "\x1b[" port)
-     (when (or (> row 1) (> col 1)) (display row port))
-     (when (> col 1) (display ";" port) (display col port))
-     (display "H" port)]
     [('sgr . params)
-     (display "\x1b[" port)
-     (display (string-join (map number->string params) ";") port)
-     (display "m" port)]
-    [('el) (display "\x1b[K" port)]
-    [('ed 2) (display "\x1b[2J" port)]
-    [('stbm) (display "\x1b[r" port)]
-    [('stbm top bottom)
-     (display "\x1b[" port) (display top port)
-     (display ";" port) (display bottom port)
-     (display "r" port)]
-    [('cursor-show) (display "\x1b[?25h" port)]
-    [('cursor-hide) (display "\x1b[?25l" port)]
-    [_ (error "screen: unknown operation" op)]))
+     (display (sgr-parameters->ansi-sequence params) port)]
+    [_ (terminal-write-screen-control op port)]))
 
 (define (ops->string ops)
   "The characters to send to the terminal to carry out OPS"

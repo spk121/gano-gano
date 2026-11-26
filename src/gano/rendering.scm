@@ -61,6 +61,7 @@
     sgr-parameter-list
     
     ;; SGR rendering
+    sgr-parameters->ansi-sequence
     sgr->ansi-sequence
     sgr-differences
     sgr-minimal-sequence
@@ -670,10 +671,12 @@
    (if (changed? sgr-background-color 'color-default)
        (color->ansi-params (sgr-background-color sgr) #t) '())))
 
+(define (sgr-parameters->ansi-sequence params)
+  "ANSI SGR sequence for PARAMS (an empty list resets attributes)"
+  (string-append "\x1b[" (string-join (map number->string params) ";") "m"))
+
 (define (csi-sgr params)
-  (if (null? params)
-      ""
-      (string-append "\x1b[" (string-join (map number->string params) ";") "m")))
+  (if (null? params) "" (sgr-parameters->ansi-sequence params)))
 
 (define (sgr->ansi-sequence sgr)
   "ANSI sequence that sets SGR's non-default attributes, starting from

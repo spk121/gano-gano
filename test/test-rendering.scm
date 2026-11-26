@@ -610,6 +610,9 @@
   (test-error "not a colour" #t (color->ansi-params "red" #f)))
 
 (test-group "strict: full sequences"
+  (test-equal "empty parameters reset" (esc "[m") (sgr-parameters->ansi-sequence '()))
+  (test-equal "explicit reset and extended colour" (esc "[0;38;5;200m")
+              (sgr-parameters->ansi-sequence '(0 38 5 200)))
   (test-equal "default" "" (sgr->ansi-sequence (make-default-sgr)))
   (test-equal "bold" (esc "[1m") (sgr->ansi-sequence (sgr #:intensity 'intensity-bold)))
   (test-equal "256-colour foreground in order" (esc "[38;5;200m")
